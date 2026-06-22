@@ -191,6 +191,56 @@ def import_video(project_id: str, video_path: str = Form(...), fps: int = Form(1
     
     return {"message": f"成功從影片抽幀並匯入 {len(filenames)} 張圖片", "imported_count": len(filenames)}
 
+@app.post("/api/projects/{project_id}/upload-video")
+def upload_video(project_id: str, file: UploadFile = File(...), fps: int = Form(1)):
+    """上傳影片檔案並自動抽幀"""
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    temp_dir = Path(project["dataset_path"]) / ".tmp_video_upload"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_video_path = temp_dir / file.filename
+    
+    try:
+        # 儲存上傳的影片檔
+        with open(temp_video_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        dest_dir = Path(project["dataset_path"]) / "raw" / "images"
+        filenames = DatasetUtils.extract_frames(str(temp_video_path), str(dest_dir), fps)
+        
+        # 將抽出的影格加入 project.json
+        for fname in filenames:
+            if any(img["filename"] == fname for img in project["images"]):
+                continue
+            project["images"].append({
+                "filename": fname,
+                "status": "unannotated",
+                "scene": "unknown",
+                "source_video": file.filename,
+                "annotations": [],
+                "split": None,
+                "quality": {}
+            })
+            
+        project["annotation_progress"]["total"] = len(project["images"])
+        ProjectManager.save_project(project_id, project)
+        
+        return {
+            "message": f"成功從上傳影片抽幀並匯入 {len(filenames)} 張圖片",
+            "imported_count": len(filenames)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"影片抽幀失敗: {e}")
+    finally:
+        # 清理暫存檔
+        if temp_video_path.exists():
+            os.remove(temp_video_path)
+        if temp_dir.exists() and not any(temp_dir.iterdir()):
+            shutil.rmtree(temp_dir)
+
+
 @app.post("/api/projects/{project_id}/quality-check")
 def trigger_quality_check(project_id: str):
     """觸發資料品質檢查並計算重複雜湊"""

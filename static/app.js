@@ -724,6 +724,100 @@ function bindDatasetActions() {
     }
   });
 
+  // 影片拖曳上傳區 (Dropzone)
+  const videoDropZone = qs("#video-drop-zone");
+  const inputVideoFile = qs("#input-video-file");
+  
+  if (videoDropZone && typeof Dropzone !== "undefined") {
+    if (inputVideoFile) inputVideoFile.style.display = "none";
+    if (!videoDropZone.dropzone) {
+      new Dropzone(videoDropZone, {
+        url: function() {
+          return `/api/projects/${appState.currentProjectId}/upload-video`;
+        },
+        paramName: "file",
+        acceptedFiles: "video/*",
+        maxFilesize: 2048,
+        autoProcessQueue: true,
+        previewsContainer: document.createElement("div"),
+        previewTemplate: '<div style="display:none"></div>',
+        init: function() {
+          this.on("addedfile", function(file) {
+            if (!appState.currentProjectId) {
+              showToast("請先載入或建立專案！");
+              this.removeFile(file);
+              return;
+            }
+            showToast("正在上傳影片並提取影格...");
+          });
+
+          this.on("sending", function(file, xhr, formData) {
+            const fpsVal = qs("#input-video-fps")?.value || "1";
+            formData.append("fps", fpsVal);
+          });
+
+          this.on("success", async function(file, response) {
+            let data = response;
+            if (typeof response === "string") {
+              try {
+                data = JSON.parse(response);
+              } catch (e) {
+                data = { message: response };
+              }
+            }
+            showToast(data.message || "影片抽幀完成！");
+            await openProject(appState.currentProjectId, { stayOnPage: true });
+            this.removeAllFiles(true);
+          });
+
+          this.on("error", function(file, message) {
+            let errMsg = message;
+            if (typeof message === "object" && message.detail) {
+              errMsg = message.detail;
+            } else if (typeof message === "object" && message.message) {
+              errMsg = message.message;
+            }
+            showToast(`影片抽幀失敗：${errMsg}`);
+            this.removeAllFiles(true);
+          });
+        }
+      });
+    }
+  } else {
+    videoDropZone?.addEventListener("click", () => {
+      inputVideoFile?.click();
+    });
+    
+    inputVideoFile?.addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!appState.currentProjectId) {
+        showToast("請先載入或建立專案！");
+        if (inputVideoFile) inputVideoFile.value = "";
+        return;
+      }
+      
+      const fpsVal = qs("#input-video-fps")?.value || "1";
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("fps", fpsVal);
+      
+      showToast("正在上傳影片並提取影格...");
+      try {
+        const data = await apiFetch(`/api/projects/${appState.currentProjectId}/upload-video`, {
+          method: "POST",
+          body: formData
+        });
+        showToast(data.message || "影片抽幀完成！");
+        await openProject(appState.currentProjectId, { stayOnPage: true });
+      } catch (err) {
+        showToast(`影片抽幀失敗：${err.message}`);
+      } finally {
+        if (inputVideoFile) inputVideoFile.value = "";
+      }
+    });
+  }
+
   qs("#btn-trigger-quality")?.addEventListener("click", async () => {
     try {
       const report = await apiFetch(`/api/projects/${appState.currentProjectId}/quality-check`, { method: "POST" });

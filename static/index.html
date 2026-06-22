@@ -181,19 +181,42 @@
             </section>
 
             <section class="panel-section dataset-import-card">
-              <div class="section-title"><h2>Extract Video Frames</h2></div>
-              <p class="section-help">從影片抽取影格成圖片，並保留來源影片資訊供 Group Split 使用。</p>
-              <div class="form-stack">
-                <label>
-                  <span>影片路徑</span>
-                  <input type="text" id="input-video-path" placeholder="D:\videos\route_1.mp4">
-                </label>
-                <div class="inline-fields dataset-video-fields">
-                  <label>
-                    <span>FPS</span>
-                    <input type="number" id="input-video-fps" value="1" min="1" max="10">
-                  </label>
-                  <button class="btn btn-primary guarded" data-requires="project" id="btn-import-video"><i class="fa-solid fa-video"></i> Extract Frames</button>
+              <div class="section-title"><h2>Extract Video Frames (影片抽幀中心)</h2></div>
+              <p class="section-help">支援掃描本機影片路徑抽幀，或直接拖曳影片（MP4、AVI 等）自動上傳並提取影格。</p>
+              
+              <div class="form-stack" style="gap: 12px; margin-top: 12px;">
+                <!-- Common FPS Settings -->
+                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.84rem; color: var(--text-soft); gap: 12px;">
+                  <span>抽幀頻率 (FPS / 每秒幾幀)</span>
+                  <input type="number" id="input-video-fps" value="1" min="1" max="10" style="width: 80px; min-height: 32px; text-align: center;">
+                </div>
+
+                <div style="border-top: 1px solid var(--border); margin: 2px 0;"></div>
+
+                <!-- Local Path Input Source -->
+                <div style="display: grid; gap: 6px;">
+                  <label for="input-video-path" style="font-weight: 600; font-size: 0.82rem; color: var(--text-soft);">本機影片路徑 (Scan Local Video)</label>
+                  <div class="class-entry-row">
+                    <input type="text" id="input-video-path" placeholder="例如 D:\videos\route_1.mp4" style="flex: 1;">
+                    <button class="btn btn-primary guarded" data-requires="project" id="btn-import-video" style="min-width: 90px; min-height: 38px;">
+                      <i class="fa-solid fa-video"></i> 抽幀
+                    </button>
+                  </div>
+                </div>
+
+                <div style="border-top: 1px solid var(--border); margin: 2px 0;"></div>
+
+                <!-- Video Upload Dropzone Source -->
+                <div style="display: grid; gap: 6px;">
+                  <span style="font-weight: 600; font-size: 0.82rem; color: var(--text-soft);">上傳影片檔案 (Upload Video File)</span>
+                  <div class="zip-drop-zone" id="video-drop-zone" style="cursor: pointer; min-height: 96px; padding: 14px;">
+                    <i class="fa-solid fa-file-video" style="font-size: 1.2rem; width: 38px; height: 38px; background: rgba(59, 130, 246, 0.16); color: var(--primary);"></i>
+                    <div>
+                      <strong>Video upload area (拖曳或點選影片)</strong>
+                      <p style="font-size: 0.78rem;">支援拖入 MP4, AVI, MKV 等格式自動上傳抽幀。</p>
+                    </div>
+                  </div>
+                  <input type="file" id="input-video-file" accept="video/*" style="display: none;">
                 </div>
               </div>
             </section>
