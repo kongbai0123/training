@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from PIL import Image
 import shutil
+import zipfile
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 
@@ -185,4 +186,101 @@ class DatasetUtils:
                 "duplicate": duplicate_cnt,
                 "unannotated": unannotated_cnt
             }
+        }
+
+    @staticmethod
+    def get_thumbnail(project_id: str, filename: str) -> str:
+        """
+        獲取縮圖，若快取存在則直接讀取，否則生成 200x200 縮圖並儲存至 cache
+        """
+        from src.config import PROJECTS_DIR
+        proj_dir = PROJECTS_DIR / project_id
+        
+        # 尋找原始影像或擴充影像路徑
+        raw_img_path = proj_dir / "dataset" / "raw" / "images" / filename
+        if not raw_img_path.exists():
+            raw_img_path = proj_dir / "dataset" / "augmentations" / "augmented_images" / filename
+            
+        if not raw_img_path.exists():
+            raise FileNotFoundError(f"找不到原始圖片: {filename}")
+            
+        cache_dir = proj_dir / "dataset" / ".cache" / "thumbnails"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        thumb_path = cache_dir / filename
+        if thumb_path.exists():
+            return str(thumb_path.resolve())
+            
+        # 生成縮圖
+        try:
+            with Image.open(raw_img_path) as img:
+                img.thumbnail((200, 200))
+                # 確保以原本的格式/RGB格式存檔
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
+                img.save(thumb_path, "JPEG", quality=85)
+            return str(thumb_path.resolve())
+        except Exception as e:
+            print(f"Error generating thumbnail for {filename}: {e}")
+            return str(raw_img_path.resolve())
+
+    @staticmethod
+    def import_zip_package(project_id: str, zip_file_path: str) -> Dict[str, Any]:
+        """
+        解壓縮 ZIP 檔案，掃描其中的圖片與 LabelMe JSON，將其歸類移入對應的資料夾
+        """
+        from src.config import PROJECTS_DIR
+        proj_dir = PROJECTS_DIR / project_id
+        
+        temp_dir = proj_dir / "dataset" / ".tmp_zip"
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 解壓縮
+        try:
+            with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+                zip_ref.extractall(temp_dir)
+        except Exception as e:
+            if temp_dir.exists():
+                shutil.rmtree(temp_dir)
+            raise ValueError(f"ZIP 檔案解壓縮失敗: {e}")
+            
+        dest_img_dir = proj_dir / "dataset" / "raw" / "images"
+        dest_labelme_dir = proj_dir / "dataset" / "raw" / "annotations" / "labelme"
+        
+        dest_img_dir.mkdir(parents=True, exist_ok=True)
+        dest_labelme_dir.mkdir(parents=True, exist_ok=True)
+        
+        valid_exts = {".jpg", ".jpeg", ".png", ".bmp"}
+        imported_imgs = []
+        imported_jsons = []
+        
+        # 遞迴掃描解壓目錄
+        for root, _, files in os.walk(temp_dir):
+            for file in files:
+                fpath = Path(root) / file
+                ext = fpath.suffix.lower()
+                
+                if ext in valid_exts:
+                    shutil.copy(str(fpath), str(dest_img_dir / file))
+                    imported_imgs.append(file)
+                elif ext == ".json":
+                    # 簡易驗證是否為 LabelMe JSON (包含 shapes 欄位)
+                    try:
+                        with open(fpath, "r", encoding="utf-8") as json_f:
+                            content = json.load(json_f)
+                        if "shapes" in content:
+                            shutil.copy(str(fpath), str(dest_labelme_dir / file))
+                            imported_jsons.append(file)
+                    except Exception:
+                        pass
+                        
+        # 刪除暫存區
+        shutil.rmtree(temp_dir)
+        
+        return {
+            "imported_images_count": len(imported_imgs),
+            "imported_jsons_count": len(imported_jsons),
+            "images": imported_imgs
         }

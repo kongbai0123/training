@@ -5,6 +5,7 @@ const appState = {
   currentProjectId: null,
   currentProject: null,
   projects: [],
+  datasetVisibleLimit: 80,
   newProjectClasses: [],
   pendingDeleteProjectId: null,
   trainingStatus: null,
@@ -95,6 +96,16 @@ const augmentationPresets = {
     noise: 0.08,
     perspective: 0.06
   }
+};
+
+const fixedAugmentationValues = {
+  brightness: 0.2,
+  contrast: 0.2,
+  rain: 0.4,
+  fog: 0.4,
+  motionBlur: 0.3,
+  noise: 0.08,
+  perspective: 0.06
 };
 
 let isBalancingSplitRatios = false;
@@ -669,8 +680,49 @@ function bindDatasetActions() {
   });
 
   qs("#btn-copy-zip-path")?.addEventListener("click", () => copyText(qs("#dataset-zip-storage-path")?.textContent));
-  qs("#search-image")?.addEventListener("input", () => renderDatasetPage(getProjectStatus(appState.currentProject)));
-  qs("#filter-status")?.addEventListener("change", () => renderDatasetPage(getProjectStatus(appState.currentProject)));
+  
+  const zipDropZone = qs("#zip-drop-zone");
+  const inputZipFile = qs("#input-zip-file");
+  
+  zipDropZone?.addEventListener("click", () => {
+    inputZipFile?.click();
+  });
+  
+  inputZipFile?.addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    showToast("正在上傳並解壓縮 ZIP 資料包...");
+    try {
+      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-zip`, {
+        method: "POST",
+        body: formData
+      });
+      showToast(data.message || "ZIP 匯入完成！");
+      await openProject(appState.currentProjectId);
+    } catch (err) {
+      showToast(`ZIP 匯入失敗：${err.message}`);
+    } finally {
+      if (inputZipFile) inputZipFile.value = "";
+    }
+  });
+
+  qs("#search-image")?.addEventListener("input", () => {
+    appState.datasetVisibleLimit = 80;
+    renderDatasetPage(getProjectStatus(appState.currentProject));
+  });
+  qs("#filter-status")?.addEventListener("change", () => {
+    appState.datasetVisibleLimit = 80;
+    renderDatasetPage(getProjectStatus(appState.currentProject));
+  });
+  qs("#dataset-thumbnails")?.addEventListener("click", (event) => {
+    if (!event.target.closest("#btn-load-more-images")) return;
+    appState.datasetVisibleLimit += 80;
+    renderDatasetPage(getProjectStatus(appState.currentProject));
+  });
 }
 
 function bindSplitActions() {
@@ -803,14 +855,14 @@ function bindAugmentationActions() {
 function applyAugmentationPreset(presetName) {
   const preset = augmentationPresets[presetName];
   if (!preset) return;
-  qs("#aug-light-brightness").value = preset.brightness;
-  qs("#aug-light-contrast").value = preset.contrast;
+  qs("#aug-light-brightness").checked = Math.abs(preset.brightness) > 0;
+  qs("#aug-light-contrast").checked = Math.abs(preset.contrast) > 0;
   qs("#aug-light-shadow").checked = preset.shadow;
-  qs("#aug-weather-rain").value = preset.rain;
-  qs("#aug-weather-fog").value = preset.fog;
-  qs("#aug-motion-blur").value = preset.motionBlur;
-  qs("#aug-camera-noise").value = preset.noise;
-  qs("#aug-camera-perspective").value = preset.perspective;
+  qs("#aug-weather-rain").checked = Math.abs(preset.rain) > 0;
+  qs("#aug-weather-fog").checked = Math.abs(preset.fog) > 0;
+  qs("#aug-motion-blur").checked = Math.abs(preset.motionBlur) > 0;
+  qs("#aug-camera-noise").checked = Math.abs(preset.noise) > 0;
+  qs("#aug-camera-perspective").checked = Math.abs(preset.perspective) > 0;
 
   qsa("[data-aug-preset]").forEach((button) => {
     button.classList.toggle("active", button.dataset.augPreset === presetName);
@@ -821,20 +873,20 @@ function applyAugmentationPreset(presetName) {
 function getAugmentationConfig() {
   return {
     light: {
-      brightness: Number(qs("#aug-light-brightness").value),
-      contrast: Number(qs("#aug-light-contrast").value),
+      brightness: qs("#aug-light-brightness").checked ? fixedAugmentationValues.brightness : 0,
+      contrast: qs("#aug-light-contrast").checked ? fixedAugmentationValues.contrast : 0,
       shadow: qs("#aug-light-shadow").checked
     },
     weather: {
-      rain: Number(qs("#aug-weather-rain").value),
-      fog: Number(qs("#aug-weather-fog").value)
+      rain: qs("#aug-weather-rain").checked ? fixedAugmentationValues.rain : 0,
+      fog: qs("#aug-weather-fog").checked ? fixedAugmentationValues.fog : 0
     },
     motion: {
-      motion_blur: Number(qs("#aug-motion-blur").value)
+      motion_blur: qs("#aug-motion-blur").checked ? fixedAugmentationValues.motionBlur : 0
     },
     camera: {
-      noise: Number(qs("#aug-camera-noise").value),
-      perspective: Number(qs("#aug-camera-perspective").value)
+      noise: qs("#aug-camera-noise").checked ? fixedAugmentationValues.noise : 0,
+      perspective: qs("#aug-camera-perspective").checked ? fixedAugmentationValues.perspective : 0
     }
   };
 }
@@ -971,13 +1023,68 @@ function generateReport() {
 }
 
 function bindLabelMeActions() {
-  qs("#btn-refresh-labelme")?.addEventListener("click", () => {
-    updateLabelMeState();
-    renderAll();
-    showToast("LabelMe UI 狀態已重新整理；後端同步仍為 Phase 2");
+  qs("#btn-refresh-labelme")?.addEventListener("click", async () => {
+    await syncLabelMeLabels(true);
+  });
+  qs("#btn-sync-labelme")?.addEventListener("click", () => {
+    syncLabelMeLabels(false);
   });
   qs("#btn-copy-images-path")?.addEventListener("click", () => copyText(qs("#labelme-images-path")?.textContent));
   qs("#btn-copy-json-path")?.addEventListener("click", () => copyText(qs("#labelme-json-path")?.textContent));
+
+  // 轉換按鈕事件綁定
+  const converters = {
+    "#btn-convert-yolo-det": "yolo_detection",
+    "#btn-convert-yolo-seg": "yolo_segmentation",
+    "#btn-convert-coco": "coco",
+    "#btn-convert-mask": "semantic_mask"
+  };
+
+  Object.entries(converters).forEach(([id, type]) => {
+    qs(id)?.addEventListener("click", async () => {
+      const btn = qs(id);
+      btn.disabled = true;
+      showToast(`正在將標註轉換為 ${type}...`);
+      try {
+        const data = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/convert`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ export_type: type })
+        });
+        showToast(`轉換完成！成功處理 ${data.converted_count} 個檔案。`);
+        await openProject(appState.currentProjectId);
+      } catch (err) {
+        showToast(`轉換失敗：${err.message}`);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+async function syncLabelMeLabels(silent = false) {
+  const btn = qs("#btn-sync-labelme");
+  if (btn) btn.disabled = true;
+  if (!silent) showToast("正在掃描與同步 LabelMe JSON 標註檔...");
+  
+  try {
+    const report = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/sync`, { method: "POST" });
+    
+    appState.labelme.jsonCount = report.annotated;
+    appState.labelme.missingJson = report.missing_json;
+    appState.labelme.invalidJson = report.corrupted_json;
+    appState.labelme.totalImages = report.total_images;
+    appState.labelme.synced = true;
+    appState.labelme.completionRate = report.total_images > 0 ? Math.round((report.annotated / report.total_images) * 100) : 0;
+    appState.labelme.unknownClasses = report.unknown_classes;
+    
+    await openProject(appState.currentProjectId, { stayOnPage: true });
+    if (!silent) showToast("同步完成！");
+  } catch (err) {
+    showToast(`同步失敗：${err.message}`);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 async function copyText(text) {
@@ -992,18 +1099,28 @@ async function copyText(text) {
 
 function updateLabelMeState() {
   const project = appState.currentProject;
-  const total = project?.images?.filter((img) => !img.is_augmented).length || 0;
+  if (!project) return;
+  const rawImages = (project.images || []).filter((img) => !img.is_augmented);
+  const total = rawImages.length;
+  
+  const annotated = rawImages.filter((img) => img.status === "annotated").length;
+  const flagged = rawImages.filter((img) => img.status === "flagged").length;
+  const skipped = rawImages.filter((img) => img.status === "skipped").length;
+  
+  const missing = total - annotated - flagged - skipped;
+  const hasAnnotated = annotated > 0;
+  
   appState.labelme = {
     uiReady: true,
-    backendReady: false,
-    synced: false,
+    backendReady: true,
+    synced: hasAnnotated || appState.labelme.synced,
     totalImages: total,
-    jsonCount: 0,
-    missingJson: total,
+    jsonCount: annotated,
+    missingJson: missing,
     emptyJson: 0,
-    unknownLabels: 0,
+    unknownLabels: appState.labelme.unknownClasses ? appState.labelme.unknownClasses.length : 0,
     invalidJson: 0,
-    completionRate: 0
+    completionRate: total > 0 ? Math.round((annotated / total) * 100) : 0
   };
 }
 
@@ -1344,15 +1461,34 @@ function renderDatasetPage(status) {
     setHTML("#dataset-thumbnails", `<div class="empty-state">目前沒有符合條件的圖片。</div>`);
     return;
   }
-  setHTML("#dataset-thumbnails", filtered.map((img) => `
+  const visibleImages = filtered.slice(0, appState.datasetVisibleLimit);
+  const hiddenCount = Math.max(0, filtered.length - visibleImages.length);
+  const cards = visibleImages.map((img) => `
     <article class="thumb-card">
-      <img src="/api/projects/${encodeURIComponent(appState.currentProjectId)}/images/${encodeURIComponent(img.filename)}" loading="lazy" alt="${escapeHtml(img.filename)}">
+      <div class="thumb-image-frame">
+        <img
+          src="/api/projects/${encodeURIComponent(appState.currentProjectId)}/thumbnails/${encodeURIComponent(img.filename)}"
+          loading="lazy"
+          decoding="async"
+          fetchpriority="low"
+          alt="${escapeHtml(img.filename)}"
+        >
+      </div>
       <footer>
         <strong title="${escapeHtml(img.filename)}">${escapeHtml(img.filename)}</strong>
         <span class="badge ${badgeClassForStatus(img.status)}">${escapeHtml(img.status || "unknown")}</span>
       </footer>
     </article>
-  `).join(""));
+  `);
+  if (hiddenCount > 0) {
+    cards.push(`
+      <button type="button" class="load-more-card" id="btn-load-more-images">
+        <strong>Load more images</strong>
+        <span>${visibleImages.length} / ${filtered.length} shown</span>
+      </button>
+    `);
+  }
+  setHTML("#dataset-thumbnails", cards.join(""));
 }
 
 function badgeClassForStatus(status) {
@@ -1385,11 +1521,130 @@ function renderLabelMeManager(status) {
   setText("#labelme-completion-text", `${status.labelme.completionRate}%`);
   const bar = qs("#labelme-completion-bar");
   if (bar) bar.style.width = `${status.labelme.completionRate}%`;
-  setHTML("#labelme-check-table", `
-    <tr>
-      <td colspan="5">尚未同步 LabelMe JSON；Phase 2 將掃描 annotations/labelme/*.json。</td>
-    </tr>
-  `);
+  const rawImages = (appState.currentProject?.images || []).filter((img) => !img.is_augmented);
+  if (rawImages.length === 0) {
+    setHTML("#labelme-check-table", `
+      <tr>
+        <td colspan="5" style="text-align:center;">無資料。請先到 Dataset 頁面匯入圖片。</td>
+      </tr>
+    `);
+    return;
+  }
+
+  const rows = rawImages.map(img => {
+    let statusText = "Unannotated";
+    let issueText = "Missing JSON";
+    let fixText = "Use LabelMe to annotate";
+    let rowClass = "row-missing";
+    
+    if (img.status === "annotated") {
+      statusText = "Annotated";
+      issueText = "None";
+      fixText = "None";
+      rowClass = "row-success";
+    } else if (img.status === "flagged") {
+      statusText = "Flagged";
+      issueText = "Flagged for review";
+      fixText = "Review annotations in LabelMe";
+      rowClass = "row-warning";
+    } else if (img.status === "skipped") {
+      statusText = "Skipped";
+      issueText = "Skipped";
+      fixText = "None";
+      rowClass = "row-muted";
+    }
+    
+    return `
+      <tr class="${rowClass}" data-preview-img="${escapeHtml(img.filename)}" style="cursor:pointer;">
+        <td><code>${escapeHtml(img.filename.replace(/\.[^/.]+$/, ".json"))}</code></td>
+        <td>${escapeHtml(img.filename)}</td>
+        <td><span class="badge ${badgeClassForStatus(img.status)}">${statusText}</span></td>
+        <td>${issueText}</td>
+        <td>${fixText}</td>
+      </tr>
+    `;
+  });
+  setHTML("#labelme-check-table", rows.join(""));
+  
+  qsa("#labelme-check-table tr").forEach(row => {
+    row.addEventListener("click", () => {
+      const filename = row.dataset.previewImg;
+      if (filename) previewLabelMeImage(filename);
+    });
+  });
+}
+
+async function previewLabelMeImage(filename) {
+  const panel = qs("#labelme-preview-panel");
+  if (!panel) return;
+  
+  panel.innerHTML = `
+    <div class="preview-placeholder">
+      <i class="fa-solid fa-spinner fa-spin"></i>
+      <p>正在載入 ${escapeHtml(filename)} 預覽...</p>
+    </div>
+  `;
+  
+  try {
+    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/preview/${filename}`);
+    
+    panel.innerHTML = `
+      <div style="position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+        <canvas id="lbl-preview-canvas" style="max-width:100%; max-height:100%; object-fit:contain;"></canvas>
+      </div>
+    `;
+    
+    const canvas = qs("#lbl-preview-canvas");
+    const ctx = canvas.getContext("2d");
+    
+    const img = new Image();
+    img.src = `/api/projects/${appState.currentProjectId}/images/${filename}`;
+    
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      
+      const shapes = data.shapes || [];
+      shapes.forEach(shape => {
+        const pts = shape.points || [];
+        if (pts.length < 2) return;
+        
+        ctx.strokeStyle = classColors[shape.label] || "#ff0000";
+        ctx.lineWidth = Math.max(3, img.width / 300);
+        ctx.fillStyle = "rgba(0, 210, 211, 0.15)";
+        
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) {
+          ctx.lineTo(pts[i][0], pts[i][1]);
+        }
+        
+        if (shape.shape_type === "rectangle") {
+          ctx.closePath();
+          const w = pts[1][0] - pts[0][0];
+          const h = pts[1][1] - pts[0][1];
+          ctx.strokeRect(pts[0][0], pts[0][1], w, h);
+          ctx.fillRect(pts[0][0], pts[0][1], w, h);
+        } else {
+          ctx.closePath();
+          ctx.stroke();
+          ctx.fill();
+        }
+        
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.font = `bold ${Math.max(16, img.width / 40)}px Inter`;
+        ctx.fillText(shape.label, pts[0][0], pts[0][1] - 8);
+      });
+    };
+  } catch (err) {
+    panel.innerHTML = `
+      <div class="preview-placeholder text-red">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <p>載入預覽失敗：${escapeHtml(err.message)}</p>
+      </div>
+    `;
+  }
 }
 
 function renderSplitPage(status) {

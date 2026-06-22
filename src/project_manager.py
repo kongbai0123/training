@@ -48,6 +48,7 @@ class ProjectManager:
         dirs = [
             project_dir / "dataset" / "raw" / "images",
             project_dir / "dataset" / "raw" / "labels",
+            project_dir / "dataset" / "raw" / "annotations" / "labelme",
             project_dir / "dataset" / "splits",
             project_dir / "dataset" / "augmentations" / "augmented_images",
             project_dir / "training" / "runs",

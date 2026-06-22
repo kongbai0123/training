@@ -184,12 +184,13 @@
                   <code id="dataset-zip-storage-path">尚未載入專案</code>
                   <button class="icon-btn guarded" data-requires="project" id="btn-copy-zip-path" title="Copy"><i class="fa-regular fa-copy"></i></button>
                 </div>
-                <div class="zip-drop-zone">
+                <div class="zip-drop-zone" id="zip-drop-zone" style="cursor: pointer;">
                   <i class="fa-solid fa-file-zipper"></i>
                   <div>
                     <strong>ZIP upload area</strong>
-                    <p>目前先保留存放空間；上傳與自動解壓需要 Phase 2 backend。</p>
+                    <p>點選此處上傳 ZIP 資料集（含影像與 json）並自動解壓縮導入。</p>
                   </div>
+                  <input type="file" id="input-zip-file" accept=".zip" style="display: none;">
                 </div>
               </div>
             </section>
@@ -270,10 +271,9 @@
               </div>
               <div class="button-row">
                 <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-labelme"><i class="fa-solid fa-rotate"></i> Refresh Status</button>
-                <button class="btn btn-disabled" disabled><i class="fa-solid fa-folder-open"></i> Open Folder</button>
-                <button class="btn btn-disabled" disabled><i class="fa-solid fa-arrows-rotate"></i> Sync JSON</button>
+                <button class="btn btn-primary guarded" data-requires="project" id="btn-sync-labelme"><i class="fa-solid fa-arrows-rotate"></i> Sync JSON</button>
               </div>
-              <p class="phase-note">目前可複製路徑並用外部 LabelMe 標註；Open Folder / Sync JSON 需要 Phase 2 backend。</p>
+              <p class="phase-note">點選 Sync JSON 即可掃描專案中已完成的 LabelMe 標註檔案並同步進度。</p>
             </section>
 
             <section class="panel-section">
@@ -319,12 +319,12 @@
                 <h2>Conversion Actions</h2>
               </div>
               <div class="conversion-list">
-                <button class="btn btn-disabled" disabled>Convert to YOLO Detection <span class="info-icon" data-tooltip="YOLO Detection 適合 rectangle / bbox，每個物件輸出類別與框座標。">i</span></button>
-                <button class="btn btn-disabled" disabled>Convert to YOLO Segmentation <span class="info-icon" data-tooltip="YOLO Segmentation 適合 polygon，會保留物件輪廓點。">i</span></button>
-                <button class="btn btn-disabled" disabled>Convert to COCO <span class="info-icon" data-tooltip="COCO 是通用資料集格式，可描述 detection 與 segmentation。">i</span></button>
-                <button class="btn btn-disabled" disabled>Convert to Semantic Mask <span class="info-icon" data-tooltip="Semantic Mask 需要 class map，會把每個像素轉成類別 ID。">i</span></button>
+                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-det">Convert to YOLO Detection <span class="info-icon" data-tooltip="YOLO Detection 適合 rectangle / bbox，每個物件輸出類別與框座標。">i</span></button>
+                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-seg">Convert to YOLO Segmentation <span class="info-icon" data-tooltip="YOLO Segmentation 適合 polygon，會保留物件輪廓點。">i</span></button>
+                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-coco">Convert to COCO <span class="info-icon" data-tooltip="COCO 是通用資料集格式，可描述 detection 與 segmentation。">i</span></button>
+                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-mask">Convert to Semantic Mask <span class="info-icon" data-tooltip="Semantic Mask 需要 class map，會把每個像素轉成類別 ID。">i</span></button>
               </div>
-              <p class="phase-note">Phase 2 backend required.</p>
+              <p class="phase-note">將同步後的 LabelMe JSON 檔轉換為目標格式以供訓練或匯出。</p>
             </section>
 
             <section class="panel-section wide legacy-panel">
@@ -410,16 +410,16 @@
                 </div>
                 <div class="augmentation-block">
                   <h3>Custom Settings</h3>
-                  <div class="form-stack">
-                    <label><span>Brightness</span><input type="range" id="aug-light-brightness" min="-0.5" max="0.5" step="0.05" value="0"></label>
-                    <label><span>Contrast</span><input type="range" id="aug-light-contrast" min="-0.5" max="0.5" step="0.05" value="0"></label>
-                    <label class="checkbox-row"><input type="checkbox" id="aug-light-shadow"> <span>Shadow</span></label>
-                    <label><span>Rain</span><input type="range" id="aug-weather-rain" min="0" max="0.8" step="0.1" value="0"></label>
-                    <label><span>Fog</span><input type="range" id="aug-weather-fog" min="0" max="0.8" step="0.1" value="0"></label>
-                    <label><span>Motion blur</span><input type="range" id="aug-motion-blur" min="0" max="0.8" step="0.1" value="0"></label>
-                    <label><span>Camera noise</span><input type="range" id="aug-camera-noise" min="0" max="0.5" step="0.05" value="0"></label>
-                    <label><span>Perspective</span><input type="range" id="aug-camera-perspective" min="0" max="0.15" step="0.02" value="0"></label>
-                    <label><span>Multiplier</span><input type="number" id="aug-multiplier" value="1" min="1" max="5"></label>
+                  <div class="custom-settings-list">
+                    <label class="custom-setting-item"><span><strong>Brightness</strong><small>Fixed +0.20</small></span><input type="checkbox" id="aug-light-brightness"></label>
+                    <label class="custom-setting-item"><span><strong>Contrast</strong><small>Fixed +0.20</small></span><input type="checkbox" id="aug-light-contrast"></label>
+                    <label class="custom-setting-item"><span><strong>Shadow</strong><small>Fixed enabled</small></span><input type="checkbox" id="aug-light-shadow"></label>
+                    <label class="custom-setting-item"><span><strong>Rain</strong><small>Fixed +0.40</small></span><input type="checkbox" id="aug-weather-rain"></label>
+                    <label class="custom-setting-item"><span><strong>Fog</strong><small>Fixed +0.40</small></span><input type="checkbox" id="aug-weather-fog"></label>
+                    <label class="custom-setting-item"><span><strong>Motion blur</strong><small>Fixed +0.30</small></span><input type="checkbox" id="aug-motion-blur"></label>
+                    <label class="custom-setting-item"><span><strong>Camera noise</strong><small>Fixed +0.08</small></span><input type="checkbox" id="aug-camera-noise"></label>
+                    <label class="custom-setting-item"><span><strong>Perspective</strong><small>Fixed +0.06</small></span><input type="checkbox" id="aug-camera-perspective"></label>
+                    <label class="custom-setting-item custom-setting-count"><span><strong>Multiplier</strong><small>Output count</small></span><input type="number" id="aug-multiplier" value="1" min="1" max="5"></label>
                     <button class="btn btn-primary guarded" data-requires="split" id="btn-apply-aug"><i class="fa-solid fa-wand-magic-sparkles"></i> Apply Augmentation</button>
                   </div>
                 </div>

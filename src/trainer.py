@@ -107,38 +107,55 @@ class YOLOTrainer:
         class_names = project_data.get("class_names", [])
         class_to_idx = {name: idx for idx, name in enumerate(class_names)}
         
-        # 3. 複製圖片並生成 txt 標註檔案
+        # 3. 複製圖片並配置 labels
         for img in images_list:
             split_name = img.get("split")
             if not split_name or split_name not in ["train", "val", "test"]:
                 continue
                 
             filename = img["filename"]
-            raw_img_path = dataset_path / "raw" / "images" / filename
+            is_aug = img.get("is_augmented", False)
             
-            # 如果 raw 目錄找不到圖片，跳過
-            if not raw_img_path.exists():
+            # 定義圖片源路徑
+            if is_aug:
+                img_src_path = dataset_path / "augmentations" / "augmented_images" / filename
+            else:
+                img_src_path = dataset_path / "raw" / "images" / filename
+                
+            if not img_src_path.exists():
                 continue
                 
             # 複製圖片
-            target_img_path = yolo_dir / split_name / "images" / filename
-            shutil.copy(raw_img_path, target_img_path)
+            shutil.copy(img_src_path, yolo_dir / split_name / "images" / filename)
             
-            # 生成 labels txt 檔案 (YOLO 格式: cls_idx x_center y_center w h)
             txt_filename = Path(filename).with_suffix(".txt")
             target_txt_path = yolo_dir / split_name / "labels" / txt_filename
             
-            with open(target_txt_path, "w", encoding="utf-8") as f:
-                for ann in img.get("annotations", []):
-                    cat = ann.get("category")
-                    if cat not in class_to_idx:
-                        continue
-                    idx = class_to_idx[cat]
-                    
-                    # bbox: [x_center, y_center, w, h] (normalized)
-                    bbox = ann.get("bbox")
-                    if bbox and len(bbox) == 4:
-                        f.write(f"{idx} {bbox[0]:.6f} {bbox[1]:.6f} {bbox[2]:.6f} {bbox[3]:.6f}\n")
+            # 如果是原始圖片且有預先轉換好的 txt label 檔案，直接複製它
+            preconverted_label_path = dataset_path / "raw" / "labels" / txt_filename
+            if not is_aug and preconverted_label_path.exists():
+                shutil.copy(preconverted_label_path, target_txt_path)
+            else:
+                # 否則 (擴充圖或未預轉換的圖)，自 project.json 元數據寫入
+                with open(target_txt_path, "w", encoding="utf-8") as f:
+                    for ann in img.get("annotations", []):
+                        cat = ann.get("category")
+                        if cat not in class_to_idx:
+                            continue
+                        idx = class_to_idx[cat]
+                        
+                        # 支援 YOLO Segmentation (多邊形點序列)
+                        points = ann.get("points")
+                        if points and len(points) >= 3:
+                            img_w = img.get("width", 640)
+                            img_h = img.get("height", 640)
+                            pts_str = " ".join(f"{pt[0]/img_w:.6f} {pt[1]/img_h:.6f}" for pt in points)
+                            f.write(f"{idx} {pts_str}\n")
+                        else:
+                            # 支援 YOLO Detection (bbox)
+                            bbox = ann.get("bbox")
+                            if bbox and len(bbox) == 4:
+                                f.write(f"{idx} {bbox[0]:.6f} {bbox[1]:.6f} {bbox[2]:.6f} {bbox[3]:.6f}\n")
 
         # 4. 生成 data.yaml
         data_yaml_path = yolo_dir / "data.yaml"

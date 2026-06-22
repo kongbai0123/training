@@ -10,12 +10,14 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
+from PIL import Image
 from src.config import BASE_DIR, PROJECTS_DIR, STATIC_DIR, HAS_GPU, DEVICE_NAME
 from src.project_manager import ProjectManager
 from src.dataset_utils import DatasetUtils
 from src.splitter import DataSplitter
 from src.augmenter import ImageAugmenter
 from src.trainer import YOLOTrainer
+from src.labelme_adapter import LabelMeAdapter
 
 app = FastAPI(title="Vision Training Studio API")
 
@@ -244,19 +246,100 @@ def trigger_quality_check(project_id: str):
 # 3. 標註 API
 @app.post("/api/projects/{project_id}/annotations")
 def save_annotations(project_id: str, data: AnnotationSave):
-    """保存單張圖片的標註"""
+    """保存單張圖片的標註，並同步寫入 LabelMe JSON 標註檔案"""
+    import numpy as np
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
         
-    # 尋找並更新對應圖片的標註
+    dataset_path = Path(project["dataset_path"])
+    
+    # 讀取圖片高寬
+    img_path = dataset_path / "raw" / "images" / data.filename
+    w, h = 640, 640
+    if img_path.exists():
+        try:
+            with Image.open(img_path) as pil_img:
+                w, h = pil_img.size
+        except Exception:
+            pass
+            
+    # 建立 LabelMe JSON 檔
+    labelme_shapes = []
+    for ann in data.annotations:
+        label = ann.get("category")
+        pts = ann.get("points")
+        shape_type = ann.get("type", "bbox")
+        
+        if not pts:
+            # bbox: [xc, yc, bw, bh] (normalized) -> points: [[x1,y1], [x2,y2]] (pixels)
+            bbox = ann.get("bbox")
+            if bbox and len(bbox) == 4:
+                x1 = (bbox[0] - bbox[2]/2) * w
+                y1 = (bbox[1] - bbox[3]/2) * h
+                x2 = (bbox[0] + bbox[2]/2) * w
+                y2 = (bbox[1] + bbox[3]/2) * h
+                pts = [[float(x1), float(y1)], [float(x2), float(y2)]]
+                shape_type = "rectangle"
+                
+        if pts:
+            labelme_shapes.append({
+                "label": label,
+                "points": pts,
+                "group_id": None,
+                "shape_type": "rectangle" if shape_type == "bbox" or shape_type == "rectangle" else "polygon",
+                "flags": {}
+            })
+            
+    labelme_json = {
+        "version": "5.0.1",
+        "flags": {},
+        "shapes": labelme_shapes,
+        "imagePath": data.filename,
+        "imageData": None,
+        "imageHeight": h,
+        "imageWidth": w
+    }
+    
+    # 寫入 json
+    labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
+    labelme_dir.mkdir(parents=True, exist_ok=True)
+    json_path = labelme_dir / Path(data.filename).with_suffix(".json")
+    
+    try:
+        with open(json_path, "w", encoding="utf-8") as json_f:
+            json.dump(labelme_json, json_f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LabelMe JSON 寫入失敗: {e}")
+        
+    # 尋找並更新對應圖片的元數據
     found = False
     for img in project["images"]:
         if img["filename"] == data.filename:
             img["status"] = data.status
             img["scene"] = data.scene
             img["source_video"] = data.source_video
-            img["annotations"] = data.annotations
+            img["width"] = w
+            img["height"] = h
+            # 對於原始圖像，annotations 會由後續 sync 從 json 載入
+            # 但為了前端能立即渲染，這裡也直接更新它
+            temp_anns = []
+            for shape in labelme_shapes:
+                # 重新歸一化 bbox
+                pts_arr = np.array(shape["points"])
+                x_min, y_min = np.min(pts_arr, axis=0)
+                x_max, y_max = np.max(pts_arr, axis=0)
+                bw = x_max - x_min
+                bh = y_max - y_min
+                xc = x_min + bw/2
+                yc = y_min + bh/2
+                temp_anns.append({
+                    "category": shape["label"],
+                    "type": "bbox" if shape["shape_type"] == "rectangle" else "polygon",
+                    "bbox": [xc/w, yc/h, bw/w, bh/h],
+                    "points": shape["points"]
+                })
+            img["annotations"] = temp_anns
             found = True
             break
             
@@ -278,6 +361,100 @@ def save_annotations(project_id: str, data: AnnotationSave):
     
     ProjectManager.save_project(project_id, project)
     return {"message": "標註儲存成功", "progress": project["annotation_progress"]}
+
+
+# --- 全新 LabelMe 與 縮圖 / ZIP API ---
+
+@app.post("/api/projects/{project_id}/labelme/sync")
+def sync_labelme(project_id: str):
+    """觸發 LabelMe JSON 掃描與 project.json 同步"""
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    try:
+        report = LabelMeAdapter.sync_labelme_annotations(project)
+        ProjectManager.save_project(project_id, project)
+        return report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"同步失敗: {e}")
+
+@app.get("/api/projects/{project_id}/labelme/preview/{filename}")
+def get_labelme_preview(project_id: str, filename: str):
+    """取得特定圖片的原始 LabelMe shapes"""
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    shapes_data = LabelMeAdapter.get_labelme_shapes(project, filename)
+    if not shapes_data:
+        return {"shapes": [], "imageHeight": 640, "imageWidth": 640}
+    return shapes_data
+
+class ConvertRequest(BaseModel):
+    export_type: str # yolo_detection, yolo_segmentation, coco, semantic_mask
+
+@app.post("/api/projects/{project_id}/labelme/convert")
+def convert_labelme_labels(project_id: str, req: ConvertRequest):
+    """執行標註檔案轉換 (如 YOLO, COCO 或 Mask)"""
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    try:
+        res = LabelMeAdapter.convert_labelme(project, req.export_type)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"轉換失敗: {e}")
+
+@app.get("/api/projects/{project_id}/thumbnails/{filename}")
+def get_image_thumbnail(project_id: str, filename: str):
+    """獲取快取縮圖 API"""
+    try:
+        thumb_path = DatasetUtils.get_thumbnail(project_id, filename)
+        return FileResponse(thumb_path)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Image not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/projects/{project_id}/import-zip")
+def import_zip_dataset(project_id: str, file: UploadFile = File(...)):
+    """上傳與解壓縮 ZIP 格式資料集 (包含 images & json)"""
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    # 保存上傳的 zip 檔
+    temp_zip_dir = Path(project["dataset_path"]) / ".tmp_zip_upload"
+    temp_zip_dir.mkdir(parents=True, exist_ok=True)
+    temp_zip_path = temp_zip_dir / "upload.zip"
+    
+    try:
+        with open(temp_zip_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        # 執行解壓縮與分類導入
+        import_res = DatasetUtils.import_zip_package(project_id, str(temp_zip_path))
+        
+        # 同步元數據
+        sync_res = LabelMeAdapter.sync_labelme_annotations(project)
+        ProjectManager.save_project(project_id, project)
+        
+        return {
+            "message": "ZIP 資料包導入完成",
+            "imported_images": import_res["imported_images_count"],
+            "imported_jsons": import_res["imported_jsons_count"],
+            "sync_status": sync_res
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"ZIP 匯入失敗: {e}")
+    finally:
+        # 清理暫存 zip
+        if temp_zip_path.exists():
+            os.remove(temp_zip_path)
+        if temp_zip_dir.exists():
+            shutil.rmtree(temp_zip_dir)
 
 # 4. 資料切分 API
 @app.post("/api/projects/{project_id}/split")

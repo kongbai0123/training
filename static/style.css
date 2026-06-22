@@ -1003,6 +1003,53 @@ select:focus {
   gap: 12px;
 }
 
+.custom-settings-list {
+  display: grid;
+  gap: 8px;
+}
+
+.custom-setting-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 50px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+  cursor: pointer;
+}
+
+.custom-setting-item span {
+  display: grid;
+  gap: 3px;
+}
+
+.custom-setting-item strong {
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.custom-setting-item small {
+  color: var(--text-soft);
+  font-size: 0.76rem;
+}
+
+.custom-setting-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.custom-setting-item input[type="number"] {
+  min-height: 32px;
+}
+
+.custom-setting-count {
+  cursor: default;
+}
+
 .checkbox-row {
   display: flex !important;
   grid-template-columns: none !important;
@@ -1071,10 +1118,11 @@ body[data-theme="light"] .empty-state {
 
 .thumbnail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
   max-height: 560px;
   overflow-y: auto;
+  align-content: start;
 }
 
 .thumb-card {
@@ -1083,27 +1131,63 @@ body[data-theme="light"] .empty-state {
   border-radius: var(--radius);
   overflow: hidden;
   cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: 132px 96px;
+}
+
+.thumb-image-frame {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #0d1117;
+  overflow: hidden;
+}
+
+body[data-theme="light"] .thumb-image-frame {
+  background: #e2e8f0;
 }
 
 .thumb-card img {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  height: 100%;
   object-fit: cover;
   display: block;
-  background: #0d1117;
 }
 
 .thumb-card footer {
   display: grid;
-  gap: 5px;
-  padding: 8px;
+  gap: 4px;
+  padding: 6px;
 }
 
 .thumb-card strong {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.thumb-card .badge {
+  width: fit-content;
+  font-size: 0.68rem;
+  padding: 3px 6px;
+}
+
+.load-more-card {
+  min-height: 124px;
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  color: var(--text);
+  background: var(--bg-panel-soft);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 10px;
+}
+
+.load-more-card span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
 }
 
 .path-list {
