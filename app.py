@@ -456,6 +456,51 @@ def import_zip_dataset(project_id: str, file: UploadFile = File(...)):
         if temp_zip_dir.exists():
             shutil.rmtree(temp_zip_dir)
 
+@app.post("/api/projects/{project_id}/import-annotations")
+def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
+    """上傳多個已標註之標註檔 (.json 或 .txt) 至專案對應目錄中"""
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    dataset_path = Path(project["dataset_path"])
+    labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
+    labels_dir = dataset_path / "raw" / "labels"
+    
+    labelme_dir.mkdir(parents=True, exist_ok=True)
+    labels_dir.mkdir(parents=True, exist_ok=True)
+    
+    imported_jsons = 0
+    imported_txts = 0
+    
+    try:
+        for file in files:
+            fname = file.filename
+            if fname.endswith(".json"):
+                target_path = labelme_dir / fname
+                with open(target_path, "wb") as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+                imported_jsons += 1
+            elif fname.endswith(".txt"):
+                target_path = labels_dir / fname
+                with open(target_path, "wb") as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+                imported_txts += 1
+                
+        # 同步標註進度
+        sync_res = LabelMeAdapter.sync_labelme_annotations(project)
+        ProjectManager.save_project(project_id, project)
+        
+        return {
+            "message": f"成功匯入 {imported_jsons} 個 JSON 檔案與 {imported_txts} 個 TXT 檔案",
+            "imported_jsons": imported_jsons,
+            "imported_txts": imported_txts,
+            "sync_status": sync_res
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"標註檔案匯入失敗: {e}")
+
+
 # 4. 資料切分 API
 @app.post("/api/projects/{project_id}/split")
 def split_dataset(project_id: str, req: SplitRequest):

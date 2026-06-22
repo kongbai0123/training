@@ -288,14 +288,39 @@
               </div>
             </section>
 
+            <section class="panel-section" id="annotations-drop-card">
+              <div class="section-title">
+                <h2>Import Labeled Files</h2>
+              </div>
+              <div class="zip-drop-zone" id="annotations-drop-zone" style="cursor: pointer;">
+                <i class="fa-solid fa-file-signature" style="background: rgba(16, 185, 129, 0.16); color: var(--success);"></i>
+                <div>
+                  <strong>Drop JSON or TXT files</strong>
+                  <p>在此拖入 LabelMe JSON 檔或 YOLO TXT 標註檔。</p>
+                </div>
+              </div>
+              <input type="file" id="input-annotations-file" accept=".json,.txt" multiple style="display: none;">
+            </section>
+
             <section class="panel-section wide">
               <div class="section-title">
-                <h2>JSON Check Results <span class="info-icon" data-tooltip="JSON 檢查會驗證 imagePath、shape_type、label、polygon 點數與座標範圍。Phase 1 尚未接後端掃描。">i</span></h2>
+                <h2>JSON Check Results <span class="info-icon" data-tooltip="JSON 檢查會驗證 imagePath、shape_type、label、polygon 點數與座標範圍。">i</span></h2>
+                <div class="section-actions" style="display: flex; gap: 12px; align-items: center;">
+                  <label class="checkbox-row" style="margin: 0; font-size: 0.84rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                    <input type="checkbox" id="chk-show-issues-only" checked style="width: 15px; height: 15px; accent-color: var(--primary);"> 僅顯示異常項目
+                  </label>
+                </div>
               </div>
-              <div class="table-wrap">
+              <div class="table-wrap" style="max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius);">
                 <table class="data-table">
                   <thead>
-                    <tr><th>File</th><th>Image</th><th>Status</th><th>Issue</th><th>Suggested Fix</th></tr>
+                    <tr>
+                      <th style="position: sticky; top: 0; background: var(--bg-panel); z-index: 1;">File</th>
+                      <th style="position: sticky; top: 0; background: var(--bg-panel); z-index: 1;">Image</th>
+                      <th style="position: sticky; top: 0; background: var(--bg-panel); z-index: 1;">Status</th>
+                      <th style="position: sticky; top: 0; background: var(--bg-panel); z-index: 1;">Issue</th>
+                      <th style="position: sticky; top: 0; background: var(--bg-panel); z-index: 1;">Suggested Fix</th>
+                    </tr>
                   </thead>
                   <tbody id="labelme-check-table"></tbody>
                 </table>

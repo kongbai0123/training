@@ -1127,6 +1127,121 @@ function bindLabelMeActions() {
       }
     });
   });
+
+  // 僅顯示異常項目的核取方塊監聽
+  qs("#chk-show-issues-only")?.addEventListener("change", () => {
+    renderLabelMeManager(getProjectStatus(appState.currentProject));
+  });
+
+  // 標註檔案拖曳上傳區 (Dropzone)
+  const annoDropZone = qs("#annotations-drop-zone");
+  const inputAnnoFile = qs("#input-annotations-file");
+
+  if (annoDropZone && typeof Dropzone !== "undefined") {
+    if (inputAnnoFile) inputAnnoFile.style.display = "none";
+    if (!annoDropZone.dropzone) {
+      new Dropzone(annoDropZone, {
+        url: function() {
+          return `/api/projects/${appState.currentProjectId}/import-annotations`;
+        },
+        paramName: "files",
+        uploadMultiple: true,
+        parallelUploads: 100,
+        acceptedFiles: ".json,.txt",
+        maxFilesize: 50,
+        autoProcessQueue: true,
+        previewsContainer: document.createElement("div"),
+        previewTemplate: '<div style="display:none"></div>',
+        init: function() {
+          this.on("addedfile", function(file) {
+            if (!appState.currentProjectId) {
+              showToast("請先載入或建立專案！");
+              this.removeFile(file);
+              return;
+            }
+            if (!file.name.endsWith(".json") && !file.name.endsWith(".txt")) {
+              showToast("只支援上傳 .json 或 .txt 格式的標註檔！");
+              this.removeFile(file);
+              return;
+            }
+          });
+
+          this.on("sendingmultiple", function() {
+            showToast("正在上傳並導入標註檔案...");
+          });
+
+          this.on("successmultiple", async function(files, response) {
+            let data = response;
+            if (typeof response === "string") {
+              try {
+                data = JSON.parse(response);
+              } catch (e) {
+                data = { message: response };
+              }
+            }
+            showToast(data.message || "標註檔案匯入完成！");
+            await openProject(appState.currentProjectId);
+            this.removeAllFiles(true);
+          });
+
+          this.on("errormultiple", function(files, message) {
+            let errMsg = message;
+            if (typeof message === "object" && message.detail) {
+              errMsg = message.detail;
+            } else if (typeof message === "object" && message.message) {
+              errMsg = message.message;
+            }
+            showToast(`標註檔案匯入失敗：${errMsg}`);
+            this.removeAllFiles(true);
+          });
+        }
+      });
+    }
+  } else {
+    annoDropZone?.addEventListener("click", () => {
+      inputAnnoFile?.click();
+    });
+    
+    inputAnnoFile?.addEventListener("change", async (event) => {
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
+      if (!appState.currentProjectId) {
+        showToast("請先載入或建立專案！");
+        if (inputAnnoFile) inputAnnoFile.value = "";
+        return;
+      }
+      
+      const formData = new FormData();
+      let hasValidFile = false;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.name.endsWith(".json") || file.name.endsWith(".txt")) {
+          formData.append("files", file);
+          hasValidFile = true;
+        }
+      }
+      
+      if (!hasValidFile) {
+        showToast("無有效的 .json 或 .txt 標註檔！");
+        if (inputAnnoFile) inputAnnoFile.value = "";
+        return;
+      }
+      
+      showToast("正在上傳並導入標註檔案...");
+      try {
+        const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-annotations`, {
+          method: "POST",
+          body: formData
+        });
+        showToast(data.message || "標註檔案匯入完成！");
+        await openProject(appState.currentProjectId);
+      } catch (err) {
+        showToast(`標註檔案匯入失敗：${err.message}`);
+      } finally {
+        if (inputAnnoFile) inputAnnoFile.value = "";
+      }
+    });
+  }
 }
 
 async function syncLabelMeLabels(silent = false) {
@@ -1598,7 +1713,23 @@ function renderLabelMeManager(status) {
     return;
   }
 
-  const rows = rawImages.map(img => {
+  const showIssuesOnly = qs("#chk-show-issues-only")?.checked ?? true;
+  const filteredImages = showIssuesOnly 
+    ? rawImages.filter(img => img.status !== "annotated")
+    : rawImages;
+
+  if (filteredImages.length === 0) {
+    setHTML("#labelme-check-table", `
+      <tr>
+        <td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">
+          <i class="fa-solid fa-circle-check" style="color: var(--success); margin-right: 6px; font-size: 1.1rem;"></i> 所有檔案皆已正確標註並通過檢查。
+        </td>
+      </tr>
+    `);
+    return;
+  }
+
+  const rows = filteredImages.map(img => {
     let statusText = "Unannotated";
     let issueText = "Missing JSON";
     let fixText = "Use LabelMe to annotate";
