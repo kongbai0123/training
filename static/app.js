@@ -684,31 +684,98 @@ function bindDatasetActions() {
   const zipDropZone = qs("#zip-drop-zone");
   const inputZipFile = qs("#input-zip-file");
   
-  zipDropZone?.addEventListener("click", () => {
-    inputZipFile?.click();
-  });
-  
-  inputZipFile?.addEventListener("change", async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    const formData = new FormData();
-    formData.append("file", file);
-    
-    showToast("正在上傳並解壓縮 ZIP 資料包...");
-    try {
-      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-zip`, {
-        method: "POST",
-        body: formData
+  if (zipDropZone && typeof Dropzone !== "undefined") {
+    if (inputZipFile) inputZipFile.style.display = "none";
+    if (!zipDropZone.dropzone) {
+      new Dropzone(zipDropZone, {
+        url: function() {
+          return `/api/projects/${appState.currentProjectId}/import-zip`;
+        },
+        paramName: "file",
+        acceptedFiles: ".zip",
+        maxFilesize: 1024,
+        autoProcessQueue: true,
+        previewsContainer: document.createElement("div"),
+        previewTemplate: '<div style="display:none"></div>',
+        init: function() {
+          this.on("addedfile", function(file) {
+            if (!appState.currentProjectId) {
+              showToast("請先載入或建立專案！");
+              this.removeFile(file);
+              return;
+            }
+            if (!file.name.endsWith(".zip")) {
+              showToast("只支援上傳 ZIP 格式的資料包！");
+              this.removeFile(file);
+              return;
+            }
+            showToast("正在上傳並解壓縮 ZIP 資料包...");
+          });
+
+          this.on("success", async function(file, response) {
+            let data = response;
+            if (typeof response === "string") {
+              try {
+                data = JSON.parse(response);
+              } catch (e) {
+                data = { message: response };
+              }
+            }
+            showToast(data.message || "ZIP 匯入完成！");
+            await openProject(appState.currentProjectId);
+            this.removeAllFiles(true);
+          });
+
+          this.on("error", function(file, message) {
+            let errMsg = message;
+            if (typeof message === "object" && message.detail) {
+              errMsg = message.detail;
+            } else if (typeof message === "object" && message.message) {
+              errMsg = message.message;
+            }
+            showToast(`ZIP 匯入失敗：${errMsg}`);
+            this.removeAllFiles(true);
+          });
+        }
       });
-      showToast(data.message || "ZIP 匯入完成！");
-      await openProject(appState.currentProjectId);
-    } catch (err) {
-      showToast(`ZIP 匯入失敗：${err.message}`);
-    } finally {
-      if (inputZipFile) inputZipFile.value = "";
     }
-  });
+  } else {
+    zipDropZone?.addEventListener("click", () => {
+      inputZipFile?.click();
+    });
+    
+    inputZipFile?.addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!appState.currentProjectId) {
+        showToast("請先載入或建立專案！");
+        if (inputZipFile) inputZipFile.value = "";
+        return;
+      }
+      if (!file.name.endsWith(".zip")) {
+        showToast("只支援上傳 ZIP 格式的資料包！");
+        if (inputZipFile) inputZipFile.value = "";
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      showToast("正在上傳並解壓縮 ZIP 資料包...");
+      try {
+        const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-zip`, {
+          method: "POST",
+          body: formData
+        });
+        showToast(data.message || "ZIP 匯入完成！");
+        await openProject(appState.currentProjectId);
+      } catch (err) {
+        showToast(`ZIP 匯入失敗：${err.message}`);
+      } finally {
+        if (inputZipFile) inputZipFile.value = "";
+      }
+    });
+  }
 
   qs("#search-image")?.addEventListener("input", () => {
     appState.datasetVisibleLimit = 80;

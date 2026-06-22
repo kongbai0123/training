@@ -730,6 +730,14 @@ body[data-theme="light"] .status-guard {
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius);
   background: var(--bg-panel-soft);
+  transition: all 0.2s ease;
+}
+
+.zip-drop-zone.dz-drag-hover {
+  border-color: var(--primary) !important;
+  background: rgba(59, 130, 246, 0.08) !important;
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.25);
+  transform: scale(0.99);
 }
 
 .zip-drop-zone i {
