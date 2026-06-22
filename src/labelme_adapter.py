@@ -375,3 +375,129 @@ class LabelMeAdapter:
             "converted_count": converted_count,
             "errors": errors
         }
+
+    @staticmethod
+    def convert_yolo_to_labelme(project_data: Dict[str, Any]) -> None:
+        """
+        將 raw/labels 下的所有 .txt 轉換為對應的 LabelMe .json (若該 .json 還不存在)。
+        """
+        dataset_path = Path(project_data["dataset_path"])
+        labels_dir = dataset_path / "raw" / "labels"
+        labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
+        img_dir = dataset_path / "raw" / "images"
+        
+        if not labels_dir.exists():
+            return
+            
+        labelme_dir.mkdir(parents=True, exist_ok=True)
+        class_names = project_data.get("class_names", [])
+        
+        # 建立圖片 filename 對應 width/height 的 map
+        images_list = project_data.get("images", [])
+        image_meta_map = {img["filename"]: img for img in images_list}
+        
+        valid_img_exts = {".jpg", ".jpeg", ".png", ".bmp"}
+        
+        for txt_file in labels_dir.glob("*.txt"):
+            json_filename = txt_file.with_suffix(".json").name
+            json_path = labelme_dir / json_filename
+            
+            # 若已存在 JSON，跳過轉換以避免覆蓋使用者的精確標註
+            if json_path.exists():
+                continue
+                
+            # 尋找對應的圖片檔
+            base_name = txt_file.stem
+            img_filename = None
+            for ext in valid_img_exts:
+                test_name = f"{base_name}{ext}"
+                if (img_dir / test_name).exists():
+                    img_filename = test_name
+                    break
+                    
+            if not img_filename:
+                continue
+                
+            # 取得圖片高寬
+            img_meta = image_meta_map.get(img_filename, {})
+            img_w = img_meta.get("width")
+            img_h = img_meta.get("height")
+            
+            if not img_w or not img_h:
+                # 實體讀取圖片以獲取寬高
+                try:
+                    img_path = img_dir / img_filename
+                    if img_path.exists():
+                        from PIL import Image
+                        with Image.open(img_path) as pil_img:
+                            img_w, img_h = pil_img.size
+                        # 回寫到 meta 裡
+                        img_meta["width"] = img_w
+                        img_meta["height"] = img_h
+                    else:
+                        print(f"[YOLO to LabelMe] Image file does not exist: {img_path}")
+                        continue
+                except Exception as e:
+                    print(f"[YOLO to LabelMe] Error reading image size for {img_filename}: {e}")
+                    continue
+            
+            if not img_w or not img_h:
+                continue
+                
+            # 解析 YOLO .txt 檔案
+            shapes = []
+            try:
+                with open(txt_file, "r") as f:
+                    lines = f.readlines()
+                
+                for line in lines:
+                    parts = line.strip().split()
+                    if len(parts) >= 5:
+                        try:
+                            class_idx = int(parts[0])
+                            xc = float(parts[1])
+                            yc = float(parts[2])
+                            w = float(parts[3])
+                            h = float(parts[4])
+                        except ValueError:
+                            continue
+                            
+                        if class_idx < 0 or class_idx >= len(class_names):
+                            label = f"class_{class_idx}"
+                        else:
+                            label = class_names[class_idx]
+                            
+                        # 計算像素 bbox 座標
+                        x1 = (xc - w/2) * img_w
+                        y1 = (yc - h/2) * img_h
+                        x2 = (xc + w/2) * img_w
+                        y2 = (yc + h/2) * img_h
+                        
+                        shapes.append({
+                            "label": label,
+                            "points": [[x1, y1], [x2, y2]],
+                            "group_id": None,
+                            "description": "",
+                            "shape_type": "rectangle",
+                            "flags": {}
+                        })
+            except Exception as e:
+                print(f"Error parsing yolo txt {txt_file.name}: {e}")
+                continue
+                
+            # 建立 LabelMe JSON
+            labelme_data = {
+                "version": "5.0.1",
+                "flags": {},
+                "shapes": shapes,
+                "imagePath": img_filename,
+                "imageData": None,
+                "imageHeight": img_h,
+                "imageWidth": img_w
+            }
+            
+            try:
+                with open(json_path, "w", encoding="utf-8") as f:
+                    json.dump(labelme_data, f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                print(f"Error writing JSON {json_filename}: {e}")

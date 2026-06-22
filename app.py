@@ -423,6 +423,7 @@ def sync_labelme(project_id: str):
         raise HTTPException(status_code=404, detail="Project not found")
         
     try:
+        LabelMeAdapter.convert_yolo_to_labelme(project)
         report = LabelMeAdapter.sync_labelme_annotations(project)
         ProjectManager.save_project(project_id, project)
         return report
@@ -538,6 +539,7 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
                 imported_txts += 1
                 
         # 同步標註進度
+        LabelMeAdapter.convert_yolo_to_labelme(project)
         sync_res = LabelMeAdapter.sync_labelme_annotations(project)
         ProjectManager.save_project(project_id, project)
         
