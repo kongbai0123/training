@@ -698,7 +698,6 @@ body[data-theme="light"] .status-guard {
   align-items: start;
 }
 
-.dataset-zip-card,
 .dataset-browser-card {
   grid-column: 1 / -1;
 }

@@ -501,6 +501,30 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
         raise HTTPException(status_code=500, detail=f"標註檔案匯入失敗: {e}")
 
 
+class UpdateClassesRequest(BaseModel):
+    class_names: List[str]
+
+@app.post("/api/projects/{project_id}/classes")
+def update_project_classes(project_id: str, req: UpdateClassesRequest):
+    """更新專案類別 (class_names)"""
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    project["class_names"] = req.class_names
+    ProjectManager.save_project(project_id, project)
+    
+    # 執行一次標註同步更新以對齊最新類別
+    sync_res = LabelMeAdapter.sync_labelme_annotations(project)
+    ProjectManager.save_project(project_id, project)
+    
+    return {
+        "message": "專案類別更新成功",
+        "class_names": project["class_names"],
+        "sync_status": sync_res
+    }
+
+
 # 4. 資料切分 API
 @app.post("/api/projects/{project_id}/split")
 def split_dataset(project_id: str, req: SplitRequest):

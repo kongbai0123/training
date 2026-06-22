@@ -140,7 +140,6 @@
               <p>匯入圖片、影片抽幀、檢查資料品質。頁面可進入，操作會依狀態開關。</p>
             </div>
           </div>
-          <div id="dataset-guards" class="guard-stack"></div>
           <div class="dataset-manager-layout">
             <section class="panel-section dataset-import-card">
               <div class="section-title"><h2>Import Images Folder</h2></div>
@@ -169,6 +168,21 @@
                   </label>
                   <button class="btn btn-primary guarded" data-requires="project" id="btn-import-video"><i class="fa-solid fa-video"></i> Extract Frames</button>
                 </div>
+              </div>
+            </section>
+
+            <section class="panel-section dataset-classes-card">
+              <div class="section-title"><h2>Class Name Management</h2></div>
+              <p class="section-help">管理此資料集的目標類別。修改類別後將同步更新標註與訓練設定。</p>
+              <div class="form-stack">
+                <div class="class-entry-row">
+                  <input type="text" id="input-dataset-new-class" placeholder="新類別名稱，如 car">
+                  <button class="btn btn-secondary" id="btn-dataset-add-class" style="min-width: 68px;"><i class="fa-solid fa-plus"></i> 新增</button>
+                </div>
+                <div class="class-list-box" id="dataset-classes-list-box" style="margin-top: 8px;"></div>
+                <button class="btn btn-primary btn-block guarded" data-requires="project" id="btn-save-dataset-classes" style="margin-top: 8px;">
+                  <i class="fa-solid fa-floppy-disk"></i> 儲存類別變更
+                </button>
               </div>
             </section>
 
@@ -225,26 +239,18 @@
         <section class="page" id="page-labelme">
           <div class="page-header">
             <div>
-              <h1>LabelMe Annotation Manager</h1>
+              <h1 style="display: flex; align-items: center; gap: 8px;">
+                LabelMe Annotation Manager
+                <span class="info-icon" style="cursor: pointer;" 
+                   data-tooltip="How to use LabelMe in this platform:;先到 Dataset 匯入圖片，圖片會放在下方的 Images folder。;在本機開啟 LabelMe，選擇 Open Dir，指向 Images folder。;在 LabelMe 內完成 polygon / rectangle 標註，並把 JSON 存到 LabelMe JSON folder。;回到本平台按 Sync JSON。;系統會解析 JSON、顯示錯誤清單、預覽標註，並轉成 YOLO / COCO / Mask 格式。">
+                  <i class="fa-solid fa-circle-question" style="color: var(--primary); font-size: 1.15rem;"></i>
+                </span>
+              </h1>
               <p>第一階段只建立 LabelMe 工作流管理介面；JSON 同步與轉換屬於 Phase 2 backend。</p>
             </div>
             <span class="badge badge-warning">UI Ready / Backend Pending</span>
           </div>
-          <div id="labelme-guards" class="guard-stack"></div>
           <div class="labelme-layout">
-            <section class="panel-section wide">
-              <div class="section-title">
-                <h2>How to use LabelMe in this platform</h2>
-                <span class="badge badge-warning">Phase 1 UI / Phase 2 Sync</span>
-              </div>
-              <ol class="workflow-list">
-                <li>先到 <strong>Dataset</strong> 匯入圖片，圖片會放在下方的 <strong>Images folder</strong>。</li>
-                <li>在本機開啟 LabelMe，選擇 <strong>Open Dir</strong>，指向 Images folder。</li>
-                <li>在 LabelMe 內完成 polygon / rectangle 標註，並把 JSON 存到 <strong>LabelMe JSON folder</strong>。</li>
-                <li>回到本平台按 <strong>Sync JSON</strong>。目前 Phase 1 尚未接後端，所以按鈕先停用。</li>
-                <li>Phase 2 會解析 JSON、顯示錯誤清單、預覽標註，並轉成 YOLO / COCO / Mask 格式。</li>
-              </ol>
-            </section>
             <section class="panel-section">
               <div class="section-title">
                 <h2>Workspace Paths <span class="info-icon" data-tooltip="LabelMe 是外部標註工具，會替每張圖片產生 JSON。本平台目前先管理路徑、進度與後續轉換入口。">i</span></h2>
@@ -369,7 +375,6 @@
               <p>設定 Train / Val / Test。可進入頁面，但執行 split 前會檢查資料與標註狀態。</p>
             </div>
           </div>
-          <div id="split-guards" class="guard-stack"></div>
           <section class="panel-section narrow-form">
             <div class="section-title"><h2>Train / Val / Test</h2></div>
             <form id="form-split-dataset" class="form-stack">
@@ -401,7 +406,6 @@
               <p>光照、天氣、運動模糊與相機雜訊。保留現有 API，第一階段只整理操作入口。</p>
             </div>
           </div>
-          <div id="augmentation-guards" class="guard-stack"></div>
           <div class="augmentation-workspace">
             <section class="panel-section augmentation-settings-panel">
               <div class="section-title">
@@ -471,7 +475,6 @@
               <p>頁面可自由進入；Start Training 會依狀態 disabled 並顯示原因。</p>
             </div>
           </div>
-          <div id="training-guards" class="guard-stack"></div>
           <div class="two-column-layout">
             <section class="panel-section">
               <div class="section-title"><h2>Model Configuration</h2></div>
@@ -508,7 +511,6 @@
               <p>保留評估入口；完整 mAP、IoU、confusion matrix 後續接回模型結果。</p>
             </div>
           </div>
-          <div id="evaluation-guards" class="guard-stack"></div>
           <div class="metric-grid">
             <div class="metric-card"><span>mAP <span class="info-icon" data-tooltip="mAP 衡量模型偵測結果與標註答案的整體吻合程度。">i</span></span><strong id="eval-map50">--</strong></div>
             <div class="metric-card"><span>IoU <span class="info-icon" data-tooltip="IoU 是預測區域與標註區域的重疊比例。">i</span></span><strong id="eval-iou">--</strong></div>
@@ -524,7 +526,6 @@
               <p>匯出模型與報告。若沒有最佳模型，匯出操作會 disabled 或由後端回報原因。</p>
             </div>
           </div>
-          <div id="export-guards" class="guard-stack"></div>
           <div class="control-card-grid compact">
             <article class="control-card">
               <div class="card-heading"><i class="fa-solid fa-file-code"></i><h3>PyTorch</h3></div>
@@ -597,6 +598,10 @@
       </main>
 
       <aside class="right-summary-panel">
+        <section class="summary-section" id="section-page-guards" style="display: none;">
+          <div class="section-title"><h2 id="page-guards-title">Page Status</h2></div>
+          <div id="page-guards-container" class="guard-stack"></div>
+        </section>
         <section class="summary-section">
           <div class="section-title"><h2>Current Project</h2></div>
           <div id="project-summary"></div>

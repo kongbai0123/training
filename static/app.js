@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindExportActions();
   bindLabelMeActions();
   await loadProjects({ autoOpenLatest: true });
-  navigate("dashboard");
+  navigate("projects");
 });
 
 const augmentationPresets = {
@@ -406,6 +406,7 @@ async function openProject(projectId, options = {}) {
   try {
     appState.currentProject = await apiFetch(`/api/projects/${projectId}`);
     appState.currentProjectId = projectId;
+    appState.currentProjectClasses = [...(appState.currentProject?.class_names || [])];
     setText("#current-project-title", appState.currentProject.project_name || projectId);
     updateLabelMeState();
     await checkCurrentTrainStatus();
@@ -633,6 +634,60 @@ function closeHistoryModal() {
 }
 
 function bindDatasetActions() {
+  // 類別管理事件綁定
+  qs("#btn-dataset-add-class")?.addEventListener("click", () => {
+    const input = qs("#input-dataset-new-class");
+    const name = input?.value.trim();
+    if (!name) return;
+    if (!appState.currentProjectClasses) {
+      appState.currentProjectClasses = [];
+    }
+    if (appState.currentProjectClasses.includes(name)) {
+      showToast("此類別已存在！");
+      return;
+    }
+    appState.currentProjectClasses.push(name);
+    if (input) input.value = "";
+    renderDatasetClassesEditList();
+  });
+
+  qs("#input-dataset-new-class")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      qs("#btn-dataset-add-class")?.click();
+    }
+  });
+
+  qs("#dataset-classes-list-box")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-remove-dataset-class]");
+    if (!btn) return;
+    const name = btn.dataset.removeDatasetClass;
+    appState.currentProjectClasses = (appState.currentProjectClasses || []).filter(c => c !== name);
+    renderDatasetClassesEditList();
+  });
+
+  qs("#btn-save-dataset-classes")?.addEventListener("click", async () => {
+    if (!appState.currentProjectId) {
+      showToast("請先選擇專案！");
+      return;
+    }
+    const btn = qs("#btn-save-dataset-classes");
+    if (btn) btn.disabled = true;
+    try {
+      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/classes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ class_names: appState.currentProjectClasses || [] })
+      });
+      showToast("類別更新成功！");
+      await openProject(appState.currentProjectId, { stayOnPage: true });
+    } catch (err) {
+      showToast(`類別更新失敗：${err.message}`);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+
   qs("#btn-import-local")?.addEventListener("click", async () => {
     const path = qs("#input-local-folder").value.trim();
     if (!path) return showToast("請輸入圖片資料夾路徑");
@@ -1602,13 +1657,31 @@ function renderPageGuards(pageId, status) {
     guards.export.push(statusGuard("warning", "目前沒有可匯出模型", ["尚未找到最佳模型權重。"], "完成訓練後再匯出 PT / ONNX。"));
   }
 
-  setHTML("#dataset-guards", guards.dataset.join(""));
-  setHTML("#labelme-guards", guards.labelme.join(""));
-  setHTML("#split-guards", guards.split.join(""));
-  setHTML("#augmentation-guards", guards.augmentation.join(""));
-  setHTML("#training-guards", guards.training.join(""));
-  setHTML("#evaluation-guards", guards.evaluation.join(""));
-  setHTML("#export-guards", guards.export.join(""));
+  // 取得當前活動頁面的限制警告
+  const activeGuards = guards[pageId] || [];
+  const container = qs("#page-guards-container");
+  const section = qs("#section-page-guards");
+  
+  if (container && section) {
+    if (activeGuards.length > 0) {
+      section.style.display = "block";
+      setHTML("#page-guards-container", activeGuards.join(""));
+      // 根據當前活動頁面動態更新標題
+      const pageTitleMap = {
+        dataset: "Dataset Page Status",
+        labelme: "LabelMe Page Status",
+        split: "Split Page Status",
+        augmentation: "Augmentation Status",
+        training: "Training Status",
+        evaluation: "Evaluation Status",
+        export: "Export Status"
+      };
+      setText("#page-guards-title", pageTitleMap[pageId] || "Page Status");
+    } else {
+      section.style.display = "none";
+      setHTML("#page-guards-container", "");
+    }
+  }
 }
 
 function statusGuard(type, title, items, nextAction) {
@@ -1626,6 +1699,16 @@ function renderDatasetPage(status) {
   const rawImages = (project?.images || []).filter((img) => !img.is_augmented);
   const zipPath = status.datasetPath ? `${status.datasetPath}/packages/zip` : "尚未載入專案";
   setText("#dataset-zip-storage-path", zipPath);
+
+  // 渲染資料集類別編輯清單
+  const classesListBox = qs("#dataset-classes-list-box");
+  if (classesListBox) {
+    if (!appState.currentProjectClasses && project) {
+      appState.currentProjectClasses = [...(project.class_names || [])];
+    }
+    renderDatasetClassesEditList();
+  }
+
   const query = qs("#search-image")?.value?.toLowerCase() || "";
   const filter = qs("#filter-status")?.value || "all";
   const filtered = rawImages.filter((img) => {
@@ -1671,6 +1754,22 @@ function renderDatasetPage(status) {
     `);
   }
   setHTML("#dataset-thumbnails", cards.join(""));
+}
+
+function renderDatasetClassesEditList() {
+  const box = qs("#dataset-classes-list-box");
+  if (!box) return;
+  const classes = appState.currentProjectClasses || [];
+  if (classes.length === 0) {
+    box.innerHTML = '<span class="empty-class-list">目前無類別。請新增類別。</span>';
+    return;
+  }
+  box.innerHTML = classes.map(cls => `
+    <span class="class-chip">
+      ${escapeHtml(cls)}
+      <button type="button" data-remove-dataset-class="${escapeHtml(cls)}" style="border:none;background:none;cursor:pointer;color:var(--text-muted);">&times;</button>
+    </span>
+  `).join("");
 }
 
 function badgeClassForStatus(status) {
