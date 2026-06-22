@@ -1344,19 +1344,37 @@ function bindLabelMeActions() {
       return;
     }
 
-    showToast(`正在上傳並導入 ${validFiles.length} 個標註檔案...`);
+    const batchSize = 800;
+    const batches = [];
+    for (let i = 0; i < validFiles.length; i += batchSize) {
+      batches.push(validFiles.slice(i, i + batchSize));
+    }
+
+    showToast(`開始導入共 ${validFiles.length} 個標註檔案（分 ${batches.length} 批上傳中）...`);
     
-    const formData = new FormData();
-    validFiles.forEach(file => {
-      formData.append("files", file, file.name);
-    });
+    let importedJsons = 0;
+    let importedTxts = 0;
 
     try {
-      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-annotations`, {
-        method: "POST",
-        body: formData
-      });
-      showToast(data.message || "標註檔案匯入完成！");
+      for (let k = 0; k < batches.length; k++) {
+        const currentBatch = batches[k];
+        showToast(`正在上傳第 ${k + 1}/${batches.length} 批標註檔案 (${currentBatch.length} 個)...`);
+        
+        const formData = new FormData();
+        currentBatch.forEach(file => {
+          formData.append("files", file, file.name);
+        });
+
+        const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-annotations`, {
+          method: "POST",
+          body: formData
+        });
+        
+        importedJsons += data.imported_jsons || 0;
+        importedTxts += data.imported_txts || 0;
+      }
+      
+      showToast(`所有標註檔案匯入完成！共匯入 ${importedJsons} 個 JSON 與 ${importedTxts} 個 TXT 檔案。`);
       await openProject(appState.currentProjectId);
     } catch (err) {
       showToast(`標註檔案匯入失敗：${err.message}`);
