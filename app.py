@@ -8,6 +8,12 @@ import sys
 from pathlib import Path
 import cv2
 import numpy as np
+import mimetypes
+
+# 強制在 Windows 下將 .js 與 .css 的 MIME 類型註冊為正確格式，防範 text/plain 阻擋
+mimetypes.add_type("application/javascript", ".js", strict=True)
+mimetypes.add_type("text/css", ".css", strict=True)
+
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -22,6 +28,7 @@ from src.splitter import DataSplitter
 from src.augmenter import ImageAugmenter
 from src.trainer import YOLOTrainer
 from src.labelme_adapter import LabelMeAdapter
+from ultralytics import YOLO
 
 app = FastAPI(title="Vision Training Studio API")
 
