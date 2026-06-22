@@ -331,6 +331,48 @@ async function apiFetch(url, options = {}) {
   return contentType.includes("application/json") ? res.json() : res.text();
 }
 
+async function collectDroppedFiles(dataTransfer) {
+  const items = [...(dataTransfer?.items || [])];
+  if (!items.length) return [...(dataTransfer?.files || [])];
+
+  const entries = items
+    .map((item) => item.webkitGetAsEntry?.())
+    .filter(Boolean);
+
+  if (!entries.length) return [...(dataTransfer?.files || [])];
+
+  const nestedFiles = await Promise.all(entries.map(readEntryFiles));
+  return nestedFiles.flat();
+}
+
+function readEntryFiles(entry) {
+  if (!entry) return Promise.resolve([]);
+  if (entry.isFile) {
+    return new Promise((resolve) => {
+      entry.file((file) => resolve([file]), () => resolve([]));
+    });
+  }
+  if (!entry.isDirectory) return Promise.resolve([]);
+
+  const reader = entry.createReader();
+  const allEntries = [];
+
+  return new Promise((resolve) => {
+    const readBatch = () => {
+      reader.readEntries(async (entries) => {
+        if (!entries.length) {
+          const nested = await Promise.all(allEntries.map(readEntryFiles));
+          resolve(nested.flat());
+          return;
+        }
+        allEntries.push(...entries);
+        readBatch();
+      }, () => resolve([]));
+    };
+    readBatch();
+  });
+}
+
 function bindNavigation() {
   qsa("[data-page]").forEach((btn) => {
     btn.addEventListener("click", () => navigate(btn.dataset.page));
@@ -1302,6 +1344,40 @@ function bindLabelMeActions() {
         previewsContainer: document.createElement("div"),
         previewTemplate: '<div style="display:none"></div>',
         init: function() {
+          const self = this;
+          if (annoDropZone) {
+            annoDropZone.addEventListener("drop", async function(event) {
+              event.preventDefault();
+              event.stopPropagation();
+              
+              if (!appState.currentProjectId) {
+                showToast("請先載入或建立專案！");
+                return;
+              }
+              
+              showToast("正在掃描拖入的項目（包含資料夾）...");
+              try {
+                const files = await collectDroppedFiles(event.dataTransfer);
+                const validFiles = files.filter(file => {
+                  const name = file.name.toLowerCase();
+                  return name.endsWith(".json") || name.endsWith(".txt");
+                });
+                
+                if (validFiles.length === 0) {
+                  showToast("未在拖入的項目中找到任何 .json 或 .txt 檔案！");
+                  return;
+                }
+                
+                showToast(`找到 ${validFiles.length} 個標註檔案，開始佇列上傳...`);
+                validFiles.forEach(file => {
+                  self.addFile(file);
+                });
+              } catch (err) {
+                showToast(`讀取資料夾失敗：${err.message}`);
+              }
+            }, true);
+          }
+
           this.on("addedfile", function(file) {
             if (!appState.currentProjectId) {
               showToast("請先載入或建立專案！");
