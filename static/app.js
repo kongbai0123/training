@@ -1324,148 +1324,102 @@ function bindLabelMeActions() {
     renderLabelMeManager(getProjectStatus(appState.currentProject));
   });
 
-  // 標註檔案拖曳上傳區 (Dropzone)
+  // 標註檔案拖曳與點選上傳區 (原生實作，避免 Dropzone 並行發送多個請求導致的寫入鎖定與效能衝突)
   const annoDropZone = qs("#annotations-drop-zone");
   const inputAnnoFile = qs("#input-annotations-file");
 
-  if (annoDropZone && typeof Dropzone !== "undefined") {
-    if (inputAnnoFile) inputAnnoFile.style.display = "none";
-    if (!annoDropZone.dropzone) {
-      new Dropzone(annoDropZone, {
-        url: function() {
-          return `/api/projects/${appState.currentProjectId}/import-annotations`;
-        },
-        paramName: "files",
-        uploadMultiple: true,
-        parallelUploads: 100,
-        acceptedFiles: ".json,.txt",
-        maxFilesize: 50,
-        autoProcessQueue: true,
-        previewsContainer: document.createElement("div"),
-        previewTemplate: '<div style="display:none"></div>',
-        init: function() {
-          const self = this;
-          if (annoDropZone) {
-            annoDropZone.addEventListener("drop", async function(event) {
-              event.preventDefault();
-              event.stopPropagation();
-              
-              if (!appState.currentProjectId) {
-                showToast("請先載入或建立專案！");
-                return;
-              }
-              
-              showToast("正在掃描拖入的項目（包含資料夾）...");
-              try {
-                const files = await collectDroppedFiles(event.dataTransfer);
-                const validFiles = files.filter(file => {
-                  const name = file.name.toLowerCase();
-                  return name.endsWith(".json") || name.endsWith(".txt");
-                });
-                
-                if (validFiles.length === 0) {
-                  showToast("未在拖入的項目中找到任何 .json 或 .txt 檔案！");
-                  return;
-                }
-                
-                showToast(`找到 ${validFiles.length} 個標註檔案，開始佇列上傳...`);
-                validFiles.forEach(file => {
-                  self.addFile(file);
-                });
-              } catch (err) {
-                showToast(`讀取資料夾失敗：${err.message}`);
-              }
-            }, true);
-          }
-
-          this.on("addedfile", function(file) {
-            if (!appState.currentProjectId) {
-              showToast("請先載入或建立專案！");
-              this.removeFile(file);
-              return;
-            }
-            if (!file.name.endsWith(".json") && !file.name.endsWith(".txt")) {
-              showToast("只支援上傳 .json 或 .txt 格式的標註檔！");
-              this.removeFile(file);
-              return;
-            }
-          });
-
-          this.on("sendingmultiple", function() {
-            showToast("正在上傳並導入標註檔案...");
-          });
-
-          this.on("successmultiple", async function(files, response) {
-            let data = response;
-            if (typeof response === "string") {
-              try {
-                data = JSON.parse(response);
-              } catch (e) {
-                data = { message: response };
-              }
-            }
-            showToast(data.message || "標註檔案匯入完成！");
-            await openProject(appState.currentProjectId);
-          });
-
-          this.on("errormultiple", function(files, message) {
-            let errMsg = message;
-            if (typeof message === "object") {
-              errMsg = message.detail || message.message || JSON.stringify(message);
-            }
-            showToast(`標註檔案匯入失敗：${errMsg}`);
-          });
-
-          this.on("queuecomplete", function() {
-            this.removeAllFiles(true);
-          });
-        }
-      });
+  async function handleAnnotationUpload(files) {
+    if (!appState.currentProjectId) {
+      showToast("請先載入或建立專案！");
+      return;
     }
-  } else {
-    annoDropZone?.addEventListener("click", () => {
-      inputAnnoFile?.click();
+
+    const validFiles = files.filter(file => {
+      const name = file.name.toLowerCase();
+      return name.endsWith(".json") || name.endsWith(".txt");
     });
+
+    if (validFiles.length === 0) {
+      showToast("無有效的 .json 或 .txt 標註檔！");
+      return;
+    }
+
+    showToast(`正在上傳並導入 ${validFiles.length} 個標註檔案...`);
     
-    inputAnnoFile?.addEventListener("change", async (event) => {
-      const files = event.target.files;
-      if (!files || files.length === 0) return;
+    const formData = new FormData();
+    validFiles.forEach(file => {
+      formData.append("files", file, file.name);
+    });
+
+    try {
+      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-annotations`, {
+        method: "POST",
+        body: formData
+      });
+      showToast(data.message || "標註檔案匯入完成！");
+      await openProject(appState.currentProjectId);
+    } catch (err) {
+      showToast(`標註檔案匯入失敗：${err.message}`);
+    }
+  }
+
+  if (annoDropZone && inputAnnoFile) {
+    inputAnnoFile.style.display = "none";
+    
+    // 確保銷毀 Dropzone 實體以避免衝突
+    if (annoDropZone.dropzone) {
+      annoDropZone.dropzone.destroy();
+    }
+
+    // 點擊觸發檔案選擇
+    annoDropZone.addEventListener("click", () => {
+      inputAnnoFile.click();
+    });
+
+    // 點選檔案改變事件
+    inputAnnoFile.addEventListener("change", async (event) => {
+      const files = [...(event.target.files || [])];
+      if (files.length === 0) return;
+      await handleAnnotationUpload(files);
+      inputAnnoFile.value = "";
+    });
+
+    // 拖曳 hover 狀態處理
+    ["dragenter", "dragover"].forEach((eventName) => {
+      annoDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        annoDropZone.classList.add("dz-drag-hover");
+      }, true);
+    });
+
+    ["dragleave", "dragend"].forEach((eventName) => {
+      annoDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        annoDropZone.classList.remove("dz-drag-hover");
+      }, true);
+    });
+
+    // 拖曳放下事件 (支援資料夾深度遍歷與自動過濾)
+    annoDropZone.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      annoDropZone.classList.remove("dz-drag-hover");
+
       if (!appState.currentProjectId) {
         showToast("請先載入或建立專案！");
-        if (inputAnnoFile) inputAnnoFile.value = "";
         return;
       }
-      
-      const formData = new FormData();
-      let hasValidFile = false;
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.name.endsWith(".json") || file.name.endsWith(".txt")) {
-          formData.append("files", file);
-          hasValidFile = true;
-        }
-      }
-      
-      if (!hasValidFile) {
-        showToast("無有效的 .json 或 .txt 標註檔！");
-        if (inputAnnoFile) inputAnnoFile.value = "";
-        return;
-      }
-      
-      showToast("正在上傳並導入標註檔案...");
+
+      showToast("正在掃描拖入的項目（支援資料夾遞迴）...");
       try {
-        const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-annotations`, {
-          method: "POST",
-          body: formData
-        });
-        showToast(data.message || "標註檔案匯入完成！");
-        await openProject(appState.currentProjectId);
+        const files = await collectDroppedFiles(e.dataTransfer);
+        await handleAnnotationUpload(files);
       } catch (err) {
-        showToast(`標註檔案匯入失敗：${err.message}`);
-      } finally {
-        if (inputAnnoFile) inputAnnoFile.value = "";
+        showToast(`讀取拖入項目失敗：${err.message}`);
       }
-    });
+    }, true);
   }
 }
 
