@@ -141,15 +141,42 @@
             </div>
           </div>
           <div class="dataset-manager-layout">
-            <section class="panel-section dataset-import-card">
-              <div class="section-title"><h2>Import Images Folder</h2></div>
-              <p class="section-help">從本機圖片資料夾匯入 Dataset。這是所有標註與訓練流程的資料來源。</p>
-              <div class="form-stack">
-                <label>
-                  <span>圖片資料夾</span>
-                  <input type="text" id="input-local-folder" placeholder="D:\datasets\road_images">
-                </label>
-                <button class="btn btn-primary btn-block guarded" data-requires="project" id="btn-import-local"><i class="fa-solid fa-folder-open"></i> Import Images</button>
+            <section class="panel-section dataset-import-card" style="grid-row: span 2;">
+              <div class="section-title"><h2>Dataset Import Center (資料匯入中心)</h2></div>
+              <p class="section-help">支援掃描本機資料夾路徑導入圖片，或直接拖曳上傳 ZIP 檔案進行自動解壓與導入。</p>
+              
+              <div class="form-stack" style="gap: 16px; margin-top: 12px;">
+                <!-- Path Input Source -->
+                <div style="display: grid; gap: 8px;">
+                  <label for="input-local-folder" style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);">本機圖片資料夾路徑 (Scan Local Folder)</label>
+                  <div class="class-entry-row">
+                    <input type="text" id="input-local-folder" placeholder="例如 D:\datasets\road_images" style="flex: 1;">
+                    <button class="btn btn-primary guarded" data-requires="project" id="btn-import-local" style="min-width: 100px;">
+                      <i class="fa-solid fa-folder-open"></i> 掃描導入
+                    </button>
+                  </div>
+                </div>
+
+                <div style="border-top: 1px solid var(--border); margin: 6px 0;"></div>
+
+                <!-- ZIP Upload Source -->
+                <div style="display: grid; gap: 8px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);">上傳 ZIP 資料集壓縮包 (Upload ZIP Package)</span>
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--text-muted);">
+                      <span>儲存路徑: <code id="dataset-zip-storage-path" style="background: var(--bg-panel-soft); padding: 2px 6px; border-radius: 4px; font-family: monospace;">尚未載入</code></span>
+                      <button class="icon-btn guarded" data-requires="project" id="btn-copy-zip-path" title="Copy" style="width: 22px; height: 22px; font-size: 0.7rem; display: inline-grid; place-items: center;"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                  </div>
+                  <div class="zip-drop-zone" id="zip-drop-zone" style="cursor: pointer; min-height: 96px; padding: 14px;">
+                    <i class="fa-solid fa-file-zipper" style="font-size: 1.2rem; width: 38px; height: 38px;"></i>
+                    <div>
+                      <strong>ZIP upload area (拖曳或點選上傳)</strong>
+                      <p style="font-size: 0.78rem;">支援將 ZIP 資料集（含影像與 JSON）直接拖曳至此自動解壓導入。</p>
+                    </div>
+                  </div>
+                  <input type="file" id="input-zip-file" accept=".zip" style="display: none;">
+                </div>
               </div>
             </section>
 
@@ -183,29 +210,6 @@
                 <button class="btn btn-primary btn-block guarded" data-requires="project" id="btn-save-dataset-classes" style="margin-top: 8px;">
                   <i class="fa-solid fa-floppy-disk"></i> 儲存類別變更
                 </button>
-              </div>
-            </section>
-
-            <section class="panel-section dataset-zip-card">
-              <div class="section-title">
-                <h2>ZIP Dataset Packages</h2>
-                <span class="badge badge-warning">Storage Ready / Import Pending</span>
-              </div>
-              <p class="section-help">這裡用來集中放原始資料集 ZIP、外部交付資料包或備份包。Phase 2 可接 ZIP 上傳、解壓與掃描。</p>
-              <div class="zip-storage-box">
-                <div class="path-row">
-                  <span>ZIP storage</span>
-                  <code id="dataset-zip-storage-path">尚未載入專案</code>
-                  <button class="icon-btn guarded" data-requires="project" id="btn-copy-zip-path" title="Copy"><i class="fa-regular fa-copy"></i></button>
-                </div>
-                <div class="zip-drop-zone" id="zip-drop-zone" style="cursor: pointer;">
-                  <i class="fa-solid fa-file-zipper"></i>
-                  <div>
-                    <strong>ZIP upload area</strong>
-                    <p>點選此處上傳 ZIP 資料集（含影像與 json）並自動解壓縮導入。</p>
-                  </div>
-                  <input type="file" id="input-zip-file" accept=".zip" style="display: none;">
-                </div>
               </div>
             </section>
 
