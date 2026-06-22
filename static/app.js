@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindExportActions();
   bindLabelMeActions();
   await loadProjects({ autoOpenLatest: true });
-  navigate("projects");
+  navigate("dashboard");
 });
 
 const augmentationPresets = {
