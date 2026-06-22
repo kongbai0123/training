@@ -798,6 +798,15 @@ body[data-theme="light"] .status-guard {
   grid-column: 1 / -1;
 }
 
+.labelme-layout #annotations-drop-card {
+  grid-column: 1 / -1;
+}
+
+#annotations-drop-card .zip-drop-zone {
+  width: 100%;
+  min-height: 118px;
+}
+
 .narrow-form {
   max-width: 720px;
 }

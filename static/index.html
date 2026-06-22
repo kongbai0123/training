@@ -162,7 +162,7 @@
                 <!-- ZIP Upload Source -->
                 <div style="display: grid; gap: 8px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                    <span style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);">上傳 ZIP 資料集壓縮包 (Upload ZIP Package)</span>
+                    <span style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);">Upload ZIP or Folder</span>
                     <div style="display: flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--text-muted);">
                       <span>儲存路徑: <code id="dataset-zip-storage-path" style="background: var(--bg-panel-soft); padding: 2px 6px; border-radius: 4px; font-family: monospace; word-break: break-all; white-space: normal;">尚未載入</code></span>
                       <button class="icon-btn guarded" data-requires="project" id="btn-copy-zip-path" title="Copy" style="width: 22px; height: 22px; font-size: 0.7rem; display: inline-grid; place-items: center;"><i class="fa-regular fa-copy"></i></button>
@@ -171,8 +171,8 @@
                   <div class="zip-drop-zone" id="zip-drop-zone" style="cursor: pointer; min-height: 96px; padding: 14px;">
                     <i class="fa-solid fa-file-zipper" style="font-size: 1.2rem; width: 38px; height: 38px;"></i>
                     <div>
-                      <strong>ZIP upload area (拖曳或點選上傳)</strong>
-                      <p style="font-size: 0.78rem;">支援將 ZIP 資料集（含影像與 JSON）直接拖曳至此自動解壓導入。</p>
+                      <strong>ZIP or folder upload area</strong>
+                      <p style="font-size: 0.78rem;">Drop a ZIP file or a folder. The system imports images, LabelMe JSON, and YOLO TXT labels.</p>
                     </div>
                   </div>
                   <input type="file" id="input-zip-file" accept=".zip" style="display: none;">
@@ -275,9 +275,23 @@
               </h1>
               <p>第一階段只建立 LabelMe 工作流管理介面；JSON 同步與轉換屬於 Phase 2 backend。</p>
             </div>
-            <span class="badge badge-warning">UI Ready / Backend Pending</span>
+            <span class="badge badge-success">Backend Connected</span>
           </div>
           <div class="labelme-layout">
+            <section class="panel-section wide" id="annotations-drop-card">
+              <div class="section-title">
+                <h2>Import Labeled Files</h2>
+              </div>
+              <div class="zip-drop-zone" id="annotations-drop-zone" style="cursor: pointer;">
+                <i class="fa-solid fa-file-signature" style="background: rgba(16, 185, 129, 0.16); color: var(--success);"></i>
+                <div>
+                  <strong>Drop JSON or TXT files</strong>
+                  <p>在此拖入 LabelMe JSON 檔或 YOLO TXT 標註檔。</p>
+                </div>
+              </div>
+              <input type="file" id="input-annotations-file" accept=".json,.txt" multiple style="display: none;">
+            </section>
+
             <section class="panel-section">
               <div class="section-title">
                 <h2>Workspace Paths <span class="info-icon" data-tooltip="LabelMe 是外部標註工具，會替每張圖片產生 JSON。本平台目前先管理路徑、進度與後續轉換入口。">i</span></h2>
@@ -301,10 +315,16 @@
                   <span>Project classes</span>
                   <code id="labelme-classes">--</code>
                 </div>
+                <div class="path-row">
+                  <span>LabelMe command</span>
+                  <code id="labelme-command">尚未載入專案</code>
+                  <button class="icon-btn guarded" data-requires="project" id="btn-copy-labelme-command" title="Copy"><i class="fa-regular fa-copy"></i></button>
+                </div>
               </div>
               <div class="button-row">
+                <button class="btn btn-primary guarded" data-requires="project" id="btn-open-labelme"><i class="fa-solid fa-up-right-from-square"></i> Open LabelMe</button>
                 <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-labelme"><i class="fa-solid fa-rotate"></i> Refresh Status</button>
-                <button class="btn btn-primary guarded" data-requires="project" id="btn-sync-labelme"><i class="fa-solid fa-arrows-rotate"></i> Sync JSON</button>
+                <button class="btn btn-secondary guarded" data-requires="project" id="btn-sync-labelme"><i class="fa-solid fa-arrows-rotate"></i> Sync JSON</button>
               </div>
               <p class="phase-note">點選 Sync JSON 即可掃描專案中已完成的 LabelMe 標註檔案並同步進度。</p>
             </section>
@@ -319,20 +339,6 @@
                 </div>
                 <div class="progress-track"><div class="progress-fill" id="labelme-completion-bar"></div></div>
               </div>
-            </section>
-
-            <section class="panel-section" id="annotations-drop-card">
-              <div class="section-title">
-                <h2>Import Labeled Files</h2>
-              </div>
-              <div class="zip-drop-zone" id="annotations-drop-zone" style="cursor: pointer;">
-                <i class="fa-solid fa-file-signature" style="background: rgba(16, 185, 129, 0.16); color: var(--success);"></i>
-                <div>
-                  <strong>Drop JSON or TXT files</strong>
-                  <p>在此拖入 LabelMe JSON 檔或 YOLO TXT 標註檔。</p>
-                </div>
-              </div>
-              <input type="file" id="input-annotations-file" accept=".json,.txt" multiple style="display: none;">
             </section>
 
             <section class="panel-section wide">
@@ -617,8 +623,8 @@
             <div class="section-title"><h2 data-i18n="systemTitle">System</h2></div>
             <div class="path-list">
               <div class="path-row"><span>Frontend phase</span><code>Phase 1 UI Redesign</code></div>
-              <div class="path-row"><span>LabelMe backend</span><code>Pending</code></div>
-              <div class="path-row"><span>Conversion backend</span><code>Pending</code></div>
+              <div class="path-row"><span>LabelMe backend</span><code>Connected</code></div>
+              <div class="path-row"><span>Conversion backend</span><code>Connected</code></div>
             </div>
           </section>
         </section>

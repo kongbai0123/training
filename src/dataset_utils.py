@@ -1,4 +1,5 @@
 import os
+import json
 import cv2
 import numpy as np
 from PIL import Image
@@ -248,13 +249,16 @@ class DatasetUtils:
             
         dest_img_dir = proj_dir / "dataset" / "raw" / "images"
         dest_labelme_dir = proj_dir / "dataset" / "raw" / "annotations" / "labelme"
+        dest_labels_dir = proj_dir / "dataset" / "raw" / "labels"
         
         dest_img_dir.mkdir(parents=True, exist_ok=True)
         dest_labelme_dir.mkdir(parents=True, exist_ok=True)
+        dest_labels_dir.mkdir(parents=True, exist_ok=True)
         
         valid_exts = {".jpg", ".jpeg", ".png", ".bmp"}
         imported_imgs = []
         imported_jsons = []
+        imported_txts = []
         
         # 遞迴掃描解壓目錄
         for root, _, files in os.walk(temp_dir):
@@ -275,6 +279,9 @@ class DatasetUtils:
                             imported_jsons.append(file)
                     except Exception:
                         pass
+                elif ext == ".txt":
+                    shutil.copy(str(fpath), str(dest_labels_dir / file))
+                    imported_txts.append(file)
                         
         # 刪除暫存區
         shutil.rmtree(temp_dir)
@@ -282,5 +289,6 @@ class DatasetUtils:
         return {
             "imported_images_count": len(imported_imgs),
             "imported_jsons_count": len(imported_jsons),
+            "imported_txts_count": len(imported_txts),
             "images": imported_imgs
         }

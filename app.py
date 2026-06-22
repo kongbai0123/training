@@ -3,7 +3,11 @@ import json
 import base64
 import shutil
 import asyncio
+import subprocess
+import sys
 from pathlib import Path
+import cv2
+import numpy as np
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -20,6 +24,58 @@ from src.trainer import YOLOTrainer
 from src.labelme_adapter import LabelMeAdapter
 
 app = FastAPI(title="Vision Training Studio API")
+
+def find_labelme_executable() -> Optional[str]:
+    """Find LabelMe in PATH, current venv, or common local Codex/Hermes venv paths."""
+    executable = shutil.which("labelme")
+    if executable:
+        return executable
+
+    scripts_dir = Path(sys.executable).parent
+    candidates = []
+    if os.name == "nt":
+        candidates.extend([
+            scripts_dir / "labelme.exe",
+            Path.home() / "AppData" / "Local" / "hermes" / "hermes-agent" / "venv" / "Scripts" / "labelme.exe",
+        ])
+    else:
+        candidates.extend([
+            scripts_dir / "labelme",
+            Path.home() / ".local" / "bin" / "labelme",
+        ])
+
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    return None
+
+def normalize_labelme_image_paths(images_dir: Path, labelme_dir: Path) -> int:
+    """Make existing LabelMe JSON files point back to raw/images."""
+    if not labelme_dir.exists():
+        return 0
+
+    normalized = 0
+    for json_path in labelme_dir.glob("*.json"):
+        try:
+            data = json.loads(json_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        image_path = data.get("imagePath") or f"{json_path.stem}.jpg"
+        image_name = Path(image_path).name
+        source_image = images_dir / image_name
+        if not source_image.exists():
+            continue
+
+        normalized_path = source_image.resolve().as_posix()
+        if data.get("imagePath") == normalized_path:
+            continue
+
+        data["imagePath"] = normalized_path
+        data["imageData"] = None
+        json_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        normalized += 1
+    return normalized
 
 # 1. 載入靜態網頁資源
 # 如果 static/ 不存在，建立它
@@ -241,6 +297,76 @@ def upload_video(project_id: str, file: UploadFile = File(...), fps: int = Form(
             shutil.rmtree(temp_dir)
 
 
+@app.post("/api/projects/{project_id}/upload-dataset-files")
+def upload_dataset_files(project_id: str, files: List[UploadFile] = File(...)):
+    """Upload mixed dataset files from browser folder drag/drop."""
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    dataset_path = Path(project["dataset_path"])
+    image_dir = dataset_path / "raw" / "images"
+    labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
+    labels_dir = dataset_path / "raw" / "labels"
+    image_dir.mkdir(parents=True, exist_ok=True)
+    labelme_dir.mkdir(parents=True, exist_ok=True)
+    labels_dir.mkdir(parents=True, exist_ok=True)
+
+    image_exts = {".jpg", ".jpeg", ".png", ".bmp"}
+    imported_images = 0
+    imported_jsons = 0
+    imported_txts = 0
+    skipped = 0
+
+    for upload in files:
+        filename = Path(upload.filename or "").name
+        ext = Path(filename).suffix.lower()
+        if not filename:
+            skipped += 1
+            continue
+
+        if ext in image_exts:
+            with open(image_dir / filename, "wb") as buffer:
+                shutil.copyfileobj(upload.file, buffer)
+            imported_images += 1
+
+            if not any(img["filename"] == filename for img in project["images"]):
+                project["images"].append({
+                    "filename": filename,
+                    "status": "unannotated",
+                    "scene": "unknown",
+                    "source_video": "",
+                    "annotations": [],
+                    "split": None,
+                    "quality": {}
+                })
+        elif ext == ".json":
+            with open(labelme_dir / filename, "wb") as buffer:
+                shutil.copyfileobj(upload.file, buffer)
+            imported_jsons += 1
+        elif ext == ".txt":
+            with open(labels_dir / filename, "wb") as buffer:
+                shutil.copyfileobj(upload.file, buffer)
+            imported_txts += 1
+        else:
+            skipped += 1
+
+    if imported_txts > 0:
+        LabelMeAdapter.convert_yolo_to_labelme(project)
+    sync_res = LabelMeAdapter.sync_labelme_annotations(project)
+    project["annotation_progress"]["total"] = len(project["images"])
+    ProjectManager.save_project(project_id, project)
+
+    return {
+        "message": "Dataset files uploaded.",
+        "imported_images": imported_images,
+        "imported_jsons": imported_jsons,
+        "imported_txts": imported_txts,
+        "skipped": skipped,
+        "sync_status": sync_res
+    }
+
+
 @app.post("/api/projects/{project_id}/quality-check")
 def trigger_quality_check(project_id: str):
     """觸發資料品質檢查並計算重複雜湊"""
@@ -415,6 +541,11 @@ def save_annotations(project_id: str, data: AnnotationSave):
 
 # --- 全新 LabelMe 與 縮圖 / ZIP API ---
 
+def should_auto_convert_yolo_to_labelme(project: Dict[str, Any]) -> bool:
+    """Import YOLO txt when it matches the project task type."""
+    task_type = str(project.get("task_type", "")).lower()
+    return task_type in {"object_detection", "detection"} or "segmentation" in task_type
+
 @app.post("/api/projects/{project_id}/labelme/sync")
 def sync_labelme(project_id: str):
     """觸發 LabelMe JSON 掃描與 project.json 同步"""
@@ -423,7 +554,8 @@ def sync_labelme(project_id: str):
         raise HTTPException(status_code=404, detail="Project not found")
         
     try:
-        LabelMeAdapter.convert_yolo_to_labelme(project)
+        if should_auto_convert_yolo_to_labelme(project):
+            LabelMeAdapter.convert_yolo_to_labelme(project)
         report = LabelMeAdapter.sync_labelme_annotations(project)
         ProjectManager.save_project(project_id, project)
         return report
@@ -441,6 +573,56 @@ def get_labelme_preview(project_id: str, filename: str):
     if not shapes_data:
         return {"shapes": [], "imageHeight": 640, "imageWidth": 640}
     return shapes_data
+
+@app.post("/api/projects/{project_id}/labelme/open")
+def open_labelme(project_id: str):
+    """Launch the external LabelMe desktop app for this project's image folder."""
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    dataset_path = Path(project["dataset_path"])
+    images_dir = dataset_path / "raw" / "images"
+    labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
+    images_dir.mkdir(parents=True, exist_ok=True)
+    labelme_dir.mkdir(parents=True, exist_ok=True)
+    normalized_jsons = normalize_labelme_image_paths(images_dir, labelme_dir)
+
+    executable = find_labelme_executable()
+    if executable:
+        command = [executable, str(images_dir), "--output", str(labelme_dir)]
+    else:
+        command = [sys.executable, "-m", "labelme", str(images_dir), "--output", str(labelme_dir)]
+
+    class_names = project.get("class_names") or []
+    if class_names:
+        command.extend(["--labels", ",".join(class_names)])
+
+    try:
+        subprocess.Popen(
+            command,
+            cwd=str(BASE_DIR),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Unable to launch LabelMe. Install it with `pip install labelme`, "
+                "or make sure labelme.exe is available to the FastAPI server. "
+                f"Original error: {e}"
+            )
+        )
+
+    return {
+        "message": "LabelMe launched.",
+        "command": " ".join(f'"{part}"' if " " in part else part for part in command),
+        "images_folder": str(images_dir.resolve().as_posix()),
+        "json_folder": str(labelme_dir.resolve().as_posix()),
+        "normalized_jsons": normalized_jsons
+    }
 
 class ConvertRequest(BaseModel):
     export_type: str # yolo_detection, yolo_segmentation, coco, semantic_mask
@@ -488,7 +670,8 @@ def import_zip_dataset(project_id: str, file: UploadFile = File(...)):
         # 執行解壓縮與分類導入
         import_res = DatasetUtils.import_zip_package(project_id, str(temp_zip_path))
         
-        # 同步元數據
+        if should_auto_convert_yolo_to_labelme(project):
+            LabelMeAdapter.convert_yolo_to_labelme(project)
         sync_res = LabelMeAdapter.sync_labelme_annotations(project)
         ProjectManager.save_project(project_id, project)
         
@@ -496,6 +679,7 @@ def import_zip_dataset(project_id: str, file: UploadFile = File(...)):
             "message": "ZIP 資料包導入完成",
             "imported_images": import_res["imported_images_count"],
             "imported_jsons": import_res["imported_jsons_count"],
+            "imported_txts": import_res.get("imported_txts_count", 0),
             "sync_status": sync_res
         }
     except Exception as e:
@@ -538,8 +722,10 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
                     shutil.copyfileobj(file.file, buffer)
                 imported_txts += 1
                 
-        # 同步標註進度
-        LabelMeAdapter.convert_yolo_to_labelme(project)
+        # Detection projects can import legacy YOLO bbox txt. Segmentation projects
+        # should keep LabelMe polygon JSON as the source of truth.
+        if should_auto_convert_yolo_to_labelme(project):
+            LabelMeAdapter.convert_yolo_to_labelme(project)
         sync_res = LabelMeAdapter.sync_labelme_annotations(project)
         ProjectManager.save_project(project_id, project)
         
@@ -639,18 +825,28 @@ def preview_augmentation(project_id: str, req: AugmentPreviewRequest):
             req.config
         )
         
-        # 將擴充後的圖片畫上變換後的 BBox 以供視覺化預覽
         preview_img = aug_img.copy()
         h, w, _ = preview_img.shape
         for ann in aug_bboxes:
-            bbox = ann["bbox"] # [xc, yc, bw, bh]
+            if ann.get("type") == "polygon" and ann.get("points"):
+                pts = np.array(ann["points"], dtype=np.int32)
+                if len(pts) >= 3:
+                    cv2.polylines(preview_img, [pts], isClosed=True, color=(0, 255, 0), thickness=2)
+                    x1 = int(np.min(pts[:, 0]))
+                    y1 = int(np.min(pts[:, 1]))
+                    cv2.putText(preview_img, ann["category"], (x1, max(14, y1 - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                continue
+
+            bbox = ann.get("bbox")
+            if not bbox or len(bbox) != 4:
+                continue
             xc, yc, bw, bh = bbox[0]*w, bbox[1]*h, bbox[2]*w, bbox[3]*h
             x1 = int(xc - bw/2)
             y1 = int(yc - bh/2)
             x2 = int(xc + bw/2)
             y2 = int(yc + bh/2)
             cv2.rectangle(preview_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(preview_img, ann["category"], (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+            cv2.putText(preview_img, ann["category"], (x1, max(14, y1 - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
             
         # 轉換為 Base64
         _, encoded_img = cv2.imencode(".jpg", preview_img)

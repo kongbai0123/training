@@ -157,24 +157,14 @@ class ImageAugmenter:
         sigma = intensity * 40
         gauss = np.random.normal(mean, sigma, (h, w, c))
         noisy = image.astype(np.float32) + gauss
-        return np.clip(noisy, 0, 255).astype(np.uint8)
-
     @staticmethod
     def apply_perspective(image: np.ndarray, bboxes: List[Dict[str, Any]], intensity: float) -> Tuple[np.ndarray, List[Dict[str, Any]]]:
-        """
-        微透視變換 (會影響 BBox 座標)
-        bboxes format: list of dict, each contains: {"category": str, "bbox": [x_center, y_center, w, h]}
-        intensity: 0.0 to 0.15
-        """
+        """Apply perspective transform to the image and preserve bbox or polygon annotations."""
         if intensity <= 0.0:
             return image, bboxes
-            
+
         h, w, _ = image.shape
-        
-        # 定義原四角點
         src_pts = np.float32([[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]])
-        
-        # 定義目標點 (往內縮隨機距離)
         max_offset = int(min(h, w) * intensity)
         dst_pts = np.float32([
             [random.randint(0, max_offset), random.randint(0, max_offset)],
@@ -182,54 +172,69 @@ class ImageAugmenter:
             [random.randint(0, max_offset), h - 1 - random.randint(0, max_offset)],
             [w - 1 - random.randint(0, max_offset), h - 1 - random.randint(0, max_offset)]
         ])
-        
-        # 取得單應性矩陣
+
         H = cv2.getPerspectiveTransform(src_pts, dst_pts)
-        
-        # 變換影像
         warped_img = cv2.warpPerspective(image, H, (w, h))
-        
-        # 變換 BBox 座標
-        warped_bboxes = []
+        warped_annotations = []
+
         for ann in bboxes:
             category = ann["category"]
-            bbox = ann["bbox"] # [x_center, y_center, w, h] (normalized)
-            
-            # 轉成四個角點像素座標
-            xc, yc, bw, bh = bbox[0]*w, bbox[1]*h, bbox[2]*w, bbox[3]*h
-            x1, y1 = xc - bw/2, yc - bh/2
-            x2, y2 = xc + bw/2, yc - bh/2
-            x3, y3 = xc - bw/2, yc + bh/2
-            x4, y4 = xc + bw/2, yc + bh/2
-            
+            ann_type = ann.get("type", "bbox")
+
+            if ann_type == "polygon" and ann.get("points"):
+                pts = np.array(ann["points"], dtype=np.float32).reshape(-1, 1, 2)
+                warped_pts = cv2.perspectiveTransform(pts, H).reshape(-1, 2)
+                warped_pts[:, 0] = np.clip(warped_pts[:, 0], 0, w - 1)
+                warped_pts[:, 1] = np.clip(warped_pts[:, 1], 0, h - 1)
+                if len(warped_pts) < 3:
+                    continue
+
+                wx = warped_pts[:, 0]
+                wy = warped_pts[:, 1]
+                new_x1 = max(0.0, float(np.min(wx)))
+                new_y1 = max(0.0, float(np.min(wy)))
+                new_x2 = min(float(w), float(np.max(wx)))
+                new_y2 = min(float(h), float(np.max(wy)))
+                new_w = new_x2 - new_x1
+                new_h = new_y2 - new_y1
+                if new_w > 2 and new_h > 2:
+                    warped_annotations.append({
+                        "category": category,
+                        "type": "polygon",
+                        "bbox": [(new_x1 + new_w / 2) / w, (new_y1 + new_h / 2) / h, new_w / w, new_h / h],
+                        "points": warped_pts.tolist()
+                    })
+                continue
+
+            bbox = ann.get("bbox")
+            if not bbox or len(bbox) != 4:
+                continue
+
+            xc, yc, bw, bh = bbox[0] * w, bbox[1] * h, bbox[2] * w, bbox[3] * h
+            x1, y1 = xc - bw / 2, yc - bh / 2
+            x2, y2 = xc + bw / 2, yc - bh / 2
+            x3, y3 = xc - bw / 2, yc + bh / 2
+            x4, y4 = xc + bw / 2, yc + bh / 2
+
             pts = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]], dtype=np.float32).reshape(-1, 1, 2)
-            # 透視變換點座標
             warped_pts = cv2.perspectiveTransform(pts, H).reshape(-1, 2)
-            
-            # 計算新的 BBox 外接矩形 (Min-Max)
             wx = warped_pts[:, 0]
             wy = warped_pts[:, 1]
-            
             new_x1 = max(0.0, float(np.min(wx)))
             new_y1 = max(0.0, float(np.min(wy)))
             new_x2 = min(float(w), float(np.max(wx)))
             new_y2 = min(float(h), float(np.max(wy)))
-            
-            # 重新轉回 YOLO 歸一化格式
             new_w = new_x2 - new_x1
             new_h = new_y2 - new_y1
-            
-            if new_w > 2 and new_h > 2: # 忽略變換後變太小或超出邊界的
-                new_xc = new_x1 + new_w/2
-                new_yc = new_y1 + new_h/2
-                
-                warped_bboxes.append({
+
+            if new_w > 2 and new_h > 2:
+                warped_annotations.append({
                     "category": category,
-                    "type": ann.get("type", "bbox"),
-                    "bbox": [new_xc / w, new_yc / h, new_w / w, new_h / h]
+                    "type": ann_type,
+                    "bbox": [(new_x1 + new_w / 2) / w, (new_y1 + new_h / 2) / h, new_w / w, new_h / h]
                 })
-                
-        return warped_img, warped_bboxes
+
+        return warped_img, warped_annotations
 
     @classmethod
     def augment_single_image(

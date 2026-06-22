@@ -16,7 +16,7 @@ const appState = {
   },
   labelme: {
     uiReady: true,
-    backendReady: false,
+    backendReady: true,
     synced: false,
     totalImages: 0,
     jsonCount: 0,
@@ -109,6 +109,16 @@ const fixedAugmentationValues = {
 };
 
 let isBalancingSplitRatios = false;
+
+function colorForLabel(label) {
+  const palette = ["#2563eb", "#16a34a", "#dc2626", "#9333ea", "#ea580c", "#0891b2", "#be123c", "#4f46e5"];
+  const text = String(label || "label");
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+  }
+  return palette[hash % palette.length];
+}
 
 function qs(selector) {
   return document.querySelector(selector);
@@ -874,98 +884,118 @@ function bindDatasetActions() {
   
   const zipDropZone = qs("#zip-drop-zone");
   const inputZipFile = qs("#input-zip-file");
-  
-  if (zipDropZone && typeof Dropzone !== "undefined") {
-    if (inputZipFile) inputZipFile.style.display = "none";
-    if (!zipDropZone.dropzone) {
-      new Dropzone(zipDropZone, {
-        url: function() {
-          return `/api/projects/${appState.currentProjectId}/import-zip`;
-        },
-        paramName: "file",
-        acceptedFiles: ".zip",
-        maxFilesize: 1024,
-        autoProcessQueue: true,
-        previewsContainer: document.createElement("div"),
-        previewTemplate: '<div style="display:none"></div>',
-        init: function() {
-          this.on("addedfile", function(file) {
-            if (!appState.currentProjectId) {
-              showToast("請先載入或建立專案！");
-              this.removeFile(file);
-              return;
-            }
-            if (!file.name.endsWith(".zip")) {
-              showToast("只支援上傳 ZIP 格式的資料包！");
-              this.removeFile(file);
-              return;
-            }
-            showToast("正在上傳並解壓縮 ZIP 資料包...");
-          });
 
-          this.on("success", async function(file, response) {
-            let data = response;
-            if (typeof response === "string") {
-              try {
-                data = JSON.parse(response);
-              } catch (e) {
-                data = { message: response };
-              }
-            }
-            showToast(data.message || "ZIP 匯入完成！");
-            await openProject(appState.currentProjectId);
-          });
-
-          this.on("error", function(file, message) {
-            let errMsg = message;
-            if (typeof message === "object") {
-              errMsg = message.detail || message.message || JSON.stringify(message);
-            }
-            showToast(`ZIP 匯入失敗：${errMsg}`);
-          });
-
-          this.on("queuecomplete", function() {
-            this.removeAllFiles(true);
-          });
-        }
-      });
+  async function uploadDatasetFiles(files) {
+    if (!appState.currentProjectId) {
+      showToast("Please load a project first.");
+      return;
     }
-  } else {
-    zipDropZone?.addEventListener("click", () => {
-      inputZipFile?.click();
+
+    const allFiles = [...files];
+    if (allFiles.length === 0) {
+      showToast("No files to upload.");
+      return;
+    }
+
+    const zipFiles = allFiles.filter(file => file.name.toLowerCase().endsWith(".zip"));
+    const mixedFiles = allFiles.filter(file => {
+      const name = file.name.toLowerCase();
+      return /\.(jpg|jpeg|png|bmp|json|txt)$/.test(name);
     });
-    
-    inputZipFile?.addEventListener("change", async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-      if (!appState.currentProjectId) {
-        showToast("請先載入或建立專案！");
-        if (inputZipFile) inputZipFile.value = "";
-        return;
-      }
-      if (!file.name.endsWith(".zip")) {
-        showToast("只支援上傳 ZIP 格式的資料包！");
-        if (inputZipFile) inputZipFile.value = "";
-        return;
-      }
-      
-      const formData = new FormData();
-      formData.append("file", file);
-      
-      showToast("正在上傳並解壓縮 ZIP 資料包...");
-      try {
+    mixedFiles.sort((a, b) => {
+      const rank = (file) => {
+        const name = file.name.toLowerCase();
+        if (/\.(jpg|jpeg|png|bmp)$/.test(name)) return 0;
+        if (name.endsWith(".json")) return 1;
+        if (name.endsWith(".txt")) return 2;
+        return 3;
+      };
+      return rank(a) - rank(b);
+    });
+
+    if (zipFiles.length === 0 && mixedFiles.length === 0) {
+      showToast("No supported files found. Use images, LabelMe JSON, YOLO TXT, or ZIP.");
+      return;
+    }
+
+    let importedImages = 0;
+    let importedJsons = 0;
+    let importedTxts = 0;
+    let skipped = Math.max(0, allFiles.length - zipFiles.length - mixedFiles.length);
+
+    try {
+      for (const zipFile of zipFiles) {
+        const formData = new FormData();
+        formData.append("file", zipFile, zipFile.name);
+        showToast(`Importing ZIP: ${zipFile.name}`);
         const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-zip`, {
           method: "POST",
           body: formData
         });
-        showToast(data.message || "ZIP 匯入完成！");
-        await openProject(appState.currentProjectId);
-      } catch (err) {
-        showToast(`ZIP 匯入失敗：${err.message}`);
-      } finally {
-        if (inputZipFile) inputZipFile.value = "";
+        importedImages += data.imported_images || 0;
+        importedJsons += data.imported_jsons || 0;
+        importedTxts += data.imported_txts || 0;
       }
+
+      const batchSize = 500;
+      for (let i = 0; i < mixedFiles.length; i += batchSize) {
+        const batch = mixedFiles.slice(i, i + batchSize);
+        const formData = new FormData();
+        batch.forEach(file => {
+          formData.append("files", file, file.webkitRelativePath || file.name);
+        });
+        showToast(`Importing folder files ${Math.floor(i / batchSize) + 1}/${Math.ceil(mixedFiles.length / batchSize)}...`);
+        const data = await apiFetch(`/api/projects/${appState.currentProjectId}/upload-dataset-files`, {
+          method: "POST",
+          body: formData
+        });
+        importedImages += data.imported_images || 0;
+        importedJsons += data.imported_jsons || 0;
+        importedTxts += data.imported_txts || 0;
+        skipped += data.skipped || 0;
+      }
+
+      showToast(`Import complete: images ${importedImages}, JSON ${importedJsons}, TXT ${importedTxts}, skipped ${skipped}`);
+      await openProject(appState.currentProjectId, { stayOnPage: true });
+    } catch (err) {
+      showToast(`Dataset import failed: ${err.message}`);
+    }
+  }
+
+  if (zipDropZone && inputZipFile) {
+    if (zipDropZone.dropzone) zipDropZone.dropzone.destroy();
+    inputZipFile.style.display = "none";
+    inputZipFile.multiple = true;
+    inputZipFile.setAttribute("webkitdirectory", "");
+    inputZipFile.setAttribute("directory", "");
+
+    zipDropZone.addEventListener("click", () => inputZipFile.click());
+
+    inputZipFile.addEventListener("change", async (event) => {
+      await uploadDatasetFiles([...(event.target.files || [])]);
+      inputZipFile.value = "";
     });
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      zipDropZone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        zipDropZone.classList.add("dz-drag-hover");
+      }, true);
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      zipDropZone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        zipDropZone.classList.remove("dz-drag-hover");
+      }, true);
+    });
+
+    zipDropZone.addEventListener("drop", async (event) => {
+      const files = await collectDroppedFiles(event.dataTransfer);
+      await uploadDatasetFiles(files);
+    }, true);
   }
 
   qs("#search-image")?.addEventListener("input", () => {
@@ -1265,7 +1295,7 @@ function generateReport() {
 - Task type: ${project.task_type}
 - Images: ${status.imageCount}
 - Annotation progress: ${status.annotatedCount}/${status.imageCount}
-- LabelMe backend: Pending
+- LabelMe backend: Connected
 - Split: ${status.splitComplete ? "Ready" : "Not ready"}
 - Training: ${status.trainingLabel}
 `;
@@ -1281,6 +1311,7 @@ function generateReport() {
 }
 
 function bindLabelMeActions() {
+  qs("#btn-open-labelme")?.addEventListener("click", openExternalLabelMe);
   qs("#btn-refresh-labelme")?.addEventListener("click", async () => {
     await syncLabelMeLabels(true);
   });
@@ -1289,6 +1320,7 @@ function bindLabelMeActions() {
   });
   qs("#btn-copy-images-path")?.addEventListener("click", () => copyText(qs("#labelme-images-path")?.textContent));
   qs("#btn-copy-json-path")?.addEventListener("click", () => copyText(qs("#labelme-json-path")?.textContent));
+  qs("#btn-copy-labelme-command")?.addEventListener("click", () => copyText(qs("#labelme-command")?.textContent));
 
   // 轉換按鈕事件綁定
   const converters = {
@@ -1441,6 +1473,27 @@ function bindLabelMeActions() {
   }
 }
 
+async function openExternalLabelMe() {
+  if (!appState.currentProjectId) {
+    showToast("請先載入或建立專案。");
+    return;
+  }
+  const btn = qs("#btn-open-labelme");
+  if (btn) btn.disabled = true;
+  showToast("正在開啟外部 LabelMe...");
+  try {
+    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/open`, { method: "POST" });
+    showToast(data.message || "LabelMe 已啟動。");
+  } catch (err) {
+    const message = err.message === "Not Found"
+      ? "LabelMe 啟動 API 尚未載入，請重啟 FastAPI 後端後再試。"
+      : `LabelMe 啟動失敗：${err.message}`;
+    showToast(message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 async function syncLabelMeLabels(silent = false) {
   const btn = qs("#btn-sync-labelme");
   if (btn) btn.disabled = true;
@@ -1583,7 +1636,7 @@ function renderDashboardAlerts(status) {
   } else if (!status.hasDataset) {
     guards.push(statusGuard("warning", "專案已載入，但尚未匯入資料", ["Dataset image count 為 0。"], "前往 Dataset 匯入圖片資料夾或影片抽幀。"));
   }
-  guards.push(statusGuard("info", "LabelMe 狀態", ["UI Ready", "Backend Pending", "尚未掃描 annotations/labelme/*.json。"], "Phase 1 僅提供 LabelMe Manager UI，sync / convert 將在 Phase 2 實作。"));
+  guards.push(statusGuard("info", "LabelMe 狀態", ["UI Ready", "Backend Connected", "可掃描 raw/annotations/labelme/*.json。"], "前往 LabelMe 頁面同步 JSON，完成後可預覽與轉換。"));
   setHTML("#dashboard-alerts", guards.join(""));
 }
 
@@ -1630,12 +1683,12 @@ function renderControlCards(status) {
     {
       icon: "fa-pen-nib",
       title: "LabelMe",
-      badge: "UI Ready / Backend Pending",
-      badgeClass: "warning",
+      badge: "Backend Connected",
+      badgeClass: "success",
       desc: "管理 LabelMe JSON 工作流，取代舊版 Canvas bbox 標註主入口。",
       stats: [["JSON", status.labelme.jsonCount], ["Missing", status.labelme.missingJson]],
       progress: status.labelme.completionRate,
-      actions: [button("Open Manager", "labelme", "primary"), disabledButton("Sync JSON")]
+      actions: [button("Open Manager", "labelme", "primary"), button("Sync JSON", "labelme", "secondary")]
     },
     {
       icon: "fa-code-branch",
@@ -1724,7 +1777,7 @@ function renderProjectSummary(status) {
       <div class="path-row"><span>Task</span><code>${escapeHtml(status.taskType)}</code></div>
       <div class="path-row"><span>Images</span><code>${status.imageCount}</code></div>
       <div class="path-row"><span>Annotated</span><code>${status.annotatedCount}/${status.imageCount}</code></div>
-      <div class="path-row"><span>LabelMe</span><code>UI Ready / Backend Pending</code></div>
+      <div class="path-row"><span>LabelMe</span><code>Backend Connected</code></div>
       <div class="path-row"><span>Split</span><code>${status.splitComplete ? "Ready" : "Not ready"}</code></div>
       <div class="path-row"><span>Training</span><code>${escapeHtml(status.trainingLabel)}</code></div>
     </div>
@@ -1735,7 +1788,7 @@ function renderNextActions(status) {
   const actions = [];
   if (!status.hasProject) actions.push("前往 Projects 建立或開啟專案。");
   if (status.hasProject && !status.hasDataset) actions.push("前往 Dataset 匯入圖片或影片抽幀。");
-  if (status.hasDataset && !status.labelme.synced) actions.push("前往 LabelMe 確認工作區路徑；Phase 2 再同步 JSON。");
+  if (status.hasDataset && !status.labelme.synced) actions.push("前往 LabelMe 同步 JSON，確認標註進度。");
   if (status.hasDataset && !status.splitComplete) actions.push("前往 Split 建立 Train / Val / Test。");
   if (status.trainReady) actions.push("前往 Training 啟動訓練。");
   if (actions.length === 0) actions.push("目前沒有必要動作。");
@@ -1744,7 +1797,7 @@ function renderNextActions(status) {
 
 function renderWarnings(status) {
   const warnings = [];
-  if (!status.labelme.backendReady) warnings.push("LabelMe backend sync 尚未實作，JSON count 目前為 UI placeholder。");
+  if (!status.labelme.backendReady) warnings.push("LabelMe backend sync 尚未連線。");
   if (!status.trainReady) warnings.push("Start Training 已依狀態 disabled。");
   if (!status.hasProject) warnings.push("尚未載入專案時，頁面可瀏覽但操作會被停用。");
   setHTML("#warning-list", warnings.map((item) => `<div class="activity-item">${escapeHtml(item)}</div>`).join(""));
@@ -1759,7 +1812,7 @@ function renderRecentProjects(projects) {
 function renderActivity(status) {
   const items = [
     `Frontend phase: Dashboard Control Center`,
-    `LabelMe: UI Ready / Backend Pending`,
+    `LabelMe: Backend Connected`,
     `Current page: ${appState.currentPage}`,
     `Training status: ${status.trainingLabel}`
   ];
@@ -1787,8 +1840,8 @@ function renderPageGuards(pageId, status) {
     guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未匯入資料集。"], "前往 Dataset 匯入圖片。"));
   }
   if (status.hasDataset && !status.labelme.synced) {
-    guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未同步 LabelMe 標註。", "LabelMe backend sync is not implemented in Phase 1."], "前往 LabelMe 頁確認工作區；Phase 2 接上 sync API 後再訓練。"));
-    guards.split.push(statusGuard("info", "LabelMe backend 尚未同步", ["此階段仍可設定 split UI，但正式訓練應等待 LabelMe JSON 轉換完成。"], "Phase 2 會加入 LabelMe JSON parser 與轉換。"));
+    guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未同步 LabelMe 標註。"], "前往 LabelMe 頁同步 JSON，再轉換為訓練格式。"));
+    guards.split.push(statusGuard("info", "LabelMe 尚未同步", ["此階段仍可設定 split UI，但正式訓練應等待 LabelMe JSON 轉換完成。"], "前往 LabelMe 頁同步 JSON 與執行轉換。"));
   }
   if (status.hasDataset && !status.splitComplete) {
     guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未建立 Train / Val / Test。"], "前往 Split 建立資料分散。"));
@@ -1924,12 +1977,13 @@ function badgeClassForStatus(status) {
 function renderLabelMeManager(status) {
   const datasetPath = status.datasetPath || "";
   const imagesPath = datasetPath ? `${datasetPath}/raw/images` : "尚未載入專案";
-  const jsonPath = datasetPath ? `${datasetPath}/annotations/labelme` : "尚未載入專案";
-  const outputPath = datasetPath ? `${datasetPath}/annotations/converted` : "尚未載入專案";
+  const jsonPath = datasetPath ? `${datasetPath}/raw/annotations/labelme` : "尚未載入專案";
+  const outputPath = datasetPath ? `${datasetPath}/raw/labels` : "尚未載入專案";
   setText("#labelme-images-path", imagesPath);
   setText("#labelme-json-path", jsonPath);
   setText("#labelme-output-path", outputPath);
   setText("#labelme-classes", status.classNames.length ? status.classNames.join(", ") : "--");
+  setText("#labelme-command", datasetPath ? `labelme "${imagesPath}" --output "${jsonPath}"` : "尚未載入專案");
   const metrics = [
     ["Total images", status.labelme.totalImages],
     ["LabelMe JSON files", status.labelme.jsonCount],
@@ -1954,9 +2008,11 @@ function renderLabelMeManager(status) {
     return;
   }
 
+  const isSegmentationTask = String(status.taskType || "").toLowerCase().includes("segmentation");
+  const hasSegmentationBbox = (img) => isSegmentationTask && (img.annotations || []).some((ann) => ann.type === "bbox");
   const showIssuesOnly = qs("#chk-show-issues-only")?.checked ?? true;
   const filteredImages = showIssuesOnly 
-    ? rawImages.filter(img => img.status !== "annotated")
+    ? rawImages.filter(img => img.status !== "annotated" || hasSegmentationBbox(img))
     : rawImages;
 
   if (filteredImages.length === 0) {
@@ -1976,6 +2032,8 @@ function renderLabelMeManager(status) {
     let fixText = "Use LabelMe to annotate";
     let rowClass = "row-missing";
     
+    const needsPolygon = hasSegmentationBbox(img);
+
     if (img.status === "annotated") {
       statusText = "Annotated";
       issueText = "None";
@@ -1992,12 +2050,19 @@ function renderLabelMeManager(status) {
       fixText = "None";
       rowClass = "row-muted";
     }
+
+    if (needsPolygon) {
+      statusText = "Needs polygon";
+      issueText = "Segmentation project contains rectangle / bbox shapes";
+      fixText = "Open LabelMe and redraw these labels with polygon";
+      rowClass = "row-warning";
+    }
     
     return `
       <tr class="${rowClass}" data-preview-img="${escapeHtml(img.filename)}" style="cursor:pointer;">
         <td><code>${escapeHtml(img.filename.replace(/\.[^/.]+$/, ".json"))}</code></td>
         <td>${escapeHtml(img.filename)}</td>
-        <td><span class="badge ${badgeClassForStatus(img.status)}">${statusText}</span></td>
+        <td><span class="badge ${needsPolygon ? "badge-warning" : badgeClassForStatus(img.status)}">${statusText}</span></td>
         <td>${issueText}</td>
         <td>${fixText}</td>
       </tr>
@@ -2049,7 +2114,7 @@ async function previewLabelMeImage(filename) {
         const pts = shape.points || [];
         if (pts.length < 2) return;
         
-        ctx.strokeStyle = classColors[shape.label] || "#ff0000";
+        ctx.strokeStyle = colorForLabel(shape.label);
         ctx.lineWidth = Math.max(3, img.width / 300);
         ctx.fillStyle = "rgba(0, 210, 211, 0.15)";
         
