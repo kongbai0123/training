@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vision Training Studio - 可視化辨識訓練流程平台</title>
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Custom Style -->
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Background Glowing Blobs -->
+  <div class="glow-bg">
+    <div class="blob blob1"></div>
+    <div class="blob blob2"></div>
+    <div class="blob blob3"></div>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <i class="fa-solid fa-brain-circuit"></i>
+      <span>Vision Training Studio</span>
+    </div>
+    
+    <div class="project-selector-bar">
+      <span id="current-project-title">未選擇專案</span>
+      <button class="btn btn-secondary btn-sm" id="btn-browse-history">
+        <i class="fa-solid fa-folder-open"></i> 開啟舊專案
+      </button>
+    </div>
+  </header>
+
+  <!-- Flow Navigation Bar -->
+  <nav class="flow-nav" id="main-flow-nav">
+    <div class="nav-step active" data-tab="tab-project">
+      <div class="step-num">0</div>
+      <div class="step-label">專案首頁</div>
+    </div>
+    <div class="nav-step disabled" data-tab="tab-dataset" id="nav-dataset">
+      <div class="step-num">1</div>
+      <div class="step-label">資料 Dataset</div>
+    </div>
+    <div class="nav-step disabled" data-tab="tab-label" id="nav-label">
+      <div class="step-num">2</div>
+      <div class="step-label">標籤 Label</div>
+    </div>
+    <div class="nav-step disabled" data-tab="tab-split" id="nav-split">
+      <div class="step-num">3</div>
+      <div class="step-label">分散與擴充</div>
+    </div>
+    <div class="nav-step disabled" data-tab="tab-train" id="nav-train">
+      <div class="step-num">4</div>
+      <div class="step-label">訓練 Training</div>
+    </div>
+    <div class="nav-step disabled" data-tab="tab-eval" id="nav-eval">
+      <div class="step-num">5</div>
+      <div class="step-label">評估 Evaluation</div>
+    </div>
+    <div class="nav-step disabled" data-tab="tab-export" id="nav-export">
+      <div class="step-num">6</div>
+      <div class="step-label">匯出 Export</div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="content-container">
+
+    <!-- TAB 0: PROJECT HOME / HISTORY -->
+    <section class="tab-content active" id="tab-project">
+      <div class="welcome-hero">
+        <h1>探索辨識訓練的新維度</h1>
+        <p>圖形化、流程化、防呆設計，告別程式碼與終端機，輕鬆訓練專屬的視覺辨識 AI 模型。</p>
+      </div>
+
+      <div class="project-home-grid">
+        <!-- New Project Card -->
+        <div class="glass-card action-card">
+          <h2><i class="fa-solid fa-circle-plus text-primary"></i> 建立新專案</h2>
+          <p>初始化全新的影像辨識、物件偵測或分割任務。</p>
+          <form id="form-create-project" class="project-form">
+            <div class="form-group">
+              <label for="new-project-name">專案名稱</label>
+              <input type="text" id="new-project-name" required placeholder="例如：道路材質與破損偵測">
+            </div>
+            
+            <div class="form-group">
+              <label>任務類型 
+                <span class="info-icon" data-tooltip="影像分類：判斷整張圖屬於什麼類別。<br>物件偵測：用框框標註出特定物體的位置與大小。<br>語意分割：為圖片上的每個像素進行分類標註。"><i class="fa-solid fa-circle-info"></i></span>
+              </label>
+              <select id="new-project-type">
+                <option value="object_detection">物件偵測 (Object Detection - 預設)</option>
+                <option value="image_classification">影像分類 (Image Classification)</option>
+                <option value="semantic_segmentation">語意分割 (Semantic Segmentation)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="new-project-classes">標籤類別 (以逗號分隔)</label>
+              <input type="text" id="new-project-classes" required placeholder="asphalt, cement, gravel, crack">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">建立並開啟專案</button>
+          </form>
+        </div>
+
+        <!-- Browse History Card -->
+        <div class="glass-card history-card">
+          <h2><i class="fa-solid fa-history text-secondary"></i> 最近開啟專案</h2>
+          <p>快速回到上一次的工作進度。</p>
+          <div class="project-list" id="recent-projects-list">
+            <div class="empty-state">
+              <i class="fa-solid fa-folder-open"></i>
+              <p>目前尚無歷史專案紀錄，請先建立新專案。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 1: DATASET -->
+    <section class="tab-content" id="tab-dataset">
+      <div class="page-header">
+        <div>
+          <h1>1. 資料集匯入與檢查</h1>
+          <p>匯入您的影像資料或影片，系統將進行自動品質檢查並生成健康度報告。</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary" id="btn-trigger-quality"><i class="fa-solid fa-circle-check"></i> 執行品質檢查</button>
+        </div>
+      </div>
+
+      <!-- Dataset Grid Layout -->
+      <div class="dataset-grid">
+        <!-- Import Control Panel -->
+        <div class="glass-card import-panel">
+          <h3><i class="fa-solid fa-file-import"></i> 資料匯入</h3>
+          
+          <div class="import-options">
+            <div class="import-opt-card" id="opt-import-folder">
+              <i class="fa-solid fa-folder-open"></i>
+              <h4>本機資料夾匯入</h4>
+              <p>掃描本機資料夾，直接複製所有影像。</p>
+              <div class="compact-form">
+                <input type="text" id="input-local-folder" placeholder="D:\datasets\road_images">
+                <button class="btn btn-primary btn-sm" id="btn-import-local">匯入</button>
+              </div>
+            </div>
+
+            <div class="import-opt-card" id="opt-import-video">
+              <i class="fa-solid fa-video"></i>
+              <h4>影片抽幀匯入</h4>
+              <p>自動將影片依照設定間隔進行抽幀。</p>
+              <div class="compact-form">
+                <input type="text" id="input-video-path" placeholder="D:\videos\route_1.mp4">
+                <div class="flex-row">
+                  <input type="number" id="input-video-fps" value="1" min="1" max="10" style="width: 70px;">
+                  <span>幀/秒</span>
+                  <button class="btn btn-primary btn-sm" id="btn-import-video">抽幀</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dataset Health Score -->
+          <div class="health-score-card margin-top">
+            <h4>資料集健康度 (Health Score)</h4>
+            <div class="health-display">
+              <div class="score-radial">
+                <span id="health-score-val">--</span>
+                <span class="score-label">/ 100</span>
+              </div>
+              <div class="health-details">
+                <p>品質狀況：<strong id="health-status-text">尚未評估</strong></p>
+                <ul id="health-warnings-list" class="warnings-list">
+                  <li>請先執行品質檢查以評估資料集健康度。</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Image Browser -->
+        <div class="glass-card browser-panel">
+          <div class="browser-header">
+            <h3><i class="fa-solid fa-images"></i> 圖片瀏覽器 (<span id="dataset-count-total">0</span> 張)</h3>
+            <div class="filters">
+              <input type="text" id="search-image" placeholder="搜尋檔名...">
+              <select id="filter-status">
+                <option value="all">所有標註狀態</option>
+                <option value="unannotated">未標註</option>
+                <option value="annotated">已標註</option>
+                <option value="flagged">需複查</option>
+                <option value="skipped">無效/跳過</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="thumbnail-grid" id="dataset-thumbnails">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: LABEL / ANNOTATION -->
+    <section class="tab-content" id="tab-label">
+      <div class="annotation-workspace">
+        
+        <!-- Left: Image List -->
+        <div class="glass-card anno-sidebar-left">
+          <h3>影像清單</h3>
+          <div class="progress-bar-container">
+            <div class="progress-info">
+              <span>標註進度: <strong id="anno-progress-percent">0%</strong></span>
+              <span id="anno-progress-fraction">0/0</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="anno-progress-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+          <div class="anno-image-list" id="anno-sidebar-images">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Center: Annotation Canvas -->
+        <div class="glass-card anno-canvas-container">
+          <div class="canvas-toolbar">
+            <div class="tool-group">
+              <button class="tool-btn active" id="tool-select" title="選取與編輯 (V)"><i class="fa-solid fa-arrow-pointer"></i></button>
+              <button class="tool-btn" id="tool-bbox" title="畫矩形框 BBox (R)"><i class="fa-solid fa-vector-square"></i></button>
+              <!-- Polygon reserved for future extension -->
+              <button class="tool-btn" id="tool-polygon" title="畫多邊形 Polygon (P)" disabled><i class="fa-solid fa-draw-polygon"></i> (預留)</button>
+            </div>
+            <div class="tool-group">
+              <button class="tool-btn" id="btn-zoom-in" title="放大"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+              <button class="tool-btn" id="btn-zoom-out" title="縮小"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+              <button class="tool-btn" id="btn-zoom-reset" title="重設大小"><i class="fa-solid fa-arrows-to-eye"></i></button>
+            </div>
+            <div class="tool-group">
+              <button class="tool-btn" id="btn-anno-undo" title="復原 (Ctrl+Z)"><i class="fa-solid fa-rotate-left"></i></button>
+              <button class="tool-btn" id="btn-anno-redo" title="重做 (Ctrl+Y)"><i class="fa-solid fa-rotate-right"></i></button>
+            </div>
+            <div class="tool-group filename-display">
+              <span id="anno-current-filename">無選取影像</span>
+            </div>
+          </div>
+
+          <div class="canvas-viewport" id="canvas-viewport">
+            <canvas id="annotation-canvas"></canvas>
+          </div>
+
+          <div class="canvas-footer">
+            <div class="hotkey-hints">
+              <span><kbd>W/S</kbd> 上一張/下一張</span> | 
+              <span><kbd>拖曳</kbd> 畫框</span> | 
+              <span><kbd>Delete</kbd> 刪除選中框</span> | 
+              <span><kbd>空白鍵+拖曳</kbd> 平移畫布</span>
+            </div>
+            <div>
+              <button class="btn btn-secondary btn-sm" id="btn-flag-review"><i class="fa-solid fa-flag text-warning"></i> 標記為需複查</button>
+              <button class="btn btn-secondary btn-sm" id="btn-skip-image"><i class="fa-solid fa-ban"></i> 跳過此圖片</button>
+              <button class="btn btn-primary btn-sm" id="btn-save-anno"><i class="fa-solid fa-floppy-disk"></i> 儲存標註 (S)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Category List -->
+        <div class="glass-card anno-sidebar-right">
+          <h3>類別與屬性</h3>
+          <div class="class-selector-list" id="anno-classes-list">
+            <!-- Rendered dynamically -->
+          </div>
+          
+          <hr class="divider">
+
+          <h3>標籤實體清單</h3>
+          <div class="bbox-list" id="anno-entities-list">
+            <!-- Rendered dynamically -->
+          </div>
+
+          <hr class="divider">
+
+          <h3>影像屬性</h3>
+          <div class="form-group">
+            <label>天氣場景</label>
+            <select id="anno-image-scene">
+              <option value="sunny">晴天 (Sunny)</option>
+              <option value="rainy">雨天 (Rainy)</option>
+              <option value="shadow">強陰影/斑駁 (Shadow)</option>
+              <option value="night">夜間/低光源 (Night)</option>
+              <option value="unknown">未指定/未知</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>資料來源影片</label>
+            <input type="text" id="anno-image-source" readonly placeholder="無影片來源">
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 3: DATA SPLIT & AUGMENTATION -->
+    <section class="tab-content" id="tab-split">
+      <div class="page-header">
+        <div>
+          <h1>3. 資料分散切分與物理擴充</h1>
+          <p>配置 Train / Val / Test 資料分配，並設定物理擴充以模擬真實世界的視覺變化。</p>
+        </div>
+      </div>
+
+      <div class="split-aug-grid">
+        <!-- Dataset Split Card -->
+        <div class="glass-card split-panel">
+          <h2><i class="fa-solid fa-chart-pie text-primary"></i> 資料集分散 (Split)</h2>
+          <p>合理的分配可以防止過擬合與虛高指標。</p>
+          
+          <form id="form-split-dataset">
+            <div class="form-group">
+              <label>分散演算法
+                <span class="info-icon" data-tooltip="基本隨機：簡單將資料隨機切分。<br>分層分散 (推薦)：依據標籤類別比例均勻分配。<br>場景分散：確保晴天、雨天、夜間影像平均出現在各子集。<br>來源/影片分組：防止同一段影片的相似幀同時出現在訓練與驗證集，杜絕 Data Leakage。"><i class="fa-solid fa-circle-info"></i></span>
+              </label>
+              <select id="split-method">
+                <option value="stratified">分層隨機分散 (Stratified Split - 推薦)</option>
+                <option value="group">影片/來源分組分散 (Group Split)</option>
+                <option value="scene">場景平衡分散 (Scene-aware Split)</option>
+                <option value="basic">基本隨機分散 (Basic Random)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>比例設定 (Train / Val / Test)</label>
+              <div class="split-slider-container">
+                <div class="flex-row">
+                  <span>訓練集 (Train): <strong id="ratio-train-val">70%</strong></span>
+                  <span>驗證集 (Val): <strong id="ratio-val-val">20%</strong></span>
+                  <span>測試集 (Test): <strong id="ratio-test-val">10%</strong></span>
+                </div>
+                <!-- Simple inputs for simplicity -->
+                <div class="flex-row gap-sm margin-top">
+                  <input type="number" id="input-ratio-train" value="70" min="10" max="90" style="width: 30%;">
+                  <input type="number" id="input-ratio-val" value="20" min="5" max="45" style="width: 30%;">
+                  <input type="number" id="input-ratio-test" value="10" min="5" max="45" style="width: 30%;">
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" id="btn-run-split">執行資料切分</button>
+          </form>
+
+          <!-- Split Quality Score -->
+          <div class="split-report-card margin-top" id="split-report-card" style="display: none;">
+            <h4>切分品質報告</h4>
+            <div class="flex-row justify-between">
+              <span>品質評分：<strong id="split-quality-score">--</strong> / 100</span>
+              <span class="badge" id="split-quality-badge">優良</span>
+            </div>
+            <ul id="split-quality-warnings" class="warnings-list margin-top">
+              <!-- Rendered dynamically -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Physical Augmentation Card -->
+        <div class="glass-card aug-panel">
+          <h2><i class="fa-solid fa-wand-magic-sparkles text-secondary"></i> 物理擴充 (Physical Augmentation)</h2>
+          <p>物理擴充藉由光學、氣象與遮擋模擬，增強模型在真實環境的泛化能力。</p>
+
+          <div class="aug-workspace-split">
+            <!-- Augmentation settings -->
+            <div class="aug-settings">
+              <h4>擴充強度設定</h4>
+              
+              <div class="form-group">
+                <label>光照類 (亮度 & 對比度) 
+                  <span class="info-icon" data-tooltip="模擬逆光、強陽光、林蔭樹影與夜間低光照下的曝光變化。"><i class="fa-solid fa-circle-info"></i></span>
+                </label>
+                <div class="slide-control">
+                  <span>亮度調整:</span>
+                  <input type="range" id="aug-light-brightness" min="-0.5" max="0.5" step="0.05" value="0">
+                  <span id="val-aug-brightness">0.0</span>
+                </div>
+                <div class="slide-control">
+                  <span>對比調整:</span>
+                  <input type="range" id="aug-light-contrast" min="-0.5" max="0.5" step="0.05" value="0">
+                  <span id="val-aug-contrast">0.0</span>
+                </div>
+                <div class="checkbox-control">
+                  <input type="checkbox" id="aug-light-shadow">
+                  <label for="aug-light-shadow">啟用斑駁樹影/隨機局部陰影</label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>天氣類 (雨、霧、濕滑)
+                  <span class="info-icon" data-tooltip="模擬雨天白線、濕滑路面反光與濃霧散射效果。"><i class="fa-solid fa-circle-info"></i></span>
+                </label>
+                <div class="slide-control">
+                  <span>降雨模擬:</span>
+                  <input type="range" id="aug-weather-rain" min="0.0" max="0.8" step="0.1" value="0">
+                  <span id="val-aug-rain">0.0</span>
+                </div>
+                <div class="slide-control">
+                  <span>大霧模擬:</span>
+                  <input type="range" id="aug-weather-fog" min="0.0" max="0.8" step="0.1" value="0">
+                  <span id="val-aug-fog">0.0</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>運動與鏡頭類 (模糊、噪聲、透視)
+                  <span class="info-icon" data-tooltip="模擬相機快速移動產生的模糊、夜間噪聲與車輛轉彎的透視鏡頭變形。"><i class="fa-solid fa-circle-info"></i></span>
+                </label>
+                <div class="slide-control">
+                  <span>運動模糊:</span>
+                  <input type="range" id="aug-motion-blur" min="0.0" max="0.8" step="0.1" value="0">
+                  <span id="val-aug-blur">0.0</span>
+                </div>
+                <div class="slide-control">
+                  <span>感光噪聲:</span>
+                  <input type="range" id="aug-camera-noise" min="0.0" max="0.5" step="0.05" value="0">
+                  <span id="val-aug-noise">0.0</span>
+                </div>
+                <div class="slide-control">
+                  <span>透視變換:</span>
+                  <input type="range" id="aug-camera-perspective" min="0.0" max="0.15" step="0.02" value="0">
+                  <span id="val-aug-perspective">0.0</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="aug-multiplier">擴充倍數 (每張 Train 圖片產生幾張變體)</label>
+                <input type="number" id="aug-multiplier" value="1" min="1" max="5">
+              </div>
+
+              <button class="btn btn-secondary btn-block" id="btn-apply-aug">套用並生成物理擴充影像</button>
+            </div>
+
+            <!-- Augmentation Live Preview -->
+            <div class="aug-preview-panel">
+              <h4>實時物理效果預覽</h4>
+              <div class="aug-preview-box" id="aug-preview-box">
+                <span class="preview-placeholder">在下方選擇一張已標註影像以預覽擴充效果</span>
+                <img id="aug-preview-img" style="display: none;" alt="Augmentation Preview">
+              </div>
+              <div class="form-group margin-top">
+                <label for="aug-preview-select-img">選擇預覽影像</label>
+                <select id="aug-preview-select-img">
+                  <!-- Rendered dynamically -->
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: TRAINING -->
+    <section class="tab-content" id="tab-train">
+      <div class="page-header">
+        <div>
+          <h1>4. 模型訓練</h1>
+          <p>設定您的模型結構與超參數，並透過視覺化儀表板與 Telemetry 監控訓練指標。</p>
+        </div>
+      </div>
+
+      <div class="training-grid">
+        <!-- Configuration Panel -->
+        <div class="glass-card train-config-panel">
+          <h2><i class="fa-solid fa-sliders text-primary"></i> 訓練配置</h2>
+          
+          <div class="toggle-mode-container">
+            <span>參數模式：</span>
+            <button class="btn btn-sm btn-secondary active" id="btn-mode-simple">簡單模式</button>
+            <button class="btn btn-sm btn-secondary" id="btn-mode-advanced">進階模式</button>
+          </div>
+
+          <form id="form-training">
+            <!-- Simple Config Section -->
+            <div id="simple-config-section">
+              <div class="form-group">
+                <label>訓練模型 (Model Architecture)
+                  <span class="info-icon" data-tooltip="YOLOv8n / YOLO11n：輕量化模型，推論速度極快，適合邊緣裝置。<br>YOLOv8s / YOLO11s：中型模型，精確度較高但運算要求較高。"><i class="fa-solid fa-circle-info"></i></span>
+                </label>
+                <select id="train-model">
+                  <option value="yolov8n.pt">YOLOv8n (輕量・快速 - 推薦)</option>
+                  <option value="yolov8s.pt">YOLOv8s (中量・較精準)</option>
+                  <option value="yolov11n.pt">YOLO11n (最新輕量模型)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="train-epochs">迭代輪數 (Epochs)
+                  <span class="info-icon" data-tooltip="模型完整看完所有訓練影像一次，稱為一個 Epoch。Epoch 越多模型學得越久，但過多可能導致過擬合 (Overfitting)。"><i class="fa-solid fa-circle-info"></i></span>
+                </label>
+                <input type="number" id="train-epochs" value="50" min="5" max="300">
+              </div>
+
+              <div class="form-group">
+                <label for="train-batch">批次大小 (Batch Size)
+                  <span class="info-icon" data-tooltip="模型每次修正權重前，一次讀取的影像數量。數值越大速度越快，但更吃顯示卡記憶體 (VRAM)。"><i class="fa-solid fa-circle-info"></i></span>
+                </label>
+                <select id="train-batch">
+                  <option value="4">4 (適用低階顯卡)</option>
+                  <option value="8" selected>8 (預設・平衡)</option>
+                  <option value="16">16 (需要 8GB+ VRAM)</option>
+                  <option value="32">32 (需要 12GB+ VRAM)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="train-imgsz">影像輸入尺寸 (Image Size)
+                  <span class="info-icon" data-tooltip="輸入到神經網路的影像解析度。預設為 640 像素。較大尺寸可提升小目標偵測能力，但大幅增加運算負擔。"><i class="fa-solid fa-circle-info"></i></span>
+                </label>
+                <select id="train-imgsz">
+                  <option value="320">320 x 320</option>
+                  <option value="640" selected>640 x 640 (預設)</option>
+                  <option value="960">960 x 960</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="train-device">訓練設備 (Hardware)
+                  <span class="info-icon" data-tooltip="GPU：利用顯示卡硬體加速，訓練速度快 20~50 倍。<br>CPU：運算緩慢，僅適用於非常小的測試。"><i class="fa-solid fa-circle-info"></i></span>
+                </label>
+                <select id="train-device">
+                  <option value="gpu">GPU / 顯示卡加速 (偵測到 GPU)</option>
+                  <option value="cpu">CPU 運算</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Advanced Config Section (Hidden by default) -->
+            <div id="advanced-config-section" class="hidden">
+              <div class="form-group">
+                <label for="train-lr0">初始學習率 (Learning Rate - lr0)
+                  <span class="info-icon" data-tooltip="學習率控制模型修正錯誤時的步伐大小。太大可能學不穩 (Loss 震盪)，太小則可能學太慢。"><i class="fa-solid fa-circle-info"></i></span>
+                </label>
+                <input type="number" id="train-lr0" value="0.01" step="0.001" min="0.0001" max="0.1">
+              </div>
+
+              <div class="form-group">
+                <label>優化器 (Optimizer)
+                  <span class="info-icon" data-tooltip="SGD：經典隨機梯度下降，學得穩但收斂慢。<br>AdamW：能自適應調整學習率，收斂極快且學得好。"><i class="fa-solid fa-circle-info"></i></span>
+                </label>
+                <select id="train-optimizer">
+                  <option value="auto">Auto (自動選擇)</option>
+                  <option value="SGD">SGD</option>
+                  <option value="AdamW">AdamW</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="train-patience">早停機制 (Patience / Early Stopping)
+                  <span class="info-icon" data-tooltip="若驗證集 Loss 連續多少個 Epoch 沒有改善，則自動停止訓練以防止過擬合。設定為 0 代表不啟用。"><i class="fa-solid fa-circle-info"></i></span>
+                </label>
+                <input type="number" id="train-patience" value="10" min="0" max="50">
+              </div>
+            </div>
+
+            <div class="training-control-buttons margin-top">
+              <button type="button" class="btn btn-primary btn-block" id="btn-start-train">
+                <i class="fa-solid fa-play"></i> 開始模型訓練
+              </button>
+              <button type="button" class="btn btn-danger btn-block hidden" id="btn-stop-train">
+                <i class="fa-solid fa-stop"></i> 中止訓練
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Telemetry & Metrics Dashboard -->
+        <div class="glass-card telemetry-panel">
+          <h2><i class="fa-solid fa-gauge-high text-secondary"></i> 訓練監控儀表板</h2>
+          
+          <!-- Live Status Bar -->
+          <div class="live-status-bar">
+            <div class="status-indicator">
+              <span>狀態: <strong id="train-status-label">閒置 (Idle)</strong></span>
+              <div class="dot" id="train-status-dot"></div>
+            </div>
+            <div>
+              <span>當前進度: <strong id="train-progress-text">Epoch 0 / 0</strong></span>
+            </div>
+          </div>
+
+          <!-- Hardware Telemetry -->
+          <div class="hardware-telemetry-grid">
+            <div class="hw-card">
+              <i class="fa-solid fa-microchip"></i>
+              <div>
+                <h5>CPU 使用率</h5>
+                <p id="hw-cpu-val">0%</p>
+              </div>
+            </div>
+            <div class="hw-card">
+              <i class="fa-solid fa-memory"></i>
+              <div>
+                <h5>主記憶體 (RAM)</h5>
+                <p id="hw-ram-val">0 / 0 MB</p>
+              </div>
+            </div>
+            <div class="hw-card">
+              <i class="fa-solid fa-gauge"></i>
+              <div>
+                <h5>GPU 使用率</h5>
+                <p id="hw-gpu-val">0%</p>
+              </div>
+            </div>
+            <div class="hw-card">
+              <i class="fa-solid fa-server"></i>
+              <div>
+                <h5>顯存 (VRAM)</h5>
+                <p id="hw-vram-val">0 / 0 MB</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Realtime Plots -->
+          <div class="chart-container margin-top">
+            <canvas id="training-metrics-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: EVALUATION -->
+    <section class="tab-content" id="tab-eval">
+      <div class="page-header">
+        <div>
+          <h1>5. 模型評估結果</h1>
+          <p>檢視模型訓練完成後的詳細指標，並透過 Failure Cases 找出弱點進行標籤修正。</p>
+        </div>
+      </div>
+
+      <div class="eval-grid">
+        <!-- Scoreboard -->
+        <div class="glass-card scoreboard-panel">
+          <h2><i class="fa-solid fa-trophy text-primary"></i> 關鍵評估指標</h2>
+          <div class="metrics-scoreboard">
+            <div class="metric-score-box">
+              <span class="metric-score-name">mAP50 
+                <span class="info-icon" data-tooltip="當預測框與真實框重合度 (IoU) 大於 50% 時的平均精準度。數值越高代表越準。"><i class="fa-solid fa-circle-info"></i></span>
+              </span>
+              <strong id="eval-map50">--</strong>
+            </div>
+            <div class="metric-score-box">
+              <span class="metric-score-name">mAP50-95 
+                <span class="info-icon" data-tooltip="在不同重合度門檻 (50% 到 95%) 下的綜合平均精準度，是評估模型定位精度的嚴格指標。"><i class="fa-solid fa-circle-info"></i></span>
+              </span>
+              <strong id="eval-map5095">--</strong>
+            </div>
+            <div class="metric-score-box">
+              <span class="metric-score-name">Precision (精準率)
+                <span class="info-icon" data-tooltip="模型預測出的框中，真正猜對的比例。"><i class="fa-solid fa-circle-info"></i></span>
+              </span>
+              <strong id="eval-precision">--</strong>
+            </div>
+            <div class="metric-score-box">
+              <span class="metric-score-name">Recall (召回率)
+                <span class="info-icon" data-tooltip="所有真實目標中，模型成功抓出來的比例。"><i class="fa-solid fa-circle-info"></i></span>
+              </span>
+              <strong id="eval-recall">--</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Failure Cases Selector -->
+        <div class="glass-card failure-case-panel">
+          <h2><i class="fa-solid fa-triangle-exclamation text-warning"></i> 預測失效分析 (Failure Cases)</h2>
+          <p>模型容易對哪些情況產生誤判？以下為您篩選出驗證集中預測信心低或 IoU 不足的圖像，您可以點選直接回歸 [2. 標籤] 階段修正。</p>
+          <div class="failure-cases-grid" id="eval-failure-cases-grid">
+            <div class="empty-state">
+              <i class="fa-solid fa-circle-check text-green"></i>
+              <p>無明顯失效影像，或尚未完成模型訓練。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 6: EXPORT -->
+    <section class="tab-content" id="tab-export">
+      <div class="page-header">
+        <div>
+          <h1>6. 模型與報告匯出</h1>
+          <p>匯出訓練完成的最佳權重，並下載詳細的模型訓練分析報告。</p>
+        </div>
+      </div>
+
+      <div class="export-grid">
+        <!-- Weights Export -->
+        <div class="glass-card export-card">
+          <h2><i class="fa-solid fa-download text-primary"></i> 匯出權重與部署包</h2>
+          <p>將訓練產生的權重檔轉換為適合邊緣運算裝置的格式。</p>
+          
+          <div class="export-options-list">
+            <div class="export-item">
+              <div class="export-details">
+                <h4>PyTorch 格式 (.pt)</h4>
+                <p>原生權重檔案，適合繼續微調或於 Python 環境中進行推論。</p>
+              </div>
+              <button class="btn btn-secondary" id="btn-export-pt">準備並下載</button>
+            </div>
+
+            <div class="export-item">
+              <div class="export-details">
+                <h4>ONNX 格式 (.onnx)</h4>
+                <p>跨平台通用格式，支援大多數推論框架 (ONNX Runtime)。</p>
+              </div>
+              <button class="btn btn-secondary" id="btn-export-onnx">編譯並匯出</button>
+            </div>
+
+            <div class="export-item">
+              <div class="export-details">
+                <h4>Edge AI 部署建議</h4>
+                <p>評估適合此模型的嵌入式端點運算裝置。</p>
+                <div class="device-spec-box">
+                  <ul>
+                    <li><strong>Jetson Orin Nano</strong>: 預估 45 FPS (FP16 量化)</li>
+                    <li><strong>Raspberry Pi 5</strong>: 預估 12 FPS (ONNX CPU)</li>
+                    <li><strong>顯存要求 (VRAM)</strong>: ~0.8 GB (輕量推論)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Report Generation -->
+        <div class="glass-card report-card">
+          <h2><i class="fa-solid fa-file-invoice text-secondary"></i> 產生訓練分析報告</h2>
+          <p>自動整理訓練過程中的所有指標、圖表、資料分佈以及品質健康度分數，匯出為專業的 MLOps PDF/Markdown 報告。</p>
+          
+          <div class="report-preview-box">
+            <i class="fa-solid fa-file-pdf"></i>
+            <p><strong>Vision_Training_Report.pdf</strong></p>
+            <span>自動彙整：資料集健康度評分、切分品質分析、光學擴充配置、訓練收斂曲線 (Loss/mAP)、Confusion Matrix 與部署建議。</span>
+          </div>
+
+          <button class="btn btn-primary btn-block margin-top" id="btn-export-report"><i class="fa-solid fa-file-pdf"></i> 產生並導出 PDF/Markdown 報告</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Overlay Modal for Browsing Project History -->
+  <div class="modal-overlay" id="project-history-modal" style="display: none;">
+    <div class="glass-card modal-content">
+      <div class="modal-header">
+        <h3>選擇專案進度</h3>
+        <button class="close-btn" id="btn-close-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-project-list">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Alert Overlay -->
+  <div id="custom-confirm-dialog" class="modal-overlay" style="display: none;">
+    <div class="glass-card confirm-content">
+      <h3 id="confirm-title">確認操作</h3>
+      <p id="confirm-message">您確定要執行此操作嗎？</p>
+      <div class="confirm-actions">
+        <button class="btn btn-secondary" id="confirm-btn-cancel">取消</button>
+        <button class="btn btn-primary" id="confirm-btn-ok">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Main Scripts -->
+  <script src="/static/app.js"></script>
+</body>
+</html>

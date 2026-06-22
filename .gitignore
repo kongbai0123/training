@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Project Data (large images, videos, checkpoints, exports)
+projects/
+runs/
+*.pt
+*.onnx
+*.engine
+*.trt
+
+# IDEs
+.idea/
+.vscode/
+.DS_Store

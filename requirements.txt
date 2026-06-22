@@ -1,0 +1,11 @@
+fastapi==0.133.1
+uvicorn==0.41.0
+python-multipart==0.0.27
+sse-starlette==3.3.2
+pydantic==2.13.4
+ultralytics==8.4.68
+opencv-python==4.13.0.92
+pillow==12.2.0
+psutil==7.2.2
+nvidia-ml-py==13.610.43
+numpy==2.4.6
