@@ -767,17 +767,17 @@ function bindDatasetActions() {
             }
             showToast(data.message || "影片抽幀完成！");
             await openProject(appState.currentProjectId, { stayOnPage: true });
-            this.removeAllFiles(true);
           });
 
           this.on("error", function(file, message) {
             let errMsg = message;
-            if (typeof message === "object" && message.detail) {
-              errMsg = message.detail;
-            } else if (typeof message === "object" && message.message) {
-              errMsg = message.message;
+            if (typeof message === "object") {
+              errMsg = message.detail || message.message || JSON.stringify(message);
             }
             showToast(`影片抽幀失敗：${errMsg}`);
+          });
+
+          this.on("queuecomplete", function() {
             this.removeAllFiles(true);
           });
         }
@@ -872,17 +872,17 @@ function bindDatasetActions() {
             }
             showToast(data.message || "ZIP 匯入完成！");
             await openProject(appState.currentProjectId);
-            this.removeAllFiles(true);
           });
 
           this.on("error", function(file, message) {
             let errMsg = message;
-            if (typeof message === "object" && message.detail) {
-              errMsg = message.detail;
-            } else if (typeof message === "object" && message.message) {
-              errMsg = message.message;
+            if (typeof message === "object") {
+              errMsg = message.detail || message.message || JSON.stringify(message);
             }
             showToast(`ZIP 匯入失敗：${errMsg}`);
+          });
+
+          this.on("queuecomplete", function() {
             this.removeAllFiles(true);
           });
         }
@@ -1330,17 +1330,17 @@ function bindLabelMeActions() {
             }
             showToast(data.message || "標註檔案匯入完成！");
             await openProject(appState.currentProjectId);
-            this.removeAllFiles(true);
           });
 
           this.on("errormultiple", function(files, message) {
             let errMsg = message;
-            if (typeof message === "object" && message.detail) {
-              errMsg = message.detail;
-            } else if (typeof message === "object" && message.message) {
-              errMsg = message.message;
+            if (typeof message === "object") {
+              errMsg = message.detail || message.message || JSON.stringify(message);
             }
             showToast(`標註檔案匯入失敗：${errMsg}`);
+          });
+
+          this.on("queuecomplete", function() {
             this.removeAllFiles(true);
           });
         }
