@@ -25,8 +25,19 @@ def validate_training_readiness(project: Dict[str, Any], config_data: Dict[str, 
     if val_count == 0:
         errors.append("驗證集 (val split) 影像數量不能為 0。請在 [3. 分散] 階段完成切分。")
 
-    # 3. 任務類型檢查
-    project_task = project.get("task_type", "detection")
+    # 3. 任務類型檢查與正規化
+    project_task = str(project.get("task_type", "detection")).lower()
+    if project_task in {"instance_segmentation", "semantic_segmentation", "seg", "segmentation"}:
+        project_task = "segmentation"
+    elif project_task in {"det", "detection", "object_detection"}:
+        project_task = "detection"
+    elif project_task in {"cls", "classification"}:
+        project_task = "classification"
+    elif project_task in {"pose", "keypoints"}:
+        project_task = "pose"
+    elif project_task in {"obb", "oriented_bounding_box"}:
+        project_task = "obb"
+
     valid_tasks = {"detection", "segmentation", "classification", "pose", "obb"}
     if project_task not in valid_tasks:
         errors.append(f"不支援的專案任務類型: {project_task}。")
@@ -51,15 +62,44 @@ def validate_training_readiness(project: Dict[str, Any], config_data: Dict[str, 
 
     # 5. 標註內容一致性與格式檢查
     has_any_labels = False
+    train_labeled = False
+    val_labeled = False
+    train_polygon_ok = False
+    val_polygon_ok = False
+
     for img in images:
+        split = img.get("split")
         annotations = img.get("annotations", [])
         if annotations:
             has_any_labels = True
-            break
-            
+            if split == "train":
+                train_labeled = True
+            elif split == "val":
+                val_labeled = True
+
+            # 針對 segmentation 多邊形檢查
+            for ann in annotations:
+                points = ann.get("points")
+                if isinstance(points, list) and len(points) >= 3:
+                    if split == "train":
+                        train_polygon_ok = True
+                    elif split == "val":
+                        val_polygon_ok = True
+
     if not has_any_labels:
         errors.append("沒有偵測到任何標註數據。請至 [2. 標註] 進行標註。")
     else:
+        if not train_labeled:
+            errors.append("訓練集 (train split) 的影像全部沒有標註！請先在 [2. 標註] 階段完成標註。")
+        if not val_labeled:
+            errors.append("驗證集 (val split) 的影像全部沒有標註！請先在 [2. 標註] 階段完成標註。")
+
+        if project_task == "segmentation":
+            if not train_polygon_ok:
+                errors.append("分割任務的訓練集 (train) 中沒有任何有效多邊形 (polygon) 標註！請確認已在 LabelMe 中完成多邊形繪製。")
+            if not val_polygon_ok:
+                errors.append("分割任務的驗證集 (val) 中沒有 any 有效多邊形 (polygon) 標註！請確認已在 LabelMe 中完成多邊形繪製。")
+
         # 針對標註資料的細部格式驗證
         for img in images:
             filename = img.get("filename", "unknown")
