@@ -276,6 +276,7 @@ class YOLOTrainer:
         
         error_msg = ""
         status = "completed"
+        data_yaml_path = None
         
         try:
             # 1. 準備資料集並進行嚴格標註檢查 (不符則會拋出 ValueError)
@@ -389,11 +390,23 @@ class YOLOTrainer:
             except Exception:
                 actual_run_dir = Path(runs_dir / run_id).resolve()
 
+            # 確保獲取到 data_yaml_path 的 Path
+            try:
+                actual_data_yaml = Path(data_yaml_path) if ('data_yaml_path' in locals() and data_yaml_path) else None
+            except Exception:
+                actual_data_yaml = None
+
             # 保存 artifacts、解析 CSV 並回寫摘要資訊至 project.json
             from src.project_manager import ProjectManager
             latest_project = ProjectManager.get_project(project_id)
             if latest_project:
-                run_summary = RunManager.finalize_run(actual_run_dir, task_type, status, error_msg)
+                run_summary = RunManager.finalize_run(
+                    run_dir=actual_run_dir,
+                    task_type=task_type,
+                    status=status,
+                    error_msg=error_msg,
+                    data_yaml_path=actual_data_yaml
+                )
                 
                 # 摘要記錄
                 run_record = {

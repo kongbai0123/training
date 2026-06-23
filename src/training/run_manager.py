@@ -52,16 +52,49 @@ class RunManager:
         run_dir: Path,
         task_type: str,
         status: str,
-        error_msg: str = ""
+        error_msg: str = "",
+        data_yaml_path: Optional[Path] = None
     ) -> Optional[Dict[str, Any]]:
         """
         當訓練完成/中止/出錯時：
-        1. 解析 results.csv 並生成 metrics.json
-        2. 計算 Best Epoch & Platform Score & Health 分析
-        3. 保存 run_summary.json
-        4. 回傳摘要資訊以寫入 project.json
+        1. 確保 run_dir 目錄一定存在 (避免 failed run 無法寫入紀錄)
+        2. 解析 results.csv 並生成 metrics.json
+        3. 計算 Best Epoch & Platform Score & Health 分析
+        4. 保存 run_summary.json
+        5. 保存 / 備份必要的 YAML 與錯誤日誌
+        6. 回傳摘要資訊以寫入 project.json
         """
-        # 1. 轉化為 metrics.json
+        # 1. 確保 run_dir 存在
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        # 2. 確保基本快照檔案存在
+        config_file = run_dir / "train_config.json"
+        if not config_file.exists():
+            try:
+                with open(config_file, "w", encoding="utf-8") as f:
+                    json.dump({}, f, indent=2)
+            except Exception:
+                pass
+
+        snapshot_file = run_dir / "dataset_snapshot.json"
+        if not snapshot_file.exists():
+            try:
+                with open(snapshot_file, "w", encoding="utf-8") as f:
+                    json.dump([], f, indent=2)
+            except Exception:
+                pass
+
+        # 3. 記錄錯誤日誌 (若出錯)
+        if status == "failed" and error_msg:
+            try:
+                with open(run_dir / "error.log", "w", encoding="utf-8") as f:
+                    f.write(f"Timestamp: {datetime.now().isoformat()}\n")
+                    f.write(f"Status: {status}\n")
+                    f.write(f"Error Message:\n{error_msg}\n")
+            except Exception:
+                pass
+
+        # 4. 轉化為 metrics.json
         metrics_data = MetricsCollector.parse_results_csv(run_dir)
         
         best_epoch = 0
@@ -77,19 +110,17 @@ class RunManager:
         }
 
         if metrics_data:
-            # 儲存 metrics.json
             try:
                 with open(run_dir / "metrics.json", "w", encoding="utf-8") as f:
                     json.dump(metrics_data, f, indent=2, ensure_ascii=False)
             except Exception as e:
                 print(f"[RunManager] Failed to write metrics.json: {e}")
 
-            # 2. 趨勢與最佳化分析
             best_epoch, best_metrics = TrendAnalyzer.find_best_epoch(metrics_data, task_type)
             platform_score = TrendAnalyzer.calculate_platform_score(best_metrics, task_type)
             health_analysis = TrendAnalyzer.analyze_health(metrics_data, task_type)
 
-        # 3. 儲存 run_summary.json
+        # 5. 儲存 run_summary.json
         summary = {
             "run_id": run_dir.name,
             "status": status,
@@ -108,12 +139,11 @@ class RunManager:
         except Exception as e:
             print(f"[RunManager] Failed to write run_summary.json: {e}")
 
-        # 4. 生成寫入 project.json 的摘要
+        # 6. 生成寫入 project.json 的摘要
         is_seg = "segmentation" in task_type or "seg" in task_type
         mAP50_key = "metrics/mAP50(M)" if is_seg else "metrics/mAP50(B)"
         mAP50_95_key = "metrics/mAP50-95(M)" if is_seg else "metrics/mAP50-95(B)"
 
-        # 擷取 best metrics 中對應的數值
         best_mAP50 = best_metrics.get(mAP50_key)
         if best_mAP50 is None:
             fallback = "metrics/mAP50(B)" if is_seg else "metrics/mAP50(M)"
@@ -122,14 +152,23 @@ class RunManager:
         else:
             best_mAP50_95 = best_metrics.get(mAP50_95_key, 0.0)
 
-        # 備份 data.yaml (如果有的話)
-        data_yaml = run_dir.parent / "data.yaml"
-        if data_yaml.exists() and not (run_dir / "data.yaml").exists():
+        # 7. 備份 data.yaml
+        target_data_yaml = run_dir / "data.yaml"
+        if data_yaml_path and data_yaml_path.exists():
             try:
                 import shutil
-                shutil.copy(data_yaml, run_dir / "data.yaml")
+                shutil.copy(data_yaml_path, target_data_yaml)
             except Exception:
                 pass
+        elif not target_data_yaml.exists():
+            # Fallback 舊邏輯，以防 path 為空時向後相容
+            legacy_yaml = run_dir.parent / "data.yaml"
+            if legacy_yaml.exists():
+                try:
+                    import shutil
+                    shutil.copy(legacy_yaml, target_data_yaml)
+                except Exception:
+                    pass
 
         return {
             "run_id": run_dir.name,

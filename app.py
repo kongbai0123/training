@@ -275,10 +275,11 @@ async def run_image_inference(
 
     try:
         if file and file.filename:
+            import uuid
             ext = Path(file.filename).suffix.lower()
             if ext not in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}:
                 raise HTTPException(status_code=400, detail="Only image files are supported")
-            safe_name = f"upload_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{Path(file.filename).name}"
+            safe_name = f"upload_{uuid.uuid4().hex}{ext}"
             input_path = inference_dirs["inputs_images"] / safe_name
             with open(input_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
@@ -300,6 +301,7 @@ async def run_image_inference(
                 "show_mask": show_mask,
                 "show_bbox": show_bbox,
                 "class_filter": class_filter,
+                "original_filename": Path(file.filename).name if file and file.filename else (Path(image_path).name if image_path else "")
             },
         )
     except HTTPException:
@@ -1175,16 +1177,33 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
     imported_jsons = 0
     imported_txts = 0
 
+    from src.security_utils import safe_filename, safe_resolve_under, validate_extension
+
     try:
         for file in files:
-            fname = file.filename
-            if fname.endswith(".json"):
-                target_path = labelme_dir / fname
+            original_name = file.filename
+            if not original_name:
+                continue
+            
+            try:
+                suffix = validate_extension(original_name, {".json", ".txt"})
+                cleaned_name = safe_filename(original_name)
+            except ValueError as ve:
+                raise HTTPException(status_code=400, detail=str(ve))
+
+            if suffix == ".json":
+                try:
+                    target_path = safe_resolve_under(labelme_dir, labelme_dir / cleaned_name)
+                except ValueError as ve:
+                    raise HTTPException(status_code=400, detail=str(ve))
                 with open(target_path, "wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
                 imported_jsons += 1
-            elif fname.endswith(".txt"):
-                target_path = labels_dir / fname
+            elif suffix == ".txt":
+                try:
+                    target_path = safe_resolve_under(labels_dir, labels_dir / cleaned_name)
+                except ValueError as ve:
+                    raise HTTPException(status_code=400, detail=str(ve))
                 with open(target_path, "wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
                 imported_txts += 1
@@ -1202,6 +1221,8 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
             "imported_txts": imported_txts,
             "sync_status": sync_res
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"標註檔案匯入失敗: {e}")
 
@@ -1410,6 +1431,13 @@ def start_training(project_id: str, config: TrainConfigRequest):
     from src.training.run_manager import RunManager
     run_id = config.run_id or RunManager.generate_run_id()
 
+    # 提前偵測 run_id 是否已存在，防止 Thread 啟動後才崩潰
+    project_dir = Path(project["dataset_path"]).parent
+    runs_dir = project_dir / "training" / "runs"
+    run_dir = runs_dir / run_id
+    if run_dir.exists():
+        raise HTTPException(status_code=409, detail=f"訓練輸出目錄 '{run_id}' 已存在，為防覆寫已拒絕啟動。")
+
     # 更新訓練設定
     project["training_config"] = {
         "model": config.model,
@@ -1617,29 +1645,96 @@ async def monitor_training(websocket: WebSocket, project_id: str):
 
 # 7. 模型與報告匯出 API
 @app.get("/api/projects/{project_id}/export")
-def export_model(project_id: str):
+def export_model(project_id: str, run_id: Optional[str] = None, model_id: Optional[str] = None):
     """匯出 YOLO pt / ONNX 模型檔"""
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     dataset_path = Path(project["dataset_path"])
-    runs_dir = dataset_path.parent / "training" / "runs" / "train"
-    best_pt = runs_dir / "weights" / "best.pt"
+    project_dir = dataset_path.parent
+    runs_dir = project_dir / "training" / "runs"
 
-    if not best_pt.exists():
+    best_pt = None
+
+    # 1. 優先使用傳入的 run_id
+    if run_id:
+        from src.security_utils import sanitize_run_id
+        try:
+            safe_run_id = sanitize_run_id(run_id)
+        except ValueError as ve:
+            raise HTTPException(status_code=400, detail=str(ve))
+        candidate_dir = runs_dir / safe_run_id
+        candidate_pt = candidate_dir / "weights" / "best.pt"
+        if candidate_pt.exists():
+            best_pt = candidate_pt
+
+    # 2. 次要使用傳入的 model_id (解析出 run_id)
+    if not best_pt and model_id:
+        parts = model_id.split("::")
+        if len(parts) >= 2:
+            safe_run_id = parts[1]
+            candidate_dir = runs_dir / safe_run_id
+            weight_type = parts[2] if len(parts) >= 3 else "best"
+            candidate_pt = candidate_dir / "weights" / f"{weight_type}.pt"
+            if candidate_pt.exists():
+                best_pt = candidate_pt
+
+    # 3. 再者使用 project["best_model"]
+    if not best_pt and project.get("best_model"):
+        candidate_pt = Path(project["best_model"])
+        if candidate_pt.exists():
+            best_pt = candidate_pt
+
+    # 4. 再次之使用最新 completed 的 training_run
+    if not best_pt and project.get("training_runs"):
+        completed_runs = [r for r in project["training_runs"] if r.get("status") == "completed"]
+        completed_runs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        for r in completed_runs:
+            safe_run_id = r.get("run_id")
+            if safe_run_id:
+                candidate_dir = runs_dir / safe_run_id
+                candidate_pt = candidate_dir / "weights" / "best.pt"
+                if candidate_pt.exists():
+                    best_pt = candidate_pt
+                    break
+
+    # 5. 再者使用 ModelRegistry 最新 best.pt
+    if not best_pt:
+        try:
+            models_list = ModelRegistry.list_models(project)
+            best_models = [m for m in models_list if m.get("weight_type") == "best"]
+            if best_models:
+                candidate_pt = Path(best_models[0]["internal_weight_path"])
+                if candidate_pt.exists():
+                    best_pt = candidate_pt
+        except Exception:
+            pass
+
+    # 6. Fallback：原本的 runs/train
+    if not best_pt:
+        legacy_dir = runs_dir / "train"
+        legacy_pt = legacy_dir / "weights" / "best.pt"
+        if legacy_pt.exists():
+            best_pt = legacy_pt
+
+    if not best_pt or not best_pt.exists():
         raise HTTPException(status_code=400, detail="最佳模型檔案不存在，可能訓練尚未完成。")
 
     # 一併匯出為 ONNX 格式
     try:
-        model = YOLO(str(best_pt.resolve()))
-        # export 會產生 best.onnx
-        model.export(format="onnx")
-        best_onnx = runs_dir / "weights" / "best.onnx"
+        model_obj = YOLO(str(best_pt.resolve()))
+        model_obj.export(format="onnx")
+        # YOLO.export 會在 weights 資料夾產生 best.onnx (與 best.pt 在同一目錄)
+        best_onnx = best_pt.parent / "best.onnx"
+
+        # 確保 exports/onnx 目錄存在
+        exports_onnx_dir = project_dir / "exports" / "onnx"
+        exports_onnx_dir.mkdir(parents=True, exist_ok=True)
 
         # 複製到專案 export 目錄下
-        export_pt = dataset_path.parent / "exports" / "onnx" / "best.pt"
-        export_onnx = dataset_path.parent / "exports" / "onnx" / "best.onnx"
+        export_pt = exports_onnx_dir / "best.pt"
+        export_onnx = exports_onnx_dir / "best.onnx"
 
         shutil.copy(str(best_pt), str(export_pt))
         if best_onnx.exists():
