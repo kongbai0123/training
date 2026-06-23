@@ -332,6 +332,14 @@ async function openProject(projectId, options = {}) {
     updateLabelMeState();
     // 檢查並重設訓練 WebSocket
     await checkCurrentTrainStatus();
+    // 載入該專案的模型清單
+    try {
+      const models = await apiFetch(`/api/projects/${projectId}/models`);
+      appState.models = Array.isArray(models) ? models : [];
+    } catch (e) {
+      console.warn("Failed to prefetch models:", e.message);
+      appState.models = [];
+    }
     // 載入最推薦配置
     await loadRecommendedConfig();
     renderAll();
@@ -629,12 +637,15 @@ function buildTrainingRightPanel(status) {
   const model = qs("#train-model")?.value || "--";
   const runs = appState.currentProject?.training_runs || [];
   const latestRun = runs.length > 0 ? runs[runs.length - 1] : null;
-  const runId = latestRun ? latestRun.run_id : "--";
-  const runStatus = latestRun ? latestRun.status : "--";
-  
+
   const formatNum = (v) => (v === null || v === undefined || v === "--") ? "--" : Number(v).toFixed(3);
+  const runId = latestRun?.run_id ?? "--";
+  const runStatus = latestRun?.status ?? "--";
   const bestMap = latestRun ? formatNum(latestRun.best_map50_95_m) : "--";
   const bestEpoch = latestRun ? String(latestRun.best_epoch ?? "--") : "--";
+
+  // Badge colour for run status
+  const statusBadge = runStatus === "completed" ? "success" : runStatus === "failed" ? "danger" : runStatus === "training" ? "warning" : "neutral";
 
   const actions = ["Fix readiness checks 排除阻擋因子", "Start training 啟動訓練流程", "View latest run 檢視運行指標"];
   const warnings = [];
@@ -648,7 +659,11 @@ function buildTrainingRightPanel(status) {
       { label: "Label ready", value: status.labelme.synced ? "Yes" : "No", badgeType: status.labelme.synced ? "success" : "danger" },
       { label: "Split ready", value: status.splitComplete ? "Yes" : "No", badgeType: status.splitComplete ? "success" : "danger" },
       { label: "Model", value: model },
-      { label: "Hardware", value: gpu, isCode: true }
+      { label: "Hardware", value: gpu, isCode: true },
+      { label: "Latest Run", value: runId, isCode: true },
+      { label: "Run Status", value: runStatus, badgeType: statusBadge },
+      { label: "Best Epoch", value: bestEpoch },
+      { label: "Best mAP50-95", value: bestMap, isCode: true }
     ],
     actions,
     warnings
@@ -656,7 +671,8 @@ function buildTrainingRightPanel(status) {
 }
 
 function buildEvaluationRightPanel(status) {
-  const models = appState.inferenceModels || [];
+  // Use appState.models as SSoT (populated by loadInferenceModels in inference.js)
+  const models = appState.models || [];
   const model = models.find(m => m.weight_type === "best") || models[0];
   const formatNum = (v) => (v === null || v === undefined) ? "--" : Number(v).toFixed(3);
 
@@ -666,7 +682,9 @@ function buildEvaluationRightPanel(status) {
       { label: "mAP50(M)", value: model ? formatNum(model.best_map50_m) : "--", isCode: true },
       { label: "mAP50-95(M)", value: model ? formatNum(model.best_map50_95_m) : "--", isCode: true },
       { label: "Precision(M)", value: model ? formatNum(model.precision) : "--" },
-      { label: "Recall(M)", value: model ? formatNum(model.recall) : "--" }
+      { label: "Recall(M)", value: model ? formatNum(model.recall) : "--" },
+      { label: "Model file", value: model ? model.weight_type : "--", isCode: true },
+      { label: "Run ID", value: model?.run_id ?? "--", isCode: true }
     ],
     actions: ["與驗證標籤比對並生成 Confusion Matrix", "檢視預測失敗個案 (Failure cases)"],
     warnings: !status.bestModelExists ? ["目前尚未找到已訓練的最佳模型權重。"] : []
@@ -674,13 +692,16 @@ function buildEvaluationRightPanel(status) {
 }
 
 function buildInferenceRightPanel(status) {
-  const models = appState.inferenceModels || [];
-  const latestRun = models[0]?.run_id || "--";
-  const bestCount = models.filter((model) => model.weight_type === "best").length;
-  const lastCount = models.filter((model) => model.weight_type === "last").length;
-  
-  const activeModelBtn = qs(".model-registry-item.selected strong");
-  const selectedModelName = activeModelBtn ? activeModelBtn.textContent : "--";
+  // Use appState.models as SSoT; appState.inferenceSelectedModelId for selected model
+  const models = appState.models || [];
+  const bestCount = models.filter((m) => m.weight_type === "best").length;
+  const lastCount = models.filter((m) => m.weight_type === "last").length;
+  const latestRun = models.length > 0 ? (models[0]?.run_id ?? "--") : "--";
+
+  // Resolve selected model display name from appState (not DOM)
+  const selId = appState.inferenceSelectedModelId;
+  const selModel = selId ? models.find((m) => m.model_id === selId) : null;
+  const selectedModelName = selModel ? `${selModel.weight_type} (${selModel.run_id || "?"})` : "--";
 
   const actions = ["Select model 選擇載入權重", "Upload test image 上傳測試圖片", "Run inference 執行單張推論"];
   const warnings = [];
@@ -692,7 +713,7 @@ function buildInferenceRightPanel(status) {
       { label: "Models count", value: String(models.length) },
       { label: "best.pt count", value: String(bestCount) },
       { label: "last.pt count", value: String(lastCount) },
-      { label: "Latest run", value: latestRun },
+      { label: "Latest run", value: latestRun, isCode: true },
       { label: "Selected model", value: selectedModelName, isCode: true }
     ],
     actions,
@@ -701,11 +722,14 @@ function buildInferenceRightPanel(status) {
 }
 
 function buildExportRightPanel(status) {
-  const models = appState.inferenceModels || [];
+  // Use appState.models as SSoT
+  const models = appState.models || [];
+  const bestModel = models.find((m) => m.weight_type === "best");
   return {
     title: "Export Status",
     rows: [
       { label: "Available weights", value: String(models.length) },
+      { label: "Best run", value: bestModel?.run_id ?? "--", isCode: true },
       { label: "ONNX export", value: status.bestModelExists ? "Ready" : "Unavailable", badgeType: status.bestModelExists ? "success" : "neutral" },
       { label: "Report status", value: "Ready", badgeType: "success" }
     ],

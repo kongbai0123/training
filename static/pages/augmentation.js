@@ -31,14 +31,25 @@ export function initAugmentation() {
     }
   });
 
-  // 監聽 Shadow Checkbox 變更
-  qs(SHADOW)?.addEventListener("change", invalidatePreview);
+  // 監聽 Shadow Checkbox 變更 (雙重事件監聽以確保安全)
+  const shadowEl = qs(SHADOW);
+  if (shadowEl) {
+    shadowEl.addEventListener("change", invalidatePreview);
+    shadowEl.addEventListener("input", invalidatePreview);
+  }
 
-  // 監聽 Multiplier 的輸入
-  qs(MULTIPLIER)?.addEventListener("input", () => {
-    updateEstimatedCount();
-    invalidatePreview();
-  });
+  // 監聽 Multiplier 的輸入 (雙重事件監聽以確保安全)
+  const multEl = qs(MULTIPLIER);
+  if (multEl) {
+    multEl.addEventListener("input", () => {
+      updateEstimatedCount();
+      invalidatePreview();
+    });
+    multEl.addEventListener("change", () => {
+      updateEstimatedCount();
+      invalidatePreview();
+    });
+  }
 
   // 監聽預覽圖片選單變更
   qs(PREVIEW_SELECT)?.addEventListener("change", () => {
@@ -82,7 +93,6 @@ export function initAugmentation() {
     } catch (err) {
       eventBus.emit("toast", `物理擴充失敗：${err.message}`);
     } finally {
-      applyBtn.disabled = false;
       applyBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Apply Augmentation`;
       invalidatePreview(); // 完成後重新設為需預覽狀態
     }
@@ -128,7 +138,7 @@ function invalidatePreview() {
     alertBox.style.borderColor = "var(--border)";
   }
   if (alertText) {
-    alertText.textContent = "請先點選「Generate Preview」預覽效果以評估潛在風險，才可套用擴充。";
+    alertText.textContent = "⚠️ 參數或影像已變更。請先點選「Generate Preview」生成效果預覽，確認擴充影像與 bounding boxes/polygons 疊加正確，才可套用物理擴充。";
     alertText.style.color = "#f59e0b";
   }
   if (alertIcon) {
@@ -160,7 +170,7 @@ function validatePreviewSuccess() {
     alertBox.style.borderColor = "rgba(16, 185, 129, 0.2)";
   }
   if (alertText) {
-    alertText.textContent = "預覽成功，您可以安全套用擴充參數。";
+    alertText.textContent = "✅ 預覽生成成功！物理擴充僅會套用於訓練集 (Train split)，驗證/測試集已安全排除。現在可以安全套用擴充參數。";
     alertText.style.color = "#10b981";
   }
   if (alertIcon) {

@@ -35,6 +35,8 @@ from ultralytics import YOLO
 
 app = FastAPI(title="Vision Training Studio API")
 
+LOCAL_TRUSTED_MODE = os.environ.get("LOCAL_TRUSTED_MODE", "false").lower() in ("true", "1", "yes")
+
 # 全域 API 異常錯誤信封格式化處理
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -164,6 +166,7 @@ def health_check():
 
     return {
         "status": "healthy",
+        "local_trusted_mode": LOCAL_TRUSTED_MODE,
         "device": {
             "has_gpu": has_gpu,
             "device_name": device_name,
@@ -284,7 +287,14 @@ async def run_image_inference(
             with open(input_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
         elif image_path:
-            input_path = Path(image_path).expanduser().resolve()
+            if not LOCAL_TRUSTED_MODE:
+                raise HTTPException(status_code=403, detail="本機路徑推論功能已停用 (Local Trusted Mode 關閉)")
+            try:
+                from src.security_utils import safe_resolve_under
+                project_base = Path(project["dataset_path"]).parent.resolve()
+                input_path = safe_resolve_under(project_base, Path(image_path))
+            except ValueError as e:
+                raise HTTPException(status_code=403, detail=str(e))
         else:
             raise HTTPException(status_code=400, detail="Please provide an image file or image_path")
 

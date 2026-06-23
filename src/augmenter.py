@@ -157,6 +157,7 @@ class ImageAugmenter:
         sigma = intensity * 40
         gauss = np.random.normal(mean, sigma, (h, w, c))
         noisy = image.astype(np.float32) + gauss
+        return np.clip(noisy, 0, 255).astype(np.uint8)
     @staticmethod
     def apply_perspective(image: np.ndarray, bboxes: List[Dict[str, Any]], intensity: float) -> Tuple[np.ndarray, List[Dict[str, Any]]]:
         """Apply perspective transform to the image and preserve bbox or polygon annotations."""

@@ -42,7 +42,18 @@ class InferenceEngine:
         conf = float(settings.get("conf", 0.25))
         iou = float(settings.get("iou", 0.7))
         imgsz = int(settings.get("imgsz", 640))
-        device = cls._normalize_device(settings.get("device", "cpu"))
+        raw_device = settings.get("device", "cpu")
+        device = cls._normalize_device(raw_device)
+        device_fallback = False
+        if device == "0":
+            try:
+                import torch
+                if not torch.cuda.is_available():
+                    device = "cpu"
+                    device_fallback = True
+            except ImportError:
+                device = "cpu"
+                device_fallback = True
         mask_opacity = float(settings.get("mask_opacity", 0.45))
         show_mask = bool(settings.get("show_mask", True))
         show_bbox = bool(settings.get("show_bbox", True))
@@ -105,6 +116,7 @@ class InferenceEngine:
             predictions=predictions,
             inference_time_ms=inference_time_ms,
             mask_area_ratio=mask_area_ratio,
+            device_fallback=device_fallback,
         )
 
         prediction_json = job_dir / "prediction.json"
@@ -254,6 +266,7 @@ class InferenceEngine:
         predictions: List[Dict[str, Any]],
         inference_time_ms: float,
         mask_area_ratio: float,
+        device_fallback: bool = False,
     ) -> Dict[str, Any]:
         detected_classes = sorted({p["class_name"] for p in predictions})
         avg_conf = sum(p["confidence"] for p in predictions) / len(predictions) if predictions else 0.0
@@ -276,6 +289,7 @@ class InferenceEngine:
             "mask_area_ratio": mask_area_ratio,
             "inference_time_ms": inference_time_ms,
             "created_at": datetime.now().isoformat(),
+            "device_fallback": device_fallback,
         }
 
     @staticmethod

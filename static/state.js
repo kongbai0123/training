@@ -9,9 +9,11 @@ export const appState = {
   newProjectClasses: [],
   pendingDeleteProjectId: null,
   trainingStatus: null,
+  models: [],
   inferenceModels: [],
   inferenceLastResult: null,
   inferenceRunning: false,
+  inferenceSelectedModelId: "",
   wsConn: null,
   settings: {
     theme: localStorage.getItem("vts-theme") || "dark",

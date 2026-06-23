@@ -4,7 +4,6 @@ import { apiFetch } from "../api.js";
 import { qs, qsa, setHTML, escapeHtml, copyText } from "../utils.js";
 
 let loadedProjectId = null;
-let selectedModelId = "";
 let selectedFileUrl = "";
 let modelsLoading = false;
 
@@ -63,6 +62,19 @@ export function renderInferencePage(status) {
     loadInferenceModels(false);
   }
 
+  // 根據 Local Trusted Mode 動態管理本機路徑輸入框
+  const pathInput = qs("#inference-image-path");
+  if (pathInput) {
+    const trusted = appState.systemHealth?.local_trusted_mode === true;
+    pathInput.disabled = !trusted;
+    if (!trusted) {
+      pathInput.placeholder = "本機路徑推論已停用 (Trusted Local Mode 關閉)";
+      pathInput.value = "";
+    } else {
+      pathInput.placeholder = "輸入本機圖片絕對路徑 (e.g. C:\\path\\to\\image.jpg)";
+    }
+  }
+
   renderModelList(status);
   renderInferenceResult();
   updateRunButtonState();
@@ -70,14 +82,14 @@ export function renderInferencePage(status) {
 
 async function loadInferenceModels(force) {
   if (!appState.currentProjectId) {
-    appState.inferenceModels = [];
+    appState.models = [];
     loadedProjectId = null;
-    selectedModelId = "";
+    appState.inferenceSelectedModelId = "";
     renderModelList();
     updateRunButtonState();
     return;
   }
-  if (!force && loadedProjectId === appState.currentProjectId) return;
+  if (!force && loadedProjectId === appState.currentProjectId && (appState.models || []).length > 0) return;
 
   modelsLoading = true;
   setInferenceError("");
@@ -86,12 +98,12 @@ async function loadInferenceModels(force) {
 
   try {
     const models = await apiFetch(`/api/projects/${appState.currentProjectId}/models`);
-    appState.inferenceModels = Array.isArray(models) ? models : [];
+    appState.models = Array.isArray(models) ? models : [];
     loadedProjectId = appState.currentProjectId;
     ensureSelectedModel();
   } catch (err) {
-    appState.inferenceModels = [];
-    selectedModelId = "";
+    appState.models = [];
+    appState.inferenceSelectedModelId = "";
     setInferenceError(`Model Registry 載入失敗：${err.message}`);
   } finally {
     modelsLoading = false;
@@ -114,7 +126,7 @@ function renderModelList(status = null) {
     return;
   }
 
-  const models = appState.inferenceModels || [];
+  const models = appState.models || [];
   ensureSelectedModel();
 
   if (!models.length) {
@@ -129,7 +141,7 @@ function renderModelList(status = null) {
 
   const projectTask = status?.taskType || appState.currentProject?.task_type || "";
   setHTML("#inference-model-list", models.map((model) => {
-    const selected = model.model_id === selectedModelId ? "selected" : "";
+    const selected = model.model_id === appState.inferenceSelectedModelId ? "selected" : "";
     const compatible = isModelCompatible(projectTask, model.task_type);
     return `
       <button type="button" class="model-registry-item ${selected}" data-model-id="${escapeHtml(model.model_id)}">
@@ -149,7 +161,7 @@ function renderModelList(status = null) {
 
   qsa("[data-model-id]").forEach((button) => {
     button.addEventListener("click", () => {
-      selectedModelId = button.dataset.modelId;
+      appState.inferenceSelectedModelId = button.dataset.modelId;
       renderModelList(status);
       updateRunButtonState();
     });
@@ -182,7 +194,7 @@ async function runInference() {
   if (!appState.currentProjectId || appState.inferenceRunning) return;
   setInferenceError("");
 
-  if (!(appState.inferenceModels || []).length) {
+  if (!(appState.models || []).length) {
     await loadInferenceModels(true);
   }
 
@@ -223,7 +235,12 @@ async function runInference() {
     });
     appState.inferenceLastResult = result;
     renderInferenceResult();
-    eventBus.emit("toast", `Inference completed: ${result.job_id}`);
+    
+    if (result.summary?.device_fallback) {
+      eventBus.emit("toast", "⚠️ 偵測不到 GPU 資源，已自動降級為 CPU 推論");
+    } else {
+      eventBus.emit("toast", `Inference completed: ${result.job_id}`);
+    }
   } catch (err) {
     setInferenceError(`推論失敗：${err.message}`);
   } finally {
@@ -250,6 +267,16 @@ function renderInferenceResult() {
     return;
   }
 
+  let fallbackHtml = "";
+  if (summary.device_fallback) {
+    fallbackHtml = `
+      <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: var(--radius); padding: 8px 12px; margin-top: 10px; font-size: 0.78rem; color: #f59e0b; display: flex; align-items: center; gap: 8px; font-weight: 500;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>偵測不到 GPU 資源，已自動降級為 CPU 推論。</span>
+      </div>
+    `;
+  }
+
   setHTML("#inference-summary", `
     <div class="path-row"><span>Job ID</span><code>${escapeHtml(result.job_id)}</code></div>
     <div class="path-row"><span>Output path</span><code>${escapeHtml(result.paths?.job_dir || "--")}</code></div>
@@ -257,6 +284,7 @@ function renderInferenceResult() {
     <div class="path-row"><span>Prediction JSON</span><code>${escapeHtml(result.paths?.prediction_json || "--")}</code></div>
     <div class="path-row"><span>Latency</span><code>${escapeHtml(summary.inference_time_ms)} ms</code></div>
     <div class="path-row"><span>Classes</span><code>${escapeHtml((summary.detected_classes || []).join(", ") || "--")}</code></div>
+    ${fallbackHtml}
   `);
 
   setHTML("#inference-prediction-signals", `
@@ -313,15 +341,15 @@ function setRunReason(reason) {
 }
 
 function ensureSelectedModel() {
-  const models = appState.inferenceModels || [];
-  if (models.length && !models.some((model) => model.model_id === selectedModelId)) {
-    selectedModelId = models[0].model_id;
+  const models = appState.models || [];
+  if (models.length && !models.some((model) => model.model_id === appState.inferenceSelectedModelId)) {
+    appState.inferenceSelectedModelId = models[0].model_id;
   }
   return selectedModel();
 }
 
 function selectedModel() {
-  return (appState.inferenceModels || []).find((model) => model.model_id === selectedModelId) || null;
+  return (appState.models || []).find((model) => model.model_id === appState.inferenceSelectedModelId) || null;
 }
 
 function isModelCompatible(projectTask = "", modelTask = "") {
