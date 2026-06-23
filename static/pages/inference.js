@@ -12,7 +12,24 @@ export function initInference() {
   qs("#btn-refresh-models")?.addEventListener("click", () => loadInferenceModels(true));
   qs("#btn-run-inference")?.addEventListener("click", runInference);
   qs("#inference-image-file")?.addEventListener("change", handleImageFileChange);
-  qs("#inference-image-path")?.addEventListener("input", updateRunButtonState);
+  qs("#inference-image-path")?.addEventListener("input", (e) => {
+    if (e.target.value.trim()) {
+      const fileInput = qs("#inference-image-file");
+      if (fileInput) fileInput.value = "";
+      if (selectedFileUrl) {
+        URL.revokeObjectURL(selectedFileUrl);
+        selectedFileUrl = "";
+      }
+      const img = qs("#inference-original-img");
+      const placeholder = qs("#inference-original-placeholder");
+      if (img) {
+        img.src = "";
+        img.style.display = "none";
+      }
+      if (placeholder) placeholder.style.display = "block";
+    }
+    updateRunButtonState();
+  });
 
   [
     "#inference-conf",
@@ -141,6 +158,10 @@ function renderModelList(status = null) {
 
 function handleImageFileChange(event) {
   const file = event.target.files?.[0];
+  if (file) {
+    const pathInput = qs("#inference-image-path");
+    if (pathInput) pathInput.value = "";
+  }
   if (selectedFileUrl) URL.revokeObjectURL(selectedFileUrl);
   selectedFileUrl = file ? URL.createObjectURL(file) : "";
 
