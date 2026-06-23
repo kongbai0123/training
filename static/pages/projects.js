@@ -1,0 +1,211 @@
+import { eventBus } from "../event_bus.js";
+import { appState } from "../state.js";
+import { apiFetch } from "../api.js";
+import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
+
+export function initProjects() {
+  qs("#btn-reload-projects")?.addEventListener("click", () => {
+    eventBus.emit("reload-projects");
+  });
+  qs("#btn-add-project-class")?.addEventListener("click", addProjectClassFromInput);
+  qs("#new-project-class-input")?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    addProjectClassFromInput();
+  });
+  qs("#new-project-class-list")?.addEventListener("click", (event) => {
+    const removeBtn = event.target.closest("[data-remove-class]");
+    if (!removeBtn) return;
+    const className = removeBtn.dataset.removeClass;
+    appState.newProjectClasses = appState.newProjectClasses.filter((item) => item !== className);
+    renderNewProjectClassList();
+  });
+  renderNewProjectClassList();
+
+  qs("#form-create-project")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const name = qs("#new-project-name").value.trim();
+    const type = qs("#new-project-type").value;
+    const classes = [...appState.newProjectClasses];
+
+    if (!name || classes.length === 0) {
+      eventBus.emit("toast", "請輸入專案名稱與至少一個類別");
+      return;
+    }
+
+    try {
+      const project = await apiFetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_name: name, task_type: type, class_names: classes })
+      });
+      qs("#form-create-project").reset();
+      appState.newProjectClasses = [];
+      renderNewProjectClassList();
+      
+      eventBus.emit("reload-projects", { openProjectId: project.project_id });
+      eventBus.emit("toast", "專案已建立");
+    } catch (err) {
+      eventBus.emit("toast", `建立專案失敗：${err.message}`);
+    }
+  });
+
+  // 綁定 Delete Project Modal 的確定與取消行為
+  qs("#btn-close-delete-project")?.addEventListener("click", closeDeleteProjectModal);
+  qs("#btn-cancel-delete-project")?.addEventListener("click", closeDeleteProjectModal);
+  qs("#delete-project-modal")?.addEventListener("click", (event) => {
+    if (event.target.id === "delete-project-modal") closeDeleteProjectModal();
+  });
+  qs("#btn-confirm-delete-project")?.addEventListener("click", confirmDeleteProject);
+
+  // 監聽專案清單的共用渲染請求，方便 dashboard 調用
+  eventBus.on("render-recent-projects-list", (subset) => {
+    setHTML("#recent-projects-list", renderProjectList(subset, { includeDelete: false }));
+    bindProjectListButtons();
+  });
+}
+
+export function renderProjectsPage() {
+  const html = renderProjectList(appState.projects, { includeDelete: true });
+  setHTML("#project-history-list", html);
+  setHTML("#history-list", html);
+  bindProjectListButtons();
+}
+
+export function renderProjectList(projects, options = {}) {
+  if (!projects || projects.length === 0) {
+    return `<div class="empty-state">目前沒有專案。請先建立新專案。</div>`;
+  }
+  return projects.map((project) => {
+    const progress = project.annotation_progress || {};
+    return `
+      <article class="list-item">
+        <div>
+          <h3>${escapeHtml(project.project_name || project.project_id)}</h3>
+          <p>${escapeHtml(project.task_type || "--")} · ${progress.annotated || 0}/${progress.total || 0} annotated · ${escapeHtml(project.updated_at || "")}</p>
+        </div>
+        <div class="button-row">
+          <button class="btn btn-secondary btn-sm" data-open-project="${escapeHtml(project.project_id)}">Open</button>
+          ${options.includeDelete ? `<button class="icon-btn" data-delete-project="${escapeHtml(project.project_id)}" title="Delete"><i class="fa-solid fa-trash"></i></button>` : ""}
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+export function bindProjectListButtons() {
+  qsa("[data-open-project]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      closeHistoryModal();
+      eventBus.emit("open-project", btn.dataset.openProject);
+    });
+  });
+  qsa("[data-delete-project]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const projectId = btn.dataset.deleteProject;
+      openDeleteProjectModal(projectId);
+    });
+  });
+}
+
+function addProjectClassFromInput() {
+  const input = qs("#new-project-class-input");
+  const rawValue = input?.value?.trim();
+  if (!rawValue) return;
+
+  const values = rawValue
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  let changed = false;
+  values.forEach((value) => {
+    const exists = appState.newProjectClasses.some((item) => item.toLowerCase() === value.toLowerCase());
+    if (exists) return;
+    appState.newProjectClasses.push(value);
+    changed = true;
+  });
+
+  if (input) input.value = "";
+  if (!changed) {
+    eventBus.emit("toast", "類別已存在");
+  }
+  renderNewProjectClassList();
+}
+
+function renderNewProjectClassList() {
+  const box = qs("#new-project-class-list");
+  if (!box) return;
+
+  if (appState.newProjectClasses.length === 0) {
+    box.innerHTML = `<div class="empty-class-list">尚未新增類別</div>`;
+    return;
+  }
+
+  box.innerHTML = appState.newProjectClasses.map((className) => `
+    <span class="class-chip">
+      ${escapeHtml(className)}
+      <button type="button" data-remove-class="${escapeHtml(className)}" aria-label="Remove ${escapeHtml(className)}">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </span>
+  `).join("");
+}
+
+function openDeleteProjectModal(projectId) {
+  const project = appState.projects.find((item) => item.project_id === projectId);
+  appState.pendingDeleteProjectId = projectId;
+  setText("#delete-project-message", `確定要刪除專案「${project?.project_name || projectId}」？此操作無法復原。`);
+  const btn = qs("#btn-confirm-delete-project");
+  if (btn) {
+    btn.disabled = false;
+    btn.classList.remove("btn-disabled");
+    btn.innerHTML = `<i class="fa-solid fa-trash"></i> 刪除`;
+  }
+  const modal = qs("#delete-project-modal");
+  if (modal) modal.hidden = false;
+}
+
+function closeDeleteProjectModal() {
+  appState.pendingDeleteProjectId = null;
+  setText("#delete-project-message", "確定要刪除此專案？此操作無法復原。");
+  const modal = qs("#delete-project-modal");
+  if (modal) modal.hidden = true;
+}
+
+async function confirmDeleteProject() {
+  const projectId = appState.pendingDeleteProjectId;
+  if (!projectId) return closeDeleteProjectModal();
+
+  const btn = qs("#btn-confirm-delete-project");
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add("btn-disabled");
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 刪除中`;
+  }
+
+  try {
+    await apiFetch(`/api/projects/${projectId}`, { method: "DELETE" });
+    closeDeleteProjectModal();
+    eventBus.emit("project-deleted", projectId);
+    eventBus.emit("toast", "專案已刪除");
+  } catch (err) {
+    if (err.message && err.message.includes("Project not found")) {
+      closeDeleteProjectModal();
+      eventBus.emit("reload-projects");
+      eventBus.emit("toast", "專案已不存在，已重新整理清單");
+      return;
+    }
+    eventBus.emit("toast", `刪除失敗：${err.message}`);
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove("btn-disabled");
+      btn.innerHTML = `<i class="fa-solid fa-trash"></i> 刪除`;
+    }
+  }
+}
+
+function closeHistoryModal() {
+  const modal = qs("#project-history-modal");
+  if (modal) modal.hidden = true;
+}

@@ -277,6 +277,93 @@ class YOLOTrainer:
             cls._global_states[project_id]["error"] = str(e)
             print(f"[Trainer] Error in training {project_id}: {e}")
         finally:
-            # 清理線程
+            from datetime import datetime
+            from src.project_manager import ProjectManager
+            latest_project = ProjectManager.get_project(project_id)
+            if latest_project:
+                final_state = cls._global_states.get(project_id, {"status": "unknown"})
+                status = final_state.get("status", "unknown")
+                last_metrics = final_state.get("metrics")[-1] if final_state.get("metrics") else {}
+                
+                run_record = {
+                    "run_id": f"run_{int(time.time())}",
+                    "timestamp": datetime.now().isoformat(),
+                    "status": status,
+                    "model": train_config.get("model"),
+                    "epochs": int(train_config.get("epochs", 50)),
+                    "batch_size": int(train_config.get("batch_size", 8)),
+                    "imgsz": int(train_config.get("imgsz", 640)),
+                    "lr0": float(train_config.get("lr0", 0.01)),
+                    "device": train_config.get("device"),
+                    "metrics": last_metrics,
+                    "error": final_state.get("error", "")
+                }
+                
+                if "training_runs" not in latest_project:
+                    latest_project["training_runs"] = []
+                latest_project["training_runs"].append(run_record)
+                
+                if status == "completed":
+                    version_id = f"v{len(latest_project.get('versions', [])) + 1}"
+                    best_model_path = runs_dir / "train" / "weights" / "best.pt"
+                    best_onnx_path = runs_dir / "train" / "weights" / "best.onnx"
+                    
+                    version_record = {
+                        "version_id": version_id,
+                        "timestamp": datetime.now().isoformat(),
+                        "model_name": train_config.get("model"),
+                        "metrics": last_metrics,
+                        "best_model_pt": str(best_model_path.resolve().as_posix()) if best_model_path.exists() else "",
+                        "best_model_onnx": str(best_onnx_path.resolve().as_posix()) if best_onnx_path.exists() else ""
+                    }
+                    if "versions" not in latest_project:
+                        latest_project["versions"] = []
+                    latest_project["versions"].append(version_record)
+                
+                ProjectManager.save_project(project_id, latest_project)
+
+            # GPU VRAM & memory release
+            import gc
+            import torch
+            gc.collect()
+            if torch.cuda.is_available():
+                try:
+                    torch.cuda.empty_cache()
+                except Exception:
+                    pass
+
             if project_id in cls._threads:
                 del cls._threads[project_id]
+
+    @staticmethod
+    def read_results_csv(runs_dir: Path) -> Optional[Dict[str, Any]]:
+        csv_path = runs_dir / "results.csv"
+        if not csv_path.exists():
+            return None
+        try:
+            import csv
+            with open(csv_path, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+                if not rows:
+                    return None
+                last_row = rows[-1]
+                cleaned_row = {k.strip(): v.strip() for k, v in last_row.items() if k is not None}
+                
+                metrics = {
+                    "map50": float(cleaned_row.get("metrics/mAP50(B)") or cleaned_row.get("metrics/mAP50(M)") or 0.0),
+                    "map50_95": float(cleaned_row.get("metrics/mAP50-95(B)") or cleaned_row.get("metrics/mAP50-95(M)") or 0.0),
+                    "precision": float(cleaned_row.get("metrics/precision(B)") or cleaned_row.get("metrics/precision(M)") or 0.0),
+                    "recall": float(cleaned_row.get("metrics/recall(B)") or cleaned_row.get("metrics/recall(M)") or 0.0),
+                    "box_loss": float(cleaned_row.get("train/box_loss") or cleaned_row.get("val/box_loss") or 0.0),
+                    "seg_loss": float(cleaned_row.get("train/seg_loss") or cleaned_row.get("val/seg_loss") or 0.0)
+                }
+                return {
+                    "metrics": metrics,
+                    "epochs_completed": len(rows),
+                    "last_row": cleaned_row
+                }
+        except Exception as e:
+            print(f"Error parsing results.csv: {e}")
+            return None
+

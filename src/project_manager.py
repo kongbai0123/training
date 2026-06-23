@@ -103,14 +103,60 @@ class ProjectManager:
 
     @staticmethod
     def get_project(project_id: str) -> Optional[Dict[str, Any]]:
-        """讀取單一專案設定"""
+        """讀取單一專案設定並進行自動延遲遷移 (Lazy Migration)"""
         project_dir = PROJECTS_DIR / project_id
         json_path = project_dir / "project.json"
         if not json_path.exists():
             return None
         try:
             with open(json_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+            
+            # Lazy Migration: 檢查並升級 Schema 至 2.0 版
+            migrated = False
+            if "schema_version" not in data or data.get("schema_version") != "2.0":
+                data["schema_version"] = "2.0"
+                migrated = True
+                
+            if "labelme_config" not in data:
+                data["labelme_config"] = {
+                    "images_dir": "dataset/raw/images",
+                    "json_dir": "dataset/raw/annotations/labelme",
+                    "command": "",
+                    "last_opened_at": None
+                }
+                migrated = True
+                
+            if "labelme_progress" not in data:
+                data["labelme_progress"] = {
+                    "last_sync_at": None,
+                    "json_count": 0,
+                    "missing_json": 0,
+                    "empty_json": 0,
+                    "invalid_json": 0,
+                    "unknown_labels": [],
+                    "corrupted_jsons_list": [],
+                    "empty_jsons_list": [],
+                    "unknown_labels_detail": {}
+                }
+                migrated = True
+                
+            if "imports_history" not in data:
+                data["imports_history"] = []
+                migrated = True
+                
+            if "versions" not in data:
+                data["versions"] = []
+                migrated = True
+                
+            if "jobs" not in data:
+                data["jobs"] = []
+                migrated = True
+                
+            if migrated:
+                ProjectManager.save_project(project_id, data)
+                
+            return data
         except Exception as e:
             print(f"Error loading project {project_id}: {e}")
             return None

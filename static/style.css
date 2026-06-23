@@ -1629,3 +1629,47 @@ body[data-theme="light"] .toast {
     align-items: flex-start;
   }
 }
+
+/* Ingestion progress bar UI */
+.ingest-progress-container {
+  margin-top: 12px;
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ingest-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.84rem;
+}
+
+.ingest-progress-status {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.ingest-progress-bar-bg {
+  background: var(--border);
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ingest-progress-bar-fill {
+  background: var(--primary);
+  height: 100%;
+  width: 0%;
+  transition: width 0.2s ease-out;
+}
+
+.ingest-progress-details {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+

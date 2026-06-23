@@ -10,8 +10,9 @@ class LabelMeAdapter:
     def sync_labelme_annotations(project_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         掃描並同步 LabelMe 的 JSON 標註。
-        更新 project.json 中的 images 列表及其狀態。
+        更新 project.json 中的 images 列表及其狀態，同時記錄詳細錯誤診斷。
         """
+        from datetime import datetime
         dataset_path = Path(project_data["dataset_path"])
         labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
         labelme_dir.mkdir(parents=True, exist_ok=True)
@@ -25,14 +26,16 @@ class LabelMeAdapter:
         images_list = project_data.get("images", [])
         image_map = {img["filename"]: img for img in images_list}
         
-        # 統計
+        # 統計與清單
         stats = {
             "annotated": 0,
             "missing_json": 0,
-            "corrupted_json": 0,
             "unknown_classes": set(),
             "total_images": 0
         }
+        corrupted_jsons_list = []
+        empty_jsons_list = []
+        unknown_labels_detail = {}
         
         # 掃描實際的圖片
         img_dir = dataset_path / "raw" / "images"
@@ -65,7 +68,7 @@ class LabelMeAdapter:
                 updated_images.append(img_meta)
                 continue
                 
-            json_filename = Path(filename).with_suffix(".json")
+            json_filename = Path(filename).with_suffix(".json").name
             json_path = labelme_dir / json_filename
             
             if not json_path.exists():
@@ -85,6 +88,8 @@ class LabelMeAdapter:
                     img_meta["height"] = img_h
                     
                     temp_annotations = []
+                    file_unknown_labels = []
+                    
                     for shape in shapes:
                         label = shape.get("label")
                         points = shape.get("points", [])
@@ -92,6 +97,7 @@ class LabelMeAdapter:
                         
                         if label not in class_to_idx:
                             stats["unknown_classes"].add(label)
+                            file_unknown_labels.append(label)
                             
                         # 計算 BBox (供 Web UI 畫框顯示使用)
                         if len(points) >= 2:
@@ -114,6 +120,9 @@ class LabelMeAdapter:
                                 "points": points # 保留 polygon 的原始點
                             })
                             
+                    if file_unknown_labels:
+                        unknown_labels_detail[json_filename] = list(set(file_unknown_labels))
+                        
                     if temp_annotations:
                         img_meta["status"] = "annotated"
                         img_meta["annotations"] = temp_annotations
@@ -121,13 +130,13 @@ class LabelMeAdapter:
                     else:
                         img_meta["status"] = "unannotated"
                         img_meta["annotations"] = []
-                        stats["missing_json"] += 1
+                        empty_jsons_list.append(json_filename)
                         
                 except Exception as e:
                     print(f"Error reading JSON {json_filename}: {e}")
                     img_meta["status"] = "unannotated"
                     img_meta["annotations"] = []
-                    stats["corrupted_json"] += 1
+                    corrupted_jsons_list.append(json_filename)
                     
             updated_images.append(img_meta)
             
@@ -145,12 +154,29 @@ class LabelMeAdapter:
             "skipped": skipped_count
         }
         
+        # 將詳細的同步結果儲存到專案的 labelme_progress 中
+        project_data["labelme_progress"] = {
+            "last_sync_at": datetime.now().isoformat(),
+            "json_count": annotated_count,
+            "missing_json": stats["missing_json"],
+            "empty_json": len(empty_jsons_list),
+            "invalid_json": len(corrupted_jsons_list),
+            "unknown_labels": list(stats["unknown_classes"]),
+            "corrupted_jsons_list": corrupted_jsons_list,
+            "empty_jsons_list": empty_jsons_list,
+            "unknown_labels_detail": unknown_labels_detail
+        }
+        
         return {
             "annotated": annotated_count,
             "missing_json": stats["missing_json"],
-            "corrupted_json": stats["corrupted_json"],
+            "empty_json": len(empty_jsons_list),
+            "corrupted_json": len(corrupted_jsons_list),
             "unknown_classes": list(stats["unknown_classes"]),
-            "total_images": stats["total_images"]
+            "total_images": stats["total_images"],
+            "corrupted_jsons_list": corrupted_jsons_list,
+            "empty_jsons_list": empty_jsons_list,
+            "unknown_labels_detail": unknown_labels_detail
         }
 
     @staticmethod

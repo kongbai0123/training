@@ -32,6 +32,53 @@ from ultralytics import YOLO
 
 app = FastAPI(title="Vision Training Studio API")
 
+# 全域 API 異常錯誤信封格式化處理
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(StarletteHTTPException)
+def http_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error": {
+                "code": "API_ERROR",
+                "message": exc.detail,
+                "details": {}
+            }
+        }
+    )
+
+@app.exception_handler(RequestValidationError)
+def validation_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "請求參數格式不正確",
+                "details": exc.errors()
+            }
+        }
+    )
+
+@app.exception_handler(Exception)
+def general_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": str(exc),
+                "details": {}
+            }
+        }
+    )
+
 def find_labelme_executable() -> Optional[str]:
     """Find LabelMe in PATH, current venv, or common local Codex/Hermes venv paths."""
     executable = shutil.which("labelme")
@@ -97,6 +144,34 @@ def get_index():
         # 若 index.html 還沒建立，回傳簡單歡迎語
         return {"message": "Vision Training Studio backend is running. static/index.html not found."}
     return FileResponse(str(index_path))
+
+@app.get("/api/health")
+def health_check():
+    """系統健康度與硬體資訊檢查 API"""
+    torch_version = "Not installed"
+    has_gpu = False
+    device_name = "CPU"
+    try:
+        import torch
+        torch_version = torch.__version__
+        has_gpu = torch.cuda.is_available()
+        device_name = torch.cuda.get_device_name(0) if has_gpu else "CPU"
+    except Exception:
+        pass
+        
+    return {
+        "status": "healthy",
+        "device": {
+            "has_gpu": has_gpu,
+            "device_name": device_name,
+            "torch_version": torch_version
+        },
+        "directories": {
+            "base_dir": str(BASE_DIR.resolve().as_posix()),
+            "projects_dir": str(PROJECTS_DIR.resolve().as_posix()),
+            "static_dir": str(STATIC_DIR.resolve().as_posix())
+        }
+    }
 
 # --- Pydantic Models ---
 class ProjectCreate(BaseModel):
@@ -190,14 +265,20 @@ def import_local_folder(project_id: str, path: str = Form(...)):
     
     # 支援副檔名
     valid_exts = {".jpg", ".jpeg", ".png", ".bmp"}
+    import hashlib
     
     for f in import_path.iterdir():
         if f.is_file() and f.suffix.lower() in valid_exts:
-            shutil.copy(str(f), str(dest_dir / f.name))
-            imported.append(f.name)
+            dest_file = dest_dir / f.name
+            shutil.copy(str(f), str(dest_file))
+            try:
+                sha = hashlib.sha256(dest_file.read_bytes()).hexdigest()
+            except Exception:
+                sha = ""
+            imported.append((f.name, sha))
             
     # 更新 project.json 結構
-    for fname in imported:
+    for fname, sha in imported:
         # 避免重複加入
         if any(img["filename"] == fname for img in project["images"]):
             continue
@@ -209,13 +290,14 @@ def import_local_folder(project_id: str, path: str = Form(...)):
             "source_video": "",
             "annotations": [],
             "split": None,
-            "quality": {}
+            "quality": {},
+            "sha256": sha
         })
         
     project["annotation_progress"]["total"] = len(project["images"])
     ProjectManager.save_project(project_id, project)
     
-    return {"message": f"成功匯入 {len(imported)} 張圖片", "imported": imported}
+    return {"message": f"成功匯入 {len(imported)} 張圖片", "imported": [x[0] for x in imported]}
 
 @app.post("/api/projects/{project_id}/import-video")
 def import_video(project_id: str, video_path: str = Form(...), fps: int = Form(1)):
@@ -235,10 +317,18 @@ def import_video(project_id: str, video_path: str = Form(...), fps: int = Form(1
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"抽幀失敗: {str(e)}")
         
+    import hashlib
     # 將抽出的幀加入 project.json 并記錄 source_video
     for fname in filenames:
         if any(img["filename"] == fname for img in project["images"]):
             continue
+        
+        img_file = dest_dir / fname
+        try:
+            sha = hashlib.sha256(img_file.read_bytes()).hexdigest()
+        except Exception:
+            sha = ""
+            
         project["images"].append({
             "filename": fname,
             "status": "unannotated",
@@ -246,7 +336,8 @@ def import_video(project_id: str, video_path: str = Form(...), fps: int = Form(1
             "source_video": v_path.name, # 用作後續 Group Split
             "annotations": [],
             "split": None,
-            "quality": {}
+            "quality": {},
+            "sha256": sha
         })
         
     project["annotation_progress"]["total"] = len(project["images"])
@@ -274,9 +365,17 @@ def upload_video(project_id: str, file: UploadFile = File(...), fps: int = Form(
         filenames = DatasetUtils.extract_frames(str(temp_video_path), str(dest_dir), fps)
         
         # 將抽出的影格加入 project.json
+        import hashlib
         for fname in filenames:
             if any(img["filename"] == fname for img in project["images"]):
                 continue
+            
+            img_file = dest_dir / fname
+            try:
+                sha = hashlib.sha256(img_file.read_bytes()).hexdigest()
+            except Exception:
+                sha = ""
+                
             project["images"].append({
                 "filename": fname,
                 "status": "unannotated",
@@ -284,7 +383,8 @@ def upload_video(project_id: str, file: UploadFile = File(...), fps: int = Form(
                 "source_video": file.filename,
                 "annotations": [],
                 "split": None,
-                "quality": {}
+                "quality": {},
+                "sha256": sha
             })
             
         project["annotation_progress"]["total"] = len(project["images"])
@@ -302,6 +402,190 @@ def upload_video(project_id: str, file: UploadFile = File(...), fps: int = Form(
             os.remove(temp_video_path)
         if temp_dir.exists() and not any(temp_dir.iterdir()):
             shutil.rmtree(temp_dir)
+
+
+@app.post("/api/projects/{project_id}/upload-images")
+def upload_images(
+    project_id: str,
+    files: List[UploadFile] = File(...),
+    batch_id: Optional[str] = Form(None)
+):
+    """上傳圖片檔案並支援內容雜湊去重與自動更名"""
+    import hashlib
+    from datetime import datetime
+    import uuid
+
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    dataset_path = Path(project["dataset_path"])
+    image_dir = dataset_path / "raw" / "images"
+    image_dir.mkdir(parents=True, exist_ok=True)
+
+    image_exts = {".jpg", ".jpeg", ".png", ".bmp"}
+    
+    if not batch_id:
+        batch_id = f"batch_{datetime.now().strftime('%Y%m%d%H%M%S')}_{str(uuid.uuid4())[:6]}"
+
+    existing_sha256_map = {}  # sha256 -> filename
+    existing_name_map = {}    # filename -> img_metadata
+    modified_project_images = False
+
+    # 1. 整理現有圖片，補齊 sha256 欄位
+    for img in project["images"]:
+        filename = img["filename"]
+        sha = img.get("sha256")
+        if not sha:
+            img_path = image_dir / filename
+            if img_path.exists():
+                try:
+                    data_bytes = img_path.read_bytes()
+                    sha = hashlib.sha256(data_bytes).hexdigest()
+                    img["sha256"] = sha
+                    modified_project_images = True
+                except Exception:
+                    sha = ""
+            else:
+                sha = ""
+        
+        if sha:
+            existing_sha256_map[sha] = filename
+        existing_name_map[filename] = img
+
+    uploaded_count = 0
+    duplicate_same_hash = 0
+    renamed_same_name_diff_hash = 0
+    invalid_count = 0
+    skipped_count = 0
+    
+    uploaded_files_info = []
+
+    # 2. 處理上傳檔案
+    for upload in files:
+        original_name = Path(upload.filename or "").name
+        if not original_name:
+            invalid_count += 1
+            continue
+
+        ext = Path(original_name).suffix.lower()
+        if ext not in image_exts:
+            invalid_count += 1
+            uploaded_files_info.append({
+                "original_name": original_name,
+                "stored_name": None,
+                "sha256": None,
+                "status": "invalid_format"
+            })
+            continue
+
+        try:
+            file_bytes = upload.file.read()
+            sha256_val = hashlib.sha256(file_bytes).hexdigest()
+
+            # 情況 A: 檔名與內容完全一致 (同名 + 同 SHA-256) -> 跳過
+            if original_name in existing_name_map and existing_name_map[original_name].get("sha256") == sha256_val:
+                duplicate_same_hash += 1
+                skipped_count += 1
+                uploaded_files_info.append({
+                    "original_name": original_name,
+                    "stored_name": original_name,
+                    "sha256": sha256_val,
+                    "status": "skipped_duplicate"
+                })
+                continue
+
+            # 情況 B: 檔名相同但內容不同 -> 自動重新命名防止覆寫
+            stored_name = original_name
+            if original_name in existing_name_map:
+                prefix = sha256_val[:6]
+                stem = Path(original_name).stem
+                stored_name = f"{stem}__{prefix}{ext}"
+                renamed_same_name_diff_hash += 1
+
+            # 情況 C: 不同檔名但內容一致 (同 SHA-256) -> 視為重複，預設跳過
+            if sha256_val in existing_sha256_map:
+                duplicate_same_hash += 1
+                skipped_count += 1
+                uploaded_files_info.append({
+                    "original_name": original_name,
+                    "stored_name": existing_sha256_map[sha256_val],
+                    "sha256": sha256_val,
+                    "status": "skipped_hash_duplicate"
+                })
+                continue
+
+            # 正常存檔
+            dest_file_path = image_dir / stored_name
+            dest_file_path.write_bytes(file_bytes)
+            uploaded_count += 1
+
+            # 新增圖片元數據
+            project["images"].append({
+                "filename": stored_name,
+                "status": "unannotated",
+                "scene": "unknown",
+                "source_video": "",
+                "annotations": [],
+                "split": None,
+                "quality": {},
+                "sha256": sha256_val
+            })
+            modified_project_images = True
+
+            # 更新局部比對 mapping
+            existing_sha256_map[sha256_val] = stored_name
+            existing_name_map[stored_name] = project["images"][-1]
+
+            uploaded_files_info.append({
+                "original_name": original_name,
+                "stored_name": stored_name,
+                "sha256": sha256_val,
+                "status": "uploaded" if stored_name == original_name else "renamed"
+            })
+
+        except Exception as e:
+            invalid_count += 1
+            uploaded_files_info.append({
+                "original_name": original_name,
+                "stored_name": None,
+                "sha256": None,
+                "status": f"error: {str(e)}"
+            })
+
+    # 3. 更新專案狀態
+    if modified_project_images:
+        project["annotation_progress"]["total"] = len(project["images"])
+
+    # 4. 寫入 imports_history
+    history_item = {
+        "batch_id": batch_id,
+        "timestamp": datetime.now().isoformat(),
+        "type": "images_upload",
+        "uploaded_count": uploaded_count,
+        "duplicate_same_hash": duplicate_same_hash,
+        "renamed_same_name_diff_hash": renamed_same_name_diff_hash,
+        "invalid_count": invalid_count,
+        "skipped_count": skipped_count
+    }
+    
+    if "imports_history" not in project:
+        project["imports_history"] = []
+    project["imports_history"].append(history_item)
+
+    ProjectManager.save_project(project_id, project)
+
+    return {
+        "success": True,
+        "batch_id": batch_id,
+        "uploaded_count": uploaded_count,
+        "duplicate_same_hash": duplicate_same_hash,
+        "renamed_same_name_diff_hash": renamed_same_name_diff_hash,
+        "invalid_count": invalid_count,
+        "skipped_count": skipped_count,
+        "files": uploaded_files_info,
+        "errors": []
+    }
 
 
 @app.post("/api/projects/{project_id}/upload-dataset-files")
@@ -623,6 +907,18 @@ def open_labelme(project_id: str):
             )
         )
 
+    from datetime import datetime
+    if "labelme_config" not in project:
+        project["labelme_config"] = {
+            "images_dir": "dataset/raw/images",
+            "json_dir": "dataset/raw/annotations/labelme",
+            "command": "",
+            "last_opened_at": None
+        }
+    project["labelme_config"]["last_opened_at"] = datetime.now().isoformat()
+    project["labelme_config"]["command"] = " ".join(f'"{part}"' if " " in part else part for part in command)
+    ProjectManager.save_project(project_id, project)
+
     return {
         "message": "LabelMe launched.",
         "command": " ".join(f'"{part}"' if " " in part else part for part in command),
@@ -657,6 +953,62 @@ def get_image_thumbnail(project_id: str, filename: str):
         raise HTTPException(status_code=404, detail="Image not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/projects/{project_id}/evaluation")
+def get_evaluation_results(project_id: str):
+    """讀取專案訓練的評估指標與 CSV"""
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    dataset_path = Path(project["dataset_path"])
+    runs_dir = dataset_path.parent / "training" / "runs" / "train"
+    
+    results = YOLOTrainer.read_results_csv(runs_dir)
+    
+    available_plots = []
+    for plot_name in ["confusion_matrix.png", "results.png", "F1_curve.png", "PR_curve.png"]:
+        plot_path = runs_dir / plot_name
+        if plot_path.exists():
+            available_plots.append(plot_name)
+            
+    if not results:
+        return {
+            "success": True,
+            "has_metrics": False,
+            "metrics": {
+                "map50": 0.0,
+                "map50_95": 0.0,
+                "precision": 0.0,
+                "recall": 0.0,
+                "box_loss": 0.0,
+                "seg_loss": 0.0
+            },
+            "epochs_completed": 0,
+            "plots": []
+        }
+        
+    return {
+        "success": True,
+        "has_metrics": True,
+        "metrics": results["metrics"],
+        "epochs_completed": results["epochs_completed"],
+        "plots": available_plots
+    }
+
+@app.get("/api/projects/{project_id}/evaluation/plot/{filename}")
+def get_evaluation_plot(project_id: str, filename: str):
+    """取得專案訓練產生的圖表，如 confusion_matrix.png 或 results.png"""
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    dataset_path = Path(project["dataset_path"])
+    plot_path = dataset_path.parent / "training" / "runs" / "train" / filename
+    if not plot_path.exists():
+        raise HTTPException(status_code=404, detail=f"Plot file {filename} not found")
+        
+    return FileResponse(str(plot_path))
 
 @app.post("/api/projects/{project_id}/import-zip")
 def import_zip_dataset(project_id: str, file: UploadFile = File(...)):
