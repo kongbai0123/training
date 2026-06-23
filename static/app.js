@@ -23,14 +23,16 @@ import { initDataset, renderDatasetPage } from "./pages/dataset.js";
 import { initLabelMe, renderLabelMeManager } from "./pages/labelme.js";
 import { initSplit, renderSplitPage } from "./pages/split.js";
 import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js";
-import { initTraining, renderTrainingMonitor } from "./pages/training.js";
+import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js";
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js";
+import { initInference, renderInferencePage } from "./pages/inference.js";
 import { initExport, renderExportPage } from "./pages/export.js";
 import { initSettings, renderSettingsPage } from "./pages/settings.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   initPreferences();
   bindGlobalNavigation();
+  bindInfoTooltips();
   
   // 初始化所有頁面
   initDashboard();
@@ -41,6 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initAugmentation();
   initTraining();
   initEvaluation();
+  initInference();
   initExport();
   initSettings();
 
@@ -50,6 +53,132 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // 全域導覽與事件訂閱
+function bindInfoTooltips() {
+  let tooltip = qs("#floating-tooltip");
+  if (!tooltip) {
+    tooltip = document.createElement("div");
+    tooltip.id = "floating-tooltip";
+    tooltip.className = "floating-tooltip";
+    tooltip.setAttribute("role", "tooltip");
+    document.body.appendChild(tooltip);
+  }
+
+  document.body.classList.add("tooltips-ready");
+
+  const normalizeInfoIcons = () => {
+    qsa(".info-icon[data-tooltip]").forEach((icon) => {
+      if (!icon.hasAttribute("tabindex")) icon.setAttribute("tabindex", "0");
+      if (!icon.hasAttribute("aria-label")) icon.setAttribute("aria-label", icon.dataset.tooltip);
+    });
+  };
+
+  const renderTooltipContent = (text) => {
+    const parts = String(text || "")
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (parts.length <= 1) return escapeHtml(parts[0] || "");
+    const [title, ...items] = parts;
+    return `
+      <strong>${escapeHtml(title)}</strong>
+      <ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    `;
+  };
+
+  const placeTooltip = (target) => {
+    const rect = target.getBoundingClientRect();
+    const margin = 12;
+    const host = target.closest(".main-content")
+      || target.closest(".right-summary-panel, .modal-content")
+      || document.body;
+    const hostRect = host === document.body
+      ? { left: 0, right: window.innerWidth, top: 0, bottom: window.innerHeight }
+      : host.getBoundingClientRect();
+    const safeLeft = Math.max(margin, hostRect.left + margin);
+    const safeRight = Math.min(window.innerWidth - margin, hostRect.right - margin);
+    const safeTop = Math.max(margin, hostRect.top + margin);
+    const safeBottom = Math.min(window.innerHeight - margin, hostRect.bottom - margin);
+    const availableWidth = Math.max(220, safeRight - safeLeft);
+
+    tooltip.classList.remove("place-right", "place-left");
+    tooltip.style.maxWidth = `${availableWidth}px`;
+    const tipRect = tooltip.getBoundingClientRect();
+    const hostCenterX = hostRect.left + (hostRect.right - hostRect.left) / 2;
+    const preferRight = rect.left + rect.width / 2 < hostCenterX;
+    const rightLeft = rect.right + 10;
+    const leftLeft = rect.left - tipRect.width - 10;
+    let left = preferRight ? rightLeft : leftLeft;
+    let top = rect.top + rect.height / 2 - tipRect.height / 2;
+
+    if (preferRight && left + tipRect.width > safeRight) {
+      left = leftLeft >= safeLeft ? leftLeft : safeRight - tipRect.width;
+    }
+    if (!preferRight && left < safeLeft) {
+      left = rightLeft + tipRect.width <= safeRight ? rightLeft : safeLeft;
+    }
+
+    if (left < safeLeft) left = safeLeft;
+    if (left + tipRect.width > safeRight) {
+      left = safeRight - tipRect.width;
+    }
+    if (top < safeTop) top = safeTop;
+    if (top + tipRect.height > safeBottom) {
+      top = Math.max(safeTop, safeBottom - tipRect.height);
+    }
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.classList.add(left >= rect.right ? "place-right" : "place-left");
+  };
+
+  const showTooltip = (target) => {
+    const text = target?.dataset?.tooltip;
+    if (!text) return;
+    tooltip.innerHTML = renderTooltipContent(text);
+    tooltip.classList.add("is-visible");
+    placeTooltip(target);
+  };
+
+  const hideTooltip = () => {
+    tooltip.classList.remove("is-visible");
+  };
+
+  normalizeInfoIcons();
+  new MutationObserver(normalizeInfoIcons).observe(document.body, { childList: true, subtree: true });
+
+  document.addEventListener("mouseover", (event) => {
+    const target = event.target.closest(".info-icon[data-tooltip]");
+    if (target) showTooltip(target);
+  });
+
+  document.addEventListener("mouseout", (event) => {
+    if (event.target.closest(".info-icon[data-tooltip]")) hideTooltip();
+  });
+
+  document.addEventListener("focusin", (event) => {
+    const target = event.target.closest(".info-icon[data-tooltip]");
+    if (target) showTooltip(target);
+  });
+
+  document.addEventListener("focusout", (event) => {
+    if (event.target.closest(".info-icon[data-tooltip]")) hideTooltip();
+  });
+
+  document.addEventListener("click", (event) => {
+    const target = event.target.closest(".info-icon[data-tooltip]");
+    if (!target) return;
+    event.preventDefault();
+    event.stopPropagation();
+    showTooltip(target);
+  }, true);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") hideTooltip();
+  });
+
+  window.addEventListener("scroll", hideTooltip, true);
+  window.addEventListener("resize", hideTooltip);
+}
 function bindGlobalNavigation() {
   qsa("[data-page]").forEach((btn) => {
     btn.addEventListener("click", () => navigate(btn.dataset.page));
@@ -144,6 +273,7 @@ function renderAll() {
   renderAugmentationPage(status);
   renderTrainingMonitor();
   renderEvaluationPage(status);
+  renderInferencePage(status);
   renderExportPage(status);
   renderSettingsPage();
   renderProjectsPage();
@@ -178,10 +308,10 @@ async function openProject(projectId, options = {}) {
     appState.currentProjectClasses = [...(appState.currentProject?.class_names || [])];
     setText("#current-project-title", appState.currentProject.project_name || projectId);
     updateLabelMeState();
-    
     // 檢查並重設訓練 WebSocket
     await checkCurrentTrainStatus();
-    
+    // 載入最推薦配置
+    await loadRecommendedConfig();
     renderAll();
     if (!options.stayOnPage) navigate(options.page || "dashboard");
   } catch (err) {
@@ -202,6 +332,10 @@ async function checkCurrentTrainStatus() {
 
 // UI 面板渲染
 function renderProjectSummary(status) {
+  const models = appState.inferenceModels || [];
+  const latestRun = models[0]?.run_id || "--";
+  const bestCount = models.filter((model) => model.weight_type === "best").length;
+  const lastCount = models.filter((model) => model.weight_type === "last").length;
   setHTML("#project-summary", `
     <div class="path-list">
       <div class="path-row"><span>Name</span><code>${escapeHtml(status.projectName)}</code></div>
@@ -211,26 +345,39 @@ function renderProjectSummary(status) {
       <div class="path-row"><span>LabelMe</span><code>Backend Connected</code></div>
       <div class="path-row"><span>Split</span><code>${status.splitComplete ? "Ready" : "Not ready"}</code></div>
       <div class="path-row"><span>Training</span><code>${escapeHtml(status.trainingLabel)}</code></div>
+      <div class="path-row"><span>Models</span><code>${models.length}</code></div>
+      <div class="path-row"><span>Latest run</span><code>${escapeHtml(latestRun)}</code></div>
+      <div class="path-row"><span>best.pt</span><code>${bestCount}</code></div>
+      <div class="path-row"><span>last.pt</span><code>${lastCount}</code></div>
     </div>
   `);
 }
 
 function renderNextActions(status) {
   const actions = [];
-  if (!status.hasProject) actions.push("前往 Projects 建立或開啟專案。");
+  const modelCount = (appState.inferenceModels || []).length;
+  if (!status.hasProject) actions.push("前往 Projects 建立或載入專案。");
   if (status.hasProject && !status.hasDataset) actions.push("前往 Dataset 匯入圖片或影片抽幀。");
-  if (status.hasDataset && !status.labelme.synced) actions.push("前往 LabelMe 同步 JSON，確認標註進度。");
+  if (status.hasDataset && !status.labelme.synced) actions.push("前往 LabelMe 同步 JSON，再轉換為訓練格式。");
   if (status.hasDataset && !status.splitComplete) actions.push("前往 Split 建立 Train / Val / Test。");
-  if (status.trainReady) actions.push("前往 Training 啟動訓練。");
-  if (actions.length === 0) actions.push("目前沒有必要動作。");
+  if (status.trainReady) actions.push("前往 Training 啟動或檢查訓練。");
+  if (modelCount > 0) actions.push("前往模型測試選擇 best.pt 並測試單張圖片。");
+  if (status.trainingLabel === "completed" && modelCount === 0) actions.push("前往 Training 確認 run 是否已產生 best.pt / last.pt。");
+  if (actions.length === 0) actions.push("目前沒有建議動作。");
   setHTML("#next-actions-list", actions.map((action) => `<li>${escapeHtml(action)}</li>`).join(""));
 }
 
 function renderWarnings(status) {
   const warnings = [];
-  if (!status.labelme.backendReady) warnings.push("LabelMe backend sync 尚未連線。");
-  if (!status.trainReady) warnings.push("Start Training 已依狀態 disabled。");
-  if (!status.hasProject) warnings.push("尚未載入專案時，頁面可瀏覽但操作會被停用。");
+  const models = appState.inferenceModels || [];
+  if (!status.labelme.backendReady) warnings.push("LabelMe backend sync 尚未就緒。");
+  if (!status.trainReady) warnings.push("Start Training 會依狀態 disabled。");
+  if (!status.hasProject) warnings.push("尚未載入專案，功能頁只會顯示狀態與操作提醒。");
+  if (status.hasProject && models.length === 0) warnings.push("No trained weights found for Inference Lab.");
+  const selectedModel = models[0];
+  if (selectedModel && String(status.taskType || "").includes("segmentation") && !String(selectedModel.task_type || "").includes("segmentation")) {
+    warnings.push("Selected model task does not match project task.");
+  }
   setHTML("#warning-list", warnings.map((item) => `<div class="activity-item">${escapeHtml(item)}</div>`).join(""));
 }
 

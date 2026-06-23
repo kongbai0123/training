@@ -5,6 +5,7 @@ import shutil
 import asyncio
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 import cv2
 import numpy as np
@@ -28,6 +29,8 @@ from src.splitter import DataSplitter
 from src.augmenter import ImageAugmenter
 from src.trainer import YOLOTrainer
 from src.labelme_adapter import LabelMeAdapter
+from src.model_registry import ModelRegistry
+from src.inference_engine import InferenceEngine
 from ultralytics import YOLO
 
 app = FastAPI(title="Vision Training Studio API")
@@ -158,7 +161,7 @@ def health_check():
         device_name = torch.cuda.get_device_name(0) if has_gpu else "CPU"
     except Exception:
         pass
-        
+
     return {
         "status": "healthy",
         "device": {
@@ -193,7 +196,6 @@ class SplitRequest(BaseModel):
 class AugmentPreviewRequest(BaseModel):
     filename: str
     config: Dict[str, Any]
-
 class TrainConfigRequest(BaseModel):
     model: str
     epochs: int
@@ -201,7 +203,15 @@ class TrainConfigRequest(BaseModel):
     imgsz: int
     lr0: float
     device: str
-
+    patience: Optional[int] = 20
+    workers: Optional[int] = 4
+    cache: Optional[bool] = False
+    amp: Optional[bool] = True
+    seed: Optional[int] = 42
+    save_period: Optional[int] = 5
+    close_mosaic: Optional[int] = 10
+    optimizer: Optional[str] = "auto"
+    run_id: Optional[str] = None
 # --- API Endpoints ---
 
 # 1. 專案管理 API
@@ -230,6 +240,96 @@ def delete_project(project_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Project not found or unable to delete")
     return {"message": "Project deleted successfully"}
+@app.get("/api/projects/{project_id}/models")
+def list_project_models(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return ModelRegistry.list_models(project)
+
+@app.post("/api/projects/{project_id}/inference/image")
+async def run_image_inference(
+    project_id: str,
+    model_id: str = Form(...),
+    conf: float = Form(0.25),
+    iou: float = Form(0.7),
+    imgsz: int = Form(640),
+    device: str = Form("cpu"),
+    mask_opacity: float = Form(0.45),
+    show_mask: bool = Form(True),
+    show_bbox: bool = Form(True),
+    class_filter: Optional[str] = Form(None),
+    image_path: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        model = ModelRegistry.resolve_model(project, model_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    inference_dirs = ModelRegistry.ensure_inference_dirs(project)
+
+    try:
+        if file and file.filename:
+            ext = Path(file.filename).suffix.lower()
+            if ext not in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}:
+                raise HTTPException(status_code=400, detail="Only image files are supported")
+            safe_name = f"upload_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{Path(file.filename).name}"
+            input_path = inference_dirs["inputs_images"] / safe_name
+            with open(input_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        elif image_path:
+            input_path = Path(image_path).expanduser().resolve()
+        else:
+            raise HTTPException(status_code=400, detail="Please provide an image file or image_path")
+
+        return InferenceEngine.run_image_inference(
+            project=project,
+            model=model,
+            input_path=input_path,
+            settings={
+                "conf": conf,
+                "iou": iou,
+                "imgsz": imgsz,
+                "device": device,
+                "mask_opacity": mask_opacity,
+                "show_mask": show_mask,
+                "show_bbox": show_bbox,
+                "class_filter": class_filter,
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+@app.get("/api/projects/{project_id}/inference/jobs/{job_id}/files/{filename}")
+def get_inference_job_file(project_id: str, job_id: str, filename: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    safe_filename = Path(filename).name
+    if safe_filename != filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    project_dir = Path(project["dataset_path"]).resolve().parent
+    jobs_root = (project_dir / "inference" / "jobs").resolve()
+    job_dir = (jobs_root / job_id).resolve()
+    if jobs_root not in job_dir.parents:
+        raise HTTPException(status_code=400, detail="Invalid job path")
+
+    file_path = (job_dir / safe_filename).resolve()
+    if job_dir not in file_path.parents:
+        raise HTTPException(status_code=400, detail="Invalid file path")
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Inference file not found")
+
+    return FileResponse(str(file_path))
 
 # 2. 資料集與圖片存取 API
 @app.get("/api/projects/{project_id}/images/{filename}")
@@ -238,15 +338,15 @@ def get_project_image(project_id: str, filename: str):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     img_path = Path(project["dataset_path"]) / "raw" / "images" / filename
     # 若在 raw 找不到，去 augmented_images 找 (物理擴充產生的圖)
     if not img_path.exists():
         img_path = Path(project["dataset_path"]) / "augmentations" / "augmented_images" / filename
-        
+
     if not img_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
-        
+
     return FileResponse(str(img_path))
 
 @app.post("/api/projects/{project_id}/import-local")
@@ -255,18 +355,18 @@ def import_local_folder(project_id: str, path: str = Form(...)):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     import_path = Path(path)
     if not import_path.exists() or not import_path.is_dir():
         raise HTTPException(status_code=400, detail="指定的路徑不存在或不是資料夾")
-        
+
     dest_dir = Path(project["dataset_path"]) / "raw" / "images"
     imported = []
-    
+
     # 支援副檔名
     valid_exts = {".jpg", ".jpeg", ".png", ".bmp"}
     import hashlib
-    
+
     for f in import_path.iterdir():
         if f.is_file() and f.suffix.lower() in valid_exts:
             dest_file = dest_dir / f.name
@@ -276,13 +376,13 @@ def import_local_folder(project_id: str, path: str = Form(...)):
             except Exception:
                 sha = ""
             imported.append((f.name, sha))
-            
+
     # 更新 project.json 結構
     for fname, sha in imported:
         # 避免重複加入
         if any(img["filename"] == fname for img in project["images"]):
             continue
-            
+
         project["images"].append({
             "filename": fname,
             "status": "unannotated",
@@ -293,10 +393,10 @@ def import_local_folder(project_id: str, path: str = Form(...)):
             "quality": {},
             "sha256": sha
         })
-        
+
     project["annotation_progress"]["total"] = len(project["images"])
     ProjectManager.save_project(project_id, project)
-    
+
     return {"message": f"成功匯入 {len(imported)} 張圖片", "imported": [x[0] for x in imported]}
 
 @app.post("/api/projects/{project_id}/import-video")
@@ -305,30 +405,30 @@ def import_video(project_id: str, video_path: str = Form(...), fps: int = Form(1
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     v_path = Path(video_path)
     if not v_path.exists() or not v_path.is_file():
         raise HTTPException(status_code=400, detail="影片檔案不存在")
-        
+
     dest_dir = Path(project["dataset_path"]) / "raw" / "images"
-    
+
     try:
         filenames = DatasetUtils.extract_frames(str(v_path), str(dest_dir), fps)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"抽幀失敗: {str(e)}")
-        
+
     import hashlib
     # 將抽出的幀加入 project.json 并記錄 source_video
     for fname in filenames:
         if any(img["filename"] == fname for img in project["images"]):
             continue
-        
+
         img_file = dest_dir / fname
         try:
             sha = hashlib.sha256(img_file.read_bytes()).hexdigest()
         except Exception:
             sha = ""
-            
+
         project["images"].append({
             "filename": fname,
             "status": "unannotated",
@@ -339,10 +439,10 @@ def import_video(project_id: str, video_path: str = Form(...), fps: int = Form(1
             "quality": {},
             "sha256": sha
         })
-        
+
     project["annotation_progress"]["total"] = len(project["images"])
     ProjectManager.save_project(project_id, project)
-    
+
     return {"message": f"成功從影片抽幀並匯入 {len(filenames)} 張圖片", "imported_count": len(filenames)}
 
 @app.post("/api/projects/{project_id}/upload-video")
@@ -351,31 +451,31 @@ def upload_video(project_id: str, file: UploadFile = File(...), fps: int = Form(
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     temp_dir = Path(project["dataset_path"]) / ".tmp_video_upload"
     temp_dir.mkdir(parents=True, exist_ok=True)
     temp_video_path = temp_dir / file.filename
-    
+
     try:
         # 儲存上傳的影片檔
         with open(temp_video_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-            
+
         dest_dir = Path(project["dataset_path"]) / "raw" / "images"
         filenames = DatasetUtils.extract_frames(str(temp_video_path), str(dest_dir), fps)
-        
+
         # 將抽出的影格加入 project.json
         import hashlib
         for fname in filenames:
             if any(img["filename"] == fname for img in project["images"]):
                 continue
-            
+
             img_file = dest_dir / fname
             try:
                 sha = hashlib.sha256(img_file.read_bytes()).hexdigest()
             except Exception:
                 sha = ""
-                
+
             project["images"].append({
                 "filename": fname,
                 "status": "unannotated",
@@ -386,10 +486,10 @@ def upload_video(project_id: str, file: UploadFile = File(...), fps: int = Form(
                 "quality": {},
                 "sha256": sha
             })
-            
+
         project["annotation_progress"]["total"] = len(project["images"])
         ProjectManager.save_project(project_id, project)
-        
+
         return {
             "message": f"成功從上傳影片抽幀並匯入 {len(filenames)} 張圖片",
             "imported_count": len(filenames)
@@ -424,7 +524,7 @@ def upload_images(
     image_dir.mkdir(parents=True, exist_ok=True)
 
     image_exts = {".jpg", ".jpeg", ".png", ".bmp"}
-    
+
     if not batch_id:
         batch_id = f"batch_{datetime.now().strftime('%Y%m%d%H%M%S')}_{str(uuid.uuid4())[:6]}"
 
@@ -448,7 +548,7 @@ def upload_images(
                     sha = ""
             else:
                 sha = ""
-        
+
         if sha:
             existing_sha256_map[sha] = filename
         existing_name_map[filename] = img
@@ -458,7 +558,7 @@ def upload_images(
     renamed_same_name_diff_hash = 0
     invalid_count = 0
     skipped_count = 0
-    
+
     uploaded_files_info = []
 
     # 2. 處理上傳檔案
@@ -568,7 +668,7 @@ def upload_images(
         "invalid_count": invalid_count,
         "skipped_count": skipped_count
     }
-    
+
     if "imports_history" not in project:
         project["imports_history"] = []
     project["imports_history"].append(history_item)
@@ -664,10 +764,10 @@ def trigger_quality_check(project_id: str):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     dataset_path = Path(project["dataset_path"])
     images_list = project.get("images", [])
-    
+
     # 1. 進行個別圖片的品質掃描
     hashes = {}
     for img in images_list:
@@ -675,14 +775,14 @@ def trigger_quality_check(project_id: str):
         img_path = dataset_path / "raw" / "images" / fname
         if not img_path.exists():
             continue
-            
+
         quality = DatasetUtils.analyze_image_quality(str(img_path))
         img["quality"] = quality
-        
+
         # 計算 dHash
         h = DatasetUtils.dhash(str(img_path))
         hashes[fname] = h
-        
+
     # 2. 重複圖片檢查 (比對雜湊值)
     for fname, h in hashes.items():
         is_duplicate = False
@@ -692,7 +792,7 @@ def trigger_quality_check(project_id: str):
             if DatasetUtils.hamming_distance(h, other_h) <= 5:
                 is_duplicate = True
                 break
-                
+
         # 尋找對應的 metadata 並標記
         for img in images_list:
             if img["filename"] == fname:
@@ -702,11 +802,11 @@ def trigger_quality_check(project_id: str):
                     if "可能為重複/極相似影像" not in img["quality"]["warnings"]:
                         img["quality"]["warnings"].append("可能為重複/極相似影像")
                 break
-                
+
     # 3. 計算整個資料集的健康度健康評估報告
     health_report = DatasetUtils.get_dataset_health(images_list)
     project["dataset_health"] = health_report
-    
+
     ProjectManager.save_project(project_id, project)
     return health_report
 
@@ -718,9 +818,9 @@ def save_annotations(project_id: str, data: AnnotationSave):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     dataset_path = Path(project["dataset_path"])
-    
+
     # 讀取圖片高寬
     img_path = dataset_path / "raw" / "images" / data.filename
     w, h = 640, 640
@@ -730,14 +830,14 @@ def save_annotations(project_id: str, data: AnnotationSave):
                 w, h = pil_img.size
         except Exception:
             pass
-            
+
     # 建立 LabelMe JSON 檔
     labelme_shapes = []
     for ann in data.annotations:
         label = ann.get("category")
         pts = ann.get("points")
         shape_type = ann.get("type", "bbox")
-        
+
         if not pts:
             # bbox: [xc, yc, bw, bh] (normalized) -> points: [[x1,y1], [x2,y2]] (pixels)
             bbox = ann.get("bbox")
@@ -748,7 +848,7 @@ def save_annotations(project_id: str, data: AnnotationSave):
                 y2 = (bbox[1] + bbox[3]/2) * h
                 pts = [[float(x1), float(y1)], [float(x2), float(y2)]]
                 shape_type = "rectangle"
-                
+
         if pts:
             labelme_shapes.append({
                 "label": label,
@@ -757,7 +857,7 @@ def save_annotations(project_id: str, data: AnnotationSave):
                 "shape_type": "rectangle" if shape_type == "bbox" or shape_type == "rectangle" else "polygon",
                 "flags": {}
             })
-            
+
     labelme_json = {
         "version": "5.0.1",
         "flags": {},
@@ -767,18 +867,18 @@ def save_annotations(project_id: str, data: AnnotationSave):
         "imageHeight": h,
         "imageWidth": w
     }
-    
+
     # 寫入 json
     labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
     labelme_dir.mkdir(parents=True, exist_ok=True)
     json_path = labelme_dir / Path(data.filename).with_suffix(".json")
-    
+
     try:
         with open(json_path, "w", encoding="utf-8") as json_f:
             json.dump(labelme_json, json_f, indent=2, ensure_ascii=False)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"LabelMe JSON 寫入失敗: {e}")
-        
+
     # 尋找並更新對應圖片的元數據
     found = False
     for img in project["images"]:
@@ -809,23 +909,23 @@ def save_annotations(project_id: str, data: AnnotationSave):
             img["annotations"] = temp_anns
             found = True
             break
-            
+
     if not found:
         raise HTTPException(status_code=404, detail="Image metadata not found in project")
-        
+
     # 重新計算標註進度
     total = len(project["images"])
     annotated = sum(1 for img in project["images"] if img["status"] == "annotated")
     flagged = sum(1 for img in project["images"] if img["status"] == "flagged")
     skipped = sum(1 for img in project["images"] if img["status"] == "skipped")
-    
+
     project["annotation_progress"] = {
         "total": total,
         "annotated": annotated,
         "flagged": flagged,
         "skipped": skipped
     }
-    
+
     ProjectManager.save_project(project_id, project)
     return {"message": "標註儲存成功", "progress": project["annotation_progress"]}
 
@@ -843,7 +943,7 @@ def sync_labelme(project_id: str):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     try:
         if should_auto_convert_yolo_to_labelme(project):
             LabelMeAdapter.convert_yolo_to_labelme(project)
@@ -859,7 +959,7 @@ def get_labelme_preview(project_id: str, filename: str):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     shapes_data = LabelMeAdapter.get_labelme_shapes(project, filename)
     if not shapes_data:
         return {"shapes": [], "imageHeight": 640, "imageWidth": 640}
@@ -936,7 +1036,7 @@ def convert_labelme_labels(project_id: str, req: ConvertRequest):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     try:
         res = LabelMeAdapter.convert_labelme(project, req.export_type)
         return res
@@ -960,18 +1060,18 @@ def get_evaluation_results(project_id: str):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     dataset_path = Path(project["dataset_path"])
     runs_dir = dataset_path.parent / "training" / "runs" / "train"
-    
+
     results = YOLOTrainer.read_results_csv(runs_dir)
-    
+
     available_plots = []
     for plot_name in ["confusion_matrix.png", "results.png", "F1_curve.png", "PR_curve.png"]:
         plot_path = runs_dir / plot_name
         if plot_path.exists():
             available_plots.append(plot_name)
-            
+
     if not results:
         return {
             "success": True,
@@ -987,7 +1087,7 @@ def get_evaluation_results(project_id: str):
             "epochs_completed": 0,
             "plots": []
         }
-        
+
     return {
         "success": True,
         "has_metrics": True,
@@ -1002,12 +1102,12 @@ def get_evaluation_plot(project_id: str, filename: str):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     dataset_path = Path(project["dataset_path"])
     plot_path = dataset_path.parent / "training" / "runs" / "train" / filename
     if not plot_path.exists():
         raise HTTPException(status_code=404, detail=f"Plot file {filename} not found")
-        
+
     return FileResponse(str(plot_path))
 
 @app.post("/api/projects/{project_id}/import-zip")
@@ -1016,24 +1116,24 @@ def import_zip_dataset(project_id: str, file: UploadFile = File(...)):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     # 保存上傳的 zip 檔
     temp_zip_dir = Path(project["dataset_path"]) / ".tmp_zip_upload"
     temp_zip_dir.mkdir(parents=True, exist_ok=True)
     temp_zip_path = temp_zip_dir / "upload.zip"
-    
+
     try:
         with open(temp_zip_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-            
+
         # 執行解壓縮與分類導入
         import_res = DatasetUtils.import_zip_package(project_id, str(temp_zip_path))
-        
+
         if should_auto_convert_yolo_to_labelme(project):
             LabelMeAdapter.convert_yolo_to_labelme(project)
         sync_res = LabelMeAdapter.sync_labelme_annotations(project)
         ProjectManager.save_project(project_id, project)
-        
+
         return {
             "message": "ZIP 資料包導入完成",
             "imported_images": import_res["imported_images_count"],
@@ -1056,17 +1156,17 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     dataset_path = Path(project["dataset_path"])
     labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
     labels_dir = dataset_path / "raw" / "labels"
-    
+
     labelme_dir.mkdir(parents=True, exist_ok=True)
     labels_dir.mkdir(parents=True, exist_ok=True)
-    
+
     imported_jsons = 0
     imported_txts = 0
-    
+
     try:
         for file in files:
             fname = file.filename
@@ -1080,14 +1180,14 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
                 with open(target_path, "wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
                 imported_txts += 1
-                
+
         # Detection projects can import legacy YOLO bbox txt. Segmentation projects
         # should keep LabelMe polygon JSON as the source of truth.
         if should_auto_convert_yolo_to_labelme(project):
             LabelMeAdapter.convert_yolo_to_labelme(project)
         sync_res = LabelMeAdapter.sync_labelme_annotations(project)
         ProjectManager.save_project(project_id, project)
-        
+
         return {
             "message": f"成功匯入 {imported_jsons} 個 JSON 檔案與 {imported_txts} 個 TXT 檔案",
             "imported_jsons": imported_jsons,
@@ -1107,14 +1207,14 @@ def update_project_classes(project_id: str, req: UpdateClassesRequest):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     project["class_names"] = req.class_names
     ProjectManager.save_project(project_id, project)
-    
+
     # 執行一次標註同步更新以對齊最新類別
     sync_res = LabelMeAdapter.sync_labelme_annotations(project)
     ProjectManager.save_project(project_id, project)
-    
+
     return {
         "message": "專案類別更新成功",
         "class_names": project["class_names"],
@@ -1128,7 +1228,7 @@ def split_dataset(project_id: str, req: SplitRequest):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     # 執行切分
     splits, quality_report = DataSplitter.split_dataset(
         images=project["images"],
@@ -1136,7 +1236,7 @@ def split_dataset(project_id: str, req: SplitRequest):
         method=req.method,
         ratio=req.ratio
     )
-    
+
     # 將切分結果寫入 project.json 中每張圖片的 split 屬性
     for img in project["images"]:
         fname = img["filename"]
@@ -1148,14 +1248,14 @@ def split_dataset(project_id: str, req: SplitRequest):
             img["split"] = "test"
         else:
             img["split"] = None
-            
+
     project["split_config"] = {
         "method": req.method,
         "ratio": req.ratio,
         "split_quality_score": quality_report["score"]
     }
     project["split_report"] = quality_report
-    
+
     ProjectManager.save_project(project_id, project)
     return {"message": "資料切分成功", "report": quality_report}
 
@@ -1166,16 +1266,16 @@ def preview_augmentation(project_id: str, req: AugmentPreviewRequest):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     img_metadata = next((img for img in project["images"] if img["filename"] == req.filename), None)
     if not img_metadata:
         raise HTTPException(status_code=404, detail="Image metadata not found")
-        
+
     dataset_path = Path(project["dataset_path"])
     raw_img_path = dataset_path / "raw" / "images" / req.filename
     if not raw_img_path.exists():
         raise HTTPException(status_code=404, detail="Image file not found")
-        
+
     try:
         # 套用擴充
         aug_img, aug_bboxes = ImageAugmenter.augment_single_image(
@@ -1183,7 +1283,7 @@ def preview_augmentation(project_id: str, req: AugmentPreviewRequest):
             img_metadata.get("annotations", []),
             req.config
         )
-        
+
         preview_img = aug_img.copy()
         h, w, _ = preview_img.shape
         for ann in aug_bboxes:
@@ -1206,11 +1306,11 @@ def preview_augmentation(project_id: str, req: AugmentPreviewRequest):
             y2 = int(yc + bh/2)
             cv2.rectangle(preview_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
             cv2.putText(preview_img, ann["category"], (x1, max(14, y1 - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-            
+
         # 轉換為 Base64
         _, encoded_img = cv2.imencode(".jpg", preview_img)
         base64_str = base64.b64encode(encoded_img).decode("utf-8")
-        
+
         return {"preview": f"data:image/jpeg;base64,{base64_str}", "bboxes": aug_bboxes}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"擴充預覽生成失敗: {str(e)}")
@@ -1221,35 +1321,35 @@ def apply_augmentation(project_id: str, req: Dict[str, Any]):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     dataset_path = Path(project["dataset_path"])
     aug_dir = dataset_path / "augmentations" / "augmented_images"
     # 清空先前的擴充結果
     if aug_dir.exists():
         shutil.rmtree(aug_dir)
     aug_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # 過濾出原本已經被劃分在 "train" 或是 val 的圖片
     # 或者是使用者指定要套用的 split (通常為 train 集)
     target_split = req.get("target_split", "train")
     multiplier = int(req.get("multiplier", 1)) # 每張圖片生成多少張擴充副本
     config = req.get("config", {})
-    
+
     train_images = [img for img in project["images"] if img.get("split") == target_split and img.get("status") == "annotated"]
-    
+
     if len(train_images) == 0:
         raise HTTPException(status_code=400, detail="沒有已標註的訓練集圖片，無法進行擴充。")
-        
+
     augmented_list = []
     # 保留非擴充圖片的 metadata
     original_images = [img for img in project["images"] if not img.get("is_augmented", False)]
-    
+
     for img in train_images:
         fname = img["filename"]
         raw_img_path = dataset_path / "raw" / "images" / fname
         if not raw_img_path.exists():
             continue
-            
+
         for i in range(multiplier):
             try:
                 aug_img, aug_bboxes = ImageAugmenter.augment_single_image(
@@ -1257,12 +1357,12 @@ def apply_augmentation(project_id: str, req: Dict[str, Any]):
                     img.get("annotations", []),
                     config
                 )
-                
+
                 # 生成新檔名
                 new_fname = f"aug_{i}_{fname}"
                 dest_path = aug_dir / new_fname
                 cv2.imwrite(str(dest_path.resolve()), aug_img)
-                
+
                 # 建立擴充圖片的元數據，並歸類在對應的 split
                 augmented_list.append({
                     "filename": new_fname,
@@ -1276,12 +1376,12 @@ def apply_augmentation(project_id: str, req: Dict[str, Any]):
                 })
             except Exception as e:
                 print(f"Failed to augment {fname}: {e}")
-                
+
     # 將擴充圖片註冊回 project.json
     project["images"] = original_images + augmented_list
     project["annotation_progress"]["total"] = len(project["images"])
     project["augmentation_config"] = config
-    
+
     ProjectManager.save_project(project_id, project)
     return {"message": f"成功生成 {len(augmented_list)} 張物理擴充影像"}
 
@@ -1291,17 +1391,20 @@ def start_training(project_id: str, config: TrainConfigRequest):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     # 檢查防呆
     # 沒有完成 split 不能訓練
     has_split = any(img.get("split") is not None for img in project["images"])
     if not has_split:
         raise HTTPException(status_code=400, detail="請先在 [3. 分散] 階段完成資料集切分")
-        
+
     # 類別數為 0 不能訓練
     if len(project["class_names"]) == 0:
         raise HTTPException(status_code=400, detail="類別數量不能為 0")
-        
+
+    from src.training.run_manager import RunManager
+    run_id = config.run_id or RunManager.generate_run_id()
+
     # 更新訓練設定
     project["training_config"] = {
         "model": config.model,
@@ -1309,13 +1412,152 @@ def start_training(project_id: str, config: TrainConfigRequest):
         "batch_size": config.batch_size,
         "imgsz": config.imgsz,
         "lr0": config.lr0,
-        "device": config.device
+        "device": config.device,
+        "patience": config.patience,
+        "workers": config.workers,
+        "cache": config.cache,
+        "amp": config.amp,
+        "seed": config.seed,
+        "save_period": config.save_period,
+        "close_mosaic": config.close_mosaic,
+        "optimizer": config.optimizer,
+        "run_id": run_id
     }
     ProjectManager.save_project(project_id, project)
-    
+
     # 啟動背景訓練
     YOLOTrainer.start_training(project)
-    return {"status": "started", "message": "訓練已成功啟動"}
+    return {"status": "started", "message": "訓練已成功啟動", "run_id": run_id}
+
+@app.get("/api/projects/{project_id}/train/recommend")
+def recommend_config(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    vram_mb = 0
+    try:
+        if HAS_NVML:
+            handle = nvmlDeviceGetHandleByIndex(0)
+            mem_info = nvmlDeviceGetMemoryInfo(handle)
+            vram_mb = int(mem_info.total / (1024 ** 2))
+    except Exception:
+        pass
+
+    if vram_mb == 0:
+        import torch
+        if torch.cuda.is_available():
+            try:
+                vram_mb = int(torch.cuda.get_device_properties(0).total_memory / (1024 ** 2))
+            except Exception:
+                vram_mb = 8000
+        else:
+            vram_mb = 2000
+
+    dataset_size = len([img for img in project.get("images", []) if not img.get("is_augmented", False)])
+    task_type = project.get("task_type", "detection")
+
+    from src.training.config_recommender import ConfigRecommender
+    return ConfigRecommender.recommend(task_type, vram_mb, dataset_size)
+
+@app.get("/api/projects/{project_id}/train/runs")
+def list_runs(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    runs_dir = Path(project["dataset_path"]).parent / "training" / "runs"
+    from src.training.run_manager import RunManager
+    return RunManager.list_project_runs(runs_dir)
+
+@app.get("/api/projects/{project_id}/train/runs/{run_id}/metrics")
+def get_run_metrics(project_id: str, run_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    metrics_file = Path(project["dataset_path"]).parent / "training" / "runs" / run_id / "metrics.json"
+    if not metrics_file.exists():
+        raise HTTPException(status_code=404, detail="Metrics file not found for this run")
+
+    try:
+        with open(metrics_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/projects/{project_id}/train/runs/{run_id}/artifacts")
+def get_run_artifacts(project_id: str, run_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    run_dir = Path(project["dataset_path"]).parent / "training" / "runs" / run_id
+    if not run_dir.exists():
+        raise HTTPException(status_code=404, detail="Run directory not found")
+
+    artifacts = []
+    def scan_dir(p: Path, base: Path):
+        for item in p.iterdir():
+            if item.is_file():
+                rel_path = item.relative_to(base).as_posix()
+                artifacts.append({
+                    "filename": item.name,
+                    "rel_path": rel_path,
+                    "size": item.stat().st_size,
+                    "status": "Ready"
+                })
+            elif item.is_dir() and item.name != "__pycache__":
+                scan_dir(item, base)
+    scan_dir(run_dir, run_dir)
+    return artifacts
+
+@app.get("/api/projects/{project_id}/train/runs/{run_id}/artifacts/download/{filename}")
+def download_run_artifact(project_id: str, run_id: str, filename: str, path: Optional[str] = None):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    run_dir = Path(project["dataset_path"]).parent / "training" / "runs" / run_id
+    file_path = run_dir / filename
+    if path:
+        file_path = run_dir / path
+
+    if not file_path.exists():
+        file_path_w = run_dir / "weights" / filename
+        if file_path_w.exists():
+            file_path = file_path_w
+        else:
+            raise HTTPException(status_code=404, detail=f"Artifact file not found: {filename}")
+
+    return FileResponse(str(file_path.resolve()), filename=filename)
+
+@app.post("/api/projects/{project_id}/train/runs/{run_id}/export-onnx")
+def export_run_onnx(project_id: str, run_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    run_dir = Path(project["dataset_path"]).parent / "training" / "runs" / run_id
+    best_pt = run_dir / "weights" / "best.pt"
+    if not best_pt.exists():
+        raise HTTPException(status_code=400, detail="best.pt 不存在，無法匯出 ONNX。")
+
+    try:
+        model = YOLO(str(best_pt.resolve()))
+        model.export(format="onnx")
+        best_onnx = run_dir / "weights" / "best.onnx"
+        if best_onnx.exists():
+            export_pt = Path(project["dataset_path"]).parent / "exports" / "onnx" / "best.pt"
+            export_onnx = Path(project["dataset_path"]).parent / "exports" / "onnx" / "best.onnx"
+            export_onnx.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(str(best_pt), str(export_pt))
+            shutil.copy(str(best_onnx), str(export_onnx))
+            return {"success": True, "onnx_path": str(export_onnx.resolve().as_posix())}
+        else:
+            raise Exception("ONNX generation failed.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/projects/{project_id}/train/stop")
 def stop_training(project_id: str):
@@ -1336,7 +1578,7 @@ async def monitor_training(websocket: WebSocket, project_id: str):
             # 每秒讀取一次最新的訓練進度與 GPU/CPU telemetry
             status = YOLOTrainer.get_status(project_id)
             await websocket.send_json(status)
-            
+
             # 若訓練已結束、中止或出錯，可以稍微減緩推送，但持續保持連線或等待客戶端關閉
             await asyncio.sleep(1.0)
     except WebSocketDisconnect:
@@ -1355,29 +1597,29 @@ def export_model(project_id: str):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
     dataset_path = Path(project["dataset_path"])
     runs_dir = dataset_path.parent / "training" / "runs" / "train"
     best_pt = runs_dir / "weights" / "best.pt"
-    
+
     if not best_pt.exists():
         raise HTTPException(status_code=400, detail="最佳模型檔案不存在，可能訓練尚未完成。")
-        
+
     # 一併匯出為 ONNX 格式
     try:
         model = YOLO(str(best_pt.resolve()))
         # export 會產生 best.onnx
         model.export(format="onnx")
         best_onnx = runs_dir / "weights" / "best.onnx"
-        
+
         # 複製到專案 export 目錄下
         export_pt = dataset_path.parent / "exports" / "onnx" / "best.pt"
         export_onnx = dataset_path.parent / "exports" / "onnx" / "best.onnx"
-        
+
         shutil.copy(str(best_pt), str(export_pt))
         if best_onnx.exists():
             shutil.copy(str(best_onnx), str(export_onnx))
-            
+
         return {
             "success": True,
             "pt_path": str(export_pt.resolve().as_posix()),

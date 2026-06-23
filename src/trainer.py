@@ -18,8 +18,7 @@ except Exception:
     HAS_NVML = False
 
 class YOLOTrainer:
-    # 追蹤全局訓練狀態的字典
-    # 格式: { project_id: { "status": "idle/training/paused/stopped/completed", "epoch": 0, "total_epochs": 0, "metrics": {...}, "error": "" } }
+    # 格式: { project_id: { "status": "idle/training/paused/stopped/completed/failed", "epoch": 0, "total_epochs": 0, "metrics": {...}, "error": "", "run_id": "" } }
     _global_states: Dict[str, Dict[str, Any]] = {}
     _stop_flags: Dict[str, bool] = {}
     _threads: Dict[str, threading.Thread] = {}
@@ -32,7 +31,8 @@ class YOLOTrainer:
             "epoch": 0,
             "total_epochs": 0,
             "metrics": [],
-            "error": ""
+            "error": "",
+            "run_id": ""
         })
         
         # 讀取硬體監控數據
@@ -44,7 +44,7 @@ class YOLOTrainer:
         """設定終止旗標"""
         cls._stop_flags[project_id] = True
         if project_id in cls._global_states:
-            cls._global_states[project_id]["status"] = "stopped"
+            cls._global_states[project_id]["status"] = "stopping"
 
     @staticmethod
     def get_hardware_info() -> Dict[str, Any]:
@@ -62,12 +62,10 @@ class YOLOTrainer:
                     gpu_info["available"] = True
                     gpu_info["name"] = nvmlDeviceGetName(handle)
                     
-                    # 記憶體資訊
                     mem_info = nvmlDeviceGetMemoryInfo(handle)
                     gpu_info["vram_used"] = int(mem_info.used / (1024 ** 2)) # MB
                     gpu_info["vram_total"] = int(mem_info.total / (1024 ** 2)) # MB
                     
-                    # 使用率與溫度
                     rates = nvmlDeviceGetUtilizationRates(handle)
                     gpu_info["usage"] = rates.gpu
                     gpu_info["temp"] = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
@@ -84,30 +82,50 @@ class YOLOTrainer:
     @classmethod
     def prepare_yolo_dataset(cls, project_data: Dict[str, Any]) -> str:
         """
-        導出符合 YOLO 格式要求的資料集目錄結構並生成 data.yaml
+        導出符合 YOLO 格式要求的資料集目錄結構並生成 data.yaml。
+        加入嚴格的多邊形、正規化、座標數以及任務格式匹配檢查。
         """
         project_id = project_data["project_id"]
         dataset_path = Path(project_data["dataset_path"])
+        task_type = project_data.get("task_type", "detection")
+        is_seg_task = "segmentation" in task_type or "seg" in task_type
         
         # 1. 建立 splits 下的 YOLO 目錄結構
         yolo_dir = dataset_path / "splits" / "yolo"
         if yolo_dir.exists():
-            shutil.rmtree(yolo_dir)
+            try:
+                shutil.rmtree(yolo_dir)
+            except Exception:
+                pass
             
         for split in ["train", "val", "test"]:
             (yolo_dir / split / "images").mkdir(parents=True, exist_ok=True)
             (yolo_dir / split / "labels").mkdir(parents=True, exist_ok=True)
-
-        # 2. 獲取 dataset_split 設定
-        # 讀取 splits.json / 專案 json
-        # 我們將用 splits_report.json 或是 images list 中的 split 來劃分
         images_list = project_data.get("images", [])
-        
-        # 統計各類別索引
         class_names = project_data.get("class_names", [])
         class_to_idx = {name: idx for idx, name in enumerate(class_names)}
         
-        # 3. 複製圖片並配置 labels
+        # 1.5 全面標註格式與一致性校驗
+        for img in images_list:
+            split_name = img.get("split")
+            if not split_name or split_name not in ["train", "val", "test"]:
+                continue
+            filename = img["filename"]
+            annotations = img.get("annotations", [])
+            for ann in annotations:
+                cat = ann.get("category")
+                if cat not in class_to_idx:
+                    raise ValueError(f"圖片 {filename} 的標註類別 '{cat}' 不存在於專案類別清單中。")
+                
+                if is_seg_task:
+                    points = ann.get("points")
+                    if not points or len(points) < 3:
+                        raise ValueError(
+                            f"分割任務出錯！圖片 '{filename}' 的標註不符合分割格式（必須包含多邊形頂點且至少為 3 個點）。"
+                            f"請在 LabelMe 中完成多邊形標註，或修正專案 Task Type。"
+                        )
+                        
+        # 2. 複製圖片並配置 labels
         for img in images_list:
             split_name = img.get("split")
             if not split_name or split_name not in ["train", "val", "test"]:
@@ -131,33 +149,76 @@ class YOLOTrainer:
             txt_filename = Path(filename).with_suffix(".txt")
             target_txt_path = yolo_dir / split_name / "labels" / txt_filename
             
-            # 如果是原始圖片且有預先轉換好的 txt label 檔案，直接複製它
-            preconverted_label_path = dataset_path / "raw" / "labels" / txt_filename
-            if not is_aug and preconverted_label_path.exists():
-                shutil.copy(preconverted_label_path, target_txt_path)
-            else:
-                # 否則 (擴充圖或未預轉換的圖)，自 project.json 元數據寫入
-                with open(target_txt_path, "w", encoding="utf-8") as f:
-                    for ann in img.get("annotations", []):
-                        cat = ann.get("category")
-                        if cat not in class_to_idx:
-                            continue
-                        idx = class_to_idx[cat]
-                        
-                        # 支援 YOLO Segmentation (多邊形點序列)
+            annotations = img.get("annotations", [])
+            
+            # 檢查與導出標註
+            with open(target_txt_path, "w", encoding="utf-8") as f:
+                for ann in annotations:
+                    cat = ann.get("category")
+                    if cat not in class_to_idx:
+                        raise ValueError(f"圖片 {filename} 的標註類別 '{cat}' 不存在於專案類別清單中。")
+                    idx = class_to_idx[cat]
+                    
+                    if is_seg_task:
                         points = ann.get("points")
-                        if points and len(points) >= 3:
+                        if not points or len(points) < 3:
+                            raise ValueError(
+                                f"分割任務出錯！圖片 '{filename}' 的標註不符合分割格式（必須包含多邊形頂點且至少為 3 個點）。"
+                                f"請在 LabelMe 中完成多邊形標註，或修正專案 Task Type。"
+                            )
+                        
+                        img_w = img.get("width")
+                        img_h = img.get("height")
+                        if not img_w or not img_h:
+                            try:
+                                import cv2
+                                temp_img = cv2.imread(str(img_src_path))
+                                if temp_img is not None:
+                                    img_h, img_w = temp_img.shape[:2]
+                                else:
+                                    img_w, img_h = 640, 640
+                            except Exception:
+                                img_w, img_h = 640, 640
+                        
+                        # 進行 0.0 ~ 1.0 的歸一化並 clip 到邊界
+                        norm_pts = []
+                        for pt in points:
+                            if len(pt) < 2:
+                                continue
+                            xn = max(0.0, min(1.0, pt[0] / img_w))
+                            yn = max(0.0, min(1.0, pt[1] / img_h))
+                            norm_pts.append(f"{xn:.6f} {yn:.6f}")
+                        
+                        if len(norm_pts) < 3:
+                            raise ValueError(f"圖片 {filename} 的多邊形頂點歸一化後有效點數少於 3。")
+                            
+                        pts_str = " ".join(norm_pts)
+                        f.write(f"{idx} {pts_str}\n")
+                    else:
+                        # Detection 任務 (若只有 points 自動轉為 bbox 作為相容機制)
+                        bbox = ann.get("bbox")
+                        if (not bbox or len(bbox) != 4) and ann.get("points"):
+                            pts = ann.get("points")
                             img_w = img.get("width", 640)
                             img_h = img.get("height", 640)
-                            pts_str = " ".join(f"{pt[0]/img_w:.6f} {pt[1]/img_h:.6f}" for pt in points)
-                            f.write(f"{idx} {pts_str}\n")
-                        else:
-                            # 支援 YOLO Detection (bbox)
-                            bbox = ann.get("bbox")
-                            if bbox and len(bbox) == 4:
-                                f.write(f"{idx} {bbox[0]:.6f} {bbox[1]:.6f} {bbox[2]:.6f} {bbox[3]:.6f}\n")
+                            xs = [p[0] for p in pts]
+                            ys = [p[1] for p in pts]
+                            xmin, xmax = min(xs), max(xs)
+                            ymin, ymax = min(ys), max(ys)
+                            w = xmax - xmin
+                            h = ymax - ymin
+                            xc = xmin + w / 2
+                            yc = ymin + h / 2
+                            bbox = [xc / img_w, yc / img_h, w / img_w, h / img_h]
+                            
+                        if bbox and len(bbox) == 4:
+                            xc = max(0.0, min(1.0, bbox[0]))
+                            yc = max(0.0, min(1.0, bbox[1]))
+                            bw = max(0.0, min(1.0, bbox[2]))
+                            bh = max(0.0, min(1.0, bbox[3]))
+                            f.write(f"{idx} {xc:.6f} {yc:.6f} {bw:.6f} {bh:.6f}\n")
 
-        # 4. 生成 data.yaml
+        # 3. 生成 data.yaml
         data_yaml_path = yolo_dir / "data.yaml"
         with open(data_yaml_path, "w", encoding="utf-8") as f:
             f.write(f"path: {yolo_dir.resolve().as_posix()}\n")
@@ -180,13 +241,6 @@ class YOLOTrainer:
             return
             
         cls._stop_flags[project_id] = False
-        cls._global_states[project_id] = {
-            "status": "training",
-            "epoch": 0,
-            "total_epochs": project_data.get("training_config", {}).get("epochs", 50),
-            "metrics": [],
-            "error": ""
-        }
         
         thread = threading.Thread(target=cls._run_yolo, args=(project_data,))
         cls._threads[project_id] = thread
@@ -197,34 +251,64 @@ class YOLOTrainer:
         project_id = project_data["project_id"]
         dataset_path = Path(project_data["dataset_path"])
         train_config = project_data.get("training_config", {})
+        task_type = project_data.get("task_type", "detection")
+        
+        from src.training.run_manager import RunManager
+        run_id = train_config.get("run_id") or RunManager.generate_run_id()
+        
+        project_dir = dataset_path.parent
+        runs_dir = project_dir / "training" / "runs"
+        
+        # 建立當次獨立 run 目錄，並存入 metadata snapshot
+        run_dir = RunManager.create_run_directory(runs_dir, run_id)
+        RunManager.save_run_metadata(run_dir, train_config, project_data.get("images", []))
+        
+        cls._global_states[project_id] = {
+            "status": "training",
+            "epoch": 0,
+            "total_epochs": train_config.get("epochs", 50),
+            "metrics": [],
+            "error": "",
+            "run_id": run_id
+        }
+        
+        error_msg = ""
+        status = "completed"
         
         try:
-            # 1. 準備資料集並導出 YOLO 格式
+            # 1. 準備資料集並進行嚴格標註檢查 (不符則會拋出 ValueError)
             data_yaml_path = cls.prepare_yolo_dataset(project_data)
             
             # 2. 初始化 YOLO 模型
             model_name = train_config.get("model", "yolov8n.pt")
             model = YOLO(model_name)
             
-            # 3. 註冊終止 Callbacks
-            # 利用 Ultralytics callbacks 機制，當 _stop_flags 觸發時拋出 Exception 終止訓練
+            # 3. 註冊 Epoch 終止 Callbacks
             def on_fit_epoch_end(trainer):
                 if cls._stop_flags.get(project_id, False):
                     raise KeyboardInterrupt("訓練由使用者手動中止。")
                     
-                # 讀取與更新狀態
                 epoch = trainer.epoch
-                total_epochs = trainer.epochs
+                is_seg = "segmentation" in task_type or "seg" in task_type
+                suffix = "M" if is_seg else "B"
                 
-                # 計算或解析 metrics
-                # trainer.metrics 內含各種指標
+                # 從 metrics 取值
+                map50 = float(trainer.metrics.get(f"metrics/mAP50({suffix})") or trainer.metrics.get("metrics/mAP50(B)") or 0.0)
+                map50_95 = float(trainer.metrics.get(f"metrics/mAP50-95({suffix})") or trainer.metrics.get("metrics/mAP50-95(B)") or 0.0)
+                precision = float(trainer.metrics.get(f"metrics/precision({suffix})") or trainer.metrics.get("metrics/precision(B)") or 0.0)
+                recall = float(trainer.metrics.get(f"metrics/recall({suffix})") or trainer.metrics.get("metrics/recall(B)") or 0.0)
+                
+                loss_val = 0.0
+                if hasattr(trainer, 'loss_items') and len(trainer.loss_items) > 0:
+                    loss_val = float(trainer.loss_items[0])
+                
                 metrics_data = {
                     "epoch": epoch + 1,
-                    "loss": float(trainer.loss_items[0]) if hasattr(trainer, 'loss_items') and len(trainer.loss_items) > 0 else 0.0,
-                    "map50": float(trainer.metrics.get("metrics/mAP50(B)", 0.0)),
-                    "map50_95": float(trainer.metrics.get("metrics/mAP50-95(B)", 0.0)),
-                    "precision": float(trainer.metrics.get("metrics/precision(B)", 0.0)),
-                    "recall": float(trainer.metrics.get("metrics/recall(B)", 0.0)),
+                    "loss": loss_val,
+                    "map50": map50,
+                    "map50_95": map50_95,
+                    "precision": precision,
+                    "recall": recall,
                     "timestamp": time.time()
                 }
                 
@@ -234,11 +318,7 @@ class YOLOTrainer:
                 
             model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
             
-            # 4. 開始訓練
-            # 確保 training runs 目錄
-            project_dir = dataset_path.parent
-            runs_dir = project_dir / "training" / "runs"
-            
+            # 4. 開始訓練，使用獨立 run_id，不覆蓋舊結果
             epochs = int(train_config.get("epochs", 50))
             batch_size = int(train_config.get("batch_size", 8))
             imgsz = int(train_config.get("imgsz", 640))
@@ -253,40 +333,50 @@ class YOLOTrainer:
                 lr0=lr0,
                 device=device,
                 project=str(runs_dir.resolve().as_posix()),
-                name="train",
-                exist_ok=True,
-                verbose=False
+                name=run_id,
+                exist_ok=False,
+                patience=int(train_config.get("patience", 20)),
+                save=True,
+                save_period=int(train_config.get("save_period", 5)),
+                cache=train_config.get("cache", False),
+                workers=int(train_config.get("workers", 4)),
+                amp=bool(train_config.get("amp", True)),
+                seed=int(train_config.get("seed", 42)),
+                deterministic=False,
+                close_mosaic=int(train_config.get("close_mosaic", 10)),
+                plots=True,
+                verbose=True
             )
             
-            # 5. 訓練完成
+            # 訓練順利完成
             state = cls._global_states[project_id]
             state["status"] = "completed"
             
-            # 將最後的最佳模型路徑寫入 metrics 報告中
-            best_model_path = runs_dir / "train" / "weights" / "best.pt"
+            best_model_path = run_dir / "weights" / "best.pt"
             if best_model_path.exists():
                 state["best_model"] = str(best_model_path.resolve().as_posix())
                 
         except KeyboardInterrupt:
-            # 捕捉手動中斷
+            status = "stopped"
             cls._global_states[project_id]["status"] = "stopped"
+            error_msg = "訓練由使用者手動中止。"
             print(f"[Trainer] Training {project_id} was stopped by user.")
         except Exception as e:
-            # 捕捉訓練錯誤
-            cls._global_states[project_id]["status"] = "error"
+            status = "failed"
+            cls._global_states[project_id]["status"] = "failed"
             cls._global_states[project_id]["error"] = str(e)
+            error_msg = str(e)
             print(f"[Trainer] Error in training {project_id}: {e}")
         finally:
-            from datetime import datetime
+            # 保存 artifacts、解析 CSV 並回寫摘要資訊至 project.json
             from src.project_manager import ProjectManager
             latest_project = ProjectManager.get_project(project_id)
             if latest_project:
-                final_state = cls._global_states.get(project_id, {"status": "unknown"})
-                status = final_state.get("status", "unknown")
-                last_metrics = final_state.get("metrics")[-1] if final_state.get("metrics") else {}
+                run_summary = RunManager.finalize_run(run_dir, task_type, status, error_msg)
                 
+                # 摘要記錄
                 run_record = {
-                    "run_id": f"run_{int(time.time())}",
+                    "run_id": run_id,
                     "timestamp": datetime.now().isoformat(),
                     "status": status,
                     "model": train_config.get("model"),
@@ -295,34 +385,40 @@ class YOLOTrainer:
                     "imgsz": int(train_config.get("imgsz", 640)),
                     "lr0": float(train_config.get("lr0", 0.01)),
                     "device": train_config.get("device"),
-                    "metrics": last_metrics,
-                    "error": final_state.get("error", "")
+                    "error": error_msg,
+                    **run_summary
                 }
                 
                 if "training_runs" not in latest_project:
                     latest_project["training_runs"] = []
+                
+                # 避免重複
+                latest_project["training_runs"] = [r for r in latest_project["training_runs"] if r["run_id"] != run_id]
                 latest_project["training_runs"].append(run_record)
                 
                 if status == "completed":
                     version_id = f"v{len(latest_project.get('versions', [])) + 1}"
-                    best_model_path = runs_dir / "train" / "weights" / "best.pt"
-                    best_onnx_path = runs_dir / "train" / "weights" / "best.onnx"
+                    best_model_path = run_dir / "weights" / "best.pt"
+                    best_onnx_path = run_dir / "weights" / "best.onnx"
                     
                     version_record = {
                         "version_id": version_id,
                         "timestamp": datetime.now().isoformat(),
                         "model_name": train_config.get("model"),
-                        "metrics": last_metrics,
                         "best_model_pt": str(best_model_path.resolve().as_posix()) if best_model_path.exists() else "",
-                        "best_model_onnx": str(best_onnx_path.resolve().as_posix()) if best_onnx_path.exists() else ""
+                        "best_model_onnx": str(best_onnx_path.resolve().as_posix()) if best_onnx_path.exists() else "",
+                        "platform_score": run_summary.get("platform_score", 0.0),
+                        "best_mAP50": run_summary.get("best_mAP50", 0.0),
+                        "best_mAP50_95": run_summary.get("best_mAP50_95", 0.0)
                     }
                     if "versions" not in latest_project:
                         latest_project["versions"] = []
                     latest_project["versions"].append(version_record)
+                    latest_project["best_model"] = str(best_model_path.resolve().as_posix())
                 
                 ProjectManager.save_project(project_id, latest_project)
-
-            # GPU VRAM & memory release
+            
+            # 釋放 GPU VRAM 資源與垃圾回收
             import gc
             import torch
             gc.collect()
@@ -331,7 +427,7 @@ class YOLOTrainer:
                     torch.cuda.empty_cache()
                 except Exception:
                     pass
-
+                    
             if project_id in cls._threads:
                 del cls._threads[project_id]
 
@@ -341,7 +437,6 @@ class YOLOTrainer:
         if not csv_path.exists():
             return None
         try:
-            import csv
             with open(csv_path, "r", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
                 rows = list(reader)
@@ -366,4 +461,3 @@ class YOLOTrainer:
         except Exception as e:
             print(f"Error parsing results.csv: {e}")
             return None
-
