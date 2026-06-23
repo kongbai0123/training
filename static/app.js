@@ -26,6 +26,7 @@ import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.j
 import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js";
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js";
 import { initInference, renderInferencePage } from "./pages/inference.js";
+import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js";
 import { initExport, renderExportPage } from "./pages/export.js";
 import { initSettings, renderSettingsPage } from "./pages/settings.js";
 
@@ -47,6 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initTraining();
   initEvaluation();
   initInference();
+  initAutoLabeling();
   initExport();
   initSettings();
 
@@ -296,6 +298,7 @@ function renderAll() {
   renderTrainingMonitor();
   renderEvaluationPage(status);
   renderInferencePage(status);
+  renderAutoLabelingPage(status);
   renderExportPage(status);
   renderSettingsPage();
   renderProjectsPage();
@@ -384,6 +387,7 @@ const RIGHT_PANEL_CONFIG = {
   training: buildTrainingRightPanel,
   evaluation: buildEvaluationRightPanel,
   inference: buildInferenceRightPanel,
+  "auto-labeling": buildAutoLabelingRightPanel,
   export: buildExportRightPanel,
   history: buildHistoryRightPanel,
   settings: buildSettingsRightPanel
@@ -410,12 +414,12 @@ function renderRightPanel(pageId, status) {
     const titleEl = qs("#page-context-title");
     if (titleEl) titleEl.textContent = getPageTitle(pageId);
     
-    setHTML(container, `
+    container.innerHTML = `
       <div class="summary-empty">
         <p>Please create or open a project first.</p>
         <button class="btn btn-secondary btn-sm" data-nav="projects">Go to Projects</button>
       </div>
-    `);
+    `;
     
     // 渲染 Empty State 下的 Suggested Actions 與 Warnings
     setHTML("#next-actions-list", `<li>前往 <a href="#" data-nav="projects">Projects</a> 建立或開啟專案。</li>`);
@@ -425,7 +429,7 @@ function renderRightPanel(pageId, status) {
 
   if (!builder) {
     section.style.display = "none";
-    setHTML(container, "");
+    container.innerHTML = "";
     setHTML("#next-actions-list", "<li>目前沒有建議動作。</li>");
     setHTML("#warning-list", "");
     return;
@@ -443,12 +447,12 @@ function renderRightPanel(pageId, status) {
   // 3. 渲染 Page Context 內容 (XSS 安全 escape 處理)
   if (config.emptyState && !status.hasProject) {
     section.style.display = "block";
-    setHTML(container, `
+    container.innerHTML = `
       <div class="summary-empty">
         <p>${escapeHtml(config.emptyState.message)}</p>
         ${config.emptyState.actionLabel ? `<button class="btn btn-secondary btn-sm" data-nav="${escapeHtml(config.emptyState.actionNav)}">${escapeHtml(config.emptyState.actionLabel)}</button>` : ""}
       </div>
-    `);
+    `;
   } else {
     section.style.display = "block";
     const rowsHtml = (config.rows || []).map(row => {
@@ -459,7 +463,7 @@ function renderRightPanel(pageId, status) {
       }
       return `<div class="summary-row"><span>${escapeHtml(row.label)}</span>${valDom}</div>`;
     }).join("");
-    setHTML(container, rowsHtml ? `<div class="path-list" style="gap: 0;">${rowsHtml}</div>` : `<div class="summary-empty"><p>沒有可用狀態項目。</p></div>`);
+    container.innerHTML = rowsHtml ? `<div class="path-list" style="gap: 0;">${rowsHtml}</div>` : `<div class="summary-empty"><p>目前沒有可顯示的頁面資訊。</p></div>`;
   }
 
   // 4. 動態渲染 Next Suggested Actions (XSS 安全處理)
@@ -488,6 +492,7 @@ function getPageTitle(pageId) {
     training: "Training Status",
     evaluation: "Evaluation Status",
     inference: "Inference Status",
+    "auto-labeling": "Auto-Labeling Status",
     export: "Export Status",
     history: "History Status"
   };
@@ -721,6 +726,46 @@ function buildInferenceRightPanel(status) {
   };
 }
 
+function buildAutoLabelingRightPanel(status) {
+  const models = appState.models || [];
+  const compatibleModels = models.filter((model) => {
+    const projectTask = String(status.taskType || "").toLowerCase();
+    const modelTask = String(model.task_type || "").toLowerCase();
+    if (!projectTask || !modelTask) return true;
+    if (projectTask.includes("segmentation")) return modelTask.includes("segmentation");
+    if (projectTask.includes("detection")) return modelTask.includes("detection");
+    if (projectTask.includes("classification")) return modelTask.includes("classification");
+    return true;
+  });
+
+  const actions = [
+    "選擇 best.pt / last.pt 作為草稿產生模型。",
+    "先用單張圖片 preview，再進入資料夾批次。",
+    "後續 API 完成後，人工確認再 Export LabelMe / YOLO。"
+  ];
+
+  const warnings = [
+    "P0 UI only：目前不會執行自動標註。",
+    "Apply scope 預設為 Train only，避免污染 Val/Test。"
+  ];
+  if (models.length === 0) warnings.unshift("找不到可用模型，請先完成 Training。");
+  if (models.length > 0 && compatibleModels.length === 0) warnings.unshift("目前模型任務與專案任務不相容。");
+
+  return {
+    title: "Auto-Labeling Status",
+    rows: [
+      { label: "UI status", value: "Phase UI", badgeType: "neutral" },
+      { label: "Available models", value: String(models.length) },
+      { label: "Compatible models", value: String(compatibleModels.length), badgeType: compatibleModels.length > 0 ? "success" : "warning" },
+      { label: "Draft output", value: "LabelMe / YOLO", isCode: true },
+      { label: "Apply scope", value: "Train only", badgeType: "warning" },
+      { label: "Backend API", value: "Pending", badgeType: "neutral" }
+    ],
+    actions,
+    warnings
+  };
+}
+
 function buildExportRightPanel(status) {
   // Use appState.models as SSoT
   const models = appState.models || [];
@@ -785,6 +830,7 @@ function renderPageGuards(pageId, status) {
     augmentation: [],
     training: [],
     evaluation: [],
+    "auto-labeling": [],
     export: []
   };
 
@@ -887,3 +933,4 @@ function closeHistoryModal() {
   const modal = qs("#project-history-modal");
   if (modal) modal.hidden = true;
 }
+

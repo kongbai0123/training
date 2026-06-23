@@ -1238,6 +1238,101 @@ select:focus {
   opacity: 0.72;
 }
 
+.auto-label-layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.95fr) minmax(380px, 1.05fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.source-option-grid,
+.mode-grid {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.source-option,
+.mode-card {
+  width: 100%;
+  min-height: 74px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+  color: var(--text);
+  text-align: left;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 4px;
+  align-items: center;
+}
+
+.source-option i {
+  grid-row: span 2;
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+.source-option span,
+.mode-card span {
+  grid-column: 2;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.source-option.active,
+.mode-card.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.22);
+}
+
+.source-option.disabled,
+.mode-card.disabled,
+.disabled-drop {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.mode-card {
+  cursor: pointer;
+}
+
+.mode-card input {
+  grid-row: span 2;
+}
+
+.auto-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.auto-preview-panel {
+  margin-top: 16px;
+}
+
+.auto-review-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+  align-items: center;
+}
+
+.auto-review-toolbar .btn-primary {
+  margin-left: auto;
+}
+
+.auto-label-bottom-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 16px;
+  margin-top: 16px;
+  align-items: start;
+}
+
 .checkbox-row {
   display: flex !important;
   grid-template-columns: none !important;
@@ -1778,6 +1873,8 @@ body[data-theme="light"] .toast {
   .inference-lab-grid,
   .inference-preview-grid,
   .inference-summary-grid,
+  .auto-label-layout,
+  .auto-label-bottom-grid,
   .dataset-manager-layout,
   .labelme-layout,
   .kpi-grid,
