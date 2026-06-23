@@ -35,7 +35,7 @@ class ModelRegistry:
             training_config = ModelRegistry._read_training_config(project, run_dir)
             stat = weight_path.stat()
             weight_type = weight_path.stem
-            task_type = ModelRegistry._infer_task_type(project, training_config, weight_path)
+            task_type = ModelRegistry._infer_task_type(project, training_config, weight_path, run_dir)
 
             models.append({
                 "model_id": ModelRegistry._model_id(project_id, run_id, weight_type),
@@ -191,11 +191,33 @@ class ModelRegistry:
         return max(values) if values else None
 
     @staticmethod
-    def _infer_task_type(project: Dict[str, Any], training_config: Dict[str, Any], weight_path: Path) -> str:
+    def _infer_task_type(project: Dict[str, Any], training_config: Dict[str, Any], weight_path: Path, run_dir: Path) -> str:
+        # 1. 優先讀取 run_summary.json 中的 task_type 欄位
+        summary_file = run_dir / "run_summary.json"
+        if summary_file.exists():
+            try:
+                summary_data = json.loads(summary_file.read_text(encoding="utf-8"))
+                if isinstance(summary_data, dict) and summary_data.get("task_type"):
+                    return str(summary_data["task_type"])
+            except Exception:
+                pass
+
+        # 2. 讀取 training_config 中的 task_type 欄位
+        if training_config.get("task_type"):
+            return str(training_config["task_type"])
+
+        # 3. 讀取 model name 或權重檔名判定
         model_name = str(training_config.get("model") or weight_path.name).lower()
-        project_task = str(project.get("task_type") or "").lower()
-        if "seg" in model_name or "segmentation" in project_task:
+        
+        if "-seg" in model_name or model_name.endswith("seg.pt") or "yolov8n-seg" in model_name:
             return "segmentation"
-        if "class" in project_task:
+        if "-cls" in model_name or "cls" in model_name:
             return "classification"
-        return "detection"
+        if "-pose" in model_name or "pose" in model_name:
+            return "pose"
+        if "-obb" in model_name or "obb" in model_name:
+            return "obb"
+        if model_name.endswith(".pt") or "yolo" in model_name:
+            return "detection"
+
+        return "unknown"

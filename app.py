@@ -448,13 +448,21 @@ def import_video(project_id: str, video_path: str = Form(...), fps: int = Form(1
 @app.post("/api/projects/{project_id}/upload-video")
 def upload_video(project_id: str, file: UploadFile = File(...), fps: int = Form(1)):
     """上傳影片檔案並自動抽幀"""
+    import uuid
+    original_name = Path(file.filename or "upload.mp4").name
+    suffix = Path(original_name).suffix.lower()
+
+    if suffix not in {".mp4", ".avi", ".mov", ".mkv", ".webm"}:
+        raise HTTPException(status_code=400, detail="Unsupported video format")
+
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    safe_filename = f"{uuid.uuid4().hex}{suffix}"
     temp_dir = Path(project["dataset_path"]) / ".tmp_video_upload"
     temp_dir.mkdir(parents=True, exist_ok=True)
-    temp_video_path = temp_dir / file.filename
+    temp_video_path = temp_dir / safe_filename
 
     try:
         # 儲存上傳的影片檔
@@ -480,7 +488,7 @@ def upload_video(project_id: str, file: UploadFile = File(...), fps: int = Form(
                 "filename": fname,
                 "status": "unannotated",
                 "scene": "unknown",
-                "source_video": file.filename,
+                "source_video": original_name,
                 "annotations": [],
                 "split": None,
                 "quality": {},
@@ -1392,15 +1400,12 @@ def start_training(project_id: str, config: TrainConfigRequest):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # 檢查防呆
-    # 沒有完成 split 不能訓練
-    has_split = any(img.get("split") is not None for img in project["images"])
-    if not has_split:
-        raise HTTPException(status_code=400, detail="請先在 [3. 分散] 階段完成資料集切分")
-
-    # 類別數為 0 不能訓練
-    if len(project["class_names"]) == 0:
-        raise HTTPException(status_code=400, detail="類別數量不能為 0")
+    # 進行後端完整的訓練就緒性檢查
+    from src.training.readiness import validate_training_readiness
+    config_dict = config.dict() if hasattr(config, "dict") else config.__dict__
+    readiness_errors = validate_training_readiness(project, config_dict)
+    if readiness_errors:
+        raise HTTPException(status_code=400, detail="訓練就緒性檢查未通過：\n" + "\n".join(readiness_errors))
 
     from src.training.run_manager import RunManager
     run_id = config.run_id or RunManager.generate_run_id()
@@ -1514,23 +1519,43 @@ def get_run_artifacts(project_id: str, run_id: str):
 
 @app.get("/api/projects/{project_id}/train/runs/{run_id}/artifacts/download/{filename}")
 def download_run_artifact(project_id: str, run_id: str, filename: str, path: Optional[str] = None):
+    # 1. 驗證 run_id 格式
+    import re
+    if not re.fullmatch(r"[A-Za-z0-9_\-\.]+", run_id):
+        raise HTTPException(status_code=400, detail="Invalid run_id")
+
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    run_dir = Path(project["dataset_path"]).parent / "training" / "runs" / run_id
-    file_path = run_dir / filename
+    # 2. Sanitize filename 與路徑
+    safe_filename = Path(filename).name
+    run_dir = (Path(project["dataset_path"]).parent / "training" / "runs" / run_id).resolve()
+    
     if path:
-        file_path = run_dir / path
+        file_path = (run_dir / path).resolve()
+    else:
+        file_path = (run_dir / safe_filename).resolve()
+
+    # 3. 確保 file_path 位於 run_dir 之內，防止路徑穿越
+    try:
+        file_path.relative_to(run_dir)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Access denied: invalid path")
 
     if not file_path.exists():
-        file_path_w = run_dir / "weights" / filename
-        if file_path_w.exists():
-            file_path = file_path_w
-        else:
-            raise HTTPException(status_code=404, detail=f"Artifact file not found: {filename}")
+        # 如果不存在，嘗試找 weights 底下
+        file_path_w = (run_dir / "weights" / safe_filename).resolve()
+        try:
+            file_path_w.relative_to(run_dir)
+            if file_path_w.exists():
+                file_path = file_path_w
+            else:
+                raise HTTPException(status_code=404, detail=f"Artifact file not found: {filename}")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Access denied: invalid path")
 
-    return FileResponse(str(file_path.resolve()), filename=filename)
+    return FileResponse(str(file_path), filename=safe_filename)
 
 @app.post("/api/projects/{project_id}/train/runs/{run_id}/export-onnx")
 def export_run_onnx(project_id: str, run_id: str):

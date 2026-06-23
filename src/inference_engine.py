@@ -49,6 +49,23 @@ class InferenceEngine:
         class_filter = cls._parse_class_filter(settings.get("class_filter"))
 
         model_obj = cls._get_model(model["internal_weight_path"])
+        
+        # Lazy validation: 驗證載入的 YOLO 模型任務與專案設定的 task_type 是否相符
+        real_task = getattr(model_obj, "task", "detect")
+        expected_task = project.get("task_type", "detection")
+        normalized_real_task = "detection"
+        if real_task == "segment":
+            normalized_real_task = "segmentation"
+        elif real_task == "classify":
+            normalized_real_task = "classification"
+        elif real_task in {"pose", "obb"}:
+            normalized_real_task = real_task
+            
+        if normalized_real_task != expected_task:
+            raise ValueError(
+                f"權重實際任務類型為 '{normalized_real_task}'，與當前專案設定之任務類型 '{expected_task}' 不符，拒絕執行預測。"
+            )
+
         started = time.perf_counter()
         results = model_obj.predict(
             source=str(input_copy.resolve()),

@@ -5,6 +5,7 @@ import time
 import shutil
 import threading
 import psutil
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from ultralytics import YOLO
@@ -259,9 +260,10 @@ class YOLOTrainer:
         project_dir = dataset_path.parent
         runs_dir = project_dir / "training" / "runs"
         
-        # 建立當次獨立 run 目錄，並存入 metadata snapshot
-        run_dir = RunManager.create_run_directory(runs_dir, run_id)
-        RunManager.save_run_metadata(run_dir, train_config, project_data.get("images", []))
+        # 1. 檢查是否存在同名資料夾，若已存在則拒絕啟動
+        actual_run_dir = Path(runs_dir / run_id).resolve()
+        if actual_run_dir.exists():
+            raise RuntimeError(f"訓練輸出目錄已存在，為防覆寫已拒絕啟動：{actual_run_dir}")
         
         cls._global_states[project_id] = {
             "status": "training",
@@ -283,7 +285,12 @@ class YOLOTrainer:
             model_name = train_config.get("model", "yolov8n.pt")
             model = YOLO(model_name)
             
-            # 3. 註冊 Epoch 終止 Callbacks
+            # 3. 註冊 Callbacks
+            def on_train_start(trainer):
+                # 這是 Ultralytics 在實際建立 save_dir 之後觸發的 callback
+                path_dir = Path(trainer.save_dir).resolve()
+                RunManager.save_run_metadata(path_dir, train_config, project_data.get("images", []))
+                
             def on_fit_epoch_end(trainer):
                 if cls._stop_flags.get(project_id, False):
                     raise KeyboardInterrupt("訓練由使用者手動中止。")
@@ -316,6 +323,7 @@ class YOLOTrainer:
                 state["epoch"] = epoch + 1
                 state["metrics"].append(metrics_data)
                 
+            model.add_callback("on_train_start", on_train_start)
             model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
             
             # 4. 開始訓練，使用獨立 run_id，不覆蓋舊結果
@@ -348,11 +356,17 @@ class YOLOTrainer:
                 verbose=True
             )
             
+            # 5. 獲取實際訓練輸出目錄（優先使用 trainer 的 save_dir，若未啟動/取不到則 fallback 到原定目錄）
+            try:
+                actual_run_dir = Path(model.trainer.save_dir).resolve()
+            except Exception:
+                actual_run_dir = Path(runs_dir / run_id).resolve()
+                
             # 訓練順利完成
             state = cls._global_states[project_id]
             state["status"] = "completed"
             
-            best_model_path = run_dir / "weights" / "best.pt"
+            best_model_path = actual_run_dir / "weights" / "best.pt"
             if best_model_path.exists():
                 state["best_model"] = str(best_model_path.resolve().as_posix())
                 
@@ -368,11 +382,18 @@ class YOLOTrainer:
             error_msg = str(e)
             print(f"[Trainer] Error in training {project_id}: {e}")
         finally:
+            # 確保有獲取到 actual_run_dir 變數，若例外在 train 啟動前發生則 fallback
+            try:
+                if 'actual_run_dir' not in locals() or not actual_run_dir:
+                    actual_run_dir = Path(runs_dir / run_id).resolve()
+            except Exception:
+                actual_run_dir = Path(runs_dir / run_id).resolve()
+
             # 保存 artifacts、解析 CSV 並回寫摘要資訊至 project.json
             from src.project_manager import ProjectManager
             latest_project = ProjectManager.get_project(project_id)
             if latest_project:
-                run_summary = RunManager.finalize_run(run_dir, task_type, status, error_msg)
+                run_summary = RunManager.finalize_run(actual_run_dir, task_type, status, error_msg)
                 
                 # 摘要記錄
                 run_record = {
@@ -398,8 +419,8 @@ class YOLOTrainer:
                 
                 if status == "completed":
                     version_id = f"v{len(latest_project.get('versions', [])) + 1}"
-                    best_model_path = run_dir / "weights" / "best.pt"
-                    best_onnx_path = run_dir / "weights" / "best.onnx"
+                    best_model_path = actual_run_dir / "weights" / "best.pt"
+                    best_onnx_path = actual_run_dir / "weights" / "best.onnx"
                     
                     version_record = {
                         "version_id": version_id,
