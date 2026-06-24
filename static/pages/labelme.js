@@ -1,4 +1,4 @@
-﻿import { eventBus } from "../event_bus.js";
+import { eventBus } from "../event_bus.js";
 import { appState } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, setText, setHTML, escapeHtml, copyText, collectDroppedFiles, colorForLabel } from "../utils.js";
@@ -15,7 +15,6 @@ export function initLabelMe() {
   qs("#btn-copy-json-path")?.addEventListener("click", () => copyText(qs("#labelme-json-path")?.textContent));
   qs("#btn-copy-labelme-command")?.addEventListener("click", () => copyText(qs("#labelme-command")?.textContent));
 
-  // 頧???鈭辣蝬?
   const converters = {
     "#btn-convert-yolo-det": "yolo_detection",
     "#btn-convert-yolo-seg": "yolo_segmentation",
@@ -26,43 +25,36 @@ export function initLabelMe() {
   Object.entries(converters).forEach(([id, type]) => {
     qs(id)?.addEventListener("click", async () => {
       const btn = qs(id);
-      btn.disabled = true;
-      eventBus.emit("toast", `甇?撠?閮餉?? ${type}...`);
+      if (btn) btn.disabled = true;
+      eventBus.emit("toast", `Converting LabelMe annotations to ${type}...`);
       try {
         const data = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/convert`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ export_type: type })
         });
-        eventBus.emit("toast", `頧?摰?嚗?????${data.converted_count} ??獢);
+        eventBus.emit("toast", `Conversion complete. Converted ${data.converted_count || 0} files.`);
         eventBus.emit("refresh-project");
       } catch (err) {
-        eventBus.emit("toast", `頧?憭望?嚗?{err.message}`);
+        eventBus.emit("toast", `Conversion failed: ${err.message}`);
       } finally {
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
       }
     });
   });
 
-  // ?＊蝷箇撣賊??桃??詨??孵???
   qs("#chk-show-issues-only")?.addEventListener("change", () => {
     eventBus.emit("state-changed");
   });
 
-  // 璅酉瑼?????訾??喳?
   const annoDropZone = qs("#annotations-drop-zone");
   const inputAnnoFile = qs("#input-annotations-file");
 
   if (annoDropZone && inputAnnoFile) {
     inputAnnoFile.style.display = "none";
-    if (annoDropZone.dropzone) {
-      annoDropZone.dropzone.destroy();
-    }
+    if (annoDropZone.dropzone) annoDropZone.dropzone.destroy();
 
-    annoDropZone.addEventListener("click", () => {
-      inputAnnoFile.click();
-    });
-
+    annoDropZone.addEventListener("click", () => inputAnnoFile.click());
     inputAnnoFile.addEventListener("change", async (event) => {
       const files = [...(event.target.files || [])];
       if (files.length === 0) return;
@@ -71,37 +63,37 @@ export function initLabelMe() {
     });
 
     ["dragenter", "dragover"].forEach((eventName) => {
-      annoDropZone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+      annoDropZone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        event.stopPropagation();
         annoDropZone.classList.add("dz-drag-hover");
       }, true);
     });
 
     ["dragleave", "dragend"].forEach((eventName) => {
-      annoDropZone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+      annoDropZone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        event.stopPropagation();
         annoDropZone.classList.remove("dz-drag-hover");
       }, true);
     });
 
-    annoDropZone.addEventListener("drop", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    annoDropZone.addEventListener("drop", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       annoDropZone.classList.remove("dz-drag-hover");
 
       if (!appState.currentProjectId) {
-        eventBus.emit("toast", "隢?頛?遣蝡?獢?");
+        eventBus.emit("toast", "Please open a project first.");
         return;
       }
 
-      eventBus.emit("toast", "甇???????殷??舀鞈?憭暸?餈湛?...");
+      eventBus.emit("toast", "Scanning dropped annotation files...");
       try {
-        const files = await collectDroppedFiles(e.dataTransfer);
+        const files = await collectDroppedFiles(event.dataTransfer);
         await handleAnnotationUpload(files);
       } catch (err) {
-        eventBus.emit("toast", `霈???仿??桀仃??${err.message}`);
+        eventBus.emit("toast", `Failed to read dropped files: ${err.message}`);
       }
     }, true);
   }
@@ -109,32 +101,28 @@ export function initLabelMe() {
 
 async function handleAnnotationUpload(files) {
   if (!appState.currentProjectId) {
-    eventBus.emit("toast", "隢?頛?遣蝡?獢?");
+    eventBus.emit("toast", "Please open a project first.");
     return;
   }
 
   const allFiles = [...files];
-  const validFiles = allFiles.filter(file => {
+  const validFiles = allFiles.filter((file) => {
     const name = file.name.toLowerCase();
     return name.endsWith(".json") || name.endsWith(".txt");
   });
+  const ignoredFiles = allFiles.length - validFiles.length;
 
-  const ignoredFiles = allFiles.filter(file => {
-    const name = file.name.toLowerCase();
-    return !name.endsWith(".json") && !name.endsWith(".txt");
-  });
-
-  if (ignoredFiles.length > 0) {
-    eventBus.emit("toast", `?蕪??${ignoredFiles.length} ??璅酉瑼?嚗???/敶梁?嚗甇方????JSON ??TXT 璅酉瑼??喋);
+  if (ignoredFiles > 0) {
+    eventBus.emit("toast", `Ignored ${ignoredFiles} unsupported files. Only JSON and TXT annotation files are accepted.`);
   }
 
   if (validFiles.length === 0) {
-    eventBus.emit("toast", "?⊥??? .json ??.txt 璅酉瑼?");
+    eventBus.emit("toast", "No .json or .txt annotation files found.");
     return;
   }
 
   if (validFiles.length > 2000) {
-    eventBus.emit("toast", "?格活銝璅酉瑼???憭?2000 ??隢??嫣??喋?);
+    eventBus.emit("toast", "Too many annotation files. Please upload 2000 files or fewer at a time.");
     return;
   }
 
@@ -144,52 +132,50 @@ async function handleAnnotationUpload(files) {
     batches.push(validFiles.slice(i, i + batchSize));
   }
 
-  eventBus.emit("toast", `??撠??${validFiles.length} ??閮餅?獢???${batches.length} ?嫣??喃葉嚗?..`);
-  
+  eventBus.emit("toast", `Uploading ${validFiles.length} annotation files in ${batches.length} batches...`);
+
   let importedJsons = 0;
   let importedTxts = 0;
 
   try {
-    for (let k = 0; k < batches.length; k++) {
+    for (let k = 0; k < batches.length; k += 1) {
       const currentBatch = batches[k];
-      eventBus.emit("toast", `甇?銝蝚?${k + 1}/${batches.length} ?寞?閮餅?獢?(${currentBatch.length} ??...`);
-      
+      eventBus.emit("toast", `Uploading batch ${k + 1}/${batches.length} (${currentBatch.length} files)...`);
+
       const formData = new FormData();
-      currentBatch.forEach(file => {
-        formData.append("files", file, file.name);
-      });
+      currentBatch.forEach((file) => formData.append("files", file, file.name));
 
       const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-annotations`, {
         method: "POST",
         body: formData
       });
-      
+
       importedJsons += data.imported_jsons || 0;
       importedTxts += data.imported_txts || 0;
     }
-    
-    eventBus.emit("toast", `???閮餅?獢?亙????勗??${importedJsons} ??JSON ??${importedTxts} ??TXT 瑼??);
+
+    eventBus.emit("toast", `Import complete. JSON: ${importedJsons}, TXT: ${importedTxts}.`);
     eventBus.emit("refresh-project");
   } catch (err) {
-    eventBus.emit("toast", `璅酉瑼??臬憭望?嚗?{err.message}`);
+    eventBus.emit("toast", `Annotation import failed: ${err.message}`);
   }
 }
 
 async function openExternalLabelMe() {
   if (!appState.currentProjectId) {
-    eventBus.emit("toast", "隢?頛?遣蝡?獢?);
+    eventBus.emit("toast", "Please open a project first.");
     return;
   }
   const btn = qs("#btn-open-labelme");
   if (btn) btn.disabled = true;
-  eventBus.emit("toast", "甇???憭 LabelMe...");
+  eventBus.emit("toast", "Opening LabelMe...");
   try {
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/open`, { method: "POST" });
-    eventBus.emit("toast", data.message || "LabelMe 撌脣???);
+    eventBus.emit("toast", data.message || "LabelMe launched.");
   } catch (err) {
     const message = err.message === "Not Found"
-      ? "LabelMe ?? API 撠頛嚗??? FastAPI 敺垢敺?閰艾?
-      : `LabelMe ??憭望?嚗?{err.message}`;
+      ? "LabelMe open API is not available. Please check that the FastAPI server is up to date."
+      : `LabelMe launch failed: ${err.message}`;
     eventBus.emit("toast", message);
   } finally {
     if (btn) btn.disabled = false;
@@ -199,11 +185,11 @@ async function openExternalLabelMe() {
 async function syncLabelMeLabels(silent = false) {
   const btn = qs("#btn-sync-labelme");
   if (btn) btn.disabled = true;
-  if (!silent) eventBus.emit("toast", "甇?????甇?LabelMe JSON 璅酉瑼?..");
-  
+  if (!silent) eventBus.emit("toast", "Syncing LabelMe JSON annotations...");
+
   try {
     const report = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/sync`, { method: "POST" });
-    
+
     appState.labelme.jsonCount = report.annotated;
     appState.labelme.missingJson = report.missing_json;
     appState.labelme.invalidJson = report.corrupted_json;
@@ -211,11 +197,11 @@ async function syncLabelMeLabels(silent = false) {
     appState.labelme.synced = true;
     appState.labelme.completionRate = report.total_images > 0 ? Math.round((report.annotated / report.total_images) * 100) : 0;
     appState.labelme.unknownClasses = report.unknown_classes;
-    
+
     eventBus.emit("refresh-project");
-    if (!silent) eventBus.emit("toast", "?郊摰?嚗?);
+    if (!silent) eventBus.emit("toast", "LabelMe sync complete.");
   } catch (err) {
-    eventBus.emit("toast", `?郊憭望?嚗?{err.message}`);
+    eventBus.emit("toast", `LabelMe sync failed: ${err.message}`);
   } finally {
     if (btn) btn.disabled = false;
   }
@@ -224,16 +210,16 @@ async function syncLabelMeLabels(silent = false) {
 export function renderLabelMeManager(status) {
   const datasetPath = status.datasetPath || "";
   const layoutPaths = appState.currentProject?._layout_report?.paths || {};
-  const imagesPath = layoutPaths.raw_images?.path || (datasetPath ? `${datasetPath}/raw/images` : "尚未載入專案");
-  const jsonPath = layoutPaths.current_labelme?.path || (datasetPath ? `${datasetPath}/raw/annotations/labelme` : "尚未載入專案");
-  const outputPath = layoutPaths.current_yolo?.path || (datasetPath ? `${datasetPath}/raw/labels` : "尚未載入專案");
+  const imagesPath = layoutPaths.raw_images?.path || (datasetPath ? `${datasetPath}/raw/images` : "No project loaded");
+  const jsonPath = layoutPaths.current_labelme?.path || (datasetPath ? `${datasetPath}/raw/annotations/labelme` : "No project loaded");
+  const outputPath = layoutPaths.current_yolo?.path || (datasetPath ? `${datasetPath}/raw/labels` : "No project loaded");
+
   setText("#labelme-images-path", imagesPath);
   setText("#labelme-json-path", jsonPath);
   setText("#labelme-output-path", outputPath);
   setText("#labelme-classes", status.classNames.length ? status.classNames.join(", ") : "--");
-  setText("#labelme-command", datasetPath ? `labelme "${imagesPath}" --output "${jsonPath}"` : "撠頛撠?");
+  setText("#labelme-command", datasetPath ? `labelme "${imagesPath}" --output "${jsonPath}"` : "No project loaded");
 
-  // 敺?獢身摰葉??閰喟敦??labelme ?郊?脣漲
   const labelmeProgress = appState.currentProject?.labelme_progress || {};
   const corruptedJsons = labelmeProgress.corrupted_jsons_list || [];
   const emptyJsons = labelmeProgress.empty_jsons_list || [];
@@ -253,12 +239,11 @@ export function renderLabelMeManager(status) {
   setText("#labelme-completion-text", `${status.labelme.completionRate}%`);
   const bar = qs("#labelme-completion-bar");
   if (bar) bar.style.width = `${status.labelme.completionRate}%`;
+
   const rawImages = (appState.currentProject?.images || []).filter((img) => !img.is_augmented);
   if (rawImages.length === 0) {
     setHTML("#labelme-check-table", `
-      <tr>
-        <td colspan="5" style="text-align:center;">?∟???? Dataset ??臬????/td>
-      </tr>
+      <tr><td colspan="5" style="text-align:center;">No images found. Import images in Dataset first.</td></tr>
     `);
     return;
   }
@@ -266,9 +251,9 @@ export function renderLabelMeManager(status) {
   const isSegmentationTask = String(status.taskType || "").toLowerCase().includes("segmentation");
   const hasSegmentationBbox = (img) => isSegmentationTask && (img.annotations || []).some((ann) => ann.type === "bbox");
   const showIssuesOnly = qs("#chk-show-issues-only")?.checked ?? true;
-  
-  const filteredImages = showIssuesOnly 
-    ? rawImages.filter(img => {
+
+  const filteredImages = showIssuesOnly
+    ? rawImages.filter((img) => {
         const jsonFilename = img.filename.replace(/\.[^/.]+$/, ".json");
         const isCorrupted = corruptedJsons.includes(jsonFilename);
         const isEmpty = emptyJsons.includes(jsonFilename);
@@ -282,20 +267,21 @@ export function renderLabelMeManager(status) {
     setHTML("#labelme-check-table", `
       <tr>
         <td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">
-          <i class="fa-solid fa-circle-check" style="color: var(--success); margin-right: 6px; font-size: 1.1rem;"></i> ???獢?撌脫迤蝣箸?閮颱蒂??瑼Ｘ??        </td>
+          <i class="fa-solid fa-circle-check" style="color: var(--success); margin-right: 6px; font-size: 1.1rem;"></i>
+          All files pass the current LabelMe checks.
+        </td>
       </tr>
     `);
     return;
   }
 
-  const rows = filteredImages.map(img => {
+  const rows = filteredImages.map((img) => {
     const jsonFilename = img.filename.replace(/\.[^/.]+$/, ".json");
-    
     let statusText = "Unannotated";
     let issueText = "Missing JSON";
     let fixText = "Use LabelMe to annotate";
     let rowClass = "row-missing";
-    
+
     const isCorrupted = corruptedJsons.includes(jsonFilename);
     const isEmpty = emptyJsons.includes(jsonFilename);
     const unknownLabels = unknownLabelsDetail[jsonFilename] || [];
@@ -325,35 +311,36 @@ export function renderLabelMeManager(status) {
       rowClass = "row-warning";
     }
 
-    // ?芸?憟敺垢?底蝝啗那?瑞???    if (isCorrupted) {
+    if (isCorrupted) {
       statusText = "Corrupted JSON";
-      issueText = "JSON ?澆???嚗瘜迤蝣箄圾??;
-      fixText = "雿輻 LabelMe ??脣?璅酉";
-      rowClass = "row-missing"; // ?臭蝙?函??脤?鈭?    } else if (isEmpty) {
+      issueText = "JSON cannot be parsed";
+      fixText = "Open and save again in LabelMe";
+      rowClass = "row-missing";
+    } else if (isEmpty) {
       statusText = "Empty JSON";
-      issueText = "JSON ?找??隞颱?璅酉?耦";
-      fixText = "??LabelMe ?折??唳??訾蒂摮?";
+      issueText = "JSON has no shapes";
+      fixText = "Add annotations in LabelMe";
       rowClass = "row-warning";
     } else if (unknownLabels.length > 0) {
       statusText = "Unknown labels";
-      issueText = `??芾酉???? ${unknownLabels.join(", ")}`;
-      fixText = "??Dataset ?啣?憿? LabelMe 靽格迤璅惜";
+      issueText = `Unknown labels: ${unknownLabels.join(", ")}`;
+      fixText = "Update class list or fix labels in LabelMe";
       rowClass = "row-warning";
     }
-    
+
     return `
       <tr class="${rowClass}" data-preview-img="${escapeHtml(img.filename)}" style="cursor:pointer;">
         <td><code>${escapeHtml(jsonFilename)}</code></td>
         <td>${escapeHtml(img.filename)}</td>
-        <td><span class="badge ${needsPolygon || isCorrupted || isEmpty || unknownLabels.length > 0 ? "badge-warning" : badgeClassForStatus(img.status)}">${statusText}</span></td>
-        <td>${issueText}</td>
-        <td>${fixText}</td>
+        <td><span class="badge ${needsPolygon || isCorrupted || isEmpty || unknownLabels.length > 0 ? "badge-warning" : badgeClassForStatus(img.status)}">${escapeHtml(statusText)}</span></td>
+        <td>${escapeHtml(issueText)}</td>
+        <td>${escapeHtml(fixText)}</td>
       </tr>
     `;
   });
   setHTML("#labelme-check-table", rows.join(""));
-  
-  qsa("#labelme-check-table tr").forEach(row => {
+
+  qsa("#labelme-check-table tr").forEach((row) => {
     row.addEventListener("click", () => {
       const filename = row.dataset.previewImg;
       if (filename) previewLabelMeImage(filename);
@@ -364,51 +351,49 @@ export function renderLabelMeManager(status) {
 async function previewLabelMeImage(filename) {
   const panel = qs("#labelme-preview-panel");
   if (!panel) return;
-  
+
   panel.innerHTML = `
     <div class="preview-placeholder">
       <i class="fa-solid fa-spinner fa-spin"></i>
-      <p>甇?頛 ${escapeHtml(filename)} ?汗...</p>
+      <p>Loading ${escapeHtml(filename)}...</p>
     </div>
   `;
-  
+
   try {
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/preview/${filename}`);
-    
+
     panel.innerHTML = `
       <div style="position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
         <canvas id="lbl-preview-canvas" style="max-width:100%; max-height:100%; object-fit:contain;"></canvas>
       </div>
     `;
-    
+
     const canvas = qs("#lbl-preview-canvas");
     const ctx = canvas.getContext("2d");
-    
     const img = new Image();
     img.src = `/api/projects/${appState.currentProjectId}/images/${filename}`;
-    
+
     img.onload = () => {
       canvas.width = img.width;
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
-      
+
       const shapes = data.shapes || [];
-      shapes.forEach(shape => {
+      shapes.forEach((shape) => {
         const pts = shape.points || [];
         if (pts.length < 2) return;
-        
+
         ctx.strokeStyle = colorForLabel(shape.label);
         ctx.lineWidth = Math.max(3, img.width / 300);
         ctx.fillStyle = "rgba(0, 210, 211, 0.15)";
-        
+
         ctx.beginPath();
         ctx.moveTo(pts[0][0], pts[0][1]);
-        for (let i = 1; i < pts.length; i++) {
+        for (let i = 1; i < pts.length; i += 1) {
           ctx.lineTo(pts[i][0], pts[i][1]);
         }
-        
+
         if (shape.shape_type === "rectangle") {
-          ctx.closePath();
           const w = pts[1][0] - pts[0][0];
           const h = pts[1][1] - pts[0][1];
           ctx.strokeRect(pts[0][0], pts[0][1], w, h);
@@ -418,7 +403,7 @@ async function previewLabelMeImage(filename) {
           ctx.stroke();
           ctx.fill();
         }
-        
+
         ctx.fillStyle = ctx.strokeStyle;
         ctx.font = `bold ${Math.max(16, img.width / 40)}px Inter`;
         ctx.fillText(shape.label, pts[0][0], pts[0][1] - 8);
@@ -428,7 +413,7 @@ async function previewLabelMeImage(filename) {
     panel.innerHTML = `
       <div class="preview-placeholder text-red">
         <i class="fa-solid fa-triangle-exclamation"></i>
-        <p>頛?汗憭望?嚗?{escapeHtml(err.message)}</p>
+        <p>Preview failed: ${escapeHtml(err.message)}</p>
       </div>
     `;
   }
