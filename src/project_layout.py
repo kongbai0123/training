@@ -201,25 +201,110 @@ class ProjectLayout:
             "current_masks",
         )
 
+    def resolve_legacy_augmented_images_dir(self) -> LayoutResolution:
+        return self._resolve(
+            self.project_dir / "augmentations" / "jobs" / "_legacy" / "outputs" / "images",
+            self.project_dir / "dataset" / "augmentations" / "augmented_images",
+            "augmented_images",
+        )
+
     def resolve_coco_path(self) -> Path:
         if self.is_v3_project():
             return self.project_dir / "annotations" / "current" / "coco" / "coco.json"
         return self.project_dir / "dataset" / "coco.json"
 
+    @property
+    def current_split_path(self) -> Path:
+        return self.project_dir / "splits" / "current_split.json"
+
+    def resolve_current_split(self) -> LayoutResolution:
+        path = self.current_split_path
+        legacy_path = self.project_dir / "dataset" / "splits" / "current_split.json"
+        if self.is_v3_project():
+            return LayoutResolution(path, "v3" if path.exists() else "missing", path.exists(), path.exists(), "current_split: layout.mode is v3")
+        valid = legacy_path.exists()
+        return LayoutResolution(legacy_path, "legacy" if valid else "missing", valid, valid, "current_split: legacy fallback")
+
     def split_dir(self, split_id: str) -> Path:
-        return self.project_dir / "splits" / split_id
+        if self.is_v3_project():
+            return self.project_dir / "splits" / split_id
+        return self.project_dir / "dataset" / "splits" / split_id
+
+    def yolo_split_dir(self, split_id: Optional[str] = None) -> Path:
+        if split_id:
+            return self.split_dir(split_id) / "yolo"
+        if self.is_v3_project():
+            return self.project_dir / "splits" / "manual" / "yolo"
+        return self.project_dir / "dataset" / "splits" / "yolo"
+
+    def resolve_yolo_split_dir(self) -> LayoutResolution:
+        split_id = self.current_split_id()
+        if split_id:
+            path = self.yolo_split_dir(split_id)
+            return LayoutResolution(path, "v3" if self.is_v3_project() else "legacy", path.exists(), path.exists(), "yolo_split: current split")
+        legacy_path = self.project_dir / "dataset" / "splits" / "yolo"
+        path = self.yolo_split_dir()
+        if self.is_v3_project():
+            return LayoutResolution(path, "missing", path.exists(), path.exists(), "yolo_split: no current split")
+        return LayoutResolution(legacy_path, "legacy" if legacy_path.exists() else "missing", legacy_path.exists(), legacy_path.exists(), "yolo_split: legacy fallback")
+
+    def current_split_id(self) -> Optional[str]:
+        layout_current = (self.project_data.get("current") or {}).get("split_id")
+        if layout_current:
+            return str(layout_current)
+        if self.current_split_path.exists():
+            try:
+                data = json.loads(self.current_split_path.read_text(encoding="utf-8"))
+                if data.get("current_split_id"):
+                    return str(data["current_split_id"])
+            except Exception:
+                return None
+        return None
+
+    def split_manifest_path(self, split_id: str) -> Path:
+        return self.split_dir(split_id) / "split_manifest.json"
 
     def training_run_dir(self, run_id: str) -> Path:
         return self.project_dir / "training" / "runs" / run_id
 
+    def training_runs_dir(self) -> Path:
+        return self.project_dir / "training" / "runs"
+
     def inference_job_dir(self, job_id: str) -> Path:
         return self.project_dir / "inference" / "jobs" / job_id
+
+    def inference_jobs_dir(self) -> Path:
+        return self.project_dir / "inference" / "jobs"
 
     def auto_label_job_dir(self, job_id: str) -> Path:
         return self.project_dir / "auto_labeling" / "jobs" / job_id
 
+    def auto_label_draft_dir(self, job_id: str) -> Path:
+        return self.project_dir / "annotations" / "drafts" / "auto_label" / job_id
+
+    def annotation_version_dir(self, version_id: str) -> Path:
+        return self.project_dir / "annotations" / "versions" / version_id
+
     def export_dir(self, export_id: str) -> Path:
         return self.project_dir / "exports" / export_id
+
+    @property
+    def latest_export_path(self) -> Path:
+        return self.project_dir / "exports" / "latest_export.json"
+
+    @property
+    def tmp_dir(self) -> Path:
+        return self.project_dir / "tmp"
+
+    @property
+    def cache_dir(self) -> Path:
+        return self.project_dir / "cache"
+
+    def augmentation_job_dir(self, job_id: str) -> Path:
+        return self.project_dir / "augmentations" / "jobs" / job_id
+
+    def augmentation_outputs_dir(self, job_id: str) -> Path:
+        return self.augmentation_job_dir(job_id) / "outputs"
 
     def get_layout_report(self) -> Dict[str, Any]:
         return {
@@ -232,5 +317,11 @@ class ProjectLayout:
                 "current_labelme": self.resolve_current_labelme_dir().as_dict(),
                 "current_yolo": self.resolve_current_yolo_labels_dir().as_dict(),
                 "current_masks": self.resolve_current_masks_dir().as_dict(),
+                "current_split": self.resolve_current_split().as_dict(),
+                "yolo_split": self.resolve_yolo_split_dir().as_dict(),
+                "augmented_images": self.resolve_legacy_augmented_images_dir().as_dict(),
+                "training_runs": LayoutResolution(self.training_runs_dir(), "v3", self.training_runs_dir().exists(), self.training_runs_dir().exists(), "training_runs").as_dict(),
+                "inference_jobs": LayoutResolution(self.inference_jobs_dir(), "v3", self.inference_jobs_dir().exists(), self.inference_jobs_dir().exists(), "inference_jobs").as_dict(),
+                "exports": LayoutResolution(self.project_dir / "exports", "v3", (self.project_dir / "exports").exists(), (self.project_dir / "exports").exists(), "exports").as_dict(),
             },
         }

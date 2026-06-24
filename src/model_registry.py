@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from src.config import PROJECTS_DIR
+from src.project_layout import ProjectLayout
 
 
 class ModelRegistry:
@@ -68,11 +69,12 @@ class ModelRegistry:
 
     @staticmethod
     def ensure_inference_dirs(project: Dict[str, Any]) -> Dict[str, Path]:
-        base = ModelRegistry._project_dir(project) / "inference"
+        layout = ProjectLayout.from_project(project)
+        base = layout.project_dir / "inference"
         paths = {
             "inputs_images": base / "inputs" / "images",
             "outputs_images": base / "outputs" / "images",
-            "jobs": base / "jobs",
+            "jobs": layout.inference_jobs_dir(),
         }
         for path in paths.values():
             path.mkdir(parents=True, exist_ok=True)
@@ -80,8 +82,7 @@ class ModelRegistry:
 
     @staticmethod
     def _project_dir(project: Dict[str, Any]) -> Path:
-        dataset_path = Path(project["dataset_path"]).resolve()
-        return dataset_path.parent
+        return ProjectLayout.from_project(project).project_dir
 
     @staticmethod
     def _model_id(project_id: str, run_id: str, weight_type: str) -> str:

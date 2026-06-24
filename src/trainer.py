@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from ultralytics import YOLO
+from src.project_layout import ProjectLayout
 
 # 嘗試載入 GPU 監控庫
 try:
@@ -88,11 +89,13 @@ class YOLOTrainer:
         """
         project_id = project_data["project_id"]
         dataset_path = Path(project_data["dataset_path"])
+        layout = ProjectLayout.from_project(project_data)
         task_type = project_data.get("task_type", "detection")
         is_seg_task = "segmentation" in task_type or "seg" in task_type
         
         # 1. 建立 splits 下的 YOLO 目錄結構
-        yolo_dir = dataset_path / "splits" / "yolo"
+        split_id = layout.current_split_id()
+        yolo_dir = layout.yolo_split_dir(split_id)
         if yolo_dir.exists():
             try:
                 shutil.rmtree(yolo_dir)
@@ -137,9 +140,13 @@ class YOLOTrainer:
             
             # 定義圖片源路徑
             if is_aug:
-                img_src_path = dataset_path / "augmentations" / "augmented_images" / filename
+                aug_job_id = img.get("augmentation_job_id") or img.get("aug_job_id")
+                if aug_job_id:
+                    img_src_path = layout.augmentation_outputs_dir(aug_job_id) / "images" / filename
+                else:
+                    img_src_path = layout.resolve_legacy_augmented_images_dir().path / filename
             else:
-                img_src_path = dataset_path / "raw" / "images" / filename
+                img_src_path = layout.resolve_raw_images_dir().path / filename
                 
             if not img_src_path.exists():
                 continue
@@ -229,7 +236,18 @@ class YOLOTrainer:
             f.write(f"names:\n")
             for idx, name in enumerate(class_names):
                 f.write(f"  {idx}: {name}\n")
-                
+
+        if split_id:
+            manifest_path = layout.split_manifest_path(split_id)
+            if manifest_path.exists():
+                try:
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    manifest["yolo_data_yaml"] = data_yaml_path.relative_to(layout.project_dir).as_posix()
+                    manifest["prepared_at"] = datetime.now().isoformat()
+                    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+                except Exception:
+                    pass
+
         return str(data_yaml_path.resolve().as_posix())
 
     @classmethod
@@ -251,14 +269,15 @@ class YOLOTrainer:
     def _run_yolo(cls, project_data: Dict[str, Any]):
         project_id = project_data["project_id"]
         dataset_path = Path(project_data["dataset_path"])
+        layout = ProjectLayout.from_project(project_data)
         train_config = project_data.get("training_config", {})
         task_type = project_data.get("task_type", "detection")
         
         from src.training.run_manager import RunManager
         run_id = train_config.get("run_id") or RunManager.generate_run_id()
         
-        project_dir = dataset_path.parent
-        runs_dir = project_dir / "training" / "runs"
+        project_dir = layout.project_dir
+        runs_dir = layout.training_runs_dir()
         
         # 1. 檢查是否存在同名資料夾，若已存在則拒絕啟動
         actual_run_dir = Path(runs_dir / run_id).resolve()
@@ -429,6 +448,9 @@ class YOLOTrainer:
                 # 避免重複
                 latest_project["training_runs"] = [r for r in latest_project["training_runs"] if r["run_id"] != run_id]
                 latest_project["training_runs"].append(run_record)
+                if "current" not in latest_project:
+                    latest_project["current"] = {}
+                latest_project["current"]["training_run_id"] = run_id
                 
                 if status == "completed":
                     version_id = f"v{len(latest_project.get('versions', [])) + 1}"
@@ -449,6 +471,7 @@ class YOLOTrainer:
                         latest_project["versions"] = []
                     latest_project["versions"].append(version_record)
                     latest_project["best_model"] = str(best_model_path.resolve().as_posix())
+                    latest_project["current"]["best_model_id"] = f"{project_id}::{run_id}::best"
                 
                 ProjectManager.save_project(project_id, latest_project)
             
