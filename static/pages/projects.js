@@ -38,7 +38,11 @@ export function initProjects() {
   qs("#btn-confirm-delete-project")?.addEventListener("click", confirmDeleteProject);
 
   eventBus.on("render-recent-projects-list", (subset) => {
-    setHTML("#recent-projects-list", renderProjectList(subset, { includeDelete: false }));
+    setHTML("#recent-projects-list", renderProjectList(subset, { includeDelete: false, compact: true }));
+    bindProjectListButtons();
+  });
+  eventBus.on("render-project-history-modal", () => {
+    setHTML("#modal-project-list", renderProjectList(appState.projects, { includeDelete: false, showFiles: true }));
     bindProjectListButtons();
   });
   eventBus.on("open-create-project-modal", openCreateProjectModal);
@@ -47,9 +51,10 @@ export function initProjects() {
 }
 
 export function renderProjectsPage() {
-  const html = renderProjectList(appState.projects, { includeDelete: true });
+  const html = renderProjectList(appState.projects, { includeDelete: true, showFiles: true });
   setHTML("#project-history-list", html);
   setHTML("#history-list", html);
+  setHTML("#modal-project-list", renderProjectList(appState.projects, { includeDelete: false, showFiles: true }));
   bindProjectListButtons();
 }
 
@@ -58,26 +63,61 @@ export function renderProjectList(projects, options = {}) {
     return `<div class="empty-state">目前沒有專案。請使用 New Project 建立新專案。</div>`;
   }
 
-  return projects.map((project) => {
-    const progress = project.annotation_progress || {};
-    const updatedAt = formatDate(project.updated_at);
-    const progressText = progress.total
-      ? `${progress.annotated || 0}/${progress.total || 0} annotated`
-      : "No images imported";
+  return projects.map((project) => renderProjectCard(project, options)).join("");
+}
 
-    return `
-      <article class="list-item">
+function renderProjectCard(project, options = {}) {
+  const progress = project.annotation_progress || {};
+  const files = project.file_summary || {};
+  const updatedAt = formatDate(project.updated_at);
+  const progressText = progress.total
+    ? `${progress.annotated || 0}/${progress.total || 0} annotated`
+    : "No images imported";
+  const classNames = Array.isArray(project.class_names) ? project.class_names : [];
+
+  return `
+    <article class="project-history-card ${options.compact ? "compact" : ""}">
+      <div class="project-history-main">
         <div>
-          <h3>${escapeHtml(project.project_name || project.project_id)}</h3>
-          <p>${escapeHtml(project.task_type || "--")} · ${escapeHtml(progressText)} · ${escapeHtml(updatedAt)}</p>
+          <div class="project-history-title-row">
+            <h3>${escapeHtml(project.project_name || project.project_id)}</h3>
+            <span class="badge badge-muted">${escapeHtml(project.task_type || "--")}</span>
+          </div>
+          <p>${escapeHtml(progressText)} · Updated ${escapeHtml(updatedAt || "--")}</p>
         </div>
         <div class="button-row">
           <button class="btn btn-secondary btn-sm" data-open-project="${escapeHtml(project.project_id)}">Open</button>
           ${options.includeDelete ? `<button class="icon-btn" data-delete-project="${escapeHtml(project.project_id)}" title="Delete"><i class="fa-solid fa-trash"></i></button>` : ""}
         </div>
-      </article>
-    `;
-  }).join("");
+      </div>
+      ${options.showFiles ? `
+        <div class="project-file-summary">
+          ${fileMetric("Images", files.images ?? progress.total ?? 0)}
+          ${fileMetric("LabelMe JSON", files.labelme_json ?? 0)}
+          ${fileMetric("YOLO labels", files.yolo_labels ?? 0)}
+          ${fileMetric("Videos", files.videos ?? 0)}
+          ${fileMetric("Split", files.split_ready ? "Ready" : "None", files.split_ready ? "success" : "muted")}
+          ${fileMetric("best.pt", files.best_weights ?? 0)}
+          ${fileMetric("last.pt", files.last_weights ?? 0)}
+          ${fileMetric("Inference jobs", files.inference_jobs ?? 0)}
+          ${fileMetric("Exports", files.exports ?? 0)}
+        </div>
+        <div class="project-file-details">
+          <div><span>Project ID</span><code>${escapeHtml(project.project_id || "--")}</code></div>
+          <div><span>Layout</span><code>${escapeHtml(files.layout_mode || "--")}</code></div>
+          <div><span>Classes</span><code>${escapeHtml(classNames.length ? classNames.join(", ") : "--")}</code></div>
+          <div><span>Project root</span><code>${escapeHtml(files.project_root || project.path || "--")}</code></div>
+        </div>
+      ` : ""}
+    </article>
+  `;
+}
+
+function fileMetric(label, value, badgeType = null) {
+  const valueHtml = badgeType
+    ? `<span class="summary-badge badge-${badgeType}">${escapeHtml(value)}</span>`
+    : `<strong>${escapeHtml(value)}</strong>`;
+  return `<div class="project-file-metric"><span>${escapeHtml(label)}</span>${valueHtml}</div>`;
 }
 
 export function bindProjectListButtons() {

@@ -8,6 +8,9 @@ from typing import Dict, Any, List, Optional
 from src.config import PROJECTS_DIR
 from src.project_layout import ProjectLayout
 
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
+VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv"}
+
 class ProjectManager:
     @staticmethod
     def get_all_projects() -> List[Dict[str, Any]]:
@@ -31,13 +34,72 @@ class ProjectManager:
                                 "updated_at": data.get("updated_at"),
                                 "class_names": data.get("class_names", []),
                                 "annotation_progress": data.get("annotation_progress", {"total": 0, "annotated": 0}),
-                                "path": str(d.resolve())
+                                "path": str(d.resolve()),
+                                "file_summary": ProjectManager.build_project_file_summary(d, data)
                             })
                     except Exception as e:
                         print(f"Error loading project {d.name}: {e}")
         # 依修改時間降序排序
         projects.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
         return projects
+
+    @staticmethod
+    def build_project_file_summary(project_dir: Path, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Build a lightweight project content summary for history/browser views."""
+        data = data or {}
+
+        def count_files(path: Path, suffixes: Optional[set] = None) -> int:
+            if not path.exists():
+                return 0
+            try:
+                if suffixes:
+                    return sum(1 for item in path.rglob("*") if item.is_file() and item.suffix.lower() in suffixes)
+                return sum(1 for item in path.rglob("*") if item.is_file())
+            except Exception:
+                return 0
+
+        def latest_file_mtime(path: Path) -> Optional[str]:
+            if not path.exists():
+                return None
+            latest = None
+            try:
+                for item in path.rglob("*"):
+                    if not item.is_file():
+                        continue
+                    mtime = item.stat().st_mtime
+                    latest = mtime if latest is None or mtime > latest else latest
+            except Exception:
+                return None
+            return datetime.fromtimestamp(latest).isoformat() if latest else None
+
+        layout = ProjectLayout(project_dir, data)
+        raw_images = layout.resolve_raw_images_dir().path
+        labelme_dir = layout.resolve_current_labelme_dir().path
+        yolo_labels = layout.resolve_current_yolo_labels_dir().path
+        training_runs = layout.training_runs_dir()
+        inference_jobs = layout.inference_jobs_dir()
+        exports_dir = project_dir / "exports"
+        split_current = project_dir / "splits" / "current_split.json"
+        videos_raw = project_dir / "dataset" / "videos" / "raw"
+
+        best_weights = list(training_runs.rglob("weights/best.pt")) if training_runs.exists() else []
+        last_weights = list(training_runs.rglob("weights/last.pt")) if training_runs.exists() else []
+
+        return {
+            "project_root": str(project_dir.resolve().as_posix()),
+            "layout_mode": (data.get("layout") or {}).get("mode") or data.get("layout_version") or "legacy",
+            "images": count_files(raw_images, IMAGE_EXTENSIONS),
+            "videos": count_files(videos_raw, VIDEO_EXTENSIONS),
+            "labelme_json": count_files(labelme_dir, {".json"}),
+            "yolo_labels": count_files(yolo_labels, {".txt"}),
+            "split_ready": split_current.exists(),
+            "training_runs": count_files(training_runs, None) if training_runs.exists() else 0,
+            "best_weights": len(best_weights),
+            "last_weights": len(last_weights),
+            "inference_jobs": len([p for p in inference_jobs.iterdir() if p.is_dir()]) if inference_jobs.exists() else 0,
+            "exports": len([p for p in exports_dir.iterdir() if p.is_dir()]) if exports_dir.exists() else 0,
+            "latest_file_updated_at": latest_file_mtime(project_dir),
+        }
 
     @staticmethod
     def create_project(project_name: str, task_type: str, class_names: List[str]) -> Dict[str, Any]:

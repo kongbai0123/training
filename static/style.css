@@ -882,6 +882,97 @@ body[data-theme="light"] .workflow-card {
 .workflow-indigo .workflow-title i { color: #6366f1; }
 .workflow-teal .workflow-title i { color: #14b8a6; }
 
+.project-history-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.project-history-card + .project-history-card {
+  margin-top: 12px;
+}
+
+.project-history-card.compact .project-file-summary,
+.project-history-card.compact .project-file-details {
+  display: none;
+}
+
+.project-history-main,
+.project-history-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.project-history-main {
+  justify-content: space-between;
+}
+
+.project-history-title-row h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.project-history-main p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.project-file-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 8px;
+}
+
+.project-file-metric {
+  min-height: 58px;
+  padding: 10px;
+  display: grid;
+  align-content: space-between;
+  gap: 6px;
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.project-file-metric span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.project-file-metric strong {
+  font-size: 1rem;
+}
+
+.project-file-details {
+  display: grid;
+  gap: 7px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.project-file-details > div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.project-file-details span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.project-file-details code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
 .dataset-manager-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

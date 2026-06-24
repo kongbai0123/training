@@ -980,7 +980,7 @@ function showToast(message) {
 
 function openHistoryModal() {
   const modal = qs("#project-history-modal");
-  eventBus.emit("render-recent-projects-list", appState.projects);
+  eventBus.emit("render-project-history-modal");
   if (modal) modal.hidden = false;
 }
 
