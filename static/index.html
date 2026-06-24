@@ -60,7 +60,7 @@
           <div class="page-header">
             <div>
               <h1>Dashboard Control Center</h1>
-              <p>自由進入各功能頁；系統只在危險操作前做條件檢查。</p>
+              <p>Control the active project workflow and jump to the next operation.</p>
             </div>
             <div class="page-actions">
               <button class="btn btn-primary" data-nav="projects"><i class="fa-solid fa-plus"></i> New Project</button>
@@ -92,49 +92,20 @@
           <div class="page-header">
             <div>
               <h1>Projects</h1>
-              <p>建立、載入與管理訓練專案。</p>
+              <p>Browse, open, and manage projects. New projects are created in a modal dialog.</p>
+            </div>
+            <div class="page-actions">
+              <button class="btn btn-primary" id="btn-open-create-project" type="button"><i class="fa-solid fa-plus"></i> New Project</button>
             </div>
           </div>
-          <div class="two-column-layout">
-            <section class="panel-section">
-              <div class="section-title"><h2>New Project</h2></div>
-              <form id="form-create-project" class="form-stack">
-                <label>
-                  <span>專案名稱</span>
-                  <input type="text" id="new-project-name" required placeholder="my_vision_project">
-                </label>
-                <label>
-                  <span>任務類型</span>
-                  <select id="new-project-type">
-                    <option value="object_detection">Object Detection</option>
-                    <option value="image_classification">Image Classification</option>
-                    <option value="semantic_segmentation">Semantic Segmentation</option>
-                  </select>
-                </label>
-                <label>
-                  <span>類別清單</span>
-                  <div class="class-entry-row">
-                    <input type="text" id="new-project-class-input" placeholder="輸入類別名稱，例如 class_a">
-                    <button type="button" class="btn btn-secondary" id="btn-add-project-class">
-                      <i class="fa-solid fa-plus"></i>
-                      Add
-                    </button>
-                  </div>
-                </label>
-                <div class="class-list-box" id="new-project-class-list">
-                  <div class="empty-class-list">尚未新增類別</div>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-folder-plus"></i> Create Project</button>
-              </form>
-            </section>
-            <section class="panel-section">
-              <div class="section-title">
-                <h2>Project History</h2>
-                <button class="btn btn-secondary btn-sm" id="btn-reload-projects"><i class="fa-solid fa-rotate"></i> Reload</button>
-              </div>
-              <div id="project-history-list" class="list-stack"></div>
-            </section>
-          </div>
+          <section class="panel-section">
+            <div class="section-title">
+              <h2>Project History</h2>
+              <button class="btn btn-secondary btn-sm" id="btn-reload-projects"><i class="fa-solid fa-rotate"></i> Reload</button>
+            </div>
+            <p class="section-help">Project creation now opens as a modal; this area keeps project browsing, opening, and deletion.</p>
+            <div id="project-history-list" class="list-stack"></div>
+          </section>
         </section>
 
         <section class="page" id="page-dataset">
@@ -1370,6 +1341,49 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="project-create-modal" hidden>
+    <div class="modal-content project-create-modal">
+      <div class="modal-header">
+        <div>
+          <h2>New Project</h2>
+          <p>Create a training project. It will be opened automatically after creation.</p>
+        </div>
+        <button class="icon-btn" id="btn-close-create-project" aria-label="Close">&times;</button>
+      </div>
+      <form id="form-create-project" class="form-stack modal-form">
+        <label>
+          <span>Project name</span>
+          <input type="text" id="new-project-name" required placeholder="my_vision_project">
+        </label>
+        <label>
+          <span>Task type</span>
+          <select id="new-project-type">
+            <option value="object_detection">Object Detection</option>
+            <option value="image_classification">Image Classification</option>
+            <option value="semantic_segmentation">Semantic Segmentation</option>
+          </select>
+        </label>
+        <label>
+          <span>Class list</span>
+          <div class="class-entry-row">
+            <input type="text" id="new-project-class-input" placeholder="Class name, e.g. class_a; comma separated is supported">
+            <button type="button" class="btn btn-secondary" id="btn-add-project-class">
+              <i class="fa-solid fa-plus"></i>
+              Add
+            </button>
+          </div>
+        </label>
+        <div class="class-list-box" id="new-project-class-list">
+          <div class="empty-class-list">No classes added</div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-create-project">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-folder-plus"></i> Create Project</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="project-history-modal" hidden>
     <div class="modal-content">
       <div class="modal-header">
@@ -1383,15 +1397,15 @@
   <div class="modal-overlay" id="delete-project-modal" hidden>
     <div class="modal-content confirm-modal">
       <div class="modal-header">
-        <h2>刪除專案</h2>
+        <h2>Delete Project</h2>
         <button class="icon-btn" id="btn-close-delete-project" aria-label="Close">&times;</button>
       </div>
-      <p id="delete-project-message">確定要刪除此專案？此操作無法復原。</p>
+      <p id="delete-project-message">Delete this project? This action cannot be undone.</p>
       <div class="modal-actions">
-        <button class="btn btn-secondary" id="btn-cancel-delete-project">取消</button>
+        <button class="btn btn-secondary" id="btn-cancel-delete-project">Cancel</button>
         <button class="btn btn-danger" id="btn-confirm-delete-project">
           <i class="fa-solid fa-trash"></i>
-          刪除
+          Delete
         </button>
       </div>
     </div>

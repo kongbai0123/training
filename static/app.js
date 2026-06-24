@@ -228,13 +228,23 @@ function bindInfoTooltips() {
 
 function bindGlobalNavigation() {
   qsa("[data-page]").forEach((btn) => {
-    btn.addEventListener("click", () => navigate(btn.dataset.page));
+    btn.addEventListener("click", () => {
+      if (btn.dataset.page === "projects") {
+        eventBus.emit("open-create-project-modal");
+        return;
+      }
+      navigate(btn.dataset.page);
+    });
   });
   
   document.addEventListener("click", (event) => {
     const navTarget = event.target.closest("[data-nav]");
     if (!navTarget) return;
     event.preventDefault();
+    if (navTarget.dataset.nav === "projects") {
+      eventBus.emit("open-create-project-modal");
+      return;
+    }
     navigate(navTarget.dataset.nav);
   });
 

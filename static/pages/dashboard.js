@@ -1,6 +1,6 @@
 import { eventBus } from "../event_bus.js";
-import { appState, getProjectStatus } from "../state.js";
-import { qs, qsa, setHTML, escapeHtml } from "../utils.js";
+import { appState } from "../state.js";
+import { qs, setHTML, escapeHtml } from "../utils.js";
 
 export function initDashboard() {
   qs("#btn-dashboard-refresh")?.addEventListener("click", () => {
@@ -9,22 +9,11 @@ export function initDashboard() {
 }
 
 export function renderDashboard(status) {
-  renderDashboardAlerts(status);
+  setHTML("#dashboard-alerts", "");
   renderKpis(status);
   renderControlCards(status);
   renderRecentProjects(appState.projects);
   renderActivity(status);
-}
-
-function renderDashboardAlerts(status) {
-  const guards = [];
-  if (!status.hasProject) {
-    guards.push(statusGuard("info", "尚未載入專案", ["請先建立或開啟專案。"], "前往 Projects 建立新專案，或從 Recent Projects 開啟舊專案。"));
-  } else if (!status.hasDataset) {
-    guards.push(statusGuard("warning", "專案已載入，但尚未匯入資料", ["Dataset image count 為 0。"], "前往 Dataset 匯入圖片資料夾或影片抽幀。"));
-  }
-  guards.push(statusGuard("info", "LabelMe 狀態", ["Backend Connected"], "前往 LabelMe 頁面同步 JSON。", "LabelMe 狀態;UI Ready：標註管理介面已可使用。;Backend Connected：後端 API 已連線。;可掃描 raw/annotations/labelme/*.json。;同步後可預覽、檢查錯誤並轉換訓練格式。"));
-  setHTML("#dashboard-alerts", guards.join(""));
 }
 
 function renderKpis(status) {
@@ -32,8 +21,9 @@ function renderKpis(status) {
     ["Project", status.projectName],
     ["Images", status.imageCount],
     ["LabelMe JSON", `${status.labelme.jsonCount}/${status.imageCount}`],
-    ["Split", status.splitComplete ? "Ready" : "Not ready"]
+    ["Split", status.splitComplete ? "Ready" : "Not ready"],
   ];
+
   setHTML("#dashboard-kpis", items.map(([label, value]) => `
     <div class="metric-card">
       <span>${escapeHtml(label)}</span>
@@ -52,10 +42,7 @@ function renderControlCards(status) {
       desc: "建立、開啟與管理視覺訓練專案。",
       stats: [["Task", status.taskType], ["Classes", status.classNames.length]],
       progress: status.hasProject ? 100 : 0,
-      actions: [
-        button("Projects", "projects", "primary"),
-        button("Browse History", "history", "secondary")
-      ]
+      actions: [button("New Project", "projects", "primary"), button("Browse History", "history", "secondary")],
     },
     {
       icon: "fa-images",
@@ -65,7 +52,7 @@ function renderControlCards(status) {
       desc: "管理圖片、影片抽幀與品質檢查。",
       stats: [["Images", status.imageCount], ["Health", appState.currentProject?.dataset_health?.score ?? "--"]],
       progress: status.hasDataset ? 100 : 0,
-      actions: [button("Import Images", "dataset", "primary"), button("Quality Check", "dataset", "secondary")]
+      actions: [button("Import Images", "dataset", "primary"), button("Quality Check", "dataset", "secondary")],
     },
     {
       icon: "fa-pen-nib",
@@ -75,7 +62,7 @@ function renderControlCards(status) {
       desc: "管理 LabelMe JSON 工作流，取代舊版 Canvas bbox 標註主入口。",
       stats: [["JSON", status.labelme.jsonCount], ["Missing", status.labelme.missingJson]],
       progress: status.labelme.completionRate,
-      actions: [button("Open Manager", "labelme", "primary"), button("Sync JSON", "labelme", "secondary")]
+      actions: [button("Open Manager", "labelme", "primary"), button("Sync JSON", "labelme", "secondary")],
     },
     {
       icon: "fa-code-branch",
@@ -85,48 +72,48 @@ function renderControlCards(status) {
       desc: "建立 Train / Val / Test，避免資料外洩。",
       stats: [["Train", status.splitCounts.train], ["Val", status.splitCounts.val], ["Test", status.splitCounts.test]],
       progress: status.splitComplete ? 100 : 0,
-      actions: [button("Configure Split", "split", "primary"), button("Run Split", "split", "secondary")]
+      actions: [button("Configure Split", "split", "primary"), button("Run Split", "split", "secondary")],
     },
     {
       icon: "fa-wand-magic-sparkles",
       title: "Augmentation",
       badge: appState.currentProject?.augmentation_config ? "Configured" : "Not configured",
       badgeClass: appState.currentProject?.augmentation_config ? "info" : "warning",
-      desc: "設定物理擴充並預覽結果。",
+      desc: "設定物理擴充，並以 Train split 為主要套用目標。",
       stats: [["Requires", "Split"], ["Target", "Train"]],
       progress: status.splitComplete ? 60 : 0,
-      actions: [button("Configure", "augmentation", "primary"), button("Preview", "augmentation", "secondary")]
+      actions: [button("Configure", "augmentation", "primary"), button("Preview", "augmentation", "secondary")],
     },
     {
       icon: "fa-microchip",
       title: "Training",
       badge: status.trainReady ? "Ready" : "Not ready",
       badgeClass: status.trainReady ? "success" : "danger",
-      desc: "設定模型與啟動訓練。LabelMe sync 完成前不能開始。",
+      desc: "設定模型訓練參數，並依 LabelMe、Split 狀態啟用安全操作。",
       stats: [["Status", status.trainingLabel], ["Blockers", status.blockers.length]],
       progress: status.trainReady ? 100 : 25,
-      actions: [button("Configure", "training", "primary"), disabledButton("Start Training")]
+      actions: [button("Configure", "training", "primary"), disabledButton("Start Training")],
     },
     {
       icon: "fa-chart-line",
       title: "Evaluation",
       badge: status.bestModelExists ? "Available" : "No model",
       badgeClass: status.bestModelExists ? "success" : "warning",
-      desc: "查看 mAP、IoU、failure cases 與模型品質。",
+      desc: "查看 mAP、IoU、failure cases 等模型評估資訊。",
       stats: [["mAP", "--"], ["IoU", "--"]],
       progress: status.bestModelExists ? 100 : 0,
-      actions: [button("View Evaluation", "evaluation", "primary")]
+      actions: [button("View Evaluation", "evaluation", "primary")],
     },
     {
       icon: "fa-file-export",
       title: "Export",
       badge: status.bestModelExists ? "Exportable" : "No model",
       badgeClass: status.bestModelExists ? "success" : "warning",
-      desc: "匯出 PT、ONNX、報告，TensorRT 後續擴充。",
+      desc: "匯出 PT、ONNX、報告與部署需要的模型成果。",
       stats: [["ONNX", "Supported"], ["TensorRT", "Pending"]],
       progress: status.bestModelExists ? 100 : 0,
-      actions: [button("Open Export", "export", "primary")]
-    }
+      actions: [button("Open Export", "export", "primary")],
+    },
   ];
 
   setHTML("#control-cards", cards.map(renderControlCard).join(""));
@@ -157,30 +144,19 @@ function disabledButton(label) {
   return `<button class="btn btn-disabled" disabled>${escapeHtml(label)}</button>`;
 }
 
-function statusGuard(type, title, items, nextAction, tooltip = "") {
-  const tooltipIcon = tooltip ? ` <span class="info-icon" data-tooltip="${escapeHtml(tooltip)}">i</span>` : "";
-  return `
-    <div class="status-guard ${type}">
-      <div class="guard-title">${escapeHtml(title)}${tooltipIcon}</div>
-      <ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-      <div class="guard-next-actions">${escapeHtml(nextAction)}</div>
-    </div>
-  `;
-}
-
 function renderRecentProjects(projects) {
-  const subset = (projects || []).slice(0, 5);
-  // 我們透過 eventBus 去觸發頁面渲染專案列表的共用行為，或者在此引入 renderProjectList 渲染
-  // 為了減少重複與耦合，我們直接調用 eventBus 廣播渲染，或是用全域方法
-  eventBus.emit("render-recent-projects-list", subset);
+  eventBus.emit("render-recent-projects-list", (projects || []).slice(0, 5));
 }
 
 function renderActivity(status) {
-  const items = [
-    `Frontend phase: Dashboard Control Center`,
-    `LabelMe: Backend Connected`,
-    `Current page: ${appState.currentPage}`,
-    `Training status: ${status.trainingLabel}`
-  ];
+  const items = [];
+  if (!status.hasProject) {
+    items.push("尚未開啟專案。");
+  } else if (!status.hasDataset) {
+    items.push("目前專案尚未匯入資料。");
+  } else {
+    items.push(`目前專案：${status.projectName}`);
+  }
+
   setHTML("#recent-activity-list", items.map((item) => `<div class="activity-item">${escapeHtml(item)}</div>`).join(""));
 }

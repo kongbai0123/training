@@ -2120,6 +2120,14 @@ body[data-theme="light"] .modal-overlay {
   padding: 18px;
 }
 
+.project-create-modal {
+  width: min(680px, calc(100vw - 32px));
+}
+
+.modal-form {
+  margin-top: 14px;
+}
+
 .modal-header {
   display: flex;
   align-items: center;
