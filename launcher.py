@@ -14,6 +14,9 @@ from urllib.request import urlopen
 from src.app_paths import LOGS_DIR
 
 
+APP_TITLE = "Vision Training Studio"
+
+
 def run_backend_child(host: str, port: int, env_mode: str) -> None:
     import os
 
@@ -22,6 +25,33 @@ def run_backend_child(host: str, port: int, env_mode: str) -> None:
     from app import app as fastapi_app
 
     uvicorn.run(fastapi_app, host=host, port=port, log_level="info")
+
+
+def open_desktop_window(url: str, backend_process: subprocess.Popen) -> None:
+    try:
+        import webview
+
+        def on_closed():
+            if backend_process and backend_process.poll() is None:
+                backend_process.terminate()
+
+        window = webview.create_window(
+            APP_TITLE,
+            url,
+            width=1440,
+            height=920,
+            min_size=(1100, 720),
+            confirm_close=True,
+        )
+        window.events.closed += on_closed
+        webview.start(gui="edgechromium", debug=False)
+    except Exception as exc:
+        print(f"[launcher] Desktop shell failed, falling back to browser: {exc}")
+        webbrowser.open(url)
+        while True:
+            if backend_process.poll() is not None:
+                raise RuntimeError("Backend process exited unexpectedly.")
+            time.sleep(1)
 
 
 def is_port_available(host: str, port: int) -> bool:
@@ -104,7 +134,8 @@ def parse_args():
     parser.add_argument("--backend-child", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--host", default="127.0.0.1", help="Backend bind host (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=18080, help="Preferred bind port")
-    parser.add_argument("--open-browser", action="store_true", default=True, help="Open browser after startup")
+    parser.add_argument("--shell", default="webview", choices=["webview", "browser", "none"], help="Desktop shell mode")
+    parser.add_argument("--open-browser", action="store_true", default=False, help="Deprecated: open browser after startup")
     parser.add_argument("--no-open-browser", action="store_true", help="Do not open browser")
     parser.add_argument("--env", default="production", choices=["development", "production"], help="Application mode")
     return parser.parse_args()
@@ -117,7 +148,9 @@ def main():
         return
 
     cwd = Path(__file__).resolve().parent
-    open_browser = args.open_browser and not args.no_open_browser
+    shell = "browser" if args.open_browser else args.shell
+    if args.no_open_browser:
+        shell = "none"
     port = next_available_port(args.host, args.port)
     base_url = f"http://{args.host}:{port}"
 
@@ -135,13 +168,19 @@ def main():
         if not wait_ready(f"{base_url}/api/health", timeout_sec=25):
             raise RuntimeError("Backend did not become healthy in time.")
 
-        if open_browser:
-            webbrowser.open(base_url)
-            print(f"[launcher] Browser opened: {base_url}")
-
         if backend_log:
             backend_log.write(f"Backend started at {base_url}\\n")
             backend_log.flush()
+
+        if shell == "webview":
+            open_desktop_window(base_url, proc)
+            return_code = 0
+            return
+        elif shell == "browser":
+            webbrowser.open(base_url)
+            print(f"[launcher] Browser opened: {base_url}")
+        else:
+            print(f"[launcher] Backend ready: {base_url}")
 
         while True:
             if proc.poll() is not None:

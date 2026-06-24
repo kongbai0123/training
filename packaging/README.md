@@ -17,7 +17,7 @@ dist\VisionTrainingStudio\VisionTrainingStudio.exe
 Smoke test:
 
 ```powershell
-dist\VisionTrainingStudio\VisionTrainingStudio.exe --port 18105 --env production --no-open-browser
+dist\VisionTrainingStudio\VisionTrainingStudio.exe --port 18105 --env production --shell none
 ```
 
 Then check:
@@ -25,4 +25,22 @@ Then check:
 ```text
 http://127.0.0.1:18105/api/health
 http://127.0.0.1:18105/
+```
+
+Desktop shell:
+
+```powershell
+dist\VisionTrainingStudio\VisionTrainingStudio.exe
+```
+
+Installer build, when Inno Setup is installed:
+
+```powershell
+ISCC installer\VisionTrainingStudio.iss
+```
+
+Installer output:
+
+```text
+installer\output\VisionTrainingStudio_Setup_0.1.0.exe
 ```

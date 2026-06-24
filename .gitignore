@@ -25,5 +25,6 @@ runs/
 # Packaging output
 build/
 dist/
+installer/output/
 
 # skill

@@ -31,6 +31,11 @@ for package_name in [
     "sse_starlette",
     "ultralytics",
     "lap",
+    "webview",
+    "pythonnet",
+    "clr_loader",
+    "proxy_tools",
+    "bottle",
 ]:
     try:
         package_datas, package_binaries, package_hiddenimports = collect_all(package_name)
@@ -74,7 +79,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
