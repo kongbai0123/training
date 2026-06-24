@@ -1,4 +1,4 @@
-﻿// Vision Training Studio - Phase 1 Front-end Entry Module
+// Vision Training Studio - Phase 1 Front-end Entry Module
 import { eventBus } from "./event_bus.js";
 import { 
   appState, 
@@ -16,7 +16,7 @@ import {
   escapeHtml 
 } from "./utils.js";
 
-// 頛??辣
+// 載入頁面元件
 import { initDashboard, renderDashboard } from "./pages/dashboard.js";
 import { initProjects, renderProjectsPage } from "./pages/projects.js";
 import { initDataset, renderDatasetPage } from "./pages/dataset.js";
@@ -36,9 +36,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindGlobalNavigation();
   bindInfoTooltips();
   
-  // 頛蝖祇?蝟餌絞????憛?頞?頞嚗?  fetchSystemHealth();
+  // 載入硬體系統狀態（非阻塞，超時超控）
+  fetchSystemHealth();
 
-  // ????????  initDashboard();
+  // 初始化所有頁面
+  initDashboard();
   initProjects();
   initDataset();
   initLabelMe();
@@ -51,7 +53,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initExport();
   initSettings();
 
-  // 頛撠?銝阡?閮剛歲頧 Dashboard
+  // 載入專案並預設跳轉到 Dashboard
   await loadProjects({ autoOpenLatest: true });
   navigate("dashboard");
 });
@@ -96,7 +98,8 @@ async function fetchSystemHealth() {
   }
 }
 
-// ?典?撠汗??隞嗉???function bindInfoTooltips() {
+// 全域導覽與事件訂閱
+function bindInfoTooltips() {
   let tooltip = qs("#floating-tooltip");
   if (!tooltip) {
     tooltip = document.createElement("div");
@@ -235,13 +238,14 @@ function bindGlobalNavigation() {
     navigate(navTarget.dataset.nav);
   });
 
-  // History Modal 閫貊????  qs("#btn-header-history")?.addEventListener("click", openHistoryModal);
+  // History Modal 觸發與關閉
+  qs("#btn-header-history")?.addEventListener("click", openHistoryModal);
   qs("#btn-close-history")?.addEventListener("click", closeHistoryModal);
   qs("#project-history-modal")?.addEventListener("click", (event) => {
     if (event.target.id === "project-history-modal") closeHistoryModal();
   });
 
-  // EventBus 鈭辣??
+  // EventBus 事件監聽
   eventBus.on("state-changed", () => {
     renderAll();
   });
@@ -270,7 +274,7 @@ function bindGlobalNavigation() {
     if (appState.currentProjectId) {
       await openProject(appState.currentProjectId, { stayOnPage: true });
     }
-    showToast("??歇??渡?");
+    showToast("狀態已重新整理");
   });
 
   eventBus.on("project-deleted", async (projectId) => {
@@ -279,7 +283,7 @@ function bindGlobalNavigation() {
       appState.currentProject = null;
       appState.trainingStatus = null;
       updateLabelMeState();
-      setText("#current-project-title", "撠頛撠?");
+      setText("#current-project-title", "尚未載入專案");
       if (appState.wsConn) {
         appState.wsConn.close();
         appState.wsConn = null;
@@ -304,7 +308,7 @@ function navigate(pageId) {
 function renderAll() {
   const status = getProjectStatus(appState.currentProject);
   
-  // 閫貊???皜脫?
+  // 觸發各子頁面渲染
   renderDashboard(status);
   renderRightPanel(appState.currentPage, status);
   renderPageGuards(appState.currentPage, status);
@@ -324,7 +328,8 @@ function renderAll() {
   applyLanguage(appState.settings.language);
 }
 
-// 頛????獢?async function loadProjects(options = {}) {
+// 載入與開啟專案
+async function loadProjects(options = {}) {
   try {
     appState.projects = await apiFetch("/api/projects");
     qs("#api-status-dot")?.classList.add("online");
@@ -336,7 +341,7 @@ function renderAll() {
     renderAll();
   } catch (err) {
     qs("#api-status-dot")?.classList.add("offline");
-    showToast(`?⊥?霈??獢??殷?${err.message}`);
+    showToast(`無法讀取專案清單：${err.message}`);
     renderAll();
   }
 }
@@ -349,9 +354,9 @@ async function openProject(projectId, options = {}) {
     appState.currentProjectClasses = [...(appState.currentProject?.class_names || [])];
     setText("#current-project-title", appState.currentProject.project_name || projectId);
     updateLabelMeState();
-    // 瑼Ｘ銝阡?閮剛?蝺?WebSocket
+    // 檢查並重設訓練 WebSocket
     await checkCurrentTrainStatus();
-    // 頛閰脣?獢?璅∪?皜
+    // 載入該專案的模型清單
     try {
       const models = await apiFetch(`/api/projects/${projectId}/models`);
       appState.models = Array.isArray(models) ? models : [];
@@ -359,12 +364,12 @@ async function openProject(projectId, options = {}) {
       console.warn("Failed to prefetch models:", e.message);
       appState.models = [];
     }
-    // 頛??刻?蔭
+    // 載入最推薦配置
     await loadRecommendedConfig();
     renderAll();
     if (!options.stayOnPage) navigate(options.page || "dashboard");
   } catch (err) {
-    showToast(`?⊥?頛撠?嚗?{err.message}`);
+    showToast(`無法載入專案：${err.message}`);
   }
 }
 
@@ -372,13 +377,14 @@ async function checkCurrentTrainStatus() {
   if (!appState.currentProjectId) return;
   try {
     appState.trainingStatus = await apiFetch(`/api/projects/${appState.currentProjectId}/train/status`);
-    // 閫貊閮毀 WebSocket ???賣炎??    eventBus.emit("check-training-websocket");
+    // 觸發訓練 WebSocket 狀態監聽檢查
+    eventBus.emit("check-training-websocket");
   } catch {
     appState.trainingStatus = null;
   }
 }
 
-// UI ?Ｘ皜脫?
+// UI 面板渲染
 function renderProjectSummary(status) {
   setHTML("#project-summary", `
     <div class="path-list">
@@ -408,18 +414,19 @@ const RIGHT_PANEL_CONFIG = {
   settings: buildSettingsRightPanel
 };
 
-// 蝯曹??葡????(Separation of Concerns & XSS ?脰風)
+// 統一的渲染引擎 (Separation of Concerns & XSS 防護)
 function renderRightPanel(pageId, status) {
-  // 1. 皜脫?蝎曄陛??獢??閬?  renderProjectSummary(status);
+  // 1. 渲染精簡版專案全域摘要
+  renderProjectSummary(status);
 
-  // 2. ?脣??撠惇??瑽? Context 鞈?
+  // 2. 獲取頁面專屬的結構化 Context 資料
   const builder = RIGHT_PANEL_CONFIG[pageId];
   const container = qs("#page-context-container");
   const section = qs("#section-page-context");
   
   if (!container || !section) return;
 
-  // ?文??臬?函撠????憿舐內 Empty State
+  // 判定是否在無專案狀態下顯示 Empty State
   const bypassEmptyPages = ["dashboard", "projects", "settings"];
   const showEmpty = !status.hasProject && !bypassEmptyPages.includes(pageId);
 
@@ -435,29 +442,30 @@ function renderRightPanel(pageId, status) {
       </div>
     `;
     
-    // 皜脫? Empty State 銝? Suggested Actions ??Warnings
-    setHTML("#next-actions-list", `<li>?? <a href="#" data-nav="projects">Projects</a> 撱箇?????獢?/li>`);
-    setHTML("#warning-list", `<div class="summary-warning-item">撠頛撠?嚗????獢?/div>`);
+    // 渲染 Empty State 下的 Suggested Actions 與 Warnings
+    setHTML("#next-actions-list", `<li>前往 <a href="#" data-nav="projects">Projects</a> 建立或開啟專案。</li>`);
+    setHTML("#warning-list", `<div class="summary-warning-item">尚未載入專案，請先選擇專案。</div>`);
     return;
   }
 
   if (!builder) {
     section.style.display = "none";
     container.innerHTML = "";
-    setHTML("#next-actions-list", "<li>?桀?瘝?撱箄降????/li>");
+    setHTML("#next-actions-list", "<li>目前沒有建議動作。</li>");
     setHTML("#warning-list", "");
     return;
   }
 
-  // ??閮?敺?蝯?????  const config = builder(status);
+  // 取得計算後的結構化資料
+  const config = builder(status);
   
-  // 皜脫? Context 璅?
+  // 渲染 Context 標題
   const titleEl = qs("#page-context-title");
   if (titleEl && config.title) {
     titleEl.textContent = config.title;
   }
 
-  // 3. 皜脫? Page Context ?批捆 (XSS 摰 escape ??)
+  // 3. 渲染 Page Context 內容 (XSS 安全 escape 處理)
   if (config.emptyState && !status.hasProject) {
     section.style.display = "block";
     container.innerHTML = `
@@ -476,18 +484,18 @@ function renderRightPanel(pageId, status) {
       }
       return `<div class="summary-row"><span>${escapeHtml(row.label)}</span>${valDom}</div>`;
     }).join("");
-    container.innerHTML = rowsHtml ? `<div class="path-list" style="gap: 0;">${rowsHtml}</div>` : `<div class="summary-empty"><p>?桀?瘝??舫＊蝷箇??鞈???/p></div>`;
+    container.innerHTML = rowsHtml ? `<div class="path-list" style="gap: 0;">${rowsHtml}</div>` : `<div class="summary-empty"><p>目前沒有可顯示的頁面資訊。</p></div>`;
   }
 
-  // 4. ??皜脫? Next Suggested Actions (XSS 摰??)
+  // 4. 動態渲染 Next Suggested Actions (XSS 安全處理)
   const actions = config.actions || [];
   if (actions.length > 0) {
     setHTML("#next-actions-list", actions.map(act => `<li>${escapeHtml(act)}</li>`).join(""));
   } else {
-    setHTML("#next-actions-list", "<li>?桀?瘝?撱箄降????/li>");
+    setHTML("#next-actions-list", "<li>目前沒有建議動作。</li>");
   }
 
-  // 5. ??皜脫? Warnings (XSS 摰??)
+  // 5. 動態渲染 Warnings (XSS 安全處理)
   const warnings = config.warnings || [];
   if (warnings.length > 0) {
     setHTML("#warning-list", warnings.map(warn => `<div class="summary-warning-item">${escapeHtml(warn)}</div>`).join(""));
@@ -511,149 +519,41 @@ function getPageTitle(pageId) {
   };
   return map[pageId] || "Page Context";
 }
+
 function buildDashboardRightPanel(status) {
-  const focus = appState.dashboardFocus || "overview";
-  const healthScore = calculateProjectHealth(status);
-  const baseRows = [
-    { label: "Project health", value: `${healthScore}%`, badgeType: healthScore >= 80 ? "success" : healthScore >= 45 ? "warning" : "danger" },
-    { label: "Dataset", value: status.hasDataset ? `${status.imageCount} images` : "No images", badgeType: status.hasDataset ? "success" : "warning" },
-    { label: "Annotation", value: status.imageCount > 0 ? `${status.annotatedCount}/${status.imageCount}` : "Unavailable" },
-    { label: "Split", value: status.splitComplete ? "Ready" : "Not ready", badgeType: status.splitComplete ? "success" : "warning" },
-    { label: "Model", value: status.bestModelExists ? "Available" : "Not trained", badgeType: status.bestModelExists ? "success" : "neutral" }
-  ];
+  const healthScore = status.hasDataset 
+    ? Math.round((status.annotatedCount / status.imageCount) * 50 + (status.splitComplete ? 30 : 0) + (status.bestModelExists ? 20 : 0))
+    : 0;
 
-  const contexts = {
-    overview: {
-      title: "Dashboard Context",
-      rows: baseRows,
-      actions: buildDashboardActions(status),
-      warnings: buildDashboardWarnings(status)
-    },
-    dataset: {
-      title: "Dataset Context",
-      rows: [
-        { label: "Images", value: String(status.imageCount) },
-        { label: "Dataset status", value: status.hasDataset ? "Imported" : "Empty", badgeType: status.hasDataset ? "success" : "warning" },
-        { label: "Next gate", value: "Annotation" }
-      ],
-      actions: status.hasDataset ? ["Run quality check", "Open Annotation Manager"] : ["Import images or a dataset folder"],
-      warnings: status.hasDataset ? [] : ["Training cannot start until images are imported."]
-    },
-    labelme: {
-      title: "Annotation Context",
-      rows: [
-        { label: "Annotated", value: `${status.annotatedCount}/${status.imageCount}` },
-        { label: "Missing", value: String(status.unannotatedCount), badgeType: status.unannotatedCount > 0 ? "warning" : "success" },
-        { label: "LabelMe JSON", value: String(status.labelme.jsonCount || 0) }
-      ],
-      actions: status.labelme.synced ? ["Review annotation quality", "Continue to Split"] : ["Sync LabelMe JSON", "Review missing annotations"],
-      warnings: status.unannotatedCount > 0 ? [`${status.unannotatedCount} images still need annotation review.`] : []
-    },
-    "auto-labeling": {
-      title: "Auto-Labeling Context",
-      rows: [
-        { label: "Unlabeled images", value: String(status.unannotatedCount) },
-        { label: "Available models", value: String((appState.models || []).length) },
-        { label: "Target", value: "Draft annotations", isCode: true }
-      ],
-      actions: status.bestModelExists ? ["Create draft annotations", "Review drafts before applying"] : ["Train or import a model first"],
-      warnings: status.bestModelExists ? ["Drafts should be reviewed before updating current annotations."] : ["No trained weights are available for auto-labeling."]
-    },
-    split: {
-      title: "Split Context",
-      rows: [
-        { label: "Train", value: String(status.splitCounts.train) },
-        { label: "Val", value: String(status.splitCounts.val) },
-        { label: "Test", value: String(status.splitCounts.test) },
-        { label: "Ready", value: status.splitComplete ? "Yes" : "No", badgeType: status.splitComplete ? "success" : "warning" }
-      ],
-      actions: status.splitComplete ? ["Review split balance", "Continue to Training"] : ["Create Train / Val / Test split"],
-      warnings: status.splitComplete ? [] : ["Training is blocked until a split exists."]
-    },
-    augmentation: {
-      title: "Augmentation Context",
-      rows: [
-        { label: "Scope", value: "Train only", isCode: true },
-        { label: "Split ready", value: status.splitComplete ? "Yes" : "No", badgeType: status.splitComplete ? "success" : "warning" },
-        { label: "Configured", value: appState.currentProject?.augmentation_config ? "Yes" : "No" }
-      ],
-      actions: ["Choose preset or custom checks", "Preview before applying"],
-      warnings: status.splitComplete ? ["Do not apply augmentation to validation or test sets."] : ["Create a split before applying augmentation."]
-    },
-    training: {
-      title: "Training Context",
-      rows: [
-        { label: "Dataset ready", value: status.hasDataset ? "Yes" : "No", badgeType: status.hasDataset ? "success" : "danger" },
-        { label: "Annotation ready", value: status.labelme.synced ? "Yes" : "No", badgeType: status.labelme.synced ? "success" : "danger" },
-        { label: "Split ready", value: status.splitComplete ? "Yes" : "No", badgeType: status.splitComplete ? "success" : "danger" },
-        { label: "Training", value: status.trainReady ? "Ready" : "Blocked", badgeType: status.trainReady ? "success" : "danger" }
-      ],
-      actions: status.trainReady ? ["Start training", "Review recommended model settings"] : ["Resolve blockers before starting training"],
-      warnings: status.blockers.length > 0 ? status.blockers : []
-    },
-    evaluation: {
-      title: "Evaluation Context",
-      rows: [
-        { label: "Model", value: status.bestModelExists ? "Available" : "Missing", badgeType: status.bestModelExists ? "success" : "warning" },
-        { label: "Metrics", value: status.bestModelExists ? "Ready to review" : "Unavailable" }
-      ],
-      actions: status.bestModelExists ? ["Open Evaluation", "Review failure cases"] : ["Complete a training run first"],
-      warnings: status.bestModelExists ? [] : ["No model has been trained yet."]
-    },
-    inference: {
-      title: "Inference Lab Context",
-      rows: [
-        { label: "Weights", value: String((appState.models || []).length) },
-        { label: "Input", value: "Single image", isCode: true },
-        { label: "Output", value: "Inference job", isCode: true }
-      ],
-      actions: (appState.models || []).length > 0 ? ["Select a model", "Upload a test image"] : ["Train a model first"],
-      warnings: (appState.models || []).length > 0 ? [] : ["No best.pt or last.pt was found."]
-    },
-    export: {
-      title: "Export Context",
-      rows: [
-        { label: "Model", value: status.bestModelExists ? "Available" : "Missing", badgeType: status.bestModelExists ? "success" : "warning" },
-        { label: "ONNX", value: status.bestModelExists ? "Ready" : "Unavailable" }
-      ],
-      actions: status.bestModelExists ? ["Export model package", "Generate report"] : ["Train a model before exporting"],
-      warnings: status.bestModelExists ? [] : ["Export is unavailable without trained weights."]
-    }
-  };
+  const rows = status.hasProject ? [
+    { label: "Health Score", value: `${healthScore}%`, badgeType: healthScore > 75 ? "success" : (healthScore > 40 ? "warning" : "danger") },
+    { label: "Unannotated", value: String(status.unannotatedCount) },
+    { label: "Best Model", value: status.bestModelExists ? "Exists" : "None", badgeType: status.bestModelExists ? "success" : "neutral" }
+  ] : [];
 
-  return contexts[focus] || contexts.overview;
-}
+  const actions = [];
+  if (!status.hasProject) actions.push("前往 Projects 建立或載入專案。");
+  else if (!status.hasDataset) actions.push("前往 Dataset 匯入圖片或影片。");
+  else if (!status.labelme.synced) actions.push("前往 LabelMe 同步標註。");
+  else if (!status.splitComplete) actions.push("前往 Split 切分資料集。");
+  else actions.push("前往 Training 控制台進行模型訓練。");
 
-function buildDashboardActions(status) {
-  if (!status.hasProject) return ["Create or open a project."];
-  if (!status.hasDataset) return ["Import images in Dataset Manager."];
-  if (!status.labelme.synced) return ["Sync LabelMe annotations."];
-  if (!status.splitComplete) return ["Create Train / Val / Test split."];
-  if (!status.bestModelExists) return ["Start training or review training settings."];
-  return ["Open Inference Lab or Export the trained model."];
-}
-
-function buildDashboardWarnings(status) {
   const warnings = [];
-  if (!status.hasProject) warnings.push("No project is currently open.");
-  if (status.hasProject && !status.hasDataset) warnings.push("Dataset is empty.");
-  if (status.hasDataset && status.unannotatedCount > 0) warnings.push(`${status.unannotatedCount} images need annotation review.`);
-  if (status.hasDataset && !status.splitComplete) warnings.push("Training is blocked until Train / Val / Test is created.");
-  return warnings;
-}
+  if (!status.hasProject) warnings.push("尚未開啟任何專案，系統操作已限制。");
+  else if (!status.hasDataset) warnings.push("專案中目前沒有影像資料。");
 
-function calculateProjectHealth(status) {
-  let score = 0;
-  if (status.hasProject) score += 10;
-  if (status.hasDataset) score += 20;
-  if (status.annotationRate >= 95) score += 25;
-  else if (status.annotationRate > 0) score += Math.round(status.annotationRate * 0.2);
-  if (status.splitComplete) score += 20;
-  if (status.bestModelExists) score += 15;
-  if (appState.currentProject?.current?.export_id) score += 10;
-  return Math.min(100, score);
+  return {
+    title: "Dashboard Status",
+    rows,
+    actions,
+    warnings,
+    emptyState: !status.hasProject ? {
+      message: "Please open a project on Projects page.",
+      actionLabel: "Go to Projects",
+      actionNav: "projects"
+    } : null
+  };
 }
-
 
 function buildProjectsRightPanel(status) {
   return {
@@ -661,8 +561,8 @@ function buildProjectsRightPanel(status) {
     rows: [
       { label: "Total Projects", value: String(appState.projects?.length || 0) }
     ],
-    actions: ["?典椰?寡”?桐葉憛怠?迂???伐?撱箇??啣?獢?, "敺風蝔??”銝剖?頛??獢?],
-    warnings: appState.projects?.length === 0 ? ["蝟餌絞?桀?瘝?隞颱?撠???] : []
+    actions: ["在左方表單中填入名稱與類別，建立新專案。", "從歷程或列表中加載現有專案。"],
+    warnings: appState.projects?.length === 0 ? ["系統目前沒有任何專案。"] : []
   };
 }
 
@@ -673,10 +573,10 @@ function buildDatasetRightPanel(status) {
   const invalid = images.filter(img => img.quality?.is_corrupted).length;
   const score = status.hasDataset ? Math.max(0, 100 - (duplicates * 5) - (invalid * 10)) : 0;
 
-  const actions = ["Run quality check ?瑁??釭瑼Ｘ葫", "Go to LabelMe ?脰?璅?蝞∠?"];
+  const actions = ["Run quality check 執行品質檢測", "Go to LabelMe 進行標記管理"];
   const warnings = [];
-  if (duplicates > 0) warnings.push(`?菜葫??${duplicates} 撘菟???????嚗遣霅唳??);
-  if (invalid > 0) warnings.push(`?菜葫??${invalid} 撘萇????瑼??);
+  if (duplicates > 0) warnings.push(`偵測到 ${duplicates} 張重疊/重複圖片，建議清理。`);
+  if (invalid > 0) warnings.push(`偵測到 ${invalid} 張無效或損毀檔案。`);
 
   return {
     title: "Dataset Status",
@@ -694,10 +594,10 @@ function buildDatasetRightPanel(status) {
 
 function buildLabelMeRightPanel(status) {
   const lm = appState.labelme || {};
-  const actions = ["Sync JSON ?脰?璅惜?郊", "Fix invalid labels 靽格迤?芰璅惜"];
+  const actions = ["Sync JSON 進行標籤同步", "Fix invalid labels 修正未知標籤"];
   const warnings = [];
-  if (lm.missingJson > 0) warnings.push(`??${lm.missingJson} 撘萄????芣???JSON 璅?瑼);
-  if (lm.unknownLabels > 0) warnings.push(`?菜葫??${lm.unknownLabels} ??券??交??桐葉??交?蝐扎);
+  if (lm.missingJson > 0) warnings.push(`有 ${lm.missingJson} 張圖片尚未擁有 JSON 標記檔。`);
+  if (lm.unknownLabels > 0) warnings.push(`偵測到 ${lm.unknownLabels} 個未在類別清單中的未知標籤。`);
 
   return {
     title: "LabelMe Status",
@@ -714,10 +614,10 @@ function buildLabelMeRightPanel(status) {
 }
 
 function buildSplitRightPanel(status) {
-  const actions = ["Review class balance 瑼Ｚ?憿撟唾﹛摨?, "Go to Augmentation ??敶勗??游?"];
+  const actions = ["Review class balance 檢視類別平衡度", "Go to Augmentation 前往影像擴充"];
   const warnings = [];
-  if (!status.splitComplete) warnings.push("撠?脰? Train / Val / Test ??嚗??餅?璅∪?閮毀嚗?);
-  if (status.splitCounts.val === 0) warnings.push("撽???(Val) ?賊???0嚗?????撽?鞈???);
+  if (!status.splitComplete) warnings.push("尚未進行 Train / Val / Test 切分，將阻擋模型訓練！");
+  if (status.splitCounts.val === 0) warnings.push("驗證集 (Val) 數量為 0，請務必分配驗證資料。");
 
   return {
     title: "Split Status",
@@ -740,8 +640,8 @@ function buildAugmentationRightPanel(status) {
   const trainCount = status.splitCounts.train || 0;
   const valTestCount = (status.splitCounts.val || 0) + (status.splitCounts.test || 0);
 
-  const actions = ["Preview augmentation ?汗?游???", "Apply to Train only 憟?拍??游?", "Go to Training ??璅∪?閮毀"];
-  const warnings = ["Val/Test excluded (撽??葫閰阡?銝脰??游?)", "Strong blur may reduce annotation quality"];
+  const actions = ["Preview augmentation 預覽擴增效果", "Apply to Train only 套用物理擴充", "Go to Training 前往模型訓練"];
+  const warnings = ["Val/Test excluded (驗證與測試集不進行擴充)", "Strong blur may reduce annotation quality"];
 
   return {
     title: "Augmentation Status",
@@ -773,10 +673,10 @@ function buildTrainingRightPanel(status) {
   // Badge colour for run status
   const statusBadge = runStatus === "completed" ? "success" : runStatus === "failed" ? "danger" : runStatus === "training" ? "warning" : "neutral";
 
-  const actions = ["Fix readiness checks ??餅???", "Start training ??閮毀瘚?", "View latest run 瑼Ｚ?????"];
+  const actions = ["Fix readiness checks 排除阻擋因子", "Start training 啟動訓練流程", "View latest run 檢視運行指標"];
   const warnings = [];
-  if (!status.trainReady) warnings.push("隢??日??蝝????Dataset?歇?郊 Label?歇撱箇? Split嚗????閮毀??);
-  if (gpu === "CPU" || gpu.includes("unavailable") || gpu.includes("Backend")) warnings.push("GPU unavailable (?桀???CPU ????璅∪?嚗?蝺湧漲?扔????);
+  if (!status.trainReady) warnings.push("請排除阻擋因素（需有 Dataset、已同步 Label、已建立 Split）後才能啟動訓練。");
+  if (gpu === "CPU" || gpu.includes("unavailable") || gpu.includes("Backend")) warnings.push("GPU unavailable (目前為 CPU 或無連線模式，訓練速度會極慢)。");
 
   return {
     title: "Training Status",
@@ -812,8 +712,8 @@ function buildEvaluationRightPanel(status) {
       { label: "Model file", value: model ? model.weight_type : "--", isCode: true },
       { label: "Run ID", value: model?.run_id ?? "--", isCode: true }
     ],
-    actions: ["??霅?蝐斗?撠蒂?? Confusion Matrix", "瑼Ｚ??葫憭望??? (Failure cases)"],
-    warnings: !status.bestModelExists ? ["?桀?撠?曉撌脰?蝺渡??雿單芋????] : []
+    actions: ["與驗證標籤比對並生成 Confusion Matrix", "檢視預測失敗個案 (Failure cases)"],
+    warnings: !status.bestModelExists ? ["目前尚未找到已訓練的最佳模型權重。"] : []
   };
 }
 
@@ -829,9 +729,9 @@ function buildInferenceRightPanel(status) {
   const selModel = selId ? models.find((m) => m.model_id === selId) : null;
   const selectedModelName = selModel ? `${selModel.weight_type} (${selModel.run_id || "?"})` : "--";
 
-  const actions = ["Select model ?豢?頛甈?", "Upload test image 銝皜祈岫??", "Run inference ?瑁??桀撐?刻?"];
+  const actions = ["Select model 選擇載入權重", "Upload test image 上傳測試圖片", "Run inference 執行單張推論"];
   const warnings = [];
-  if (models.length === 0) warnings.push("no trained weights found (撠?曉隞颱?撌脰?蝺湔???隢?閮毀璅∪?)??);
+  if (models.length === 0) warnings.push("no trained weights found (尚未找到任何已訓練權重，請先訓練模型)。");
 
   return {
     title: "Model Registry",
@@ -860,17 +760,17 @@ function buildAutoLabelingRightPanel(status) {
   });
 
   const actions = [
-    "?豢? best.pt / last.pt 雿?阮?Ｙ?璅∪???,
-    "??桀撐?? preview嚗??脣鞈?憭暹甈～?,
-    "敺? API 摰?敺?鈭箏極蝣箄???Export LabelMe / YOLO??
+    "選擇 best.pt / last.pt 作為草稿產生模型。",
+    "先用單張圖片 preview，再進入資料夾批次。",
+    "後續 API 完成後，人工確認再 Export LabelMe / YOLO。"
   ];
 
   const warnings = [
-    "P0 UI only嚗???銵??閮颯?,
-    "Apply scope ?身??Train only嚗?情??Val/Test??
+    "P0 UI only：目前不會執行自動標註。",
+    "Apply scope 預設為 Train only，避免污染 Val/Test。"
   ];
-  if (models.length === 0) warnings.unshift("?曆??啣?冽芋??隢?摰? Training??);
-  if (models.length > 0 && compatibleModels.length === 0) warnings.unshift("?桀?璅∪?隞餃???獢遙???詨捆??);
+  if (models.length === 0) warnings.unshift("找不到可用模型，請先完成 Training。");
+  if (models.length > 0 && compatibleModels.length === 0) warnings.unshift("目前模型任務與專案任務不相容。");
 
   return {
     title: "Auto-Labeling Status",
@@ -899,8 +799,8 @@ function buildExportRightPanel(status) {
       { label: "ONNX export", value: status.bestModelExists ? "Ready" : "Unavailable", badgeType: status.bestModelExists ? "success" : "neutral" },
       { label: "Report status", value: "Ready", badgeType: "success" }
     ],
-    actions: ["Export ONNX ?臬頝典像?圈蝵脫撘?, "Generate report ?Ｙ? Markdown 閮毀?勗?"],
-    warnings: !status.bestModelExists ? ["?⊥?雿單芋????ONNX 撠?撌脣??具?] : []
+    actions: ["Export ONNX 匯出跨平台部署格式", "Generate report 產生 Markdown 訓練報告"],
+    warnings: !status.bestModelExists ? ["無最佳模型權重，ONNX 導出功能已停用。"] : []
   };
 }
 
@@ -913,7 +813,7 @@ function buildHistoryRightPanel(status) {
       { label: "Total runs", value: String(runs) },
       { label: "Imports count", value: String(imports) }
     ],
-    actions: ["暺??甇瑕閮??亦?甇瑕 Metrics", "?臬撠?霈甇瑞??勗?"],
+    actions: ["點選運行歷史記錄查看歷史 Metrics", "匯出專案變更歷程報告"],
     warnings: []
   };
 }
@@ -930,8 +830,8 @@ function buildSettingsRightPanel(status) {
       { label: "LabelMe Backend", value: status.labelme.backendReady ? "Connected" : "Disconnected", badgeType: status.labelme.backendReady ? "success" : "danger" },
       { label: "GPU/CPU status", value: isHealthy ? "Healthy" : "Offline", badgeType: isHealthy ? "success" : "danger" }
     ],
-    actions: ["隤踵隤??末閮剖?", "??瘛梯/?漁銝駁?鈭桀漲"],
-    warnings: !isHealthy ? ["API 敺垢隡箸??冽?????頞??啣虜??] : []
+    actions: ["調整語言偏好設定", "切換深色/明亮主題亮度"],
+    warnings: !isHealthy ? ["API 後端伺服器未連線或有超時異常。"] : []
   };
 }
 
@@ -956,25 +856,25 @@ function renderPageGuards(pageId, status) {
   };
 
   if (!status.hasProject) {
-    const guard = statusGuard("warning", "撠頛撠?", ["甇日??舐汗嚗???撌脣??具?], "?? Projects 撱箇?????獢?);
+    const guard = statusGuard("warning", "尚未載入專案", ["此頁可瀏覽，但操作已停用。"], "前往 Projects 建立或開啟專案。");
     Object.keys(guards).forEach((key) => guards[key].push(guard));
   }
   if (status.hasProject && !status.hasDataset) {
-    guards.labelme.push(statusGuard("warning", "撠?臬鞈???, ["Images folder ?桀?瘝?????], "?? Dataset ?臬???蔣?撟??));
-    guards.split.push(statusGuard("warning", "撠?臬鞈???, ["銝撱箇? Train / Val / Test??], "????Dataset ?臬??));
-    guards.training.push(statusGuard("danger", "?桀??⊥???閮毀", ["撠?臬鞈???], "?? Dataset ?臬????));
+    guards.labelme.push(statusGuard("warning", "尚未匯入資料集", ["Images folder 目前沒有圖片。"], "前往 Dataset 匯入圖片或影片抽幀。"));
+    guards.split.push(statusGuard("warning", "尚未匯入資料集", ["不能建立 Train / Val / Test。"], "先完成 Dataset 匯入。"));
+    guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未匯入資料集。"], "前往 Dataset 匯入圖片。"));
   }
   if (status.hasDataset && !status.labelme.synced) {
-    guards.training.push(statusGuard("danger", "?桀??⊥???閮毀", ["撠?郊 LabelMe 璅酉??], "?? LabelMe ??甇?JSON嚗?頧??箄?蝺湔撘?));
-    guards.split.push(statusGuard("info", "LabelMe 撠?郊", ["甇日?畾萎??航身摰?split UI嚗?甇??閮毀??敺?LabelMe JSON 頧?摰???], "?? LabelMe ??甇?JSON ?銵???));
+    guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未同步 LabelMe 標註。"], "前往 LabelMe 頁同步 JSON，再轉換為訓練格式。"));
+    guards.split.push(statusGuard("info", "LabelMe 尚未同步", ["此階段仍可設定 split UI，但正式訓練應等待 LabelMe JSON 轉換完成。"], "前往 LabelMe 頁同步 JSON 與執行轉換。"));
   }
   if (status.hasDataset && !status.splitComplete) {
-    guards.training.push(statusGuard("danger", "?桀??⊥???閮毀", ["撠撱箇? Train / Val / Test??], "?? Split 撱箇?鞈????));
-    guards.augmentation.push(statusGuard("warning", "撠摰? split", ["憟 augmentation ??閬??target split??], "?? Split 撱箇? Train / Val / Test??));
+    guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未建立 Train / Val / Test。"], "前往 Split 建立資料分散。"));
+    guards.augmentation.push(statusGuard("warning", "尚未完成 split", ["套用 augmentation 前需要知道 target split。"], "前往 Split 建立 Train / Val / Test。"));
   }
   if (!status.bestModelExists) {
-    guards.evaluation.push(statusGuard("warning", "?桀?瘝??航?隡唳芋??, ["撠摰?閮毀???芰??best model??], "摰?閮毀敺??亦? mAP / IoU??));
-    guards.export.push(statusGuard("warning", "?桀?瘝??臬?箸芋??, ["撠?曉?雿單芋????], "摰?閮毀敺??臬 PT / ONNX??));
+    guards.evaluation.push(statusGuard("warning", "目前沒有可評估模型", ["尚未完成訓練或尚未產生 best model。"], "完成訓練後再查看 mAP / IoU。"));
+    guards.export.push(statusGuard("warning", "目前沒有可匯出模型", ["尚未找到最佳模型權重。"], "完成訓練後再匯出 PT / ONNX。"));
   }
 
   const activeGuards = guards[pageId] || [];
@@ -1032,7 +932,7 @@ function updateActionAvailability(status) {
   }
 }
 
-// Toast ??Modal ?批
+// Toast 與 Modal 控制
 function showToast(message) {
   const toast = qs("#toast");
   if (!toast) return;

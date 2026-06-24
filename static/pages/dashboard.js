@@ -1,76 +1,38 @@
 import { eventBus } from "../event_bus.js";
-import { appState } from "../state.js";
-import { qs, setHTML, escapeHtml } from "../utils.js";
+import { appState, getProjectStatus } from "../state.js";
+import { qs, qsa, setHTML, escapeHtml } from "../utils.js";
 
 export function initDashboard() {
   qs("#btn-dashboard-refresh")?.addEventListener("click", () => {
     eventBus.emit("refresh-project");
   });
-
-  qs("#control-cards")?.addEventListener("click", (event) => {
-    const card = event.target.closest(".control-card[data-dashboard-card]");
-    if (!card) return;
-    appState.dashboardFocus = card.dataset.dashboardCard || "overview";
-    eventBus.emit("state-changed");
-  });
 }
 
 export function renderDashboard(status) {
-  renderDashboardAlerts();
-  renderProjectCommandBar(status);
+  renderDashboardAlerts(status);
   renderKpis(status);
   renderControlCards(status);
+  renderRecentProjects(appState.projects);
   renderActivity(status);
 }
 
-function renderDashboardAlerts() {
-  setHTML("#dashboard-alerts", "");
-}
-
-function renderProjectCommandBar(status) {
-  const project = appState.currentProject;
-  const healthScore = getProjectHealthScore(status);
-  const updatedAt = formatDate(project?.updated_at || project?.created_at);
-  const projectTitle = status.hasProject ? status.projectName : "No project opened";
-  const projectMeta = status.hasProject
-    ? `${status.taskType || "vision"} · ${status.imageCount > 0 ? `${status.imageCount} images` : "No images imported"} · Health ${healthScore}%`
-    : "Create or open a project to start the workflow.";
-  const primaryAction = status.hasProject
-    ? `<button class="btn btn-primary" data-nav="dataset"><i class="fa-solid fa-play"></i> Continue Project</button>`
-    : `<button class="btn btn-primary" data-nav="projects"><i class="fa-solid fa-plus"></i> Create Project</button>`;
-
-  setHTML("#project-command-bar", `
-    <section class="project-command-bar">
-      <div class="project-command-main">
-        <span class="eyebrow">Current Project</span>
-        <h2>${escapeHtml(projectTitle)}</h2>
-        <p>${escapeHtml(projectMeta)}</p>
-      </div>
-      <div class="project-command-status">
-        <div class="health-ring" aria-label="Project health ${healthScore}%">
-          <strong>${healthScore}%</strong>
-          <span>Health</span>
-        </div>
-        <div class="project-command-updated">
-          <span>Updated</span>
-          <strong>${escapeHtml(updatedAt || "--")}</strong>
-        </div>
-      </div>
-      <div class="project-command-actions">
-        ${primaryAction}
-        <button class="btn btn-secondary" data-nav="projects"><i class="fa-solid fa-folder-open"></i> Open Project</button>
-        <button class="btn btn-secondary" data-nav="history"><i class="fa-solid fa-clock-rotate-left"></i> Browse History</button>
-      </div>
-    </section>
-  `);
+function renderDashboardAlerts(status) {
+  const guards = [];
+  if (!status.hasProject) {
+    guards.push(statusGuard("info", "尚未載入專案", ["請先建立或開啟專案。"], "前往 Projects 建立新專案，或從 Recent Projects 開啟舊專案。"));
+  } else if (!status.hasDataset) {
+    guards.push(statusGuard("warning", "專案已載入，但尚未匯入資料", ["Dataset image count 為 0。"], "前往 Dataset 匯入圖片資料夾或影片抽幀。"));
+  }
+  guards.push(statusGuard("info", "LabelMe 狀態", ["Backend Connected"], "前往 LabelMe 頁面同步 JSON。", "LabelMe 狀態;UI Ready：標註管理介面已可使用。;Backend Connected：後端 API 已連線。;可掃描 raw/annotations/labelme/*.json。;同步後可預覽、檢查錯誤並轉換訓練格式。"));
+  setHTML("#dashboard-alerts", guards.join(""));
 }
 
 function renderKpis(status) {
   const items = [
-    ["Dataset", status.hasDataset ? `${status.imageCount} images` : "No images imported"],
-    ["Annotation", status.imageCount > 0 ? `${status.annotatedCount}/${status.imageCount}` : "Unavailable"],
-    ["Split", status.splitComplete ? "Ready" : "Not ready"],
-    ["Training", productTrainingLabel(status)]
+    ["Project", status.projectName],
+    ["Images", status.imageCount],
+    ["LabelMe JSON", `${status.labelme.jsonCount}/${status.imageCount}`],
+    ["Split", status.splitComplete ? "Ready" : "Not ready"]
   ];
   setHTML("#dashboard-kpis", items.map(([label, value]) => `
     <div class="metric-card">
@@ -83,94 +45,87 @@ function renderKpis(status) {
 function renderControlCards(status) {
   const cards = [
     {
-      key: "dataset",
+      icon: "fa-folder-tree",
+      title: "Project",
+      badge: status.hasProject ? "Loaded" : "No project",
+      badgeClass: status.hasProject ? "success" : "warning",
+      desc: "建立、開啟與管理視覺訓練專案。",
+      stats: [["Task", status.taskType], ["Classes", status.classNames.length]],
+      progress: status.hasProject ? 100 : 0,
+      actions: [
+        button("Projects", "projects", "primary"),
+        button("Browse History", "history", "secondary")
+      ]
+    },
+    {
       icon: "fa-images",
       title: "Dataset",
-      badge: status.hasDataset ? "Ready" : "Needs data",
+      badge: status.hasDataset ? "Imported" : "No data",
       badgeClass: status.hasDataset ? "success" : "warning",
-      progressText: status.hasDataset ? `${status.imageCount} images` : "No images imported",
+      desc: "管理圖片、影片抽幀與品質檢查。",
+      stats: [["Images", status.imageCount], ["Health", appState.currentProject?.dataset_health?.score ?? "--"]],
       progress: status.hasDataset ? 100 : 0,
-      primary: button("Manage Dataset", "dataset", "primary")
+      actions: [button("Import Images", "dataset", "primary"), button("Quality Check", "dataset", "secondary")]
     },
     {
-      key: "labelme",
       icon: "fa-pen-nib",
-      title: "Annotation",
-      badge: status.labelme.synced ? "Synced" : "Needs sync",
-      badgeClass: status.labelme.synced ? "success" : "warning",
-      progressText: status.imageCount > 0 ? `${status.annotatedCount}/${status.imageCount} annotated` : "Annotation unavailable",
-      progress: status.labelme.completionRate || 0,
-      primary: button("Open LabelMe", "labelme", "primary")
+      title: "LabelMe",
+      badge: "Backend Connected",
+      badgeClass: "success",
+      desc: "管理 LabelMe JSON 工作流，取代舊版 Canvas bbox 標註主入口。",
+      stats: [["JSON", status.labelme.jsonCount], ["Missing", status.labelme.missingJson]],
+      progress: status.labelme.completionRate,
+      actions: [button("Open Manager", "labelme", "primary"), button("Sync JSON", "labelme", "secondary")]
     },
     {
-      key: "auto-labeling",
-      icon: "fa-wand-magic-sparkles",
-      title: "Auto-Labeling",
-      badge: status.bestModelExists ? "Model available" : "No model",
-      badgeClass: status.bestModelExists ? "success" : "warning",
-      progressText: `${status.unannotatedCount} unlabeled images`,
-      progress: status.bestModelExists ? 70 : 15,
-      primary: button("Create Drafts", "auto-labeling", "primary")
-    },
-    {
-      key: "split",
       icon: "fa-code-branch",
       title: "Split",
-      badge: status.splitComplete ? "Ready" : "Not ready",
+      badge: status.splitComplete ? "Ready" : "Not split",
       badgeClass: status.splitComplete ? "success" : "warning",
-      progressText: `Train ${status.splitCounts.train} · Val ${status.splitCounts.val} · Test ${status.splitCounts.test}`,
+      desc: "建立 Train / Val / Test，避免資料外洩。",
+      stats: [["Train", status.splitCounts.train], ["Val", status.splitCounts.val], ["Test", status.splitCounts.test]],
       progress: status.splitComplete ? 100 : 0,
-      primary: button("Configure Split", "split", "primary")
+      actions: [button("Configure Split", "split", "primary"), button("Run Split", "split", "secondary")]
     },
     {
-      key: "augmentation",
-      icon: "fa-layer-group",
+      icon: "fa-wand-magic-sparkles",
       title: "Augmentation",
-      badge: appState.currentProject?.augmentation_config ? "Configured" : "Optional",
-      badgeClass: appState.currentProject?.augmentation_config ? "success" : "neutral",
-      progressText: "Train-set only",
-      progress: appState.currentProject?.augmentation_config ? 100 : 35,
-      primary: button("Open Settings", "augmentation", "primary")
+      badge: appState.currentProject?.augmentation_config ? "Configured" : "Not configured",
+      badgeClass: appState.currentProject?.augmentation_config ? "info" : "warning",
+      desc: "設定物理擴充並預覽結果。",
+      stats: [["Requires", "Split"], ["Target", "Train"]],
+      progress: status.splitComplete ? 60 : 0,
+      actions: [button("Configure", "augmentation", "primary"), button("Preview", "augmentation", "secondary")]
     },
     {
-      key: "training",
       icon: "fa-microchip",
       title: "Training",
-      badge: status.trainReady ? "Ready" : "Blocked",
+      badge: status.trainReady ? "Ready" : "Not ready",
       badgeClass: status.trainReady ? "success" : "danger",
-      progressText: status.trainReady ? "Ready to start" : `${status.blockers.length} blockers`,
+      desc: "設定模型與啟動訓練。LabelMe sync 完成前不能開始。",
+      stats: [["Status", status.trainingLabel], ["Blockers", status.blockers.length]],
       progress: status.trainReady ? 100 : 25,
-      primary: button("Open Training", "training", "primary")
+      actions: [button("Configure", "training", "primary"), disabledButton("Start Training")]
     },
     {
-      key: "evaluation",
       icon: "fa-chart-line",
       title: "Evaluation",
       badge: status.bestModelExists ? "Available" : "No model",
       badgeClass: status.bestModelExists ? "success" : "warning",
-      progressText: status.bestModelExists ? "Model metrics available" : "Train a model first",
+      desc: "查看 mAP、IoU、failure cases 與模型品質。",
+      stats: [["mAP", "--"], ["IoU", "--"]],
       progress: status.bestModelExists ? 100 : 0,
-      primary: button("View Results", "evaluation", "primary")
+      actions: [button("View Evaluation", "evaluation", "primary")]
     },
     {
-      key: "inference",
-      icon: "fa-vial-circle-check",
-      title: "Inference Lab",
-      badge: (appState.models || []).length > 0 ? "Ready" : "No weights",
-      badgeClass: (appState.models || []).length > 0 ? "success" : "warning",
-      progressText: `${(appState.models || []).length} available weights`,
-      progress: (appState.models || []).length > 0 ? 100 : 0,
-      primary: button("Test Model", "inference", "primary")
-    },
-    {
-      key: "export",
       icon: "fa-file-export",
       title: "Export",
-      badge: status.bestModelExists ? "Ready" : "No model",
+      badge: status.bestModelExists ? "Exportable" : "No model",
       badgeClass: status.bestModelExists ? "success" : "warning",
-      progressText: status.bestModelExists ? "Export package available" : "No trained model",
+      desc: "匯出 PT、ONNX、報告，TensorRT 後續擴充。",
+      stats: [["ONNX", "Supported"], ["TensorRT", "Pending"]],
       progress: status.bestModelExists ? 100 : 0,
-      primary: button("Open Export", "export", "primary")
+      actions: [button("Open Export", "export", "primary")]
     }
   ];
 
@@ -178,16 +133,18 @@ function renderControlCards(status) {
 }
 
 function renderControlCard(card) {
-  const active = appState.dashboardFocus === card.key ? " active" : "";
   return `
-    <article class="control-card${active}" data-dashboard-card="${escapeHtml(card.key)}" tabindex="0">
+    <article class="control-card">
       <div class="card-heading"><i class="fa-solid ${card.icon}"></i><h3>${escapeHtml(card.title)}</h3></div>
       <span class="badge badge-${card.badgeClass}">${escapeHtml(card.badge)}</span>
-      <div class="workflow-progress-label">${escapeHtml(card.progressText)}</div>
-      <div class="progress-block">
-        <div class="progress-track"><div class="progress-fill" style="width:${Number(card.progress) || 0}%"></div></div>
+      <p>${escapeHtml(card.desc)}</p>
+      <div>
+        ${card.stats.map((item) => `<div class="card-stat"><span>${escapeHtml(item[0])}</span><strong>${escapeHtml(item[1])}</strong></div>`).join("")}
+        <div class="progress-block" style="margin-top:10px">
+          <div class="progress-track"><div class="progress-fill" style="width:${Number(card.progress) || 0}%"></div></div>
+        </div>
       </div>
-      <div class="card-actions">${card.primary}</div>
+      <div class="card-actions">${card.actions.join("")}</div>
     </article>
   `;
 }
@@ -196,106 +153,34 @@ function button(label, page, type) {
   return `<button class="btn btn-${type}" data-nav="${page}">${escapeHtml(label)}</button>`;
 }
 
-function renderActivity(status) {
-  const events = buildMeaningfulEvents(status);
-  if (events.length === 0) {
-    setHTML("#recent-activity-list", `
-      <div class="empty-activity">
-        <strong>No activity yet.</strong>
-        <span>Import images or open a project to begin.</span>
-      </div>
-    `);
-    return;
-  }
+function disabledButton(label) {
+  return `<button class="btn btn-disabled" disabled>${escapeHtml(label)}</button>`;
+}
 
-  setHTML("#recent-activity-list", events.slice(0, 5).map((item) => `
-    <div class="activity-item">
-      <strong>${escapeHtml(item.title)}</strong>
-      <span>${escapeHtml(item.detail)}</span>
+function statusGuard(type, title, items, nextAction, tooltip = "") {
+  const tooltipIcon = tooltip ? ` <span class="info-icon" data-tooltip="${escapeHtml(tooltip)}">i</span>` : "";
+  return `
+    <div class="status-guard ${type}">
+      <div class="guard-title">${escapeHtml(title)}${tooltipIcon}</div>
+      <ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      <div class="guard-next-actions">${escapeHtml(nextAction)}</div>
     </div>
-  `).join(""));
+  `;
 }
 
-function buildMeaningfulEvents(status) {
-  const project = appState.currentProject;
-  if (!project) return [];
-  const events = [];
-
-  const imports = project.imports_history || project.import_history || [];
-  if (imports.length > 0) {
-    const latest = imports[imports.length - 1];
-    const count = latest.uploaded_count ?? latest.imported_count ?? latest.count ?? 0;
-    events.push({
-      title: `Imported ${count} files`,
-      detail: formatDate(latest.timestamp || latest.created_at) || "Latest dataset import"
-    });
-  } else if (status.hasDataset) {
-    events.push({
-      title: `Dataset contains ${status.imageCount} images`,
-      detail: "Ready for annotation review"
-    });
-  }
-
-  if (status.labelme.jsonCount > 0) {
-    events.push({
-      title: `Synced ${status.labelme.jsonCount} LabelMe JSON files`,
-      detail: `${status.labelme.completionRate || 0}% annotation coverage`
-    });
-  }
-
-  if (status.splitComplete) {
-    events.push({
-      title: "Created Train / Val / Test split",
-      detail: `Train ${status.splitCounts.train}, Val ${status.splitCounts.val}, Test ${status.splitCounts.test}`
-    });
-  }
-
-  const runs = project.training_runs || [];
-  if (runs.length > 0) {
-    const latestRun = runs[runs.length - 1];
-    events.push({
-      title: `Training ${latestRun.status || "run"}: ${latestRun.run_id || "latest run"}`,
-      detail: latestRun.best_map50_95_m ? `Best mAP50-95 ${Number(latestRun.best_map50_95_m).toFixed(3)}` : "Training record available"
-    });
-  }
-
-  if (status.bestModelExists) {
-    events.push({
-      title: "Model weights available",
-      detail: "Evaluation, inference, and export can use the trained model"
-    });
-  }
-
-  return events;
+function renderRecentProjects(projects) {
+  const subset = (projects || []).slice(0, 5);
+  // 我們透過 eventBus 去觸發頁面渲染專案列表的共用行為，或者在此引入 renderProjectList 渲染
+  // 為了減少重複與耦合，我們直接調用 eventBus 廣播渲染，或是用全域方法
+  eventBus.emit("render-recent-projects-list", subset);
 }
 
-function productTrainingLabel(status) {
-  if (status.trainingRunning) return "Running";
-  if (status.bestModelExists) return "Completed";
-  if (status.trainReady) return "Ready";
-  return "Not ready";
-}
-
-function getProjectHealthScore(status) {
-  let score = 0;
-  if (status.hasProject) score += 10;
-  if (status.hasDataset) score += 20;
-  if (status.annotationRate >= 95) score += 25;
-  else if (status.annotationRate > 0) score += Math.round(status.annotationRate * 0.2);
-  if (status.splitComplete) score += 20;
-  if (status.bestModelExists) score += 15;
-  if (appState.currentProject?.current?.export_id) score += 10;
-  return Math.min(100, score);
-}
-
-function formatDate(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value).replace("T", " ").slice(0, 16);
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mi = String(date.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+function renderActivity(status) {
+  const items = [
+    `Frontend phase: Dashboard Control Center`,
+    `LabelMe: Backend Connected`,
+    `Current page: ${appState.currentPage}`,
+    `Training status: ${status.trainingLabel}`
+  ];
+  setHTML("#recent-activity-list", items.map((item) => `<div class="activity-item">${escapeHtml(item)}</div>`).join(""));
 }

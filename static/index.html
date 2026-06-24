@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
@@ -24,7 +24,7 @@
       </div>
       <div class="header-project">
         <span class="status-dot" id="api-status-dot"></span>
-        <span id="current-project-title">撠頛撠?</span>
+        <span id="current-project-title">尚未載入專案</span>
         <button class="btn btn-secondary btn-sm" id="btn-theme-toggle" type="button" aria-label="Toggle background brightness">
           <i class="fa-solid fa-sun"></i>
           <span data-i18n="themeToggle">Light</span>
@@ -47,8 +47,8 @@
           <button class="sidebar-item" data-page="augmentation"><i class="fa-solid fa-wand-magic-sparkles"></i><span data-i18n="navAugmentation">Augmentation</span></button>
           <button class="sidebar-item" data-page="training"><i class="fa-solid fa-microchip"></i><span data-i18n="navTraining">Training</span></button>
           <button class="sidebar-item" data-page="evaluation"><i class="fa-solid fa-chart-line"></i><span data-i18n="navEvaluation">Evaluation</span></button>
-          <button class="sidebar-item" data-page="inference"><i class="fa-solid fa-magnifying-glass-chart"></i><span data-i18n="navInference">璅∪?皜祈岫</span></button>
-          <button class="sidebar-item" data-page="auto-labeling"><i class="fa-solid fa-wand-sparkles"></i><span data-i18n="navAutoLabeling">?芸?璅酉</span></button>
+          <button class="sidebar-item" data-page="inference"><i class="fa-solid fa-magnifying-glass-chart"></i><span data-i18n="navInference">模型測試</span></button>
+          <button class="sidebar-item" data-page="auto-labeling"><i class="fa-solid fa-wand-sparkles"></i><span data-i18n="navAutoLabeling">自動標註</span></button>
           <button class="sidebar-item" data-page="export"><i class="fa-solid fa-file-export"></i><span data-i18n="navExport">Export</span></button>
           <button class="sidebar-item" data-page="history"><i class="fa-solid fa-clock"></i><span data-i18n="navHistory">History</span></button>
           <button class="sidebar-item" data-page="settings"><i class="fa-solid fa-gear"></i><span data-i18n="navSettings">Settings</span></button>
@@ -60,7 +60,7 @@
           <div class="page-header">
             <div>
               <h1>Dashboard Control Center</h1>
-              <p>Control the active project workflow, review readiness, and jump to the next operation.</p>
+              <p>自由進入各功能頁；系統只在危險操作前做條件檢查。</p>
             </div>
             <div class="page-actions">
               <button class="btn btn-primary" data-nav="projects"><i class="fa-solid fa-plus"></i> New Project</button>
@@ -69,14 +69,19 @@
           </div>
 
           <div id="dashboard-alerts" class="guard-stack"></div>
-          <div id="project-command-bar"></div>
           <div class="kpi-grid" id="dashboard-kpis"></div>
           <div class="control-card-grid" id="control-cards"></div>
           <div class="dashboard-lower-grid">
-            <section class="panel-section dashboard-events-panel">
+            <section class="panel-section">
               <div class="section-title">
-                <h2>Recent Meaningful Events</h2>
+                <h2>Recent Projects</h2>
                 <button class="btn btn-secondary btn-sm" data-nav="history">Browse History</button>
+              </div>
+              <div id="recent-projects-list" class="list-stack"></div>
+            </section>
+            <section class="panel-section">
+              <div class="section-title">
+                <h2>Recent Activity</h2>
               </div>
               <div id="recent-activity-list" class="activity-list"></div>
             </section>
@@ -87,7 +92,7 @@
           <div class="page-header">
             <div>
               <h1>Projects</h1>
-              <p>撱箇????亥?蝞∠?閮毀撠???/p>
+              <p>建立、載入與管理訓練專案。</p>
             </div>
           </div>
           <div class="two-column-layout">
@@ -95,11 +100,11 @@
               <div class="section-title"><h2>New Project</h2></div>
               <form id="form-create-project" class="form-stack">
                 <label>
-                  <span>撠??迂</span>
+                  <span>專案名稱</span>
                   <input type="text" id="new-project-name" required placeholder="my_vision_project">
                 </label>
                 <label>
-                  <span>隞餃?憿?</span>
+                  <span>任務類型</span>
                   <select id="new-project-type">
                     <option value="object_detection">Object Detection</option>
                     <option value="image_classification">Image Classification</option>
@@ -107,9 +112,9 @@
                   </select>
                 </label>
                 <label>
-                  <span>憿皜</span>
+                  <span>類別清單</span>
                   <div class="class-entry-row">
-                    <input type="text" id="new-project-class-input" placeholder="頛詨憿?迂嚗?憒?class_a">
+                    <input type="text" id="new-project-class-input" placeholder="輸入類別名稱，例如 class_a">
                     <button type="button" class="btn btn-secondary" id="btn-add-project-class">
                       <i class="fa-solid fa-plus"></i>
                       Add
@@ -117,7 +122,7 @@
                   </div>
                 </label>
                 <div class="class-list-box" id="new-project-class-list">
-                  <div class="empty-class-list">撠?啣?憿</div>
+                  <div class="empty-class-list">尚未新增類別</div>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-folder-plus"></i> Create Project</button>
               </form>
@@ -136,22 +141,22 @@
           <div class="page-header">
             <div>
               <h1>Dataset Manager</h1>
-              <p>?臬???蔣?撟?炎?亥???鞈芥??Ｗ?脣嚗?雿?靘?????/p>
+              <p>匯入圖片、影片抽幀、檢查資料品質。頁面可進入，操作會依狀態開關。</p>
             </div>
           </div>
           <div class="dataset-manager-layout">
             <section class="panel-section dataset-import-card" style="grid-row: span 2;">
-              <div class="section-title"><h2>Dataset Import Center (鞈??臬銝剖?)</h2></div>
-              <p class="section-help">?舀???祆?鞈?憭曇楝敺??亙?????交??喃???ZIP 瑼??脰??芸?閫?????乓?/p>
+              <div class="section-title"><h2>Dataset Import Center (資料匯入中心)</h2></div>
+              <p class="section-help">支援掃描本機資料夾路徑導入圖片，或直接拖曳上傳 ZIP 檔案進行自動解壓與導入。</p>
 
               <div class="form-stack" style="gap: 16px; margin-top: 12px;">
                 <!-- Path Input Source -->
                 <div style="display: grid; gap: 8px;">
-                  <label for="input-local-folder" style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);">?祆???鞈?憭曇楝敺?(Scan Local Folder)</label>
+                  <label for="input-local-folder" style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);">本機圖片資料夾路徑 (Scan Local Folder)</label>
                   <div class="class-entry-row">
-                    <input type="text" id="input-local-folder" placeholder="靘? D:\datasets\images" style="flex: 1;">
+                    <input type="text" id="input-local-folder" placeholder="例如 D:\datasets\images" style="flex: 1;">
                     <button class="btn btn-primary guarded" data-requires="project" id="btn-import-local" style="min-width: 100px;">
-                      <i class="fa-solid fa-folder-open"></i> ??撠
+                      <i class="fa-solid fa-folder-open"></i> 掃描導入
                     </button>
                   </div>
                 </div>
@@ -163,7 +168,7 @@
                   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <span style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);">Upload ZIP or Folder</span>
                     <div style="display: flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--text-muted);">
-                      <span>?脣?頝臬?: <code id="dataset-zip-storage-path" style="background: var(--bg-panel-soft); padding: 2px 6px; border-radius: 4px; font-family: monospace; word-break: break-all; white-space: normal;">撠頛</code></span>
+                      <span>儲存路徑: <code id="dataset-zip-storage-path" style="background: var(--bg-panel-soft); padding: 2px 6px; border-radius: 4px; font-family: monospace; word-break: break-all; white-space: normal;">尚未載入</code></span>
                       <button class="icon-btn guarded" data-requires="project" id="btn-copy-zip-path" title="Copy" style="width: 22px; height: 22px; font-size: 0.7rem; display: inline-grid; place-items: center;"><i class="fa-regular fa-copy"></i></button>
                     </div>
                   </div>
@@ -180,13 +185,13 @@
             </section>
 
             <section class="panel-section dataset-import-card">
-              <div class="section-title"><h2>Extract Video Frames (敶梁??賢?銝剖?)</h2></div>
-              <p class="section-help">?舀???祆?敶梁?頝臬??賢?嚗??湔?敶梁?嚗P4?VI 蝑??芸?銝銝行??蔣?潦?/p>
+              <div class="section-title"><h2>Extract Video Frames (影片抽幀中心)</h2></div>
+              <p class="section-help">支援掃描本機影片路徑抽幀，或直接拖曳影片（MP4、AVI 等）自動上傳並提取影格。</p>
 
               <div class="form-stack" style="gap: 12px; margin-top: 12px;">
                 <!-- Common FPS Settings -->
                 <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.84rem; color: var(--text-soft); gap: 12px;">
-                  <span>?賢??餌? (FPS / 瘥?撟曉?)</span>
+                  <span>抽幀頻率 (FPS / 每秒幾幀)</span>
                   <input type="number" id="input-video-fps" value="1" min="1" max="10" style="width: 80px; min-height: 32px; text-align: center;">
                 </div>
 
@@ -194,11 +199,11 @@
 
                 <!-- Local Path Input Source -->
                 <div style="display: grid; gap: 6px;">
-                  <label for="input-video-path" style="font-weight: 600; font-size: 0.82rem; color: var(--text-soft);">?祆?敶梁?頝臬? (Scan Local Video)</label>
+                  <label for="input-video-path" style="font-weight: 600; font-size: 0.82rem; color: var(--text-soft);">本機影片路徑 (Scan Local Video)</label>
                   <div class="class-entry-row">
-                    <input type="text" id="input-video-path" placeholder="靘? D:\videos\route_1.mp4" style="flex: 1;">
+                    <input type="text" id="input-video-path" placeholder="例如 D:\videos\route_1.mp4" style="flex: 1;">
                     <button class="btn btn-primary guarded" data-requires="project" id="btn-import-video" style="min-width: 90px; min-height: 38px;">
-                      <i class="fa-solid fa-video"></i> ?賢?
+                      <i class="fa-solid fa-video"></i> 抽幀
                     </button>
                   </div>
                 </div>
@@ -207,12 +212,12 @@
 
                 <!-- Video Upload Dropzone Source -->
                 <div style="display: grid; gap: 6px;">
-                  <span style="font-weight: 600; font-size: 0.82rem; color: var(--text-soft);">銝敶梁?瑼? (Upload Video File)</span>
+                  <span style="font-weight: 600; font-size: 0.82rem; color: var(--text-soft);">上傳影片檔案 (Upload Video File)</span>
                   <div class="zip-drop-zone" id="video-drop-zone" style="cursor: pointer; min-height: 96px; padding: 14px;">
                     <i class="fa-solid fa-file-video" style="font-size: 1.2rem; width: 38px; height: 38px; background: rgba(59, 130, 246, 0.16); color: var(--primary);"></i>
                     <div>
-                      <strong>Video upload area (????詨蔣??</strong>
-                      <p style="font-size: 0.78rem;">?舀? MP4, AVI, MKV 蝑撘???單撟??/p>
+                      <strong>Video upload area (拖曳或點選影片)</strong>
+                      <p style="font-size: 0.78rem;">支援拖入 MP4, AVI, MKV 等格式自動上傳抽幀。</p>
                     </div>
                   </div>
                   <input type="file" id="input-video-file" accept="video/*" style="display: none;">
@@ -222,15 +227,15 @@
 
             <section class="panel-section dataset-classes-card">
               <div class="section-title"><h2>Class Name Management</h2></div>
-              <p class="section-help">蝞∠?甇方????璅??乓耨?寥??亙?撠?甇交?唳?閮餉?閮毀閮剖???/p>
+              <p class="section-help">管理此資料集的目標類別。修改類別後將同步更新標註與訓練設定。</p>
               <div class="form-stack">
                 <div class="class-entry-row">
-                  <input type="text" id="input-dataset-new-class" placeholder="?圈??亙?蝔梧?憒?car">
-                  <button class="btn btn-secondary" id="btn-dataset-add-class" style="min-width: 68px;"><i class="fa-solid fa-plus"></i> ?啣?</button>
+                  <input type="text" id="input-dataset-new-class" placeholder="新類別名稱，如 car">
+                  <button class="btn btn-secondary" id="btn-dataset-add-class" style="min-width: 68px;"><i class="fa-solid fa-plus"></i> 新增</button>
                 </div>
                 <div class="class-list-box" id="dataset-classes-list-box" style="margin-top: 8px;"></div>
                 <button class="btn btn-primary btn-block guarded" data-requires="project" id="btn-save-dataset-classes" style="margin-top: 8px;">
-                  <i class="fa-solid fa-floppy-disk"></i> ?脣?憿霈
+                  <i class="fa-solid fa-floppy-disk"></i> 儲存類別變更
                 </button>
               </div>
             </section>
@@ -239,7 +244,7 @@
               <div class="section-title dataset-browser-header">
                 <div>
                   <h2>Image Browser</h2>
-                  <p class="section-help">?汗撌脣?亙???靘?閮餌??祟?詻?/p>
+                  <p class="section-help">瀏覽已匯入圖片，依標註狀態篩選。</p>
                 </div>
                 <div class="dataset-browser-tools">
                   <input type="text" id="search-image" placeholder="Search image">
@@ -268,11 +273,11 @@
               <h1 style="display: flex; align-items: center; gap: 8px;">
                 LabelMe Annotation Manager
                 <span class="info-icon" style="cursor: pointer;"
-                   data-tooltip="How to use LabelMe in this platform:;? Dataset ?臬??嚗????曉銝??Images folder???冽璈???LabelMe嚗??Open Dir嚗???Images folder????LabelMe ?批???polygon / rectangle 璅酉嚗蒂??JSON 摮 LabelMe JSON folder????砍像?唳? Sync JSON??蝟餌絞?圾??JSON?＊蝷粹隤斗??柴?閬賣?閮鳴?銝西???YOLO / COCO / Mask ?澆???>
+                   data-tooltip="How to use LabelMe in this platform:;先到 Dataset 匯入圖片，圖片會放在下方的 Images folder。;在本機開啟 LabelMe，選擇 Open Dir，指向 Images folder。;在 LabelMe 內完成 polygon / rectangle 標註，並把 JSON 存到 LabelMe JSON folder。;回到本平台按 Sync JSON。;系統會解析 JSON、顯示錯誤清單、預覽標註，並轉成 YOLO / COCO / Mask 格式。">
                   <i class="fa-solid fa-circle-question" style="color: var(--primary); font-size: 1.15rem;"></i>
                 </span>
               </h1>
-              <p>蝚砌??挾?芸遣蝡?LabelMe 撌乩?瘚恣???ｇ?JSON ?郊???惇??Phase 2 backend??/p>
+              <p>第一階段只建立 LabelMe 工作流管理介面；JSON 同步與轉換屬於 Phase 2 backend。</p>
             </div>
             <span class="badge badge-success">Backend Connected</span>
           </div>
@@ -285,7 +290,7 @@
                 <i class="fa-solid fa-file-signature" style="background: rgba(16, 185, 129, 0.16); color: var(--success);"></i>
                 <div>
                   <strong>Drop JSON or TXT files</strong>
-                  <p>?冽迨? LabelMe JSON 瑼? YOLO TXT 璅酉瑼?/p>
+                  <p>在此拖入 LabelMe JSON 檔或 YOLO TXT 標註檔。</p>
                 </div>
               </div>
               <input type="file" id="input-annotations-file" accept=".json,.txt" multiple style="display: none;">
@@ -293,22 +298,22 @@
 
             <section class="panel-section">
               <div class="section-title">
-                <h2>Workspace Paths <span class="info-icon" data-tooltip="LabelMe ?臬??冽?閮餃極?瘀??瘥撐???Ｙ? JSON?撟喳?桀??恣?楝敺脣漲??蝥?????>i</span></h2>
+                <h2>Workspace Paths <span class="info-icon" data-tooltip="LabelMe 是外部標註工具，會替每張圖片產生 JSON。本平台目前先管理路徑、進度與後續轉換入口。">i</span></h2>
               </div>
               <div class="path-list">
                 <div class="path-row">
                   <span>Images folder</span>
-                  <code id="labelme-images-path">撠頛撠?</code>
+                  <code id="labelme-images-path">尚未載入專案</code>
                   <button class="icon-btn guarded" data-requires="project" id="btn-copy-images-path" title="Copy"><i class="fa-regular fa-copy"></i></button>
                 </div>
                 <div class="path-row">
                   <span>LabelMe JSON folder</span>
-                  <code id="labelme-json-path">撠頛撠?</code>
+                  <code id="labelme-json-path">尚未載入專案</code>
                   <button class="icon-btn guarded" data-requires="project" id="btn-copy-json-path" title="Copy"><i class="fa-regular fa-copy"></i></button>
                 </div>
                 <div class="path-row">
                   <span>Annotation output</span>
-                  <code id="labelme-output-path">撠頛撠?</code>
+                  <code id="labelme-output-path">尚未載入專案</code>
                 </div>
                 <div class="path-row">
                   <span>Project classes</span>
@@ -316,7 +321,7 @@
                 </div>
                 <div class="path-row">
                   <span>LabelMe command</span>
-                  <code id="labelme-command">撠頛撠?</code>
+                  <code id="labelme-command">尚未載入專案</code>
                   <button class="icon-btn guarded" data-requires="project" id="btn-copy-labelme-command" title="Copy"><i class="fa-regular fa-copy"></i></button>
                 </div>
               </div>
@@ -325,7 +330,7 @@
                 <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-labelme"><i class="fa-solid fa-rotate"></i> Refresh Status</button>
                 <button class="btn btn-secondary guarded" data-requires="project" id="btn-sync-labelme"><i class="fa-solid fa-arrows-rotate"></i> Sync JSON</button>
               </div>
-              <p class="phase-note">暺 Sync JSON ?喳??撠?銝剖歇摰???LabelMe 璅酉瑼?銝血?甇仿脣漲??/p>
+              <p class="phase-note">點選 Sync JSON 即可掃描專案中已完成的 LabelMe 標註檔案並同步進度。</p>
             </section>
 
             <section class="panel-section">
@@ -342,10 +347,10 @@
 
             <section class="panel-section wide">
               <div class="section-title">
-                <h2>JSON Check Results <span class="info-icon" data-tooltip="JSON 瑼Ｘ??霅?imagePath?hape_type?abel?olygon 暺?漣璅???>i</span></h2>
+                <h2>JSON Check Results <span class="info-icon" data-tooltip="JSON 檢查會驗證 imagePath、shape_type、label、polygon 點數與座標範圍。">i</span></h2>
                 <div class="section-actions" style="display: flex; gap: 12px; align-items: center;">
                   <label class="checkbox-row" style="margin: 0; font-size: 0.84rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                    <input type="checkbox" id="chk-show-issues-only" checked style="width: 15px; height: 15px; accent-color: var(--primary);"> ?＊蝷箇撣賊???
+                    <input type="checkbox" id="chk-show-issues-only" checked style="width: 15px; height: 15px; accent-color: var(--primary);"> 僅顯示異常項目
                   </label>
                 </div>
               </div>
@@ -382,12 +387,12 @@
                 <h2>Conversion Actions</h2>
               </div>
               <div class="conversion-list">
-                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-det">Convert to YOLO Detection <span class="info-icon" data-tooltip="YOLO Detection ?拙? rectangle / bbox嚗??隞嗉撓?粹??亥?獢漣璅?>i</span></button>
-                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-seg">Convert to YOLO Segmentation <span class="info-icon" data-tooltip="YOLO Segmentation ?拙? polygon嚗?靽??拐辣頛芸?暺?>i</span></button>
-                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-coco">Convert to COCO <span class="info-icon" data-tooltip="COCO ?舫鞈??撘??舀?餈?detection ??segmentation??>i</span></button>
-                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-mask">Convert to Semantic Mask <span class="info-icon" data-tooltip="Semantic Mask ?閬?class map嚗?????蝝?????ID??>i</span></button>
+                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-det">Convert to YOLO Detection <span class="info-icon" data-tooltip="YOLO Detection 適合 rectangle / bbox，每個物件輸出類別與框座標。">i</span></button>
+                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-seg">Convert to YOLO Segmentation <span class="info-icon" data-tooltip="YOLO Segmentation 適合 polygon，會保留物件輪廓點。">i</span></button>
+                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-coco">Convert to COCO <span class="info-icon" data-tooltip="COCO 是通用資料集格式，可描述 detection 與 segmentation。">i</span></button>
+                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-mask">Convert to Semantic Mask <span class="info-icon" data-tooltip="Semantic Mask 需要 class map，會把每個像素轉成類別 ID。">i</span></button>
               </div>
-              <p class="phase-note">撠?甇亙???LabelMe JSON 瑼???格??澆?隞乩?閮毀??箝?/p>
+              <p class="phase-note">將同步後的 LabelMe JSON 檔轉換為目標格式以供訓練或匯出。</p>
             </section>
 
             <section class="panel-section wide legacy-panel">
@@ -395,7 +400,7 @@
                 <h2>Legacy Annotation Preview</h2>
                 <span class="badge badge-muted">Deprecated path</span>
               </div>
-              <p>?? Canvas bbox 璅酉?典歇敺蜓瘚?????挾銝???雿銝餉?璅酉?亙嚗?蝥 LabelMe JSON 撌乩?瘚?隞??/p>
+              <p>舊版 Canvas bbox 標註器已從主流程降級。本階段不再把它作為主要標註入口，後續由 LabelMe JSON 工作流取代。</p>
             </section>
           </div>
         </section>
@@ -404,14 +409,14 @@
           <div class="page-header">
             <div>
               <h1>Split Manager</h1>
-              <p>閮剖? Train / Val / Test??脣?嚗??瑁? split ??瑼Ｘ鞈???閮餌???/p>
+              <p>設定 Train / Val / Test。可進入頁面，但執行 split 前會檢查資料與標註狀態。</p>
             </div>
           </div>
           <section class="panel-section narrow-form">
             <div class="section-title"><h2>Train / Val / Test</h2></div>
             <form id="form-split-dataset" class="form-stack">
               <label>
-                <span>Split method <span class="info-icon" data-tooltip="Stratified Split ?⊿?蝬剜????亙 Train / Val / Test 銝剔?瘥??roup Split 靘蔣??靘???嚗?雿?dataset leakage??>i</span></span>
+                <span>Split method <span class="info-icon" data-tooltip="Stratified Split 盡量維持各類別在 Train / Val / Test 中的比例。Group Split 依影片或來源分組，降低 dataset leakage。">i</span></span>
                 <select id="split-method">
                   <option value="stratified">Class-balanced Stratified Split</option>
                   <option value="group">Group Split</option>
@@ -435,37 +440,37 @@
           <div class="page-header">
             <div>
               <h1>Physical Augmentation</h1>
-              <p>??予瘞???芋蝟??豢????????API嚗洵銝?挾?芣??雿???/p>
+              <p>光照、天氣、運動模糊與相機雜訊。保留現有 API，第一階段只整理操作入口。</p>
             </div>
           </div>
           <div class="augmentation-workspace">
             <section class="panel-section augmentation-settings-panel">
               <div class="section-title">
-                <h2>Augmentation Settings <span class="info-icon" data-tooltip="Physical Augmentation 璅⊥?祕銝???予瘞?????⊿璇辣霈???>i</span></h2>
+                <h2>Augmentation Settings <span class="info-icon" data-tooltip="Physical Augmentation 模擬真實世界光照、天氣、運動與鏡頭條件變化。">i</span></h2>
               </div>
               <div class="augmentation-settings-layout">
                 <div class="augmentation-block">
                   <h3>Recommended Presets</h3>
                   <div class="preset-list" aria-label="Recommended augmentation presets">
                     <button type="button" class="preset-item active" data-aug-preset="clear_day">
-                      <strong>Clear Day Baseline <span class="info-icon" data-tooltip="Brightness +0.10嚗ontrast +0.10嚗o rain / fog / blur??>i</span></strong>
-                      <span>?刻嚗嗾瘛冽?扼???瘥???/span>
+                      <strong>Clear Day Baseline <span class="info-icon" data-tooltip="Brightness +0.10；Contrast +0.10；No rain / fog / blur。">i</span></strong>
+                      <span>推薦：乾淨日照、少量對比變化。</span>
                     </button>
                     <button type="button" class="preset-item" data-aug-preset="low_light">
-                      <strong>Low Light Scene <span class="info-icon" data-tooltip="Brightness -0.25嚗hadow enabled嚗amera noise +0.05??>i</span></strong>
-                      <span>?刻嚗??敶晞??批漲?湔??/span>
+                      <strong>Low Light Scene <span class="info-icon" data-tooltip="Brightness -0.25；Shadow enabled；Camera noise +0.05。">i</span></strong>
+                      <span>推薦：夜間、陰影、低照度場景。</span>
                     </button>
                     <button type="button" class="preset-item" data-aug-preset="rainy">
-                      <strong>Rainy Surface <span class="info-icon" data-tooltip="Rain +0.40嚗rightness -0.10嚗otion blur +0.10??>i</span></strong>
-                      <span>?刻嚗??圈?憭抵?雿?瘥?胯?/span>
+                      <strong>Rainy Surface <span class="info-icon" data-tooltip="Rain +0.40；Brightness -0.10；Motion blur +0.10。">i</span></strong>
+                      <span>推薦：濕地面、雨天與低對比場景。</span>
                     </button>
                     <button type="button" class="preset-item" data-aug-preset="foggy">
-                      <strong>Fog / Haze <span class="info-icon" data-tooltip="Fog +0.40嚗ontrast -0.15嚗rightness +0.05??>i</span></strong>
-                      <span>?刻嚗瘞??頝?蝺?撌柴?/span>
+                      <strong>Fog / Haze <span class="info-icon" data-tooltip="Fog +0.40；Contrast -0.15；Brightness +0.05。">i</span></strong>
+                      <span>推薦：霧氣、遠距視線變差。</span>
                     </button>
                     <button type="button" class="preset-item" data-aug-preset="motion_camera">
-                      <strong>Motion Camera <span class="info-icon" data-tooltip="Motion blur +0.35嚗amera noise +0.08嚗erspective +0.06??>i</span></strong>
-                      <span>?刻嚗?頠???剜???????/span>
+                      <strong>Motion Camera <span class="info-icon" data-tooltip="Motion blur +0.35；Camera noise +0.08；Perspective +0.06。">i</span></strong>
+                      <span>推薦：行車震動、鏡頭晃動與雜訊。</span>
                     </button>
                   </div>
                 </div>
@@ -475,7 +480,7 @@
                     <!-- Brightness Slider -->
                     <div class="custom-setting-item slider-item">
                       <div class="slider-header">
-                        <span><strong>Brightness (鈭桀漲)</strong><small>隤踵敶勗??湧?鈭桀漲 (-0.50 ??0.50)</small></span>
+                        <span><strong>Brightness (亮度)</strong><small>調整影像整體亮度 (-0.50 到 0.50)</small></span>
                         <span class="slider-value" id="val-brightness">0.00</span>
                       </div>
                       <input type="range" id="aug-light-brightness" min="-0.5" max="0.5" step="0.05" value="0">
@@ -484,7 +489,7 @@
                     <!-- Contrast Slider -->
                     <div class="custom-setting-item slider-item">
                       <div class="slider-header">
-                        <span><strong>Contrast (撠?)</strong><small>隤踵敶勗?撠? (-0.50 ??0.50)</small></span>
+                        <span><strong>Contrast (對比)</strong><small>調整影像對比 (-0.50 到 0.50)</small></span>
                         <span class="slider-value" id="val-contrast">0.00</span>
                       </div>
                       <input type="range" id="aug-light-contrast" min="-0.5" max="0.5" step="0.05" value="0">
@@ -492,7 +497,7 @@
 
                     <!-- Shadow Switch Toggle -->
                     <div class="custom-setting-item switch-container">
-                      <span><strong>Shadow (撅?券敶?</strong><small>?冽????????啣蔣??</small></span>
+                      <span><strong>Shadow (局部陰影)</strong><small>隨機疊加半透明斑駁陰影效果</small></span>
                       <label class="switch">
                         <input type="checkbox" id="aug-light-shadow">
                         <span class="switch-slider"></span>
@@ -502,7 +507,7 @@
                     <!-- Rain Slider -->
                     <div class="custom-setting-item slider-item">
                       <div class="slider-header">
-                        <span><strong>Rain (?典予)</strong><small>璅⊥???賜??冽輕?芋蝟?(0.00 ??1.00)</small></span>
+                        <span><strong>Rain (雨天)</strong><small>模擬斜向白線雨滴與模糊 (0.00 到 1.00)</small></span>
                         <span class="slider-value" id="val-rain">0.00</span>
                       </div>
                       <input type="range" id="aug-weather-rain" min="0.0" max="1.0" step="0.05" value="0">
@@ -511,7 +516,7 @@
                     <!-- Fog Slider -->
                     <div class="custom-setting-item slider-item">
                       <div class="slider-header">
-                        <span><strong>Fog (?扳除)</strong><small>璅⊥?質銝??餅??瘞?(0.00 ??1.00)</small></span>
+                        <span><strong>Fog (霧氣)</strong><small>模擬白色不均勻擴散霧氣 (0.00 到 1.00)</small></span>
                         <span class="slider-value" id="val-fog">0.00</span>
                       </div>
                       <input type="range" id="aug-weather-fog" min="0.0" max="1.0" step="0.05" value="0">
@@ -520,7 +525,7 @@
                     <!-- Motion Blur Slider -->
                     <div class="custom-setting-item slider-item">
                       <div class="slider-header">
-                        <span><strong>Motion blur (??璅∠?)</strong><small>璅⊥?豢?蝘餃??Ｙ??芋蝟?(0.00 ??1.00)</small></span>
+                        <span><strong>Motion blur (運動模糊)</strong><small>模擬相機移動產生的模糊 (0.00 到 1.00)</small></span>
                         <span class="slider-value" id="val-motion-blur">0.00</span>
                       </div>
                       <input type="range" id="aug-motion-blur" min="0.0" max="1.0" step="0.05" value="0">
@@ -529,7 +534,7 @@
                     <!-- Camera Noise Slider -->
                     <div class="custom-setting-item slider-item">
                       <div class="slider-header">
-                        <span><strong>Camera noise (?豢???)</strong><small>?擃?豢??芾 (0.00 ??1.00)</small></span>
+                        <span><strong>Camera noise (相機雜訊)</strong><small>加入高斯相機噪聲 (0.00 到 1.00)</small></span>
                         <span class="slider-value" id="val-camera-noise">0.00</span>
                       </div>
                       <input type="range" id="aug-camera-noise" min="0.0" max="1.0" step="0.01" value="0">
@@ -538,7 +543,7 @@
                     <!-- Perspective Slider -->
                     <div class="custom-setting-item slider-item">
                       <div class="slider-header">
-                        <span><strong>Perspective (撟曆???)</strong><small>?冽?撱?????撓 (0.00 ??0.10)</small></span>
+                        <span><strong>Perspective (幾何透視)</strong><small>隨機廣角透視拉伸 (0.00 到 0.10)</small></span>
                         <span class="slider-value" id="val-camera-perspective">0.00</span>
                       </div>
                       <input type="range" id="aug-camera-perspective" min="0.0" max="0.1" step="0.01" value="0">
@@ -546,31 +551,31 @@
 
                     <!-- Multiplier -->
                     <div class="custom-setting-item custom-setting-count">
-                      <span><strong>Multiplier (???)</strong><small>瘥撐??敶勗??Ｙ????祆??/small></span>
+                      <span><strong>Multiplier (生成倍數)</strong><small>每張原始影像產生的擴充副本數量</small></span>
                       <input type="number" id="aug-multiplier" value="1" min="1" max="5" style="width: 80px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-panel-soft); text-align: center; color: var(--text);">
                     </div>
 
                     <!-- Estimated Output Count & Danger/Risk Prompt -->
                     <div class="aug-info-alert" id="aug-info-alert" style="margin-top: 12px; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; background: rgba(245, 158, 11, 0.05); display: flex; flex-direction: column; gap: 6px;">
                       <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                        <span>閮毀??游???:</span>
+                        <span>訓練集可擴充圖片:</span>
                         <strong id="aug-info-train-count">0</strong>
                       </div>
                       <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                        <span>??? (Multiplier):</span>
+                        <span>生成倍數 (Multiplier):</span>
                         <strong id="aug-info-multiplier">1x</strong>
                       </div>
                       <div style="display: flex; justify-content: space-between; font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 6px;">
-                        <span>???Ｙ??游?敶勗?:</span>
-                        <strong id="aug-info-total-count" style="color: var(--primary);">0 撘?/strong>
+                        <span>預計產生擴充影像:</span>
+                        <strong id="aug-info-total-count" style="color: var(--primary);">0 張</strong>
                       </div>
                       <div style="font-size: 0.78rem; color: var(--text-muted); border-top: 1px dashed var(--border); padding-top: 6px; line-height: 1.4;">
                         <i class="fa-solid fa-circle-info" style="color: var(--primary); margin-right: 4px;"></i>
-                        <span>???拍??游???憟?潸?蝺湧? (Train split)嚗?霅? (Val) ?葫閰阡? (Test) 撠?鋡急???(Excluded) 隞亦雁??隡啁?摰Ｚ??祕?扼?/span>
+                        <span>※ 物理擴充僅會套用於訓練集 (Train split)，驗證集 (Val) 與測試集 (Test) 將會被排除 (Excluded) 以維持評估的客觀真實性。</span>
                       </div>
                       <div id="aug-alert-warning" style="font-size: 0.8rem; color: #f59e0b; margin-top: 4px; display: flex; gap: 6px; align-items: flex-start;">
                         <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px;"></i>
-                        <span id="aug-alert-text">隢?暺?enerate Preview??閬賣??誑閰摯瞏憸券嚗??臬??冽??/span>
+                        <span id="aug-alert-text">請先點選「Generate Preview」預覽效果以評估潛在風險，才可套用擴充。</span>
                       </div>
                     </div>
 
@@ -580,29 +585,29 @@
               </div>
               <div class="augmentation-preview-under-settings">
                 <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 8px;">
-                  <h2>Preview (???汗)</h2>
+                  <h2>Preview (效果預覽)</h2>
                   <button type="button" class="btn btn-secondary" id="btn-preview-aug" style="display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-eye"></i> Generate Preview</button>
                 </div>
                 <label class="form-stack" style="margin-bottom: 12px;">
-                  <span>?豢??汗敶勗?</span>
+                  <span>選擇預覽影像</span>
                   <select id="aug-preview-select-img"></select>
                 </label>
                 
                 <div class="aug-preview-container">
                   <!-- Before Container -->
                   <div class="aug-preview-box">
-                    <h4>Original (??敶勗?)</h4>
+                    <h4>Original (原始影像)</h4>
                     <div class="aug-preview-content">
                       <canvas id="aug-before-canvas" style="display: none;"></canvas>
-                      <div class="preview-placeholder" id="aug-before-placeholder">?豢?撌脫?閮颱?撌?split ?蔣??/div>
+                      <div class="preview-placeholder" id="aug-before-placeholder">選擇已標註且已 split 的影像。</div>
                     </div>
                   </div>
                   <!-- After Container -->
                   <div class="aug-preview-box">
-                    <h4>Augmented (?游?敺蔣??</h4>
+                    <h4>Augmented (擴充後影像)</h4>
                     <div class="aug-preview-content">
                       <img id="aug-preview-img" alt="Augmentation preview" style="display: none;">
-                      <div class="preview-placeholder" id="aug-preview-placeholder">暺??enerate Preview???脰??汗??/div>
+                      <div class="preview-placeholder" id="aug-preview-placeholder">點擊「Generate Preview」按鈕進行預覽。</div>
                     </div>
                   </div>
                 </div>
@@ -615,16 +620,16 @@
           <div class="page-header">
             <div>
               <h1>Training Control Console</h1>
-              <p>?脰?璅∪?閮毀頞??賊?蝵柴??扼鼓鋆賢??????扯隅?Ｗ????砍?瑼?/p>
+              <p>進行模型訓練超參數配置、即時監控、繪製多指標非線性趨勢圖與版本存檔。</p>
             </div>
           </div>
 
           <!-- 1. Training Readiness Guard -->
           <div id="training-readiness-guard" class="training-readiness">
-            <!-- ??JS ??瘜典???-->
+            <!-- 由 JS 動態注入狀態 -->
           </div>
 
-          <!-- 2. Training Overview Cards (5 甈? -->
+          <!-- 2. Training Overview Cards (5 欄) -->
           <div class="training-overview-grid">
             <div class="metric-card">
               <span>Dataset</span>
@@ -653,10 +658,10 @@
             </div>
           </div>
 
-          <!-- 3. Training Main Grid (撌?40% 閮剖?嚗 60% ??) -->
+          <!-- 3. Training Main Grid (左 40% 設定，右 60% 監控) -->
           <div class="training-main-grid">
 
-            <!-- 撌血: Training Configuration -->
+            <!-- 左側: Training Configuration -->
             <section class="panel-section training-config-panel">
               <div class="section-title">
                 <h2>Training Configuration</h2>
@@ -666,7 +671,7 @@
                 </div>
               </div>
 
-              <!-- ???內 -->
+              <!-- 鎖定提示 -->
               <div id="config-lock-msg" class="status-guard warning hidden" style="margin-bottom: 12px; padding: 6px 10px;">
                 <i class="fa-solid fa-lock"></i> Training configuration is locked while a run is active.
               </div>
@@ -676,10 +681,10 @@
                 <div id="config-simple-fields">
                   <label>
                     <span>Run Name</span>
-                    <input type="text" id="train-run-id-input" placeholder="?芸??? run_YYYYMMDD_HHMMSS">
+                    <input type="text" id="train-run-id-input" placeholder="自動生成 run_YYYYMMDD_HHMMSS">
                   </label>
                   <label>
-                    <span>Model <span class="info-icon" data-tooltip="?豢?閬?蝺渡? YOLO 撉典凳甈????脖遙?撥?嗉?瘙??*-seg.pt 璅∪???>i</span></span>
+                    <span>Model <span class="info-icon" data-tooltip="選擇要訓練的 YOLO 骨幹權重。分割任務強制要求選擇 *-seg.pt 模型。">i</span></span>
                     <select id="train-model">
                       <option value="yolov8n-seg.pt">YOLOv8n Segmentation (Recommended)</option>
                       <option value="yolov8s-seg.pt">YOLOv8s Segmentation</option>
@@ -689,11 +694,11 @@
                     </select>
                   </label>
                   <label>
-                    <span>Epochs <span class="info-icon" data-tooltip="璅∪?摰??閮毀鞈?銝甈∠迂?箔???epoch?憚?貉?憭飛蝧?憌賢?嚗?銋?摰寞????>i</span></span>
+                    <span>Epochs <span class="info-icon" data-tooltip="模型完整看過訓練資料一次稱為一個 epoch。輪數越多學習越飽和，但也越容易過擬合。">i</span></span>
                     <input type="number" id="train-epochs" value="50" min="5" max="300">
                   </label>
                   <label>
-                    <span>Batch Size <span class="info-icon" data-tooltip="璅∪?銝甈∟??嗾撘萄???潸?憭扯??＊蝷箏閮擃?(VRAM)?PU 銝雲??隤踹???>i</span></span>
+                    <span>Batch Size <span class="info-icon" data-tooltip="模型一次處理幾張圖片。數值越大越吃顯示卡記憶體 (VRAM)。GPU 不足時請調小。">i</span></span>
                     <select id="train-batch">
                       <option value="2">2</option>
                       <option value="4">4</option>
@@ -703,7 +708,7 @@
                     </select>
                   </label>
                   <label>
-                    <span>Image Size <span class="info-icon" data-tooltip="頛詨蟡?蝬脰楝?蔣?偕撖賂??詨潸?憭抒敦蝭頞?雿?頞????園???閮剔 640??>i</span></span>
+                    <span>Image Size <span class="info-icon" data-tooltip="輸入神經網路的影像尺寸，數值越大細節越多但也越消耗記憶體。預設為 640。">i</span></span>
                     <select id="train-imgsz">
                       <option value="320">320</option>
                       <option value="640" selected>640</option>
@@ -712,11 +717,11 @@
                     </select>
                   </label>
                   <label>
-                    <span>Learning Rate <span class="info-icon" data-tooltip="璅∪?瘥活靽格迤?航炊??甇乩?憭批???憭扳????嚗?撠??嗆?憭芣??>i</span></span>
+                    <span>Learning Rate <span class="info-icon" data-tooltip="模型每次修正錯誤時的步伐大小。過大會造成震盪，過小會收斂太慢。">i</span></span>
                     <input type="number" id="train-lr0" value="0.01" step="0.001" min="0.0001" max="0.1">
                   </label>
                   <label>
-                    <span>Hardware Device <span class="info-icon" data-tooltip="閮毀蝖祇??PU ?臬???蝺湔??舐 GPU ????CPU??>i</span></span>
+                    <span>Hardware Device <span class="info-icon" data-tooltip="訓練硬體。GPU 可加速訓練數十倍。無可用 GPU 時請選 CPU。">i</span></span>
                     <select id="train-device">
                       <option value="gpu">GPU (CUDA)</option>
                       <option value="cpu">CPU</option>
@@ -727,7 +732,7 @@
                 <!-- Advanced Mode Fields (Collapsible) -->
                 <div id="config-advanced-fields" class="hidden">
                   <label>
-                    <span>Optimizer <span class="info-icon" data-tooltip="?芸?瞍?瘜uto ???身摰????SGD/AdamW??>i</span></span>
+                    <span>Optimizer <span class="info-icon" data-tooltip="優化演算法。auto 會依據設定自動挑選 SGD/AdamW。">i</span></span>
                     <select id="train-optimizer">
                       <option value="auto" selected>auto (Recommended)</option>
                       <option value="SGD">SGD</option>
@@ -736,32 +741,32 @@
                     </select>
                   </label>
                   <label>
-                    <span>Patience <span class="info-icon" data-tooltip="Early Stopping 摰孵?頛芣??霅?蝮暹?蝥?孵??迨 Epoch ?詨??銝剜迫閮毀??>i</span></span>
+                    <span>Patience <span class="info-icon" data-tooltip="Early Stopping 容忍輪數。驗證成績持續無改善達此 Epoch 數則提早中止訓練。">i</span></span>
                     <input type="number" id="train-patience" value="20" min="0">
                   </label>
                   <label>
-                    <span>Workers <span class="info-icon" data-tooltip="鞈?頛?瑁?蝺???詨? CPU ?航矽擃誑??????>i</span></span>
+                    <span>Workers <span class="info-icon" data-tooltip="資料載入執行緒數。多核心 CPU 可調高以加速資料準備。">i</span></span>
                     <input type="number" id="train-workers" value="4" min="0" max="16">
                   </label>
                   <label>
-                    <span>Seed <span class="info-icon" data-tooltip="?冽?蝔桀??身摰摰?澆??銝璅??閮毀??????>i</span></span>
+                    <span>Seed <span class="info-icon" data-tooltip="隨機種子。設定固定數值可重複一樣的訓練初始化結果。">i</span></span>
                     <input type="number" id="train-seed" value="42">
                   </label>
                   <label>
-                    <span>Save Period <span class="info-icon" data-tooltip="瘥?憭???Epoch ?脣?銝甈⊥炎?仿?甈??身??5 ?單? 5 epoch ?脣?銝甈～?>i</span></span>
+                    <span>Save Period <span class="info-icon" data-tooltip="每隔多少個 Epoch 儲存一次檢查點權重。設為 5 即每 5 epoch 儲存一次。">i</span></span>
                     <input type="number" id="train-save-period" value="5" min="1">
                   </label>
                   <label>
-                    <span>Close Mosaic Epochs <span class="info-icon" data-tooltip="?刻?蝺渡????敺?N ??Epoch ??擐祈魚????撘瘀?隞亙璅∪??嗆???>i</span></span>
+                    <span>Close Mosaic Epochs <span class="info-icon" data-tooltip="在訓練結束前最後 N 個 Epoch 關閉馬賽克資料增強，以利模型收斂。">i</span></span>
                     <input type="number" id="train-close-mosaic" value="10" min="0">
                   </label>
                   <label class="checkbox-row">
                     <input type="checkbox" id="train-amp" checked>
-                    <span>AMP (Mixed Precision) <span class="info-icon" data-tooltip="??移摨行毽??蝺湛??舫＊??雿?VRAM 雿輻?蒂??撟曆??⊥?蝎暹?摨艾?>i</span></span>
+                    <span>AMP (Mixed Precision) <span class="info-icon" data-tooltip="啟用半精度混合訓練，可顯著降低 VRAM 使用量並加速，幾乎無損精準度。">i</span></span>
                   </label>
                   <label class="checkbox-row">
                     <input type="checkbox" id="train-cache">
-                    <span>Cache Images <span class="info-icon" data-tooltip="撠??翰? RAM 銝凋誑璆菟?????撣豢????園?嚗遣霅啣之鞈???????>i</span></span>
+                    <span>Cache Images <span class="info-icon" data-tooltip="將圖片快取至 RAM 中以極限加速讀取。非常消耗記憶體，建議大資料集不開啟。">i</span></span>
                   </label>
                 </div>
 
@@ -776,7 +781,7 @@
               </form>
             </section>
 
-            <!-- ?喳: Live Training Monitor -->
+            <!-- 右側: Live Training Monitor -->
             <section class="panel-section training-monitor-panel">
               <div class="section-title"><h2>Live Training Monitor</h2></div>
               <div class="training-status-grid">
@@ -787,7 +792,7 @@
                 <div class="metric-card"><span>Loss</span><strong id="monitor-loss">--</strong></div>
               </div>
 
-              <!-- 蝖祇?雿輻??Progress Bars -->
+              <!-- 硬體使用率 Progress Bars -->
               <div class="hardware-telemetry-panel" style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px;">
                 <div>
                   <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:4px;">
@@ -821,7 +826,7 @@
             </section>
           </div>
 
-          <!-- 4. Interactive Charts Dashboard (?典祝) -->
+          <!-- 4. Interactive Charts Dashboard (全寬) -->
           <section class="panel-section training-chart-card" style="margin-top: 16px;">
             <div class="section-title" style="flex-wrap: wrap; gap: 12px;">
               <h2>Interactive Metrics Dashboard</h2>
@@ -835,7 +840,7 @@
               </div>
             </div>
 
-            <!-- ?”?批???嗆??扯那??-->
+            <!-- 圖表控制項與收斂性診斷 -->
             <div class="chart-control-panel" style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr); gap: 16px; margin-bottom: 12px; align-items: start;">
               <div class="chart-filters" style="display: flex; gap: 14px; align-items: center; background: var(--bg-panel-soft); padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); flex-wrap: wrap;">
                 <label class="checkbox-row" style="margin:0;">
@@ -862,12 +867,12 @@
                   <div>Platform Score: <span id="trend-platform-score" style="color:var(--success);">--</span></div>
                 </div>
                 <div id="trend-suggestions" style="font-size:0.75rem; color:var(--text-muted); margin-top:6px; line-height:1.35;">
-                  ?怎閮箸鞈???
+                  暫無診斷資料。
                 </div>
               </div>
             </div>
 
-            <!-- ?”蝜芾ˊ Canvas / Report View -->
+            <!-- 圖表繪製 Canvas / Report View -->
             <div id="chart-drawing-container" style="position: relative; width: 100%; height: 320px; background: var(--bg-preview); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px;">
               <canvas id="metrics-chart-canvas"></canvas>
             </div>
@@ -881,10 +886,10 @@
             </div>
           </section>
 
-          <!-- 5. Logs & Artifacts (撌血鈭?) -->
+          <!-- 5. Logs & Artifacts (左右二欄) -->
           <div class="two-column-layout" style="margin-top: 16px;">
 
-            <!-- 撌行?: Epoch History & Event Log -->
+            <!-- 左欄: Epoch History & Event Log -->
             <section class="panel-section">
               <div class="section-title">
                 <h2>History & Event Logs</h2>
@@ -909,28 +914,28 @@
                     </tr>
                   </thead>
                   <tbody id="epoch-history-rows">
-                    <tr><td colspan="7" class="text-center" style="padding:16px; color:var(--text-muted);">撠閮毀甇瑕??/td></tr>
+                    <tr><td colspan="7" class="text-center" style="padding:16px; color:var(--text-muted);">尚無訓練歷史。</td></tr>
                   </tbody>
                 </table>
               </div>
 
               <!-- Event Log -->
               <div id="log-event-container" class="hidden" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px;">
-                <div class="empty-state" id="event-log-empty">撠鈭辣蝝??/div>
+                <div class="empty-state" id="event-log-empty">尚無事件紀錄。</div>
                 <div id="event-log-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
               </div>
             </section>
 
-            <!-- ?單?: Model Artifacts -->
+            <!-- 右欄: Model Artifacts -->
             <section class="panel-section">
               <div class="section-title"><h2>Model Artifacts</h2></div>
               <div class="artifact-grid" id="artifact-list-container" style="display: grid; gap: 10px; max-height: 340px; overflow-y: auto; padding: 4px;">
-                <div class="empty-state">?桀?撠?甈?Run ??箸?獢?/div>
+                <div class="empty-state">目前尚未有本次 Run 的產出檔案。</div>
               </div>
             </section>
           </div>
 
-          <!-- 6. Run History (?典祝) -->
+          <!-- 6. Run History (全寬) -->
           <section class="panel-section" style="margin-top: 16px;">
             <div class="section-title"><h2>Run History</h2></div>
             <div class="table-wrap">
@@ -950,7 +955,7 @@
                   </tr>
                 </thead>
                 <tbody id="run-history-rows">
-                  <tr><td colspan="10" class="text-center" style="padding:16px; color:var(--text-muted);">撠?風?脤?銵???/td></tr>
+                  <tr><td colspan="10" class="text-center" style="padding:16px; color:var(--text-muted);">尚未有歷史運行紀錄。</td></tr>
                 </tbody>
               </table>
             </div>
@@ -961,12 +966,12 @@
           <div class="page-header">
             <div>
               <h1>Evaluation Console</h1>
-              <p>靽?閰摯?亙嚗???mAP?oU?onfusion matrix 敺??亙?璅∪?蝯???/p>
+              <p>保留評估入口；完整 mAP、IoU、confusion matrix 後續接回模型結果。</p>
             </div>
           </div>
           <div class="metric-grid">
-            <div class="metric-card"><span>mAP <span class="info-icon" data-tooltip="mAP 銵⊿?璅∪??菜葫蝯???閮餌?獢??湧??餃?蝔漲??>i</span></span><strong id="eval-map50">--</strong></div>
-            <div class="metric-card"><span>IoU <span class="info-icon" data-tooltip="IoU ?舫?皜砍???璅酉?????瘥???>i</span></span><strong id="eval-iou">--</strong></div>
+            <div class="metric-card"><span>mAP <span class="info-icon" data-tooltip="mAP 衡量模型偵測結果與標註答案的整體吻合程度。">i</span></span><strong id="eval-map50">--</strong></div>
+            <div class="metric-card"><span>IoU <span class="info-icon" data-tooltip="IoU 是預測區域與標註區域的重疊比例。">i</span></span><strong id="eval-iou">--</strong></div>
             <div class="metric-card"><span>Precision</span><strong id="eval-precision">--</strong></div>
             <div class="metric-card"><span>Recall</span><strong id="eval-recall">--</strong></div>
           </div>
@@ -976,7 +981,7 @@
           <div class="page-header">
             <div>
               <h1>Inference Lab</h1>
-              <p>?豢?撌脰?蝺渡? best.pt / last.pt嚗??桀撐???瑁?璅∪?皜祈岫嚗撓?箔??毽??dataset??/p>
+              <p>選擇已訓練的 best.pt / last.pt，對單張圖片執行模型測試，輸出不會混入 dataset。</p>
             </div>
             <div class="page-actions">
               <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-models">
@@ -1000,12 +1005,12 @@
               <div class="preview-tile">
                 <h3>Original</h3>
                 <img id="inference-original-img" alt="Original inference input">
-                <div class="preview-placeholder" id="inference-original-placeholder">?豢????喳撘萄???/div>
+                <div class="preview-placeholder" id="inference-original-placeholder">選擇或上傳單張圖片。</div>
               </div>
               <div class="preview-tile">
                 <h3>Prediction Overlay</h3>
                 <img id="inference-result-img" alt="Inference result overlay">
-                <div class="preview-placeholder" id="inference-result-placeholder">?刻?摰?敺＊蝷?overlay??/div>
+                <div class="preview-placeholder" id="inference-result-placeholder">推論完成後顯示 overlay。</div>
               </div>
             </div>
           </section>
@@ -1055,7 +1060,7 @@
               <button class="btn btn-primary btn-block" id="btn-run-inference" disabled>
                 <i class="fa-solid fa-play"></i> Run Inference
               </button>
-              <div class="form-hint" id="inference-run-reason">隢??豢?璅∪??葫閰血???/div>
+              <div class="form-hint" id="inference-run-reason">請先選擇模型與測試圖片。</div>
             </section>
           </div>
           <div class="inference-summary-grid">
@@ -1255,38 +1260,38 @@
           <div class="page-header">
             <div>
               <h1>Export & Deployment</h1>
-              <p>?臬璅∪???瘝??雿單芋???臬????disabled ?敺垢?????/p>
+              <p>匯出模型與報告。若沒有最佳模型，匯出操作會 disabled 或由後端回報原因。</p>
             </div>
           </div>
           <div class="control-card-grid compact" style="grid-template-columns: 1fr; margin-bottom: 20px;">
             <article class="control-card">
-              <div class="card-heading"><i class="fa-solid fa-cube"></i><h3>?豢?閬?箇?璅∪??</h3></div>
+              <div class="card-heading"><i class="fa-solid fa-cube"></i><h3>選擇要匯出的模型版本</h3></div>
               <div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
                 <select id="export-model-select" class="form-control" style="flex: 1; max-width: 400px; padding: 8px; border-radius: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">
-                  <option value="">-- 雿輻?身?雿單芋??--</option>
+                  <option value="">-- 使用預設最佳模型 --</option>
                 </select>
-                <button class="btn btn-secondary" id="btn-refresh-export-models" style="padding: 8px 12px;"><i class="fa-solid fa-rotate"></i> ?渡?</button>
+                <button class="btn btn-secondary" id="btn-refresh-export-models" style="padding: 8px 12px;"><i class="fa-solid fa-rotate"></i> 整理</button>
               </div>
             </article>
           </div>
           <div class="control-card-grid compact">
             <article class="control-card">
               <div class="card-heading"><i class="fa-solid fa-file-code"></i><h3>PyTorch</h3></div>
-              <p>?臬 `.pt` 甈?靘?Python / Ultralytics 雿輻??/p>
+              <p>匯出 `.pt` 權重供 Python / Ultralytics 使用。</p>
               <button class="btn btn-secondary guarded" data-requires="project" id="btn-export-pt">Export PT</button>
             </article>
             <article class="control-card">
-              <div class="card-heading"><i class="fa-solid fa-diagram-project"></i><h3>ONNX <span class="info-icon" data-tooltip="ONNX ?航楊撟喳璅∪??澆?嚗虜?冽?函蔡??ONNX Runtime ??蝺?身??>i</span></h3></div>
-              <p>?臬 ONNX 靘蝵脫隢?/p>
+              <div class="card-heading"><i class="fa-solid fa-diagram-project"></i><h3>ONNX <span class="info-icon" data-tooltip="ONNX 是跨平台模型格式，常用於部署到 ONNX Runtime 或邊緣設備。">i</span></h3></div>
+              <p>匯出 ONNX 供部署推論。</p>
               <button class="btn btn-secondary guarded" data-requires="project" id="btn-export-onnx">Export ONNX</button>
             </article>
             <article class="control-card">
               <div class="card-heading"><i class="fa-solid fa-file-lines"></i><h3>Report</h3></div>
-              <p>?Ｙ? Markdown 閮毀?勗???/p>
+              <p>產生 Markdown 訓練報告。</p>
               <button class="btn btn-primary guarded" data-requires="project" id="btn-export-report">Generate Report</button>
             </article>
             <article class="control-card muted">
-              <div class="card-heading"><i class="fa-solid fa-bolt"></i><h3>TensorRT <span class="info-icon" data-tooltip="TensorRT ??NVIDIA GPU 撣貊???隢????虜?閬??′擃?璅∪?頧?瘚???>i</span></h3></div>
+              <div class="card-heading"><i class="fa-solid fa-bolt"></i><h3>TensorRT <span class="info-icon" data-tooltip="TensorRT 是 NVIDIA GPU 常用的高效推論引擎，通常需要對應硬體與模型轉換流程。">i</span></h3></div>
               <p>Phase 2 backend required.</p>
               <button class="btn btn-disabled" disabled>Export TensorRT</button>
             </article>
@@ -1297,7 +1302,7 @@
           <div class="page-header">
             <div>
               <h1>History</h1>
-              <p>?餈?獢???蝝??/p>
+              <p>最近專案與操作紀錄。</p>
             </div>
           </div>
           <div id="history-list" class="list-stack"></div>
@@ -1307,7 +1312,7 @@
           <div class="page-header">
             <div>
               <h1 data-i18n="settingsTitle">Settings</h1>
-              <p data-i18n="settingsSubtitle">蝚砌??挾?芷＊蝷箇頂蝯梯身摰???蝥? LabelMe?OLO?撓?箸撘身摰?/p>
+              <p data-i18n="settingsSubtitle">第一階段只顯示系統設定狀態。後續可加入 LabelMe、YOLO、輸出格式設定。</p>
             </div>
           </div>
           <section class="panel-section narrow-form">
@@ -1316,7 +1321,7 @@
               <label>
                 <span data-i18n="languageLabel">Language</span>
                 <select id="settings-language">
-                  <option value="zh-TW">蝜?銝剜?</option>
+                  <option value="zh-TW">繁體中文</option>
                   <option value="en">English</option>
                 </select>
               </label>
@@ -1378,15 +1383,15 @@
   <div class="modal-overlay" id="delete-project-modal" hidden>
     <div class="modal-content confirm-modal">
       <div class="modal-header">
-        <h2>?芷撠?</h2>
+        <h2>刪除專案</h2>
         <button class="icon-btn" id="btn-close-delete-project" aria-label="Close">&times;</button>
       </div>
-      <p id="delete-project-message">蝣箏?閬?斗迨撠?嚗迨???⊥?敺拙???/p>
+      <p id="delete-project-message">確定要刪除此專案？此操作無法復原。</p>
       <div class="modal-actions">
-        <button class="btn btn-secondary" id="btn-cancel-delete-project">??</button>
+        <button class="btn btn-secondary" id="btn-cancel-delete-project">取消</button>
         <button class="btn btn-danger" id="btn-confirm-delete-project">
           <i class="fa-solid fa-trash"></i>
-          ?芷
+          刪除
         </button>
       </div>
     </div>

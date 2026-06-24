@@ -698,146 +698,11 @@ body[data-theme="light"] .status-guard {
   font-size: 0.88rem;
 }
 
-.project-command-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 18px;
-  align-items: center;
-  padding: 18px;
-  margin-bottom: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-panel);
-}
-
-.project-command-main {
-  min-width: 0;
-}
-
-.project-command-main .eyebrow {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0;
-}
-
-.project-command-main h2 {
-  margin: 0;
-  font-size: 1.35rem;
-  line-height: 1.2;
-}
-
-.project-command-main p {
-  margin: 6px 0 0;
-  color: var(--text-soft);
-}
-
-.project-command-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.health-ring {
-  width: 76px;
-  height: 76px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--border-strong);
-  border-radius: 50%;
-  background: var(--bg-panel-soft);
-}
-
-.health-ring strong,
-.health-ring span {
-  grid-column: 1;
-  line-height: 1;
-}
-
-.health-ring strong {
-  align-self: end;
-  font-size: 1.1rem;
-}
-
-.health-ring span {
-  align-self: start;
-  margin-top: 4px;
-  color: var(--text-muted);
-  font-size: 0.72rem;
-}
-
-.project-command-updated {
-  display: grid;
-  gap: 4px;
-  min-width: 120px;
-}
-
-.project-command-updated span {
-  color: var(--text-muted);
-  font-size: 0.78rem;
-}
-
-.project-command-updated strong {
-  font-size: 0.9rem;
-}
-
-.project-command-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
 .dashboard-lower-grid,
 .two-column-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 14px;
-}
-
-.dashboard-events-panel {
-  grid-column: 1 / -1;
-}
-
-.workflow-progress-label {
-  min-height: 20px;
-  color: var(--text-soft);
-  font-size: 0.88rem;
-}
-
-.control-card {
-  cursor: pointer;
-}
-
-.control-card.active {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 35%, transparent);
-}
-
-.activity-item {
-  display: grid;
-  gap: 4px;
-}
-
-.activity-item strong {
-  font-size: 0.95rem;
-}
-
-.activity-item span,
-.empty-activity span {
-  color: var(--text-soft);
-}
-
-.empty-activity {
-  display: grid;
-  gap: 6px;
-  padding: 16px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-panel-soft);
 }
 
 .dataset-manager-layout {
@@ -2364,7 +2229,6 @@ body[data-theme="light"] .toast {
   }
 
   .page-header,
-  .project-command-bar,
   .dashboard-lower-grid,
   .two-column-layout,
   .augmentation-settings-layout,
@@ -2394,15 +2258,6 @@ body[data-theme="light"] .toast {
   .monitor-grid {
     grid-template-columns: 1fr;
     display: grid;
-  }
-
-  .project-command-bar {
-    gap: 14px;
-  }
-
-  .project-command-status,
-  .project-command-actions {
-    justify-content: flex-start;
   }
 
   .path-row {
