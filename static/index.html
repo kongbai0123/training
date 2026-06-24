@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css?v=20260624-dashboard-layout-fix">
+  <link rel="stylesheet" href="/static/style.css?v=20260624-labelme-ui-redesign">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -261,101 +261,97 @@
         </section>
 
         <section class="page" id="page-labelme">
-          <div class="page-header">
+          <div class="page-header labelme-page-header">
             <div>
-              <h1 style="display: flex; align-items: center; gap: 8px;">
+              <h1>
                 LabelMe Annotation Manager
-                <span class="info-icon" style="cursor: pointer;"
-                   data-tooltip="How to use LabelMe in this platform:;先到 Dataset 匯入圖片，圖片會放在下方的 Images folder。;在本機開啟 LabelMe，選擇 Open Dir，指向 Images folder。;在 LabelMe 內完成 polygon / rectangle 標註，並把 JSON 存到 LabelMe JSON folder。;回到本平台按 Sync JSON。;系統會解析 JSON、顯示錯誤清單、預覽標註，並轉成 YOLO / COCO / Mask 格式。">
-                  <i class="fa-solid fa-circle-question" style="color: var(--primary); font-size: 1.15rem;"></i>
-                </span>
+                <span class="info-icon" data-tooltip="LabelMe 是外部標註工具。本頁負責管理圖片路徑、JSON 同步、檢查結果與轉換入口。">i</span>
               </h1>
-              <p>第一階段只建立 LabelMe 工作流管理介面；JSON 同步與轉換屬於 Phase 2 backend。</p>
+              <p>管理 LabelMe 工作區、同步 JSON 標註，並在轉換訓練格式前完成檢查。</p>
             </div>
-            <span class="badge badge-success">Backend Connected</span>
+            <div class="page-actions">
+              <span class="badge badge-success">Backend Connected</span>
+              <button class="btn btn-primary guarded" data-requires="project" id="btn-sync-labelme">
+                <i class="fa-solid fa-arrows-rotate"></i> Sync JSON
+              </button>
+            </div>
           </div>
-          <div class="labelme-layout">
-            <section class="panel-section wide" id="annotations-drop-card">
+
+          <div class="labelme-clean-layout">
+            <section class="labelme-step-strip" aria-label="LabelMe workflow steps">
+              <article class="labelme-step-card">
+                <i class="fa-solid fa-images"></i>
+                <div><strong>1. Import Images</strong><span>先在 Dataset 匯入圖片或影片抽幀。</span></div>
+              </article>
+              <article class="labelme-step-card">
+                <i class="fa-solid fa-pen-nib"></i>
+                <div><strong>2. Annotate in LabelMe</strong><span>使用 LabelMe 建立 polygon 或 rectangle JSON。</span></div>
+              </article>
+              <article class="labelme-step-card">
+                <i class="fa-solid fa-circle-check"></i>
+                <div><strong>3. Sync & Review</strong><span>同步 JSON，檢查缺檔、空標註與未知類別。</span></div>
+              </article>
+            </section>
+
+            <section class="panel-section labelme-import-panel" id="annotations-drop-card">
               <div class="section-title">
-                <h2>Import Labeled Files</h2>
+                <h2>Import Label Files</h2>
+                <span class="badge badge-muted">JSON / TXT / Folder</span>
               </div>
-              <div class="zip-drop-zone" id="annotations-drop-zone" style="cursor: pointer;">
-                <i class="fa-solid fa-file-signature" style="background: rgba(16, 185, 129, 0.16); color: var(--success);"></i>
+              <div class="zip-drop-zone labelme-drop-zone" id="annotations-drop-zone">
+                <i class="fa-solid fa-file-import"></i>
                 <div>
-                  <strong>Drop JSON or TXT files</strong>
-                  <p>在此拖入 LabelMe JSON 檔或 YOLO TXT 標註檔。</p>
+                  <strong>Drop LabelMe JSON, YOLO TXT, or a folder</strong>
+                  <p>系統會篩選 .json 與 .txt 標註檔；不符合格式的檔案會被忽略。</p>
                 </div>
               </div>
               <input type="file" id="input-annotations-file" accept=".json,.txt" multiple style="display: none;">
             </section>
 
-            <section class="panel-section">
+            <section class="panel-section labelme-workspace-panel">
               <div class="section-title">
-                <h2>Workspace Paths <span class="info-icon" data-tooltip="LabelMe 是外部標註工具，會替每張圖片產生 JSON。本平台目前先管理路徑、進度與後續轉換入口。">i</span></h2>
+                <h2>Workspace</h2>
+                <span class="info-icon" data-tooltip="Images folder 給 LabelMe 開啟圖片；LabelMe JSON folder 是 JSON 輸出位置。">i</span>
               </div>
-              <div class="path-list">
-                <div class="path-row">
-                  <span>Images folder</span>
-                  <code id="labelme-images-path">尚未載入專案</code>
-                  <button class="icon-btn guarded" data-requires="project" id="btn-copy-images-path" title="Copy"><i class="fa-regular fa-copy"></i></button>
-                </div>
-                <div class="path-row">
-                  <span>LabelMe JSON folder</span>
-                  <code id="labelme-json-path">尚未載入專案</code>
-                  <button class="icon-btn guarded" data-requires="project" id="btn-copy-json-path" title="Copy"><i class="fa-regular fa-copy"></i></button>
-                </div>
-                <div class="path-row">
-                  <span>Annotation output</span>
-                  <code id="labelme-output-path">尚未載入專案</code>
-                </div>
-                <div class="path-row">
-                  <span>Project classes</span>
-                  <code id="labelme-classes">--</code>
-                </div>
-                <div class="path-row">
-                  <span>LabelMe command</span>
-                  <code id="labelme-command">尚未載入專案</code>
-                  <button class="icon-btn guarded" data-requires="project" id="btn-copy-labelme-command" title="Copy"><i class="fa-regular fa-copy"></i></button>
-                </div>
+              <div class="path-list labelme-path-list">
+                <div class="path-row"><span>Images</span><code id="labelme-images-path">No project loaded</code><button class="icon-btn guarded" data-requires="project" id="btn-copy-images-path" title="Copy"><i class="fa-regular fa-copy"></i></button></div>
+                <div class="path-row"><span>JSON</span><code id="labelme-json-path">No project loaded</code><button class="icon-btn guarded" data-requires="project" id="btn-copy-json-path" title="Copy"><i class="fa-regular fa-copy"></i></button></div>
+                <div class="path-row"><span>Output</span><code id="labelme-output-path">No project loaded</code></div>
+                <div class="path-row"><span>Classes</span><code id="labelme-classes">--</code></div>
+                <div class="path-row"><span>Command</span><code id="labelme-command">No project loaded</code><button class="icon-btn guarded" data-requires="project" id="btn-copy-labelme-command" title="Copy"><i class="fa-regular fa-copy"></i></button></div>
               </div>
-              <div class="button-row">
+              <div class="button-row labelme-primary-actions">
                 <button class="btn btn-primary guarded" data-requires="project" id="btn-open-labelme"><i class="fa-solid fa-up-right-from-square"></i> Open LabelMe</button>
                 <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-labelme"><i class="fa-solid fa-rotate"></i> Refresh Status</button>
-                <button class="btn btn-secondary guarded" data-requires="project" id="btn-sync-labelme"><i class="fa-solid fa-arrows-rotate"></i> Sync JSON</button>
-              </div>
-              <p class="phase-note">點選 Sync JSON 即可掃描專案中已完成的 LabelMe 標註檔案並同步進度。</p>
-            </section>
-
-            <section class="panel-section">
-              <div class="section-title"><h2>Progress Summary</h2></div>
-              <div class="metric-grid" id="labelme-progress-grid"></div>
-              <div class="progress-block">
-                <div class="progress-row">
-                  <span>Completion rate</span>
-                  <strong id="labelme-completion-text">0%</strong>
-                </div>
-                <div class="progress-track"><div class="progress-fill" id="labelme-completion-bar"></div></div>
               </div>
             </section>
 
-            <section class="panel-section wide">
+            <section class="panel-section labelme-progress-panel">
+              <div class="section-title"><h2>Annotation Progress</h2></div>
+              <div class="labelme-progress-hero">
+                <strong id="labelme-completion-text">0%</strong>
+                <span>Completion rate</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill" id="labelme-completion-bar"></div></div>
+              <div class="metric-grid labelme-metric-grid" id="labelme-progress-grid"></div>
+            </section>
+
+            <section class="panel-section labelme-review-panel">
               <div class="section-title">
-                <h2>JSON Check Results <span class="info-icon" data-tooltip="JSON 檢查會驗證 imagePath、shape_type、label、polygon 點數與座標範圍。">i</span></h2>
-                <div class="section-actions" style="display: flex; gap: 12px; align-items: center;">
-                  <label class="checkbox-row" style="margin: 0; font-size: 0.84rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                    <input type="checkbox" id="chk-show-issues-only" checked style="width: 15px; height: 15px; accent-color: var(--primary);"> 僅顯示異常項目
-                  </label>
-                </div>
+                <h2>Review Queue</h2>
+                <label class="checkbox-row labelme-issue-toggle">
+                  <input type="checkbox" id="chk-show-issues-only" checked> Show issues only
+                </label>
               </div>
-              <div class="table-wrap" style="max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius);">
+              <div class="table-wrap labelme-review-table">
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th style="position: sticky; top: 0; background: var(--bg-panel); z-index: 1;">File</th>
-                      <th style="position: sticky; top: 0; background: var(--bg-panel); z-index: 1;">Image</th>
-                      <th style="position: sticky; top: 0; background: var(--bg-panel); z-index: 1;">Status</th>
-                      <th style="position: sticky; top: 0; background: var(--bg-panel); z-index: 1;">Issue</th>
-                      <th style="position: sticky; top: 0; background: var(--bg-panel); z-index: 1;">Suggested Fix</th>
+                      <th>File</th>
+                      <th>Image</th>
+                      <th>Status</th>
+                      <th>Issue</th>
+                      <th>Suggested Fix</th>
                     </tr>
                   </thead>
                   <tbody id="labelme-check-table"></tbody>
@@ -363,41 +359,32 @@
               </div>
             </section>
 
-            <section class="panel-section">
-              <div class="section-title">
-                <h2>Lightweight Preview</h2>
-              </div>
+            <section class="panel-section labelme-preview-card">
+              <div class="section-title"><h2>Preview</h2></div>
               <div class="preview-panel" id="labelme-preview-panel">
                 <div class="preview-placeholder">
                   <i class="fa-solid fa-draw-polygon"></i>
-                  <p>LabelMe preview will be available after backend sync API is implemented.</p>
+                  <p>Select a review row to preview LabelMe shapes.</p>
                 </div>
               </div>
             </section>
 
-            <section class="panel-section">
-              <div class="section-title">
-                <h2>Conversion Actions</h2>
-              </div>
-              <div class="conversion-list">
-                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-det">Convert to YOLO Detection <span class="info-icon" data-tooltip="YOLO Detection 適合 rectangle / bbox，每個物件輸出類別與框座標。">i</span></button>
-                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-seg">Convert to YOLO Segmentation <span class="info-icon" data-tooltip="YOLO Segmentation 適合 polygon，會保留物件輪廓點。">i</span></button>
-                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-coco">Convert to COCO <span class="info-icon" data-tooltip="COCO 是通用資料集格式，可描述 detection 與 segmentation。">i</span></button>
-                <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-mask">Convert to Semantic Mask <span class="info-icon" data-tooltip="Semantic Mask 需要 class map，會把每個像素轉成類別 ID。">i</span></button>
-              </div>
-              <p class="phase-note">將同步後的 LabelMe JSON 檔轉換為目標格式以供訓練或匯出。</p>
-            </section>
-
-            <section class="panel-section wide legacy-panel">
-              <div class="section-title">
-                <h2>Legacy Annotation Preview</h2>
-                <span class="badge badge-muted">Deprecated path</span>
-              </div>
-              <p>舊版 Canvas bbox 標註器已從主流程降級。本階段不再把它作為主要標註入口，後續由 LabelMe JSON 工作流取代。</p>
+            <section class="panel-section labelme-export-card">
+              <details class="labelme-export-details">
+                <summary>
+                  <span><i class="fa-solid fa-file-export"></i> Export Formats</span>
+                  <small>Open after JSON checks pass</small>
+                </summary>
+                <div class="conversion-list labelme-conversion-grid">
+                  <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-det">YOLO Detection <span class="info-icon" data-tooltip="適合 rectangle / bbox 標註。">i</span></button>
+                  <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-seg">YOLO Segmentation <span class="info-icon" data-tooltip="適合 polygon segmentation 標註。">i</span></button>
+                  <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-coco">COCO <span class="info-icon" data-tooltip="輸出 COCO detection / segmentation 格式。">i</span></button>
+                  <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-mask">Semantic Mask <span class="info-icon" data-tooltip="輸出語意分割 mask，需要 class map。">i</span></button>
+                </div>
+              </details>
             </section>
           </div>
         </section>
-
         <section class="page" id="page-split">
           <div class="page-header">
             <div>
@@ -1444,6 +1431,6 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260624-dashboard-layout-fix"></script>
+  <script type="module" src="/static/app.js?v=20260624-labelme-ui-redesign"></script>
 </body>
 </html>
