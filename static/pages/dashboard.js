@@ -133,7 +133,7 @@ function renderWorkflowMap(status) {
       <div class="section-title workflow-map-title">
         <div>
           <h2><i class="fa-solid fa-map"></i> Workflow Map</h2>
-          <p>依照專案生命週期顯示狀態；頁面可自由進入，危險操作由各頁防呆。</p>
+          <p>依照專案狀態檢視資料、標註、分散、訓練與匯出進度；頁面可自由進入，危險操作會在執行前提醒。</p>
         </div>
       </div>
       <div class="workflow-grid">
@@ -174,13 +174,13 @@ function renderRecentProjects(projects) {
 function renderActivity(status) {
   const items = [];
   if (!status.hasProject) {
-    items.push("尚未開啟專案。請使用 New Project 建立專案，或從 Browse History 開啟既有專案。");
+    items.push("目前尚未開啟專案。可使用 New Project 建立專案，或從 Browse History 開啟既有專案。");
   } else if (!status.hasDataset) {
-    items.push("專案已開啟，但尚未匯入資料。下一步建議前往 Dataset 匯入圖片或影片。");
+    items.push("專案已開啟，但尚未匯入資料。下一步請前往 Dataset 匯入圖片或影片。");
   } else if (!status.splitComplete) {
-    items.push("資料已匯入。下一步建議同步標註並建立 Train / Val / Test。");
+    items.push("資料已匯入。請確認標註狀態，並建立 Train / Val / Test 資料分散。");
   } else if (!status.trainReady) {
-    items.push("Split 已建立，但訓練條件尚未完成。請檢查 Training 頁面的 blockers。");
+    items.push("Split 已建立，但訓練條件仍需檢查。請到 Training 查看阻擋原因。");
   } else {
     items.push("專案已接近可訓練狀態。可前往 Training 設定模型並開始訓練。");
   }

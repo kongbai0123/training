@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css?v=20260624-dashboard-workflow">
+  <link rel="stylesheet" href="/static/style.css?v=20260624-dashboard-layout-fix">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -44,7 +44,7 @@
           <span>System Status</span>
           <strong id="header-health-label">Checking</strong>
         </div>
-        <span id="current-project-title">尚未載入專案</span>
+        <span id="current-project-title">No project opened</span>
         <button class="btn btn-primary btn-sm" data-nav="projects">
           <i class="fa-solid fa-plus"></i>
           <span>New Project</span>
@@ -70,8 +70,8 @@
           <button class="sidebar-item" data-page="augmentation"><i class="fa-solid fa-wand-magic-sparkles"></i><span data-i18n="navAugmentation">Augmentation</span></button>
           <button class="sidebar-item" data-page="training"><i class="fa-solid fa-microchip"></i><span data-i18n="navTraining">Training</span></button>
           <button class="sidebar-item" data-page="evaluation"><i class="fa-solid fa-chart-line"></i><span data-i18n="navEvaluation">Evaluation</span></button>
-          <button class="sidebar-item" data-page="inference"><i class="fa-solid fa-magnifying-glass-chart"></i><span data-i18n="navInference">模型測試</span></button>
-          <button class="sidebar-item" data-page="auto-labeling"><i class="fa-solid fa-wand-sparkles"></i><span data-i18n="navAutoLabeling">自動標註</span></button>
+          <button class="sidebar-item" data-page="inference"><i class="fa-solid fa-magnifying-glass-chart"></i><span data-i18n="navInference">Inference Lab</span></button>
+          <button class="sidebar-item" data-page="auto-labeling"><i class="fa-solid fa-wand-sparkles"></i><span data-i18n="navAutoLabeling">Auto-Labeling</span></button>
           <button class="sidebar-item" data-page="export"><i class="fa-solid fa-file-export"></i><span data-i18n="navExport">Export</span></button>
           <button class="sidebar-item" data-page="history"><i class="fa-solid fa-clock"></i><span data-i18n="navHistory">History</span></button>
           <button class="sidebar-item" data-page="settings"><i class="fa-solid fa-gear"></i><span data-i18n="navSettings">Settings</span></button>
@@ -1444,6 +1444,6 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260624-dashboard-workflow"></script>
+  <script type="module" src="/static/app.js?v=20260624-dashboard-layout-fix"></script>
 </body>
 </html>

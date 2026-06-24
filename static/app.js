@@ -420,10 +420,13 @@ function renderHeaderStatus() {
 
 // UI 面板渲染
 function renderProjectSummary(status) {
+  const taskLabel = String(status.taskType || "--")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
   setHTML("#project-summary", `
     <div class="path-list">
       <div class="path-row"><span>Name</span><code>${escapeHtml(status.projectName)}</code></div>
-      <div class="path-row"><span>Task</span><code>${escapeHtml(status.taskType)}</code></div>
+      <div class="path-row"><span>Task</span><code>${escapeHtml(taskLabel)}</code></div>
       <div class="path-row"><span>Images</span><code>${status.imageCount}</code></div>
       <div class="path-row"><span>Annotated</span><code>${status.annotatedCount}/${status.imageCount}</code></div>
       <div class="path-row"><span>Split</span><code>${status.splitComplete ? "Ready" : "Not ready"}</code></div>
@@ -556,7 +559,7 @@ function getPageTitle(pageId) {
 
 function buildDashboardRightPanel(status) {
   const healthScore = status.hasDataset 
-    ? Math.round((status.annotatedCount / status.imageCount) * 50 + (status.splitComplete ? 30 : 0) + (status.bestModelExists ? 20 : 0))
+    ? Math.round((status.annotatedCount / Math.max(status.imageCount, 1)) * 50 + (status.splitComplete ? 30 : 0) + (status.bestModelExists ? 20 : 0))
     : 0;
 
   const rows = status.hasProject ? [
@@ -566,14 +569,14 @@ function buildDashboardRightPanel(status) {
   ] : [];
 
   const actions = [];
-  if (!status.hasProject) actions.push("前往 Projects 建立或載入專案。");
+  if (!status.hasProject) actions.push("建立新專案，或從 Browse History 開啟既有專案。");
   else if (!status.hasDataset) actions.push("前往 Dataset 匯入圖片或影片。");
-  else if (!status.labelme.synced) actions.push("前往 LabelMe 同步標註。");
-  else if (!status.splitComplete) actions.push("前往 Split 切分資料集。");
-  else actions.push("前往 Training 控制台進行模型訓練。");
+  else if (!status.labelme.synced) actions.push("前往 LabelMe 同步或檢查標註 JSON。");
+  else if (!status.splitComplete) actions.push("前往 Split 建立 Train / Val / Test 資料分散。");
+  else actions.push("前往 Training 設定模型並開始訓練。");
 
   const warnings = [];
-  if (!status.hasProject) warnings.push("尚未開啟任何專案，系統操作已限制。");
+  if (!status.hasProject) warnings.push("尚未開啟專案，部分功能會維持待命狀態。");
   else if (!status.hasDataset) warnings.push("專案中目前沒有影像資料。");
 
   return {
@@ -582,9 +585,9 @@ function buildDashboardRightPanel(status) {
     actions,
     warnings,
     emptyState: !status.hasProject ? {
-      message: "Please open a project on Projects page.",
-      actionLabel: "Go to Projects",
-      actionNav: "projects"
+      message: "請先建立或開啟專案。",
+      actionLabel: "Browse History",
+      actionNav: "history"
     } : null
   };
 }

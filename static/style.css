@@ -235,7 +235,7 @@ body[data-theme="light"] .brand-mark {
 
 .app-body {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 310px;
+  grid-template-columns: 220px minmax(0, 1fr) 300px;
   min-height: 0;
   overflow: hidden;
 }
@@ -789,7 +789,7 @@ body[data-theme="light"] .status-guard {
 .workflow-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px 44px;
+  gap: 18px 28px;
   position: relative;
 }
 
@@ -834,6 +834,7 @@ body[data-theme="light"] .workflow-card {
 .workflow-card-top {
   justify-content: space-between;
   gap: 10px;
+  align-items: flex-start;
 }
 
 .workflow-title {
@@ -852,6 +853,15 @@ body[data-theme="light"] .workflow-card {
 .workflow-title h3 {
   margin: 0;
   font-size: 0.98rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.workflow-card .badge {
+  flex: 0 0 auto;
+  min-width: 82px;
+  white-space: nowrap;
+  font-size: 0.7rem;
 }
 
 .workflow-card-rows {
@@ -870,6 +880,8 @@ body[data-theme="light"] .workflow-card {
 .workflow-row strong {
   color: var(--text);
   text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .workflow-violet .workflow-title i { color: #8b5cf6; }
@@ -1030,6 +1042,57 @@ body[data-theme="light"] .workflow-card {
 
 .project-history-scroll .project-history-card:nth-child(n + 3) {
   margin-top: 12px;
+}
+
+@media (max-width: 1500px) {
+  .top-header {
+    padding: 0 14px;
+  }
+
+  .header-resources {
+    gap: 8px;
+    padding-right: 10px;
+  }
+
+  .header-resource-item {
+    grid-template-columns: 20px minmax(58px, auto);
+    gap: 6px;
+  }
+
+  .header-project {
+    gap: 10px;
+  }
+
+  .header-project-title {
+    max-width: 120px;
+  }
+
+  .app-body {
+    grid-template-columns: 212px minmax(0, 1fr) 292px;
+  }
+
+  .workflow-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .workflow-card::after {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .app-body {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+
+  .right-summary-panel {
+    display: none;
+  }
+
+  .workflow-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .dataset-manager-layout {
@@ -2186,7 +2249,7 @@ body[data-theme="light"] .thumb-image-frame {
 }
 
 .right-summary-panel .path-row {
-  grid-template-columns: 86px minmax(0, 1fr);
+  grid-template-columns: 64px minmax(0, 1fr);
   padding: 8px 10px;
   min-height: 36px;
 }
@@ -2195,8 +2258,9 @@ body[data-theme="light"] .thumb-image-frame {
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
-  overflow-wrap: break-word;
-  word-break: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-size: 0.76rem;
   line-height: 1.35;
   text-align: right;
 }
@@ -2819,7 +2883,8 @@ body[data-theme="light"] .toast {
 .summary-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 10px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--border, #3f3f46);
   font-size: 0.85rem;
@@ -2829,6 +2894,7 @@ body[data-theme="light"] .toast {
 }
 .summary-row span {
   color: var(--text-muted, #a1a1aa);
+  flex: 0 0 auto;
 }
 .summary-row code {
   font-family: var(--font-mono, monospace);
@@ -2836,6 +2902,11 @@ body[data-theme="light"] .toast {
   padding: 2px 6px;
   border-radius: 4px;
   color: var(--accent-light, #38bdf8);
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 body[data-theme="light"] .summary-row code {
   background: #f1f5f9;
@@ -2860,6 +2931,7 @@ body[data-theme="light"] .summary-row code {
   margin: 8px 0;
   font-size: 0.85rem;
   color: var(--text-soft, #e4e4e7);
+  line-height: 1.45;
 }
 .summary-action-list li {
   margin-bottom: 6px;
