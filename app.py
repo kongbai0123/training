@@ -218,11 +218,28 @@ def health_check():
     torch_version = "Not installed"
     has_gpu = False
     device_name = "CPU"
+    memory = {
+        "available_gb": None,
+        "total_gb": None,
+        "percent_used": None,
+        "status": "unavailable",
+    }
     try:
         import torch
         torch_version = torch.__version__
         has_gpu = torch.cuda.is_available()
         device_name = torch.cuda.get_device_name(0) if has_gpu else "CPU"
+    except Exception:
+        pass
+    try:
+        import psutil
+        ram = psutil.virtual_memory()
+        memory = {
+            "available_gb": round(ram.available / (1024 ** 3), 1),
+            "total_gb": round(ram.total / (1024 ** 3), 1),
+            "percent_used": round(ram.percent, 1),
+            "status": "available",
+        }
     except Exception:
         pass
 
@@ -236,6 +253,7 @@ def health_check():
             "device_name": device_name,
             "torch_version": torch_version,
         },
+        "memory": memory,
         "directories": {
             "base_dir": str(BASE_DIR.resolve().as_posix()),
             "projects_dir": str(PROJECTS_DIR.resolve().as_posix()),

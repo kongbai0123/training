@@ -11,121 +11,160 @@ export function initDashboard() {
 export function renderDashboard(status) {
   setHTML("#dashboard-alerts", "");
   setHTML("#dashboard-kpis", "");
-  renderControlCards(status);
+  renderWorkflowMap(status);
   renderRecentProjects(appState.projects);
   renderActivity(status);
 }
 
-function renderControlCards(status) {
-  const cards = [
+function renderWorkflowMap(status) {
+  const workflow = [
     {
-      icon: "fa-folder-tree",
-      title: "Project",
-      badge: status.hasProject ? "Loaded" : "No project",
-      badgeClass: status.hasProject ? "success" : "warning",
-      desc: "建立、開啟與管理視覺訓練專案。",
-      stats: [["Task", status.taskType], ["Classes", status.classNames.length]],
-      progress: status.hasProject ? 100 : 0,
-      actions: [button("New Project", "projects", "primary"), button("Browse History", "history", "secondary")],
-    },
-    {
-      icon: "fa-images",
+      step: 1,
+      icon: "fa-folder-open",
       title: "Dataset",
-      badge: status.hasDataset ? "Imported" : "No data",
-      badgeClass: status.hasDataset ? "success" : "warning",
-      desc: "管理圖片、影片抽幀與品質檢查。",
-      stats: [["Images", status.imageCount], ["Health", appState.currentProject?.dataset_health?.score ?? "--"]],
+      page: "dataset",
+      accent: "violet",
+      badge: status.hasDataset ? "Ready" : "Not started",
+      badgeClass: status.hasDataset ? "success" : "muted",
+      rows: [["Images", status.imageCount], ["Quality check", appState.currentProject?.dataset_health ? "Done" : "Not run"]],
       progress: status.hasDataset ? 100 : 0,
-      actions: [button("Import Images", "dataset", "primary"), button("Quality Check", "dataset", "secondary")],
+      action: "Manage Dataset",
     },
     {
+      step: 2,
       icon: "fa-pen-nib",
-      title: "LabelMe",
-      badge: "Ready",
-      badgeClass: "success",
-      desc: "管理 LabelMe JSON 工作流、同步標註進度並檢查錯誤。",
-      stats: [["JSON", status.labelme.jsonCount], ["Missing", status.labelme.missingJson]],
-      progress: status.labelme.completionRate,
-      actions: [button("Open Manager", "labelme", "primary"), button("Sync JSON", "labelme", "secondary")],
+      title: "Annotation",
+      page: "labelme",
+      accent: "green",
+      badge: status.labelme.synced ? "Synced" : "Not started",
+      badgeClass: status.labelme.synced ? "success" : "muted",
+      rows: [["Annotated", `${status.annotatedCount}/${status.imageCount}`], ["Coverage", `${status.labelme.completionRate || 0}%`]],
+      progress: status.labelme.completionRate || 0,
+      action: "Open LabelMe",
     },
     {
+      step: 3,
+      icon: "fa-robot",
+      title: "Auto-Labeling",
+      page: "auto-labeling",
+      accent: "cyan",
+      badge: "Not started",
+      badgeClass: "muted",
+      rows: [["Drafts", 0], ["Models", appState.models?.length || 0]],
+      progress: 0,
+      action: "Start Auto-Labeling",
+    },
+    {
+      step: 4,
       icon: "fa-code-branch",
       title: "Split",
-      badge: status.splitComplete ? "Ready" : "Not split",
-      badgeClass: status.splitComplete ? "success" : "warning",
-      desc: "建立 Train / Val / Test，避免資料外洩。",
-      stats: [["Train", status.splitCounts.train], ["Val", status.splitCounts.val], ["Test", status.splitCounts.test]],
+      page: "split",
+      accent: "orange",
+      badge: status.splitComplete ? "Ready" : "Not ready",
+      badgeClass: status.splitComplete ? "success" : "danger",
+      rows: [["Train / Val / Test", `${status.splitCounts.train || "-"} / ${status.splitCounts.val || "-"} / ${status.splitCounts.test || "-"}`], ["Split file", status.splitComplete ? "Ready" : "None"]],
       progress: status.splitComplete ? 100 : 0,
-      actions: [button("Configure Split", "split", "primary"), button("Run Split", "split", "secondary")],
+      action: "Create Split",
     },
     {
+      step: 5,
       icon: "fa-wand-magic-sparkles",
       title: "Augmentation",
-      badge: appState.currentProject?.augmentation_config ? "Configured" : "Not configured",
-      badgeClass: appState.currentProject?.augmentation_config ? "info" : "warning",
-      desc: "設定物理擴充並預覽結果，輸出不污染原始資料。",
-      stats: [["Requires", "Split"], ["Target", "Train"]],
-      progress: status.splitComplete ? 60 : 0,
-      actions: [button("Configure", "augmentation", "primary"), button("Preview", "augmentation", "secondary")],
+      page: "augmentation",
+      accent: "amber",
+      badge: appState.currentProject?.augmentation_config ? "Configured" : "Not started",
+      badgeClass: appState.currentProject?.augmentation_config ? "success" : "muted",
+      rows: [["Policies", appState.currentProject?.augmentation_config ? 1 : 0], ["Active", appState.currentProject?.augmentation_config ? "Yes" : "No"]],
+      progress: appState.currentProject?.augmentation_config ? 100 : 0,
+      action: "Configure Augmentation",
     },
     {
+      step: 6,
       icon: "fa-microchip",
       title: "Training",
-      badge: status.trainReady ? "Ready" : "Not ready",
-      badgeClass: status.trainReady ? "success" : "danger",
-      desc: "設定模型與啟動訓練；不符合條件時只鎖定危險操作。",
-      stats: [["Status", status.trainingLabel], ["Blockers", status.blockers.length]],
-      progress: status.trainReady ? 100 : 25,
-      actions: [button("Configure", "training", "primary"), disabledButton("Start Training")],
+      page: "training",
+      accent: "blue",
+      badge: status.trainReady ? "Ready" : "Not started",
+      badgeClass: status.trainReady ? "success" : "muted",
+      rows: [["Runs", appState.currentProject?.training_runs?.length || 0], ["Best mAP", "--"]],
+      progress: status.bestModelExists ? 100 : status.trainReady ? 60 : 0,
+      action: "Start Training",
     },
     {
+      step: 7,
       icon: "fa-chart-line",
       title: "Evaluation",
-      badge: status.bestModelExists ? "Available" : "No model",
-      badgeClass: status.bestModelExists ? "success" : "warning",
-      desc: "查看 mAP、IoU、failure cases 與模型品質。",
-      stats: [["mAP", "--"], ["IoU", "--"]],
-      progress: status.bestModelExists ? 100 : 0,
-      actions: [button("View Evaluation", "evaluation", "primary")],
+      page: "evaluation",
+      accent: "purple",
+      badge: status.bestModelExists ? "Available" : "Not started",
+      badgeClass: status.bestModelExists ? "success" : "muted",
+      rows: [["Evaluations", 0], ["Best mAP", "--"]],
+      progress: status.bestModelExists ? 70 : 0,
+      action: "Run Evaluation",
     },
     {
-      icon: "fa-file-export",
+      step: 8,
+      icon: "fa-flask",
+      title: "Inference Lab",
+      page: "inference",
+      accent: "indigo",
+      badge: appState.models?.length ? "Available" : "Not started",
+      badgeClass: appState.models?.length ? "success" : "muted",
+      rows: [["Models", appState.models?.length || 0], ["Tests", 0]],
+      progress: appState.models?.length ? 50 : 0,
+      action: "Open Inference Lab",
+    },
+    {
+      step: 9,
+      icon: "fa-box-archive",
       title: "Export",
-      badge: status.bestModelExists ? "Exportable" : "No model",
-      badgeClass: status.bestModelExists ? "success" : "warning",
-      desc: "匯出 PT、ONNX 與訓練報告，供部署或交付使用。",
-      stats: [["ONNX", "Supported"], ["TensorRT", "Pending"]],
-      progress: status.bestModelExists ? 100 : 0,
-      actions: [button("Open Export", "export", "primary")],
+      page: "export",
+      accent: "teal",
+      badge: status.bestModelExists ? "Ready" : "Not ready",
+      badgeClass: status.bestModelExists ? "success" : "danger",
+      rows: [["Exports", 0], ["Last export", "--"]],
+      progress: status.bestModelExists ? 80 : 0,
+      action: "Export Model",
     },
   ];
 
-  setHTML("#control-cards", cards.map(renderControlCard).join(""));
-}
-
-function renderControlCard(card) {
-  return `
-    <article class="control-card">
-      <div class="card-heading"><i class="fa-solid ${card.icon}"></i><h3>${escapeHtml(card.title)}</h3></div>
-      <span class="badge badge-${card.badgeClass}">${escapeHtml(card.badge)}</span>
-      <p>${escapeHtml(card.desc)}</p>
-      <div>
-        ${card.stats.map((item) => `<div class="card-stat"><span>${escapeHtml(item[0])}</span><strong>${escapeHtml(item[1])}</strong></div>`).join("")}
-        <div class="progress-block" style="margin-top:10px">
-          <div class="progress-track"><div class="progress-fill" style="width:${Number(card.progress) || 0}%"></div></div>
+  setHTML("#control-cards", `
+    <section class="workflow-map-panel">
+      <div class="section-title workflow-map-title">
+        <div>
+          <h2><i class="fa-solid fa-map"></i> Workflow Map</h2>
+          <p>依照專案生命週期顯示狀態；頁面可自由進入，危險操作由各頁防呆。</p>
         </div>
       </div>
-      <div class="card-actions">${card.actions.join("")}</div>
+      <div class="workflow-grid">
+        ${workflow.map(renderWorkflowCard).join("")}
+      </div>
+    </section>
+  `);
+}
+
+function renderWorkflowCard(card) {
+  return `
+    <article class="workflow-card workflow-${card.accent}">
+      <div class="workflow-card-top">
+        <div class="workflow-title">
+          <i class="fa-solid ${card.icon}"></i>
+          <h3>${card.step}. ${escapeHtml(card.title)}</h3>
+        </div>
+        <span class="badge badge-${card.badgeClass}">${escapeHtml(card.badge)}</span>
+      </div>
+      <div class="workflow-card-rows">
+        ${card.rows.map(([label, value]) => `
+          <div class="workflow-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+        `).join("")}
+      </div>
+      <div class="progress-block">
+        <div class="progress-track"><div class="progress-fill" style="width:${Number(card.progress) || 0}%"></div></div>
+        <div class="progress-row"><span></span><strong>${Number(card.progress) || 0}%</strong></div>
+      </div>
+      <button class="btn btn-secondary btn-sm btn-block" data-nav="${escapeHtml(card.page)}">${escapeHtml(card.action)}</button>
     </article>
   `;
-}
-
-function button(label, page, type) {
-  return `<button class="btn btn-${type}" data-nav="${page}">${escapeHtml(label)}</button>`;
-}
-
-function disabledButton(label) {
-  return `<button class="btn btn-disabled" disabled>${escapeHtml(label)}</button>`;
 }
 
 function renderRecentProjects(projects) {
@@ -135,9 +174,9 @@ function renderRecentProjects(projects) {
 function renderActivity(status) {
   const items = [];
   if (!status.hasProject) {
-    items.push("尚未載入專案。請使用 New Project 建立專案，或從 Browse History 開啟既有專案。");
+    items.push("尚未開啟專案。請使用 New Project 建立專案，或從 Browse History 開啟既有專案。");
   } else if (!status.hasDataset) {
-    items.push("專案已載入，但尚未匯入資料。下一步建議前往 Dataset 匯入圖片或影片。");
+    items.push("專案已開啟，但尚未匯入資料。下一步建議前往 Dataset 匯入圖片或影片。");
   } else if (!status.splitComplete) {
     items.push("資料已匯入。下一步建議同步標註並建立 Train / Val / Test。");
   } else if (!status.trainReady) {

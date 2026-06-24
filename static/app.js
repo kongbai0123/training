@@ -318,6 +318,8 @@ function navigate(pageId) {
 function renderAll() {
   const status = getProjectStatus(appState.currentProject);
   
+  renderHeaderStatus();
+
   // 觸發各子頁面渲染
   renderDashboard(status);
   renderRightPanel(appState.currentPage, status);
@@ -391,6 +393,28 @@ async function checkCurrentTrainStatus() {
     eventBus.emit("check-training-websocket");
   } catch {
     appState.trainingStatus = null;
+  }
+}
+
+function renderHeaderStatus() {
+  const health = appState.systemHealth || {};
+  const device = health.device || {};
+  const memory = health.memory || {};
+  const hasGpu = device.has_gpu === true;
+  const isHealthy = health.status === "healthy";
+
+  setText("#header-gpu-value", hasGpu ? (device.device_name || "GPU ready") : "CPU mode");
+  if (memory.status === "available" && memory.available_gb !== null && memory.available_gb !== undefined) {
+    setText("#header-ram-value", `${memory.available_gb} GB free`);
+  } else {
+    setText("#header-ram-value", "Unavailable");
+  }
+  setText("#header-health-label", isHealthy ? "Healthy" : "Offline");
+
+  const dot = qs("#api-status-dot");
+  if (dot) {
+    dot.classList.toggle("online", isHealthy);
+    dot.classList.toggle("offline", !isHealthy);
   }
 }
 
