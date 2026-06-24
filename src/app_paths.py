@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 import os
+import sys
 
 
 def _resolve_app_home() -> Path:
     explicit = os.environ.get("VTS_APP_HOME")
     if explicit:
         return Path(explicit).expanduser().resolve()
+    if getattr(sys, "frozen", False):
+        internal_dir = Path(getattr(sys, "_MEIPASS", Path(sys.executable).resolve().parent))
+        return internal_dir.resolve()
     base = Path(__file__).resolve().parents[1]
     return base.resolve()
 

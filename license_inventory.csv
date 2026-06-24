@@ -6,8 +6,10 @@ numpy,2.4.6,requirements,Allowed,BSD,No extra restrictions.
 pillow,12.2.0,requirements,Allowed,HPND/BSD family,Use bundled wheel license.
 opencv-python,4.13.0.92,requirements,Notice required,BSD/GPL mix check,Confirm wheel license for distribution package.
 ultralytics,8.4.68,requirements,Commercial risk,Unknown,Needs legal review before closed-source distribution.
+lap,0.5.13,requirements,Notice required,BSD-style/needs confirmation,Installed by Ultralytics; confirm license text before redistribution.
 torch,install-time,dependencies,Notice required,Depends by wheel,Confirm AGPL/rules for distribution scenario.
 nvidia-ml-py,13.610.43,requirements,Allowed,Apache/MIT family,Keep notice.
+pyinstaller,6.21.0,build,Notice required,GPL with exception,Build tool only; keep build dependency license noted.
 Font Awesome,ui bundle,third-party,Notice required,Various,Need local LICENSE copy or CDN attribution.
 Chart.js,ui bundle,third-party,Notice required,MIT,Keep attribution and license text.
 Dropzone,ui bundle,third-party,Notice required,MIT,Keep attribution and license text.

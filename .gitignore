@@ -22,4 +22,8 @@ runs/
 # Logs
 *.log
 
-#skill
+# Packaging output
+build/
+dist/
+
+# skill

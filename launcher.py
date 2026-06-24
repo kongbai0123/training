@@ -14,6 +14,16 @@ from urllib.request import urlopen
 from src.app_paths import LOGS_DIR
 
 
+def run_backend_child(host: str, port: int, env_mode: str) -> None:
+    import os
+
+    os.environ["VTS_ENV"] = env_mode
+    import uvicorn
+    from app import app as fastapi_app
+
+    uvicorn.run(fastapi_app, host=host, port=port, log_level="info")
+
+
 def is_port_available(host: str, port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -49,18 +59,30 @@ def wait_ready(url: str, timeout_sec: int = 20) -> bool:
 
 def run_backend(host: str, port: int, env_mode: str, cwd: Path, log_path: Path) -> Tuple[subprocess.Popen, object]:
     env = dict(**{**os_env(), "VTS_ENV": env_mode})
-    cmd = [
-        sys.executable,
-        "-m",
-        "uvicorn",
-        "app:app",
-        "--host",
-        host,
-        "--port",
-        str(port),
-        "--log-level",
-        "info",
-    ]
+    if getattr(sys, "frozen", False):
+        cmd = [
+            sys.executable,
+            "--backend-child",
+            "--host",
+            host,
+            "--port",
+            str(port),
+            "--env",
+            env_mode,
+        ]
+    else:
+        cmd = [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "app:app",
+            "--host",
+            host,
+            "--port",
+            str(port),
+            "--log-level",
+            "info",
+        ]
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_file = log_path.open("a", encoding="utf-8")
     process = subprocess.Popen(
@@ -79,6 +101,7 @@ def os_env() -> dict:
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Vision Training Studio launcher")
+    parser.add_argument("--backend-child", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--host", default="127.0.0.1", help="Backend bind host (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=18080, help="Preferred bind port")
     parser.add_argument("--open-browser", action="store_true", default=True, help="Open browser after startup")
@@ -89,6 +112,10 @@ def parse_args():
 
 def main():
     args = parse_args()
+    if args.backend_child:
+        run_backend_child(args.host, args.port, args.env)
+        return
+
     cwd = Path(__file__).resolve().parent
     open_browser = args.open_browser and not args.no_open_browser
     port = next_available_port(args.host, args.port)
