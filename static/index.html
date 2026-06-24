@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css?v=20260624-auto-label-readable">
+  <link rel="stylesheet" href="/static/style.css?v=20260624-dashboard-clean">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -40,7 +40,6 @@
       <aside class="sidebar">
         <nav class="sidebar-nav" aria-label="Main navigation">
           <button class="sidebar-item active" data-page="dashboard"><i class="fa-solid fa-grid-2"></i><span data-i18n="navDashboard">Dashboard</span></button>
-          <button class="sidebar-item" data-page="projects"><i class="fa-solid fa-folder-tree"></i><span data-i18n="navProjects">Projects</span></button>
           <button class="sidebar-item" data-page="dataset"><i class="fa-solid fa-images"></i><span data-i18n="navDataset">Dataset</span></button>
           <button class="sidebar-item" data-page="labelme"><i class="fa-solid fa-pen-nib"></i><span data-i18n="navLabelMe">LabelMe</span></button>
           <button class="sidebar-item" data-page="split"><i class="fa-solid fa-code-branch"></i><span data-i18n="navSplit">Split</span></button>
@@ -69,7 +68,6 @@
           </div>
 
           <div id="dashboard-alerts" class="guard-stack"></div>
-          <div class="kpi-grid" id="dashboard-kpis"></div>
           <div class="control-card-grid" id="control-cards"></div>
           <div class="dashboard-lower-grid">
             <section class="panel-section">
@@ -1414,6 +1412,6 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260624-auto-label-readable"></script>
+  <script type="module" src="/static/app.js?v=20260624-dashboard-clean"></script>
 </body>
 </html>

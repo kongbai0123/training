@@ -10,26 +10,10 @@ export function initDashboard() {
 
 export function renderDashboard(status) {
   setHTML("#dashboard-alerts", "");
-  renderKpis(status);
+  setHTML("#dashboard-kpis", "");
   renderControlCards(status);
   renderRecentProjects(appState.projects);
   renderActivity(status);
-}
-
-function renderKpis(status) {
-  const items = [
-    ["Project", status.projectName],
-    ["Images", status.imageCount],
-    ["LabelMe JSON", `${status.labelme.jsonCount}/${status.imageCount}`],
-    ["Split", status.splitComplete ? "Ready" : "Not ready"],
-  ];
-
-  setHTML("#dashboard-kpis", items.map(([label, value]) => `
-    <div class="metric-card">
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(value)}</strong>
-    </div>
-  `).join(""));
 }
 
 function renderControlCards(status) {
@@ -57,9 +41,9 @@ function renderControlCards(status) {
     {
       icon: "fa-pen-nib",
       title: "LabelMe",
-      badge: "Backend Connected",
+      badge: "Ready",
       badgeClass: "success",
-      desc: "管理 LabelMe JSON 工作流，取代舊版 Canvas bbox 標註主入口。",
+      desc: "管理 LabelMe JSON 工作流、同步標註進度並檢查錯誤。",
       stats: [["JSON", status.labelme.jsonCount], ["Missing", status.labelme.missingJson]],
       progress: status.labelme.completionRate,
       actions: [button("Open Manager", "labelme", "primary"), button("Sync JSON", "labelme", "secondary")],
@@ -79,7 +63,7 @@ function renderControlCards(status) {
       title: "Augmentation",
       badge: appState.currentProject?.augmentation_config ? "Configured" : "Not configured",
       badgeClass: appState.currentProject?.augmentation_config ? "info" : "warning",
-      desc: "設定物理擴充，並以 Train split 為主要套用目標。",
+      desc: "設定物理擴充並預覽結果，輸出不污染原始資料。",
       stats: [["Requires", "Split"], ["Target", "Train"]],
       progress: status.splitComplete ? 60 : 0,
       actions: [button("Configure", "augmentation", "primary"), button("Preview", "augmentation", "secondary")],
@@ -89,7 +73,7 @@ function renderControlCards(status) {
       title: "Training",
       badge: status.trainReady ? "Ready" : "Not ready",
       badgeClass: status.trainReady ? "success" : "danger",
-      desc: "設定模型訓練參數，並依 LabelMe、Split 狀態啟用安全操作。",
+      desc: "設定模型與啟動訓練；不符合條件時只鎖定危險操作。",
       stats: [["Status", status.trainingLabel], ["Blockers", status.blockers.length]],
       progress: status.trainReady ? 100 : 25,
       actions: [button("Configure", "training", "primary"), disabledButton("Start Training")],
@@ -99,7 +83,7 @@ function renderControlCards(status) {
       title: "Evaluation",
       badge: status.bestModelExists ? "Available" : "No model",
       badgeClass: status.bestModelExists ? "success" : "warning",
-      desc: "查看 mAP、IoU、failure cases 等模型評估資訊。",
+      desc: "查看 mAP、IoU、failure cases 與模型品質。",
       stats: [["mAP", "--"], ["IoU", "--"]],
       progress: status.bestModelExists ? 100 : 0,
       actions: [button("View Evaluation", "evaluation", "primary")],
@@ -109,7 +93,7 @@ function renderControlCards(status) {
       title: "Export",
       badge: status.bestModelExists ? "Exportable" : "No model",
       badgeClass: status.bestModelExists ? "success" : "warning",
-      desc: "匯出 PT、ONNX、報告與部署需要的模型成果。",
+      desc: "匯出 PT、ONNX 與訓練報告，供部署或交付使用。",
       stats: [["ONNX", "Supported"], ["TensorRT", "Pending"]],
       progress: status.bestModelExists ? 100 : 0,
       actions: [button("Open Export", "export", "primary")],
@@ -145,17 +129,21 @@ function disabledButton(label) {
 }
 
 function renderRecentProjects(projects) {
-  eventBus.emit("render-recent-projects-list", (projects || []).slice(0, 5));
+  eventBus.emit("render-recent-projects-list", (projects || []).slice(0, 3));
 }
 
 function renderActivity(status) {
   const items = [];
   if (!status.hasProject) {
-    items.push("尚未開啟專案。");
+    items.push("尚未載入專案。請使用 New Project 建立專案，或從 Browse History 開啟既有專案。");
   } else if (!status.hasDataset) {
-    items.push("目前專案尚未匯入資料。");
+    items.push("專案已載入，但尚未匯入資料。下一步建議前往 Dataset 匯入圖片或影片。");
+  } else if (!status.splitComplete) {
+    items.push("資料已匯入。下一步建議同步標註並建立 Train / Val / Test。");
+  } else if (!status.trainReady) {
+    items.push("Split 已建立，但訓練條件尚未完成。請檢查 Training 頁面的 blockers。");
   } else {
-    items.push(`目前專案：${status.projectName}`);
+    items.push("專案已接近可訓練狀態。可前往 Training 設定模型並開始訓練。");
   }
 
   setHTML("#recent-activity-list", items.map((item) => `<div class="activity-item">${escapeHtml(item)}</div>`).join(""));

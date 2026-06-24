@@ -55,16 +55,21 @@ export function renderProjectsPage() {
 
 export function renderProjectList(projects, options = {}) {
   if (!projects || projects.length === 0) {
-    return `<div class="empty-state">目前沒有專案。請點選 New Project 建立第一個專案。</div>`;
+    return `<div class="empty-state">目前沒有專案。請使用 New Project 建立新專案。</div>`;
   }
 
   return projects.map((project) => {
     const progress = project.annotation_progress || {};
+    const updatedAt = formatDate(project.updated_at);
+    const progressText = progress.total
+      ? `${progress.annotated || 0}/${progress.total || 0} annotated`
+      : "No images imported";
+
     return `
       <article class="list-item">
         <div>
           <h3>${escapeHtml(project.project_name || project.project_id)}</h3>
-          <p>${escapeHtml(project.task_type || "--")} · ${progress.annotated || 0}/${progress.total || 0} annotated · ${escapeHtml(project.updated_at || "")}</p>
+          <p>${escapeHtml(project.task_type || "--")} · ${escapeHtml(progressText)} · ${escapeHtml(updatedAt)}</p>
         </div>
         <div class="button-row">
           <button class="btn btn-secondary btn-sm" data-open-project="${escapeHtml(project.project_id)}">Open</button>
@@ -109,7 +114,7 @@ async function createProject(event) {
   const classes = [...appState.newProjectClasses];
 
   if (!name || classes.length === 0) {
-    eventBus.emit("toast", "請輸入專案名稱，並至少新增一個類別。");
+    eventBus.emit("toast", "請輸入專案名稱與至少一個類別");
     return;
   }
 
@@ -126,7 +131,7 @@ async function createProject(event) {
     closeCreateProjectModal();
 
     eventBus.emit("reload-projects", { openProjectId: project.project_id });
-    eventBus.emit("toast", "專案已建立。");
+    eventBus.emit("toast", "專案已建立");
   } catch (err) {
     eventBus.emit("toast", `建立專案失敗：${err.message}`);
   }
@@ -151,7 +156,7 @@ function addProjectClassFromInput() {
   });
 
   if (input) input.value = "";
-  if (!changed) eventBus.emit("toast", "類別已存在。");
+  if (!changed) eventBus.emit("toast", "類別已存在");
   renderNewProjectClassList();
 }
 
@@ -177,7 +182,7 @@ function renderNewProjectClassList() {
 function openDeleteProjectModal(projectId) {
   const project = appState.projects.find((item) => item.project_id === projectId);
   appState.pendingDeleteProjectId = projectId;
-  setText("#delete-project-message", `確定要刪除「${project?.project_name || projectId}」？此操作無法復原。`);
+  setText("#delete-project-message", `確定要刪除專案「${project?.project_name || projectId}」？此操作無法復原。`);
   const btn = qs("#btn-confirm-delete-project");
   if (btn) {
     btn.disabled = false;
@@ -210,12 +215,12 @@ async function confirmDeleteProject() {
     await apiFetch(`/api/projects/${projectId}`, { method: "DELETE" });
     closeDeleteProjectModal();
     eventBus.emit("project-deleted", projectId);
-    eventBus.emit("toast", "專案已刪除。");
+    eventBus.emit("toast", "專案已刪除");
   } catch (err) {
     if (err.message && err.message.includes("Project not found")) {
       closeDeleteProjectModal();
       eventBus.emit("reload-projects");
-      eventBus.emit("toast", "專案已不存在，已重新整理清單。");
+      eventBus.emit("toast", "專案已不存在，已重新整理清單");
       return;
     }
     eventBus.emit("toast", `刪除失敗：${err.message}`);
@@ -230,4 +235,12 @@ async function confirmDeleteProject() {
 function closeHistoryModal() {
   const modal = qs("#project-history-modal");
   if (modal) modal.hidden = true;
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (num) => String(num).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
