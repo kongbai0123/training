@@ -1248,6 +1248,319 @@ select:focus {
   align-items: start;
 }
 
+.auto-label-layout.simplified {
+  grid-template-columns: minmax(360px, 0.85fr) minmax(460px, 1.15fr);
+}
+
+.model-registry-list.grouped {
+  gap: 14px;
+}
+
+.model-registry-group {
+  display: grid;
+  gap: 8px;
+}
+
+.model-registry-group-title {
+  display: grid;
+  gap: 2px;
+  padding: 0 2px;
+}
+
+.model-registry-group-title strong {
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.model-registry-group-title span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.model-registry-item.checkpoint {
+  background: color-mix(in srgb, var(--bg-panel-soft) 84%, var(--bg) 16%);
+}
+
+.readable-panel {
+  border-top: 1px solid var(--border);
+}
+
+.model-drop-zone {
+  min-height: 112px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.model-drop-zone.drag-over {
+  border-color: var(--primary);
+  background: rgba(59, 130, 246, 0.10);
+  transform: translateY(-1px);
+}
+
+.simple-step-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.simple-step {
+  min-height: 72px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+  display: grid;
+  gap: 4px;
+}
+
+.simple-step.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18);
+}
+
+.simple-step strong {
+  font-size: 0.84rem;
+}
+
+.simple-step span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.compact-source-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.compact-source-grid .source-option {
+  min-height: 82px;
+}
+
+.source-drop-preview {
+  margin: 2px 0 14px;
+}
+
+.auto-basic-settings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.advanced-collapse {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.advanced-collapse summary {
+  cursor: pointer;
+  padding: 12px;
+  font-weight: 700;
+}
+
+.compact-strategy-list {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.compact-strategy-list div {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.compact-strategy-list strong {
+  font-size: 0.86rem;
+}
+
+.compact-strategy-list span,
+.muted-note {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.compact-toolbar .btn-primary {
+  margin-left: 0;
+}
+
+.auto-readable-preview {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.auto-result-summary {
+  margin-top: 14px;
+}
+
+.auto-label-status-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.auto-label-workbench {
+  display: grid;
+  grid-template-columns: minmax(520px, 1.05fr) minmax(420px, 0.95fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.auto-job-builder,
+.auto-review-panel {
+  min-width: 0;
+}
+
+.auto-step-block {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.auto-step-block + .auto-step-block {
+  margin-top: 12px;
+}
+
+.auto-step-block.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.16);
+}
+
+.auto-step-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auto-step-heading span {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.auto-step-heading strong {
+  font-size: 0.95rem;
+}
+
+.auto-source-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 0;
+}
+
+.model-source-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.model-source-tab {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.model-source-tab.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.model-source-tab:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.model-registry-list.dimmed {
+  opacity: 0.52;
+}
+
+.model-import-collapse {
+  margin-top: 0;
+}
+
+.auto-basic-settings.expanded {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.target-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.target-card i {
+  color: var(--primary);
+  font-size: 1.15rem;
+}
+
+.target-card div {
+  display: grid;
+  gap: 3px;
+}
+
+.target-card span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.safe-target {
+  border-color: rgba(22, 163, 74, 0.45);
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.review-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.review-preview-grid .preview-placeholder {
+  min-height: 240px;
+}
+
+.draft-inspector {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.auto-label-bottom-grid.redesigned {
+  grid-template-columns: minmax(420px, 1fr) minmax(420px, 1fr);
+}
+
+.compact-table {
+  max-height: 260px;
+  overflow: auto;
+}
+
 .source-option-grid,
 .mode-grid {
   display: grid;
@@ -1923,7 +2236,17 @@ body[data-theme="light"] .toast {
   .inference-preview-grid,
   .inference-summary-grid,
   .auto-label-layout,
+  .auto-label-layout.simplified,
+  .auto-label-status-strip,
+  .auto-label-workbench,
   .auto-label-bottom-grid,
+  .auto-label-bottom-grid.redesigned,
+  .simple-step-list,
+  .compact-source-grid,
+  .auto-source-grid,
+  .auto-basic-settings,
+  .auto-basic-settings.expanded,
+  .auto-readable-preview,
   .dataset-manager-layout,
   .labelme-layout,
   .kpi-grid,

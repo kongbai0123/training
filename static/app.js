@@ -26,7 +26,7 @@ import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.j
 import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js";
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js";
 import { initInference, renderInferencePage } from "./pages/inference.js";
-import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js";
+import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260624-auto-label-readable";
 import { initExport, renderExportPage } from "./pages/export.js";
 import { initSettings, renderSettingsPage } from "./pages/settings.js";
 

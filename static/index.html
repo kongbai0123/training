@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css?v=20260623-auto-label-ui">
+  <link rel="stylesheet" href="/static/style.css?v=20260624-auto-label-readable">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -1083,7 +1083,7 @@
           <div class="page-header">
             <div>
               <h1>Auto-Labeling Console</h1>
-              <p>使用已註冊模型產生標註草稿；本階段先完成介面，後續再接入自動標註 API。</p>
+              <p>Generate draft annotations from project models, review them, and safely apply accepted labels.</p>
             </div>
             <div class="page-actions">
               <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-auto-label-models">
@@ -1092,199 +1092,167 @@
             </div>
           </div>
 
-          <div class="status-guard info">
-            <div class="guard-title">Phase UI Preview</div>
+          <div class="auto-label-status-strip">
+            <div class="metric-card"><span>Unlabeled images</span><strong id="auto-stat-unlabeled">--</strong></div>
+            <div class="metric-card"><span>Draft annotations</span><strong id="auto-stat-drafts">0</strong></div>
+            <div class="metric-card"><span>Available models</span><strong id="auto-stat-models">--</strong></div>
+            <div class="metric-card"><span>Review queue</span><strong id="auto-stat-review">0</strong></div>
+            <div class="metric-card"><span>Target</span><strong>Draft only</strong></div>
+          </div>
+
+          <div class="status-guard info compact-guard">
+            <div class="guard-title">Auto-Labeling ????</div>
             <ul>
-              <li>此頁目前為 Auto-Labeling P0 介面草案。</li>
-              <li>Start Auto-Label、Confirm、Export 等功能會在後續後端 API 完成後啟用。</li>
-              <li>設計目標是產生 LabelMe / YOLO 草稿，不直接覆寫正式標註。</li>
+              <li>?????? draft annotation job???????????? LabelMe ????</li>
+              <li>P0 ?????????? drafts??????? annotations/current?</li>
+              <li>best.pt ? last.pt ???? training/runs/*/weights?????????? checkpoint ???</li>
             </ul>
-            <div class="guard-next-actions">後續接入：/inference/auto-label/start、job review、LabelMe draft exporter。</div>
           </div>
 
-          <div class="auto-label-layout">
-            <section class="panel-section">
+          <div class="auto-label-workbench">
+            <section class="panel-section auto-job-builder">
               <div class="section-title">
-                <h2>Model Selector</h2>
-                <span class="info-icon" data-tooltip="Model Selector;只顯示 Model Registry 掃描到的 best.pt / last.pt。;後端正式實作時只允許傳 model_id，不允許任意 weight path。">i</span>
+                <h2>Create Draft Job</h2>
+                <span class="info-icon" data-tooltip="Create Draft Job;?????????????????????????????????????????????????">i</span>
               </div>
-              <div id="auto-label-model-list" class="model-registry-list"></div>
-              <div class="model-import-panel">
-                <div class="section-title compact-title">
-                  <h3>Import Model</h3>
-                  <span class="info-icon" data-tooltip="Import Model;後續可導入本機 .pt / .onnx 權重。;導入後會先進 Model Registry，通過安全檢查才可用於自動標註。;不允許前端直接指定任意權重路徑執行。">i</span>
-                </div>
-                <div class="drop-zone compact disabled-drop">
-                  <i class="fa-solid fa-file-import"></i>
-                  <strong>Drop .pt / .onnx model here</strong>
-                  <span>UI only：後續接 model import API 與權重安全驗證。</span>
-                </div>
-                <div class="model-import-actions">
-                  <button class="btn btn-secondary btn-sm" disabled>Browse Model</button>
-                  <button class="btn btn-secondary btn-sm" disabled>Register Model</button>
-                </div>
-              </div>
-              <div class="phase-card disabled">
-                <div>
-                  <strong>External foundation models</strong>
-                  <span>Grounding DINO、SAM2、YOLOE 將保留到 Phase 2。</span>
-                </div>
-                <button class="btn btn-disabled" disabled>Phase 2</button>
-              </div>
-            </section>
 
-            <section class="panel-section">
-              <div class="section-title">
-                <h2>Source</h2>
-                <span class="info-icon" data-tooltip="Source;P0 會支援單張圖片與資料夾圖片。;影片與 Camera 會放到後續批次 job 階段。">i</span>
+              <div class="auto-step-block active">
+                <div class="auto-step-heading"><span>1</span><strong>Input Source</strong></div>
+                <div class="source-option-grid auto-source-grid">
+                  <button type="button" class="source-option active" data-auto-source="unlabeled">
+                    <i class="fa-solid fa-image"></i>
+                    <strong>Unlabeled images</strong>
+                    <span>???? LabelMe JSON ???</span>
+                  </button>
+                  <button type="button" class="source-option" data-auto-source="invalid-json">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <strong>Invalid annotations</strong>
+                    <span>JSON ??????????</span>
+                  </button>
+                  <button type="button" class="source-option disabled" disabled>
+                    <i class="fa-solid fa-folder-open"></i>
+                    <strong>Selected folder</strong>
+                    <span>Phase 2</span>
+                  </button>
+                </div>
+                <div class="drop-zone compact disabled-drop source-drop-preview">
+                  <i class="fa-solid fa-cloud-arrow-up"></i>
+                  <strong>Drop images or folder here</strong>
+                  <span>???????? upload / folder scan API ??????</span>
+                </div>
               </div>
-              <div class="source-option-grid">
-                <button type="button" class="source-option active" data-auto-source="single">
-                  <i class="fa-solid fa-image"></i>
-                  <strong>Single Image</strong>
-                  <span>單張 preview 與人工確認。</span>
-                </button>
-                <button type="button" class="source-option" data-auto-source="folder">
-                  <i class="fa-solid fa-folder-open"></i>
-                  <strong>Image Folder</strong>
-                  <span>資料夾批次草稿。</span>
-                </button>
-                <button type="button" class="source-option disabled" disabled>
-                  <i class="fa-solid fa-video"></i>
-                  <strong>Video</strong>
-                  <span>Phase 1 job queue。</span>
-                </button>
-              </div>
-              <div class="form-stack">
-                <label>
-                  <span>Upload image / folder placeholder</span>
-                  <div class="drop-zone compact disabled-drop">
+
+              <div class="auto-step-block">
+                <div class="auto-step-heading"><span>2</span><strong>Model Source</strong></div>
+                <div class="model-source-tabs">
+                  <button type="button" class="model-source-tab active" data-model-source="project">Project model</button>
+                  <button type="button" class="model-source-tab" data-model-source="external">External model</button>
+                  <button type="button" class="model-source-tab" disabled>Foundation model ? Phase 2</button>
+                </div>
+                <div id="auto-label-model-list" class="model-registry-list grouped"></div>
+                <details class="advanced-collapse model-import-collapse">
+                  <summary>External model import</summary>
+                  <label class="drop-zone model-drop-zone" id="auto-model-drop-zone" for="auto-model-file-input">
+                    <input type="file" id="auto-model-file-input" accept=".pt,.onnx" hidden>
                     <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <strong>Drop image or folder here</strong>
-                    <span>UI only：後續接上 upload / folder scan。</span>
+                    <strong>Drop .pt / .onnx model here</strong>
+                    <span id="auto-model-drop-status">??????????????????</span>
+                  </label>
+                  <div class="model-import-actions">
+                    <button class="btn btn-secondary btn-sm" id="btn-browse-auto-model" type="button">Browse Model</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-register-auto-model" type="button" disabled>Register Model</button>
                   </div>
-                </label>
-                <label>
-                  <span>Trusted local path</span>
-                  <input type="text" id="auto-label-source-path" placeholder="D:\datasets\images" disabled>
-                </label>
+                  <p class="muted-note">??????? task type?class map ???????P0 ??? UI?</p>
+                </details>
+              </div>
+
+              <div class="auto-step-block">
+                <div class="auto-step-heading"><span>3</span><strong>Draft Rules</strong></div>
+                <div class="auto-basic-settings expanded">
+                  <label><span>Confidence</span><input type="number" id="auto-confidence" value="0.35" min="0.01" max="1" step="0.01" disabled></label>
+                  <label><span>IoU</span><input type="number" id="auto-iou" value="0.50" min="0.01" max="1" step="0.01" disabled></label>
+                  <label><span>Class filter</span><input type="text" id="auto-class-filter" placeholder="class_a, class_b" disabled></label>
+                  <label><span>Minimum mask area</span><input type="number" value="400" min="0" disabled></label>
+                  <label><span>Max detections</span><input type="number" value="20" min="1" disabled></label>
+                  <label><span>Output mode</span><select disabled><option>Mask / Polygon draft</option><option>BBox draft</option></select></label>
+                </div>
+                <details class="advanced-collapse">
+                  <summary>Review priority rules</summary>
+                  <div class="compact-strategy-list">
+                    <div><strong>Low-confidence policy</strong><span>?????????? review queue???????</span></div>
+                    <div><strong>Unknown class policy</strong><span>???? class_names ????? unknown???????</span></div>
+                    <div><strong>Mask quality filter</strong><span>?????????????? mask ????????</span></div>
+                    <div><strong>Draft only protection</strong><span>??????? annotations/drafts/auto_label/{job_id}?</span></div>
+                  </div>
+                </details>
+              </div>
+
+              <div class="auto-step-block output-target-block">
+                <div class="auto-step-heading"><span>4</span><strong>Output Target</strong></div>
+                <div class="target-card safe-target">
+                  <i class="fa-solid fa-shield-halved"></i>
+                  <div><strong>Draft only</strong><span>Save to annotations/drafts/auto_label/{job_id}. Do not write to current annotations.</span></div>
+                </div>
+                <button class="btn btn-primary btn-disabled" id="btn-start-auto-label" disabled>
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Start Auto-Label Job
+                </button>
+                <p class="muted-note" id="auto-start-reason">?????? API ??????????????????</p>
               </div>
             </section>
 
-            <section class="panel-section">
+            <section class="panel-section auto-review-panel">
               <div class="section-title">
-                <h2>Labeling Mode</h2>
-                <span class="info-icon" data-tooltip="Labeling Mode;Suggest only 只產生草稿。;Semi-auto confirm 會讓高信心結果預先標記為可接受。;P0 預設不會直接寫入正式資料集。">i</span>
+                <h2>Draft Preview / Review</h2>
+                <span class="info-icon" data-tooltip="Draft Preview / Review;??????????????????P0 ????????????????? overlay ? accept/reject API?">i</span>
               </div>
-              <div class="mode-grid">
-                <label class="mode-card selected">
-                  <input type="radio" name="auto-label-mode" value="suggest" checked>
-                  <strong>Suggest only</strong>
-                  <span>產生草稿，逐張人工確認。</span>
-                </label>
-                <label class="mode-card">
-                  <input type="radio" name="auto-label-mode" value="semi">
-                  <strong>Semi-auto confirm</strong>
-                  <span>高信心項目仍需審核後套用。</span>
-                </label>
-                <label class="mode-card disabled">
-                  <input type="radio" disabled>
-                  <strong>Confirm all</strong>
-                  <span>Phase 2，需完整風險控管。</span>
-                </label>
-              </div>
-            </section>
-
-            <section class="panel-section">
-              <div class="section-title">
-                <h2>Thresholds / Controls</h2>
-                <span class="info-icon" data-tooltip="Thresholds;Confidence 控制保留預測的最低信心。;Min area 可過濾太小的 mask 或 bbox。;Polygon simplify 會降低草稿點數，方便 LabelMe 編修。">i</span>
-              </div>
-              <div class="auto-settings-grid">
-                <label><span>Confidence</span><input type="number" value="0.35" min="0.01" max="1" step="0.01" disabled></label>
-                <label><span>IoU</span><input type="number" value="0.50" min="0.01" max="1" step="0.01" disabled></label>
-                <label><span>Min area px</span><input type="number" value="400" min="0" disabled></label>
-                <label><span>Mask opacity</span><input type="number" value="0.55" min="0" max="1" step="0.05" disabled></label>
-                <label><span>Class filter</span><input type="text" placeholder="class_a, class_b" disabled></label>
-                <label><span>Polygon simplify</span><select disabled><option>Medium</option><option>Low</option><option>High</option></select></label>
-              </div>
-              <div class="inline-actions inference-toggle-row">
-                <label class="checkbox-row"><input type="checkbox" checked disabled> Show mask</label>
-                <label class="checkbox-row"><input type="checkbox" checked disabled> Show bbox</label>
-                <label class="checkbox-row"><input type="checkbox" disabled> Heatmap</label>
-              </div>
-            </section>
-
-            <section class="panel-section">
-              <div class="section-title">
-                <h2>Accuracy Strategy</h2>
-                <span class="info-icon" data-tooltip="Accuracy Strategy;自動標註不只看 confidence。;會結合類別門檻、mask 面積、NMS、polygon 簡化與低信心人工複查。;目標是提升草稿品質，而不是直接取代人工審核。">i</span>
-              </div>
-              <div class="strategy-list">
-                <div class="strategy-item">
-                  <strong>Class-aware threshold</strong>
-                  <span>稀有類別可用較低 threshold 保留候選，多數類別用較高 threshold 降低誤報。</span>
+              <div class="review-preview-grid">
+                <div class="preview-tile">
+                  <h3>Original Image</h3>
+                  <div class="preview-placeholder">?????????</div>
                 </div>
-                <div class="strategy-item">
-                  <strong>Mask quality filters</strong>
-                  <span>過小 mask、破碎 mask、邊界過度鋸齒的結果會進入人工複查。</span>
+                <div class="preview-tile">
+                  <h3>Draft Overlay</h3>
+                  <div class="preview-placeholder">Mask / bbox / polygon overlay ???????</div>
                 </div>
-                <div class="strategy-item">
-                  <strong>Human review priority</strong>
-                  <span>低信心、高重疊、未知類別會優先顯示給 reviewer。</span>
-                </div>
-                <div class="strategy-item">
-                  <strong>Train-only protection</strong>
-                  <span>確認後也只套用到 train scope，避免污染 val/test 評估集。</span>
-                </div>
+              </div>
+              <div class="draft-inspector">
+                <div class="summary-row"><span>Prediction class</span><code>--</code></div>
+                <div class="summary-row"><span>Confidence</span><code>--</code></div>
+                <div class="summary-row"><span>Warning reason</span><code>--</code></div>
+                <div class="summary-row"><span>Review state</span><code>Waiting for job</code></div>
+              </div>
+              <div class="auto-review-toolbar compact-toolbar">
+                <button class="btn btn-secondary" disabled><i class="fa-solid fa-check"></i> Accept</button>
+                <button class="btn btn-secondary" disabled><i class="fa-solid fa-xmark"></i> Reject</button>
+                <button class="btn btn-secondary" disabled><i class="fa-solid fa-forward-step"></i> Skip</button>
+                <button class="btn btn-secondary" disabled><i class="fa-solid fa-pen-nib"></i> Edit in LabelMe</button>
+                <button class="btn btn-secondary" disabled><i class="fa-solid fa-flag"></i> Hard Case</button>
               </div>
             </section>
           </div>
 
-          <section class="panel-section auto-preview-panel">
-            <div class="section-title">
-              <h2>Preview / Draft Annotation</h2>
-              <div class="inline-actions">
-                <button class="btn btn-secondary btn-sm" disabled><i class="fa-solid fa-keyboard"></i> Hotkeys</button>
-                <button class="btn btn-secondary btn-sm" disabled>View Job</button>
-              </div>
-            </div>
-            <div class="inference-preview-grid">
-              <div class="preview-tile">
-                <h3>Original</h3>
-                <div class="preview-placeholder">選擇圖片後顯示原圖。</div>
-              </div>
-              <div class="preview-tile">
-                <h3>Draft Overlay</h3>
-                <div class="preview-placeholder">後續顯示模型產生的 LabelMe / YOLO 草稿 overlay。</div>
-              </div>
-            </div>
-            <div class="auto-review-toolbar">
-              <button class="btn btn-secondary" disabled><i class="fa-solid fa-check"></i> Accept</button>
-              <button class="btn btn-secondary" disabled><i class="fa-solid fa-xmark"></i> Reject</button>
-              <button class="btn btn-secondary" disabled><i class="fa-solid fa-pen-nib"></i> Edit Polygon</button>
-              <button class="btn btn-secondary" disabled><i class="fa-solid fa-flag"></i> Hard Case</button>
-              <button class="btn btn-primary btn-disabled" id="btn-start-auto-label" disabled>
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Start Auto-Label
-              </button>
-            </div>
-          </section>
-
-          <div class="auto-label-bottom-grid">
+          <div class="auto-label-bottom-grid redesigned">
             <section class="panel-section">
-              <div class="section-title"><h2>Draft Results</h2></div>
-              <div class="metric-grid compact">
-                <div class="metric-card"><span>Job status</span><strong>UI only</strong></div>
-                <div class="metric-card"><span>Predictions</span><strong>--</strong></div>
-                <div class="metric-card"><span>Accepted</span><strong>--</strong></div>
-                <div class="metric-card"><span>Rejected</span><strong>--</strong></div>
+              <div class="section-title"><h2>Job History</h2></div>
+              <div class="data-table compact-table">
+                <table>
+                  <thead><tr><th>Job</th><th>Source</th><th>Model</th><th>Status</th><th>Drafts</th></tr></thead>
+                  <tbody id="auto-job-history-body">
+                    <tr><td colspan="5">?? auto-label job????????? job_id???????????</td></tr>
+                  </tbody>
+                </table>
               </div>
             </section>
             <section class="panel-section">
-              <div class="section-title"><h2>Export / Apply</h2></div>
-              <div class="phase-card disabled"><strong>Save draft</strong><span>寫入 job annotations/versions。</span><button class="btn btn-disabled" disabled>Phase 0 API</button></div>
-              <div class="phase-card disabled"><strong>Export LabelMe / YOLO</strong><span>輸出草稿，不覆寫正式標註。</span><button class="btn btn-disabled" disabled>Phase 0 API</button></div>
-              <div class="phase-card disabled"><strong>Apply to Train only</strong><span>人工確認後才可套用，Val/Test 不變。</span><button class="btn btn-disabled" disabled>Phase 0 API</button></div>
+              <div class="section-title"><h2>Draft Review Queue</h2></div>
+              <div class="data-table compact-table">
+                <table>
+                  <thead><tr><th>Image</th><th>Class</th><th>Confidence</th><th>Issue</th><th>Action</th></tr></thead>
+                  <tbody id="auto-review-queue-body">
+                    <tr><td colspan="5">?????????? draft job ??????????</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </section>
           </div>
         </section>
@@ -1432,6 +1400,6 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260623-auto-label-ui"></script>
+  <script type="module" src="/static/app.js?v=20260624-auto-label-readable"></script>
 </body>
 </html>
