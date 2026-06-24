@@ -1,20 +1,45 @@
+from __future__ import annotations
+
+import json
 import os
 from pathlib import Path
 
-# Base directories
-# 優先使用環境變數 VTS_BASE_DIR，否則動態計算專案根目錄 (本檔案位於 src/ 下)
-BASE_DIR = Path(os.environ.get("VTS_BASE_DIR", Path(__file__).resolve().parents[1])).resolve()
-PROJECTS_DIR = BASE_DIR / "projects"
-STATIC_DIR = BASE_DIR / "static"
+from src.app_paths import APP_HOME, STATIC_DIR as _STATIC_DIR, PROJECTS_DIR as _PROJECTS_DIR
 
-# Ensure directories exist
-PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
-STATIC_DIR.mkdir(parents=True, exist_ok=True)
+APP_ENV = os.environ.get("VTS_ENV", os.environ.get("VTS_MODE", "development")).lower()
+BASE_DIR = APP_HOME
+PROJECTS_DIR = _PROJECTS_DIR
+STATIC_DIR = _STATIC_DIR
+APP_VERSION = "0.0.0"
+VERSION_INFO = {
+    "product": "Vision Training Studio",
+    "version": APP_VERSION,
+    "edition": "Local",
+    "build": "unknown",
+    "channel": "commercial-mvp",
+}
+
+_version_file = BASE_DIR / "version.json"
+if _version_file.exists():
+    try:
+        with _version_file.open("r", encoding="utf-8") as f:
+            payload = json.load(f)
+            if isinstance(payload, dict):
+                VERSION_INFO.update(payload)
+                APP_VERSION = str(VERSION_INFO.get("version", APP_VERSION))
+                VERSION_INFO["version"] = APP_VERSION
+    except Exception:
+        APP_VERSION = "0.0.0"
+        VERSION_INFO["version"] = APP_VERSION
 
 # Device Configuration
-# 延遲導入 torch，在無 PyTorch 環境下仍可正常啟動服務
+HAS_GPU = False
+DEVICE = "cpu"
+DEVICE_NAME = "CPU"
+
 try:
     import torch
+
     HAS_GPU = torch.cuda.is_available()
     DEVICE = "0" if HAS_GPU else "cpu"
     DEVICE_NAME = torch.cuda.get_device_name(0) if HAS_GPU else "CPU"
@@ -22,6 +47,3 @@ except ImportError:
     HAS_GPU = False
     DEVICE = "cpu"
     DEVICE_NAME = "CPU (PyTorch not installed)"
-
-print(f"[Config] System initialized. BASE_DIR: {BASE_DIR}")
-print(f"[Config] Device detected: {DEVICE_NAME} (Use GPU: {HAS_GPU})")

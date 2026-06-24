@@ -15,6 +15,13 @@ export const appState = {
   inferenceRunning: false,
   inferenceSelectedModelId: "",
   wsConn: null,
+  bootstrap: {
+    token: localStorage.getItem("vts-session-token") || "",
+    startedAt: "",
+    expiresAt: "",
+    version: "",
+    environment: ""
+  },
   settings: {
     theme: localStorage.getItem("vts-theme") || "dark",
     language: localStorage.getItem("vts-language") || "zh-TW"

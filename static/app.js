@@ -32,6 +32,7 @@ import { initSettings, renderSettingsPage } from "./pages/settings.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   initPreferences();
+  await bootstrapSession();
   bindGlobalNavigation();
   bindInfoTooltips();
   
@@ -56,6 +57,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadProjects({ autoOpenLatest: true });
   navigate("dashboard");
 });
+
+async function bootstrapSession() {
+  try {
+    const payload = await apiFetch("/api/bootstrap");
+    appState.bootstrap = {
+      token: payload?.token || "",
+      startedAt: payload?.started_at || "",
+      expiresAt: payload?.expires_at || "",
+      version: payload?.version || "",
+      environment: payload?.environment || "",
+    };
+    window.__VTS_BOOTSTRAP = appState.bootstrap;
+    if (appState.bootstrap.token) {
+      localStorage.setItem("vts-session-token", appState.bootstrap.token);
+    }
+  } catch (err) {
+    console.warn("Unable to fetch bootstrap token:", err.message);
+    appState.bootstrap.token = "";
+  }
+}
 
 async function fetchSystemHealth() {
   const controller = new AbortController();

@@ -1,8 +1,21 @@
 import { eventBus } from "./event_bus.js";
+import { appState } from "./state.js";
 
 export async function apiFetch(url, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  const token = appState.bootstrap?.token;
+  const extraHeaders = { ...(options.headers || {}) };
+
+  if (token) {
+    extraHeaders["X-VTS-Token"] = token;
+  }
+
   try {
-    const res = await fetch(url, options);
+    const res = await fetch(url, {
+      ...options,
+      method,
+      headers: extraHeaders,
+    });
     if (!res.ok) {
       let detail = "";
       try {
