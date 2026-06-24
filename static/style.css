@@ -973,6 +973,65 @@ body[data-theme="light"] .workflow-card {
   text-align: left;
 }
 
+.project-history-modal-content {
+  width: min(720px, calc(100vw - 28px));
+  max-height: min(88vh, 760px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 12px;
+}
+
+.history-search-box {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.history-search-box i {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.history-search-box input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+}
+
+.history-result-count {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.project-history-scroll {
+  min-height: 0;
+  max-height: 610px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.project-history-scroll .project-history-card:nth-child(n + 3) {
+  margin-top: 12px;
+}
+
 .dataset-manager-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

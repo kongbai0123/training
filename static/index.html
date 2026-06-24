@@ -1407,12 +1407,20 @@
   </div>
 
   <div class="modal-overlay" id="project-history-modal" hidden>
-    <div class="modal-content">
+    <div class="modal-content project-history-modal-content">
       <div class="modal-header">
         <h2>Browse History</h2>
         <button class="icon-btn" id="btn-close-history" aria-label="Close">&times;</button>
       </div>
-      <div class="modal-body" id="modal-project-list"></div>
+      <div class="history-search-row">
+        <div class="history-search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="search" id="project-history-search" placeholder="Search project name, ID, class, task, path">
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btn-clear-history-search" type="button">Clear</button>
+        <span id="project-history-result-count" class="history-result-count">0 projects</span>
+      </div>
+      <div class="modal-body project-history-scroll" id="modal-project-list"></div>
     </div>
   </div>
 

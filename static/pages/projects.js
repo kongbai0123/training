@@ -3,6 +3,8 @@ import { appState } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
 
+let historySearchQuery = "";
+
 export function initProjects() {
   qs("#btn-reload-projects")?.addEventListener("click", () => {
     eventBus.emit("reload-projects");
@@ -37,14 +39,22 @@ export function initProjects() {
   });
   qs("#btn-confirm-delete-project")?.addEventListener("click", confirmDeleteProject);
 
+  qs("#project-history-search")?.addEventListener("input", (event) => {
+    historySearchQuery = event.target.value || "";
+    renderHistoryModal();
+  });
+  qs("#btn-clear-history-search")?.addEventListener("click", () => {
+    historySearchQuery = "";
+    const input = qs("#project-history-search");
+    if (input) input.value = "";
+    renderHistoryModal();
+  });
+
   eventBus.on("render-recent-projects-list", (subset) => {
     setHTML("#recent-projects-list", renderProjectList(subset, { includeDelete: false, compact: true }));
     bindProjectListButtons();
   });
-  eventBus.on("render-project-history-modal", () => {
-    setHTML("#modal-project-list", renderProjectList(appState.projects, { includeDelete: false, showFiles: true }));
-    bindProjectListButtons();
-  });
+  eventBus.on("render-project-history-modal", renderHistoryModal);
   eventBus.on("open-create-project-modal", openCreateProjectModal);
 
   renderNewProjectClassList();
@@ -54,7 +64,7 @@ export function renderProjectsPage() {
   const html = renderProjectList(appState.projects, { includeDelete: true, showFiles: true });
   setHTML("#project-history-list", html);
   setHTML("#history-list", html);
-  setHTML("#modal-project-list", renderProjectList(appState.projects, { includeDelete: false, showFiles: true }));
+  renderHistoryModal();
   bindProjectListButtons();
 }
 
@@ -64,6 +74,37 @@ export function renderProjectList(projects, options = {}) {
   }
 
   return projects.map((project) => renderProjectCard(project, options)).join("");
+}
+
+function renderHistoryModal() {
+  const filtered = filterProjects(appState.projects || [], historySearchQuery);
+  const resultText = historySearchQuery.trim()
+    ? `${filtered.length} / ${(appState.projects || []).length} projects`
+    : `${(appState.projects || []).length} projects`;
+
+  setText("#project-history-result-count", resultText);
+  setHTML("#modal-project-list", renderProjectList(filtered, { includeDelete: false, showFiles: true }));
+  bindProjectListButtons();
+}
+
+function filterProjects(projects, query) {
+  const needle = String(query || "").trim().toLowerCase();
+  if (!needle) return projects;
+
+  return projects.filter((project) => {
+    const files = project.file_summary || {};
+    const classes = Array.isArray(project.class_names) ? project.class_names.join(" ") : "";
+    const searchable = [
+      project.project_name,
+      project.project_id,
+      project.task_type,
+      project.path,
+      files.project_root,
+      files.layout_mode,
+      classes,
+    ].filter(Boolean).join(" ").toLowerCase();
+    return searchable.includes(needle);
+  });
 }
 
 function renderProjectCard(project, options = {}) {
