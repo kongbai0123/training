@@ -2,6 +2,7 @@ import { eventBus } from "./event_bus.js";
 
 export const appState = {
   currentPage: "dashboard",
+  dashboardFocus: "overview",
   currentProjectId: null,
   currentProject: null,
   projects: [],
