@@ -677,6 +677,9 @@ body[data-theme="light"] .status-guard {
 .guard-title {
   font-weight: 800;
   margin-bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .status-guard ul {
@@ -1323,6 +1326,52 @@ select:focus {
 
 .auto-review-toolbar .btn-primary {
   margin-left: auto;
+}
+
+.compact-title {
+  margin: 14px 0 8px;
+}
+
+.compact-title h3 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.model-import-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.model-import-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.strategy-list {
+  display: grid;
+  gap: 10px;
+}
+
+.strategy-item {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+  display: grid;
+  gap: 4px;
+}
+
+.strategy-item strong {
+  font-size: 0.9rem;
+}
+
+.strategy-item span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 .auto-label-bottom-grid {

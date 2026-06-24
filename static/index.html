@@ -418,7 +418,7 @@
               <label>
                 <span>Split method <span class="info-icon" data-tooltip="Stratified Split 盡量維持各類別在 Train / Val / Test 中的比例。Group Split 依影片或來源分組，降低 dataset leakage。">i</span></span>
                 <select id="split-method">
-                  <option value="stratified">Stratified Split</option>
+                  <option value="stratified">Class-balanced Stratified Split</option>
                   <option value="group">Group Split</option>
                   <option value="scene">Scene-aware Split</option>
                   <option value="basic">Basic Random</option>
@@ -1109,6 +1109,21 @@
                 <span class="info-icon" data-tooltip="Model Selector;只顯示 Model Registry 掃描到的 best.pt / last.pt。;後端正式實作時只允許傳 model_id，不允許任意 weight path。">i</span>
               </div>
               <div id="auto-label-model-list" class="model-registry-list"></div>
+              <div class="model-import-panel">
+                <div class="section-title compact-title">
+                  <h3>Import Model</h3>
+                  <span class="info-icon" data-tooltip="Import Model;後續可導入本機 .pt / .onnx 權重。;導入後會先進 Model Registry，通過安全檢查才可用於自動標註。;不允許前端直接指定任意權重路徑執行。">i</span>
+                </div>
+                <div class="drop-zone compact disabled-drop">
+                  <i class="fa-solid fa-file-import"></i>
+                  <strong>Drop .pt / .onnx model here</strong>
+                  <span>UI only：後續接 model import API 與權重安全驗證。</span>
+                </div>
+                <div class="model-import-actions">
+                  <button class="btn btn-secondary btn-sm" disabled>Browse Model</button>
+                  <button class="btn btn-secondary btn-sm" disabled>Register Model</button>
+                </div>
+              </div>
               <div class="phase-card disabled">
                 <div>
                   <strong>External foundation models</strong>
@@ -1197,6 +1212,31 @@
                 <label class="checkbox-row"><input type="checkbox" checked disabled> Show mask</label>
                 <label class="checkbox-row"><input type="checkbox" checked disabled> Show bbox</label>
                 <label class="checkbox-row"><input type="checkbox" disabled> Heatmap</label>
+              </div>
+            </section>
+
+            <section class="panel-section">
+              <div class="section-title">
+                <h2>Accuracy Strategy</h2>
+                <span class="info-icon" data-tooltip="Accuracy Strategy;自動標註不只看 confidence。;會結合類別門檻、mask 面積、NMS、polygon 簡化與低信心人工複查。;目標是提升草稿品質，而不是直接取代人工審核。">i</span>
+              </div>
+              <div class="strategy-list">
+                <div class="strategy-item">
+                  <strong>Class-aware threshold</strong>
+                  <span>稀有類別可用較低 threshold 保留候選，多數類別用較高 threshold 降低誤報。</span>
+                </div>
+                <div class="strategy-item">
+                  <strong>Mask quality filters</strong>
+                  <span>過小 mask、破碎 mask、邊界過度鋸齒的結果會進入人工複查。</span>
+                </div>
+                <div class="strategy-item">
+                  <strong>Human review priority</strong>
+                  <span>低信心、高重疊、未知類別會優先顯示給 reviewer。</span>
+                </div>
+                <div class="strategy-item">
+                  <strong>Train-only protection</strong>
+                  <span>確認後也只套用到 train scope，避免污染 val/test 評估集。</span>
+                </div>
               </div>
             </section>
           </div>

@@ -1,9 +1,112 @@
 import random
 import numpy as np
-from collections import defaultdict
+from collections import Counter, defaultdict
 from typing import Dict, Any, List, Tuple
 
 class DataSplitter:
+    @staticmethod
+    def _annotation_class(annotation: Dict[str, Any]) -> str:
+        return annotation.get("category") or annotation.get("label") or annotation.get("class_name") or ""
+
+    @staticmethod
+    def _image_class_counts(image: Dict[str, Any], class_names: List[str]) -> Counter:
+        valid_classes = set(class_names)
+        counts = Counter()
+        for ann in image.get("annotations", []):
+            cls = DataSplitter._annotation_class(ann)
+            if cls in valid_classes:
+                counts[cls] += 1
+        return counts
+
+    @staticmethod
+    def _class_balanced_stratified_split(
+        images: List[Dict[str, Any]],
+        class_names: List[str],
+        ratio: Dict[str, float]
+    ) -> Dict[str, List[str]]:
+        """Assign images to splits while minimizing class-distribution drift.
+
+        This is more robust than bucket-per-primary-class splitting for imbalanced
+        datasets because minority classes get processed first and every candidate
+        split is scored against image-count and per-class targets.
+        """
+        split_names = ["train", "val", "test"]
+        splits = {name: [] for name in split_names}
+        if not images:
+            return splits
+
+        image_counts = {img["filename"]: DataSplitter._image_class_counts(img, class_names) for img in images}
+        total_class_counts = Counter()
+        for counts in image_counts.values():
+            total_class_counts.update(counts)
+
+        total_images = len(images)
+        raw_targets = {name: ratio.get(name, 0) * total_images for name in split_names}
+        target_images = {name: int(np.floor(raw_targets[name])) for name in split_names}
+        remaining_slots = total_images - sum(target_images.values())
+        for name in sorted(split_names, key=lambda item: raw_targets[item] - target_images[item], reverse=True):
+            if remaining_slots <= 0:
+                break
+            target_images[name] += 1
+            remaining_slots -= 1
+        target_classes = {
+            name: {cls: ratio.get(name, 0) * total_class_counts[cls] for cls in class_names}
+            for name in split_names
+        }
+        current_class_counts = {name: Counter() for name in split_names}
+
+        def rarity_score(img: Dict[str, Any]) -> float:
+            counts = image_counts.get(img["filename"], Counter())
+            if not counts:
+                return -1.0
+            return sum(1.0 / max(1, total_class_counts[cls]) for cls in counts)
+
+        ordered_images = images.copy()
+        random.shuffle(ordered_images)
+        ordered_images.sort(key=rarity_score, reverse=True)
+
+        for img in ordered_images:
+            filename = img["filename"]
+            counts = image_counts.get(filename, Counter())
+
+            best_split = None
+            best_score = None
+            for split_name in split_names:
+                if len(splits[split_name]) >= target_images[split_name]:
+                    continue
+                projected_image_count = len(splits[split_name]) + 1
+                current_image_error = ((len(splits[split_name]) - target_images[split_name]) / max(1, total_images)) ** 2
+                projected_image_error = ((projected_image_count - target_images[split_name]) / max(1, total_images)) ** 2
+                image_delta = projected_image_error - current_image_error
+
+                class_delta = 0.0
+                if counts:
+                    for cls, cls_count in counts.items():
+                        current = current_class_counts[split_name][cls]
+                        projected = current_class_counts[split_name][cls] + cls_count
+                        target = target_classes[split_name].get(cls, 0)
+                        normalizer = max(1, total_class_counts[cls])
+                        rarity_weight = 1.0 + (1.0 / normalizer)
+                        current_error = ((current - target) / normalizer) ** 2
+                        projected_error = ((projected - target) / normalizer) ** 2
+                        coverage_bonus = 0.0
+                        if current == 0 and projected > 0 and target > 0 and total_class_counts[cls] >= 3:
+                            coverage_bonus = 0.25
+                        class_delta += ((projected_error - current_error) * rarity_weight) - coverage_bonus
+                    class_delta /= max(1, len(counts))
+
+                score = image_delta + class_delta
+                if best_score is None or score < best_score:
+                    best_score = score
+                    best_split = split_name
+
+            if best_split is None:
+                best_split = min(split_names, key=lambda name: len(splits[name]))
+            splits[best_split].append(filename)
+            current_class_counts[best_split].update(counts)
+
+        return splits
+
     @staticmethod
     def calculate_split_quality(images: List[Dict[str, Any]], splits: Dict[str, List[str]], class_names: List[str], expected_ratio: Dict[str, float]) -> Dict[str, Any]:
         """
@@ -145,55 +248,9 @@ class DataSplitter:
 
         # 3. 分層隨機切分 (Stratified Split)
         elif method == "stratified":
-            # 統計每張圖片含有的最稀有類別
-            # 首先計算整體類別總數
-            class_counts = defaultdict(int)
-            for img in images:
-                for ann in img.get("annotations", []):
-                    class_counts[ann.get("category")] += 1
-            
-            # 將類別以稀有度排序 (次數越少越稀有)
-            sorted_classes = sorted(class_names, key=lambda c: class_counts[c])
-            
-            # 依圖片包含的最稀有類別對圖片進行歸類
-            bucket = defaultdict(list)
-            unlabelled = []
-            
-            for img in images:
-                anns = img.get("annotations", [])
-                if not anns:
-                    unlabelled.append(img["filename"])
-                    continue
-                
-                # 尋找該圖片包含的最稀有類別
-                found = False
-                for c in sorted_classes:
-                    if any(ann.get("category") == c for ann in anns):
-                        bucket[c].append(img["filename"])
-                        found = True
-                        break
-                if not found:
-                    unlabelled.append(img["filename"])
-            
-            # 對每個 bucket 分別依比例分配
-            for c, fnames in bucket.items():
-                random.shuffle(fnames)
-                n = len(fnames)
-                n_train = int(n * norm_ratio["train"])
-                n_val = int(n * norm_ratio["val"])
-                splits["train"].extend(fnames[:n_train])
-                splits["val"].extend(fnames[n_train:n_train+n_val])
-                splits["test"].extend(fnames[n_train+n_val:])
-                
-            # 對未標註的圖片也依比例分配
-            random.shuffle(unlabelled)
-            n = len(unlabelled)
-            n_train = int(n * norm_ratio["train"])
-            n_val = int(n * norm_ratio["val"])
-            splits["train"].extend(unlabelled[:n_train])
-            splits["val"].extend(unlabelled[n_train:n_train+n_val])
-            splits["test"].extend(unlabelled[n_train+n_val:])
+            splits = DataSplitter._class_balanced_stratified_split(images, class_names, norm_ratio)
 
+        # 4. Basic Random Split
         # 4. 基本隨機切分 (Basic Random Split)
         else:
             fnames = filenames.copy()

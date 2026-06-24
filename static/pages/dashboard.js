@@ -23,7 +23,7 @@ function renderDashboardAlerts(status) {
   } else if (!status.hasDataset) {
     guards.push(statusGuard("warning", "專案已載入，但尚未匯入資料", ["Dataset image count 為 0。"], "前往 Dataset 匯入圖片資料夾或影片抽幀。"));
   }
-  guards.push(statusGuard("info", "LabelMe 狀態", ["UI Ready", "Backend Connected", "可掃描 raw/annotations/labelme/*.json。"], "前往 LabelMe 頁面同步 JSON，完成後可預覽與轉換。"));
+  guards.push(statusGuard("info", "LabelMe 狀態", ["Backend Connected"], "前往 LabelMe 頁面同步 JSON。", "LabelMe 狀態;UI Ready：標註管理介面已可使用。;Backend Connected：後端 API 已連線。;可掃描 raw/annotations/labelme/*.json。;同步後可預覽、檢查錯誤並轉換訓練格式。"));
   setHTML("#dashboard-alerts", guards.join(""));
 }
 
@@ -157,10 +157,11 @@ function disabledButton(label) {
   return `<button class="btn btn-disabled" disabled>${escapeHtml(label)}</button>`;
 }
 
-function statusGuard(type, title, items, nextAction) {
+function statusGuard(type, title, items, nextAction, tooltip = "") {
+  const tooltipIcon = tooltip ? ` <span class="info-icon" data-tooltip="${escapeHtml(tooltip)}">i</span>` : "";
   return `
     <div class="status-guard ${type}">
-      <div class="guard-title">${escapeHtml(title)}</div>
+      <div class="guard-title">${escapeHtml(title)}${tooltipIcon}</div>
       <ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
       <div class="guard-next-actions">${escapeHtml(nextAction)}</div>
     </div>
