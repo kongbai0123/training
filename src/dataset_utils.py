@@ -195,10 +195,14 @@ class DatasetUtils:
         獲取縮圖，若快取存在則直接讀取，否則生成 200x200 縮圖並儲存至 cache
         """
         from src.config import PROJECTS_DIR
+        from src.project_layout import ProjectLayout
+        from src.project_manager import ProjectManager
         proj_dir = PROJECTS_DIR / project_id
+        project = ProjectManager.get_project(project_id)
+        layout = ProjectLayout.from_project(project) if project else ProjectLayout(proj_dir)
+        raw_img_path = layout.resolve_raw_images_dir().path / filename
         
         # 尋找原始影像或擴充影像路徑
-        raw_img_path = proj_dir / "dataset" / "raw" / "images" / filename
         if not raw_img_path.exists():
             raw_img_path = proj_dir / "dataset" / "augmentations" / "augmented_images" / filename
             
@@ -231,7 +235,11 @@ class DatasetUtils:
         解壓縮 ZIP 檔案，掃描其中的圖片與 LabelMe JSON，將其歸類移入對應的資料夾
         """
         from src.config import PROJECTS_DIR
+        from src.project_layout import ProjectLayout
+        from src.project_manager import ProjectManager
         proj_dir = PROJECTS_DIR / project_id
+        project = ProjectManager.get_project(project_id)
+        layout = ProjectLayout.from_project(project) if project else ProjectLayout(proj_dir)
         
         temp_dir = proj_dir / "dataset" / ".tmp_zip"
         if temp_dir.exists():
@@ -247,9 +255,9 @@ class DatasetUtils:
                 shutil.rmtree(temp_dir)
             raise ValueError(f"ZIP 檔案解壓縮失敗: {e}")
             
-        dest_img_dir = proj_dir / "dataset" / "raw" / "images"
-        dest_labelme_dir = proj_dir / "dataset" / "raw" / "annotations" / "labelme"
-        dest_labels_dir = proj_dir / "dataset" / "raw" / "labels"
+        dest_img_dir = layout.resolve_raw_images_dir().path
+        dest_labelme_dir = layout.resolve_current_labelme_dir().path
+        dest_labels_dir = layout.resolve_current_yolo_labels_dir().path
         
         dest_img_dir.mkdir(parents=True, exist_ok=True)
         dest_labelme_dir.mkdir(parents=True, exist_ok=True)

@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from src.config import PROJECTS_DIR
+from src.project_layout import ProjectLayout
 
 class ProjectManager:
     @staticmethod
@@ -45,19 +46,8 @@ class ProjectManager:
         project_dir = PROJECTS_DIR / project_id
         
         # 建立目錄結構
-        dirs = [
-            project_dir / "dataset" / "raw" / "images",
-            project_dir / "dataset" / "raw" / "labels",
-            project_dir / "dataset" / "raw" / "annotations" / "labelme",
-            project_dir / "dataset" / "splits",
-            project_dir / "dataset" / "augmentations" / "augmented_images",
-            project_dir / "training" / "runs",
-            project_dir / "training" / "logs",
-            project_dir / "exports" / "onnx",
-            project_dir / "exports" / "reports"
-        ]
-        for d in dirs:
-            d.mkdir(parents=True, exist_ok=True)
+        layout = ProjectLayout(project_dir, {"layout": {"mode": "v3"}})
+        layout.ensure_v3_tree()
             
         # 初始化 project.json
         now_str = datetime.now().isoformat()
@@ -65,9 +55,35 @@ class ProjectManager:
           "project_id": project_id,
           "project_name": project_name,
           "task_type": task_type,
+          "schema_version": "3.0",
+          "layout_version": "v3",
+          "layout": {
+            "version": "v3",
+            "mode": "v3",
+            "migrated_from": None,
+            "created_by": "project_manager",
+            "verified_at": None
+          },
           "created_at": now_str,
           "updated_at": now_str,
           "dataset_path": str((project_dir / "dataset").resolve().as_posix()),
+          "paths": {
+            "project_root": ".",
+            "dataset": "dataset",
+            "annotations": "annotations",
+            "splits": "splits",
+            "training": "training",
+            "inference": "inference",
+            "auto_labeling": "auto_labeling",
+            "exports": "exports"
+          },
+          "current": {
+            "annotation_version": None,
+            "split_id": None,
+            "training_run_id": None,
+            "best_model_id": None,
+            "export_id": None
+          },
           "class_names": class_names,
           "annotation_progress": {
             "total": 0,
@@ -114,14 +130,26 @@ class ProjectManager:
             
             # Lazy Migration: 檢查並升級 Schema 至 2.0 版
             migrated = False
-            if "schema_version" not in data or data.get("schema_version") != "2.0":
+            if "schema_version" not in data:
                 data["schema_version"] = "2.0"
+                migrated = True
+
+            if "layout" not in data:
+                data["layout"] = {
+                    "version": "legacy",
+                    "mode": "legacy",
+                    "migrated_from": None,
+                    "created_by": "lazy_migration",
+                    "verified_at": None
+                }
+                data["layout_version"] = "legacy"
                 migrated = True
                 
             if "labelme_config" not in data:
+                is_v3_layout = (data.get("layout") or {}).get("mode") == "v3"
                 data["labelme_config"] = {
-                    "images_dir": "dataset/raw/images",
-                    "json_dir": "dataset/raw/annotations/labelme",
+                    "images_dir": "dataset/images/raw" if is_v3_layout else "dataset/raw/images",
+                    "json_dir": "annotations/current/labelme" if is_v3_layout else "dataset/raw/annotations/labelme",
                     "command": "",
                     "last_opened_at": None
                 }
@@ -155,7 +183,8 @@ class ProjectManager:
                 
             if migrated:
                 ProjectManager.save_project(project_id, data)
-                
+
+            data["_layout_report"] = ProjectLayout.from_project(data).get_layout_report()
             return data
         except Exception as e:
             print(f"Error loading project {project_id}: {e}")
@@ -171,8 +200,10 @@ class ProjectManager:
         json_path = project_dir / "project.json"
         data["updated_at"] = datetime.now().isoformat()
         try:
+            data_to_save = dict(data)
+            data_to_save.pop("_layout_report", None)
             with open(json_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+                json.dump(data_to_save, f, indent=2, ensure_ascii=False)
             return True
         except Exception as e:
             print(f"Error saving project {project_id}: {e}")

@@ -24,6 +24,7 @@ from typing import List, Dict, Any, Optional
 from PIL import Image
 from src.config import BASE_DIR, PROJECTS_DIR, STATIC_DIR, HAS_GPU, DEVICE_NAME
 from src.project_manager import ProjectManager
+from src.project_layout import ProjectLayout
 from src.dataset_utils import DatasetUtils
 from src.splitter import DataSplitter
 from src.augmenter import ImageAugmenter
@@ -351,7 +352,8 @@ def get_project_image(project_id: str, filename: str):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    img_path = Path(project["dataset_path"]) / "raw" / "images" / filename
+    layout = ProjectLayout.from_project(project)
+    img_path = layout.resolve_raw_images_dir().path / filename
     # 若在 raw 找不到，去 augmented_images 找 (物理擴充產生的圖)
     if not img_path.exists():
         img_path = Path(project["dataset_path"]) / "augmentations" / "augmented_images" / filename
@@ -372,7 +374,9 @@ def import_local_folder(project_id: str, path: str = Form(...)):
     if not import_path.exists() or not import_path.is_dir():
         raise HTTPException(status_code=400, detail="指定的路徑不存在或不是資料夾")
 
-    dest_dir = Path(project["dataset_path"]) / "raw" / "images"
+    layout = ProjectLayout.from_project(project)
+    dest_dir = layout.resolve_raw_images_dir().path
+    dest_dir.mkdir(parents=True, exist_ok=True)
     imported = []
 
     # 支援副檔名
@@ -422,7 +426,9 @@ def import_video(project_id: str, video_path: str = Form(...), fps: int = Form(1
     if not v_path.exists() or not v_path.is_file():
         raise HTTPException(status_code=400, detail="影片檔案不存在")
 
-    dest_dir = Path(project["dataset_path"]) / "raw" / "images"
+    layout = ProjectLayout.from_project(project)
+    dest_dir = layout.resolve_raw_images_dir().path
+    dest_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         filenames = DatasetUtils.extract_frames(str(v_path), str(dest_dir), fps)
@@ -481,7 +487,9 @@ def upload_video(project_id: str, file: UploadFile = File(...), fps: int = Form(
         with open(temp_video_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        dest_dir = Path(project["dataset_path"]) / "raw" / "images"
+        layout = ProjectLayout.from_project(project)
+        dest_dir = layout.resolve_raw_images_dir().path
+        dest_dir.mkdir(parents=True, exist_ok=True)
         filenames = DatasetUtils.extract_frames(str(temp_video_path), str(dest_dir), fps)
 
         # 將抽出的影格加入 project.json
@@ -539,8 +547,8 @@ def upload_images(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    dataset_path = Path(project["dataset_path"])
-    image_dir = dataset_path / "raw" / "images"
+    layout = ProjectLayout.from_project(project)
+    image_dir = layout.resolve_raw_images_dir().path
     image_dir.mkdir(parents=True, exist_ok=True)
 
     image_exts = {".jpg", ".jpeg", ".png", ".bmp"}
@@ -715,10 +723,10 @@ def upload_dataset_files(project_id: str, files: List[UploadFile] = File(...)):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    dataset_path = Path(project["dataset_path"])
-    image_dir = dataset_path / "raw" / "images"
-    labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
-    labels_dir = dataset_path / "raw" / "labels"
+    layout = ProjectLayout.from_project(project)
+    image_dir = layout.resolve_raw_images_dir().path
+    labelme_dir = layout.resolve_current_labelme_dir().path
+    labels_dir = layout.resolve_current_yolo_labels_dir().path
     image_dir.mkdir(parents=True, exist_ok=True)
     labelme_dir.mkdir(parents=True, exist_ok=True)
     labels_dir.mkdir(parents=True, exist_ok=True)
@@ -785,14 +793,14 @@ def trigger_quality_check(project_id: str):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    dataset_path = Path(project["dataset_path"])
+    layout = ProjectLayout.from_project(project)
     images_list = project.get("images", [])
 
     # 1. 進行個別圖片的品質掃描
     hashes = {}
     for img in images_list:
         fname = img["filename"]
-        img_path = dataset_path / "raw" / "images" / fname
+        img_path = layout.resolve_raw_images_dir().path / fname
         if not img_path.exists():
             continue
 
@@ -839,10 +847,10 @@ def save_annotations(project_id: str, data: AnnotationSave):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    dataset_path = Path(project["dataset_path"])
+    layout = ProjectLayout.from_project(project)
 
     # 讀取圖片高寬
-    img_path = dataset_path / "raw" / "images" / data.filename
+    img_path = layout.resolve_raw_images_dir().path / data.filename
     w, h = 640, 640
     if img_path.exists():
         try:
@@ -889,7 +897,7 @@ def save_annotations(project_id: str, data: AnnotationSave):
     }
 
     # 寫入 json
-    labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
+    labelme_dir = layout.resolve_current_labelme_dir().path
     labelme_dir.mkdir(parents=True, exist_ok=True)
     json_path = labelme_dir / Path(data.filename).with_suffix(".json")
 
@@ -992,9 +1000,9 @@ def open_labelme(project_id: str):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    dataset_path = Path(project["dataset_path"])
-    images_dir = dataset_path / "raw" / "images"
-    labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
+    layout = ProjectLayout.from_project(project)
+    images_dir = layout.resolve_raw_images_dir().path
+    labelme_dir = layout.resolve_current_labelme_dir().path
     images_dir.mkdir(parents=True, exist_ok=True)
     labelme_dir.mkdir(parents=True, exist_ok=True)
     normalized_jsons = normalize_labelme_image_paths(images_dir, labelme_dir)
@@ -1030,8 +1038,8 @@ def open_labelme(project_id: str):
     from datetime import datetime
     if "labelme_config" not in project:
         project["labelme_config"] = {
-            "images_dir": "dataset/raw/images",
-            "json_dir": "dataset/raw/annotations/labelme",
+            "images_dir": "dataset/images/raw" if layout.is_v3_project() else "dataset/raw/images",
+            "json_dir": "annotations/current/labelme" if layout.is_v3_project() else "dataset/raw/annotations/labelme",
             "command": "",
             "last_opened_at": None
         }
@@ -1177,9 +1185,9 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    dataset_path = Path(project["dataset_path"])
-    labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
-    labels_dir = dataset_path / "raw" / "labels"
+    layout = ProjectLayout.from_project(project)
+    labelme_dir = layout.resolve_current_labelme_dir().path
+    labels_dir = layout.resolve_current_yolo_labels_dir().path
 
     labelme_dir.mkdir(parents=True, exist_ok=True)
     labels_dir.mkdir(parents=True, exist_ok=True)

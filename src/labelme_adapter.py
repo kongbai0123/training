@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
+from src.project_layout import ProjectLayout
 
 class LabelMeAdapter:
     @staticmethod
@@ -13,8 +14,8 @@ class LabelMeAdapter:
         更新 project.json 中的 images 列表及其狀態，同時記錄詳細錯誤診斷。
         """
         from datetime import datetime
-        dataset_path = Path(project_data["dataset_path"])
-        labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
+        layout = ProjectLayout.from_project(project_data)
+        labelme_dir = layout.resolve_current_labelme_dir().path
         labelme_dir.mkdir(parents=True, exist_ok=True)
         
         class_names = project_data.get("class_names", [])
@@ -38,7 +39,7 @@ class LabelMeAdapter:
         unknown_labels_detail = {}
         
         # 掃描實際的圖片
-        img_dir = dataset_path / "raw" / "images"
+        img_dir = layout.resolve_raw_images_dir().path
         valid_exts = {".jpg", ".jpeg", ".png", ".bmp"}
         
         scanned_images = []
@@ -182,9 +183,9 @@ class LabelMeAdapter:
     @staticmethod
     def get_labelme_shapes(project_data: Dict[str, Any], filename: str) -> Optional[Dict[str, Any]]:
         """讀取並回傳特定的 LabelMe JSON shape 數據"""
-        dataset_path = Path(project_data["dataset_path"])
+        layout = ProjectLayout.from_project(project_data)
         json_filename = Path(filename).with_suffix(".json")
-        json_path = dataset_path / "raw" / "annotations" / "labelme" / json_filename
+        json_path = layout.resolve_current_labelme_dir().path / json_filename
         
         if not json_path.exists():
             return None
@@ -200,8 +201,8 @@ class LabelMeAdapter:
         執行 LabelMe 標註轉換管線。
         支援 YOLO Detection, YOLO Segmentation, COCO JSON, 與 Semantic Mask
         """
-        dataset_path = Path(project_data["dataset_path"])
-        labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
+        layout = ProjectLayout.from_project(project_data)
+        labelme_dir = layout.resolve_current_labelme_dir().path
         
         class_names = project_data.get("class_names", [])
         class_to_idx = {name: i for i, name in enumerate(class_names)}
@@ -214,7 +215,7 @@ class LabelMeAdapter:
         
         if export_type == "yolo_detection":
             # 建立 YOLO labels 目錄
-            labels_dir = dataset_path / "raw" / "labels"
+            labels_dir = layout.resolve_current_yolo_labels_dir().path
             labels_dir.mkdir(parents=True, exist_ok=True)
             
             for img in images:
@@ -257,7 +258,7 @@ class LabelMeAdapter:
                     errors.append(f"{fname} 轉換失敗: {e}")
 
         elif export_type == "yolo_segmentation":
-            labels_dir = dataset_path / "raw" / "labels"
+            labels_dir = layout.resolve_current_yolo_labels_dir().path
             labels_dir.mkdir(parents=True, exist_ok=True)
             
             for img in images:
@@ -355,12 +356,13 @@ class LabelMeAdapter:
                     errors.append(f"{fname} 轉換失敗: {e}")
                     
             # 寫入 coco.json
-            coco_path = dataset_path / "coco.json"
+            coco_path = layout.resolve_coco_path()
+            coco_path.parent.mkdir(parents=True, exist_ok=True)
             with open(coco_path, "w", encoding="utf-8") as f:
                 json.dump(coco_data, f, indent=2, ensure_ascii=False)
 
         elif export_type == "semantic_mask":
-            masks_dir = dataset_path / "raw" / "masks"
+            masks_dir = layout.resolve_current_masks_dir().path
             masks_dir.mkdir(parents=True, exist_ok=True)
             
             for img in images:
@@ -408,10 +410,10 @@ class LabelMeAdapter:
     @staticmethod
     def convert_yolo_to_labelme(project_data: Dict[str, Any]) -> None:
         """Convert YOLO txt labels to LabelMe JSON when the format matches the task."""
-        dataset_path = Path(project_data["dataset_path"])
-        labels_dir = dataset_path / "raw" / "labels"
-        labelme_dir = dataset_path / "raw" / "annotations" / "labelme"
-        img_dir = dataset_path / "raw" / "images"
+        layout = ProjectLayout.from_project(project_data)
+        labels_dir = layout.resolve_current_yolo_labels_dir().path
+        labelme_dir = layout.resolve_current_labelme_dir().path
+        img_dir = layout.resolve_raw_images_dir().path
 
         if not labels_dir.exists():
             return
