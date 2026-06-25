@@ -1402,13 +1402,16 @@ def import_zip_dataset(project_id: str, file: UploadFile = File(...)):
         with open(temp_zip_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # ???????格?????
         import_res = DatasetUtils.import_zip_package(project_id, str(temp_zip_path))
 
-        if should_auto_convert_yolo_to_labelme(project):
-            LabelMeAdapter.convert_yolo_to_labelme(project)
-        sync_res = LabelMeAdapter.sync_labelme_annotations(project)
-        ProjectManager.save_project(project_id, project)
+        updated_project = ProjectManager.get_project(project_id)
+        if not updated_project:
+            raise HTTPException(status_code=404, detail="Project not found after ZIP import")
+
+        if should_auto_convert_yolo_to_labelme(updated_project):
+            LabelMeAdapter.convert_yolo_to_labelme(updated_project)
+        sync_res = LabelMeAdapter.sync_labelme_annotations(updated_project)
+        ProjectManager.save_project(project_id, updated_project)
 
         return {
             "message": "ZIP dataset imported.",

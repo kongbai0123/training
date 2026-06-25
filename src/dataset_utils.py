@@ -293,6 +293,26 @@ class DatasetUtils:
                         
         # 刪除暫存區
         shutil.rmtree(temp_dir)
+
+        if project is not None and imported_imgs:
+            project.setdefault("images", [])
+            existing_filenames = {img.get("filename") for img in project.get("images", [])}
+            for filename in imported_imgs:
+                if filename in existing_filenames:
+                    continue
+                project["images"].append({
+                    "filename": filename,
+                    "status": "unannotated",
+                    "scene": "unknown",
+                    "source_video": "",
+                    "annotations": [],
+                    "split": None,
+                    "quality": {}
+                })
+                existing_filenames.add(filename)
+            project.setdefault("annotation_progress", {})
+            project["annotation_progress"]["total"] = len(project.get("images", []))
+            ProjectManager.save_project(project_id, project)
         
         return {
             "imported_images_count": len(imported_imgs),
