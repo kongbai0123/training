@@ -23,7 +23,7 @@ import { initProjects, renderProjectsPage } from "./pages/projects.js";
 import { initDataset, renderDatasetPage } from "./pages/dataset.js";
 import { initLabelMe, renderLabelMeManager } from "./pages/labelme.js";
 import { initSplit, renderSplitPage } from "./pages/split.js";
-import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js";
+import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js?v=20260625-augmentation-p0";
 import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js";
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js";
 import { initInference, renderInferencePage } from "./pages/inference.js";
@@ -611,9 +611,13 @@ function renderRightPanel(pageId, status) {
     : "<li>No suggested action right now.</li>");
 
   const warnings = config.warnings || [];
+  const notes = config.notes || [];
+  const warningTitle = qs("#warning-list")?.closest(".summary-section")?.querySelector("h2");
+  if (warningTitle) warningTitle.textContent = warnings.length > 0 ? "Warnings" : (notes.length > 0 ? "Notes" : "Warnings");
   setHTML("#warning-list", warnings.length > 0
-    ? warnings.map(warn => `<div class="summary-warning-item">${escapeHtml(warn)}</div>`).join("")
-    : "");
+    ? warnings.map(warn => `<div class="summary-warning-item">${escapeHtml(warn)}</div>`).join("") + notes.map(note => `<div class="summary-info-item">${escapeHtml(note)}</div>`).join("")
+    : notes.map(note => `<div class="summary-info-item">${escapeHtml(note)}</div>`).join("")
+  );
 }
 function getPageTitle(pageId) {
   const map = {
@@ -749,58 +753,65 @@ function buildSplitRightPanel(status) {
 
 function buildAugmentationRightPanel(status) {
   const multiplier = parseInt(qs("#aug-multiplier")?.value || qs("#multiplier")?.value || "1", 10);
-  const activePresetBtn = qs(".preset-item.active");
-  const presetName = activePresetBtn ? activePresetBtn.dataset.augPreset : "custom";
   const trainCount = status.splitCounts.train || 0;
   const valCount = status.splitCounts.val || 0;
   const testCount = status.splitCounts.test || 0;
   const valTestCount = valCount + testCount;
-  const previewReady = qs("#aug-risk-badge")?.textContent?.trim() === "Passed";
+  const readinessState = qs("#aug-readiness-card")?.dataset?.state || "blocked_no_project";
+  const previewReady = readinessState === "preview_ready";
+  const previewStale = readinessState === "preview_stale";
   const hasPreviewImage = Boolean(qs("#aug-preview-select-img")?.value);
+  const generatedCopies = trainCount * multiplier;
 
-  let applyStatus = "Blocked";
+  let statusLabel = "Blocked";
+  let riskLabel = "Blocked";
   if (status.hasProject && status.hasDataset && status.splitComplete && trainCount > 0) {
-    applyStatus = previewReady ? "Preview ready" : "Preview required";
+    statusLabel = previewReady ? "Preview ready" : "Ready";
+    riskLabel = previewReady ? "Low" : (previewStale ? "Preview stale" : "Preview required");
   }
 
   const actions = [];
   const warnings = [];
+  const notes = ["Val/Test 維持排除，避免評估資料洩漏。"];
   if (!status.hasProject) {
-    actions.push("Create or open a project.");
-    warnings.push("No project is open.");
+    actions.push("建立或開啟專案。");
+    warnings.push("尚未開啟專案。");
   } else if (!status.hasDataset) {
-    actions.push("Import images in Dataset.");
-    warnings.push("No images imported. Augmentation is blocked.");
+    actions.push("前往 Dataset 匯入圖片。");
+    actions.push("同步標註。");
+    actions.push("建立 Train / Val / Test split。");
+    warnings.push("尚未匯入圖片，無法進行擴充。");
   } else if (!status.splitComplete || trainCount === 0) {
-    actions.push("Create Train / Val / Test split.");
-    warnings.push("Split required before train-only augmentation.");
+    actions.push("建立 Train / Val / Test split。");
+    warnings.push("套用 Train-only augmentation 前必須先建立 split。");
   } else if (!hasPreviewImage) {
-    actions.push("Sync labels or select an annotated train image.");
-    warnings.push("No preview image is available.");
+    actions.push("確認 Train split 中有可預覽圖片。");
+    warnings.push("目前沒有可預覽圖片。");
+  } else if (previewStale) {
+    actions.push("重新產生 Preview。");
+    actions.push("檢查 Risk Check。");
+    warnings.push("設定已變更，Preview 需要重新產生。");
   } else if (!previewReady) {
-    actions.push("Choose a preset or custom policy.");
-    actions.push("Generate Preview before applying.");
+    actions.push("選擇 preset 或自訂策略。");
+    actions.push("產生 Preview。");
+    actions.push("檢查 Risk Check。");
   } else {
-    actions.push("Review the preview result.");
-    actions.push("Apply to Train Split.");
-    actions.push("Start a new training run after augmentation.");
+    actions.push("檢查預覽結果。");
+    actions.push("套用到 Train Split。");
+    actions.push("進行模型訓練。");
   }
-  warnings.push("Val/Test remain excluded to avoid evaluation leakage.");
 
   return {
     title: "Augmentation Status",
     rows: [
-      { label: "Target", value: "Train only", isCode: true },
-      { label: "Train", value: String(trainCount) },
-      { label: "Val/Test", value: `Excluded (${valTestCount})` },
-      { label: "Multiplier", value: `x${multiplier}` },
-      { label: "Output", value: String(trainCount * multiplier), isCode: true },
-      { label: "Preset", value: presetName, isCode: true },
-      { label: "Preview", value: previewReady ? "Ready" : "Not generated", badgeType: previewReady ? "success" : "warning" },
-      { label: "Apply", value: applyStatus, badgeType: previewReady ? "success" : "neutral" }
+      { label: "Status", value: statusLabel, badgeType: previewReady ? "success" : (statusLabel === "Ready" ? "warning" : "danger") },
+      { label: "Target", value: "Train split", isCode: true },
+      { label: "Output", value: `+${generatedCopies}`, isCode: true },
+      { label: "Risk", value: riskLabel, badgeType: previewReady ? "success" : "warning" }
     ],
     actions,
-    warnings
+    warnings,
+    notes
   };
 }
 

@@ -1211,7 +1211,67 @@ export const augmentationPresets = {
     fog: 0,
     motionBlur: 0.35,
     noise: 0.08,
-    perspective: 0.06
+    perspective: 0
+  },
+  strong_shadow: {
+    brightness: -0.12,
+    contrast: 0.18,
+    shadow: true,
+    rain: 0,
+    fog: 0,
+    motionBlur: 0,
+    noise: 0.03,
+    perspective: 0
+  },
+  wet_reflection: {
+    brightness: 0.08,
+    contrast: -0.08,
+    shadow: false,
+    rain: 0.35,
+    fog: 0.05,
+    motionBlur: 0.05,
+    noise: 0.02,
+    perspective: 0
+  },
+  night_road: {
+    brightness: -0.35,
+    contrast: 0.22,
+    shadow: true,
+    rain: 0,
+    fog: 0.08,
+    motionBlur: 0.08,
+    noise: 0.12,
+    perspective: 0
+  },
+  suburban_mix: {
+    brightness: 0.04,
+    contrast: 0.08,
+    shadow: true,
+    rain: 0.08,
+    fog: 0.04,
+    motionBlur: 0.04,
+    noise: 0.04,
+    perspective: 0
+  },
+  forest_road: {
+    brightness: -0.08,
+    contrast: 0.16,
+    shadow: true,
+    rain: 0,
+    fog: 0.06,
+    motionBlur: 0.03,
+    noise: 0.04,
+    perspective: 0
+  },
+  generalization: {
+    brightness: 0.08,
+    contrast: 0.08,
+    shadow: true,
+    rain: 0.12,
+    fog: 0.1,
+    motionBlur: 0.12,
+    noise: 0.06,
+    perspective: 0
   }
 };
 
