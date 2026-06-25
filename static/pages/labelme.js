@@ -550,6 +550,8 @@ function renderAnnotationImportReport() {
   ];
   const issueRows = [...errors, ...warnings];
   const convertedFiles = report.converted_files || [];
+  const isApplied = !!report.applied_at;
+  const scanTime = appState.currentProject?.labelme_progress?.last_sync_at || "";
 
   setHTML("#annotation-import-report", `
     <div class="annotation-import-summary">
@@ -561,8 +563,10 @@ function renderAnnotationImportReport() {
       `).join("")}
     </div>
     <div class="annotation-import-meta">
+      <span>${escapeHtml(t("labelme.import.status"))}: <strong>${escapeHtml(isApplied ? t("labelme.import.statusApplied") : t("labelme.import.statusDraft"))}</strong></span>
       <span>${escapeHtml(t("labelme.importReportId"))}: <code>${escapeHtml(report.import_id)}</code></span>
       <span>${escapeHtml(t("labelme.importReportCreated"))}: ${escapeHtml(report.created_at || "--")}</span>
+      <span>${escapeHtml(t("labelme.import.lastScan"))}: ${escapeHtml(scanTime || t("labelme.import.notScanned"))}</span>
     </div>
     <details class="annotation-import-details">
       <summary>View detailed report</summary>
@@ -621,10 +625,14 @@ function openImportReportModal() {
   } else {
     const issues = [...(report.errors || []), ...(report.warnings || [])];
     const convertedFiles = report.converted_files || [];
+    const isApplied = !!report.applied_at;
+    const scanTime = appState.currentProject?.labelme_progress?.last_sync_at || "";
     setHTML("#annotation-import-report-modal-body", `
       <div class="annotation-import-meta">
+        <span>${escapeHtml(t("labelme.import.status"))}: <strong>${escapeHtml(isApplied ? t("labelme.import.statusApplied") : t("labelme.import.statusDraft"))}</strong></span>
         <span>${escapeHtml(t("labelme.importReportId"))}: <code>${escapeHtml(report.import_id)}</code></span>
         <span>${escapeHtml(t("labelme.importReportCreated"))}: ${escapeHtml(report.created_at || "--")}</span>
+        <span>${escapeHtml(t("labelme.import.lastScan"))}: ${escapeHtml(scanTime || t("labelme.import.notScanned"))}</span>
       </div>
       <h3>Converted files</h3>
       <div class="table-wrap modal-report-table">
