@@ -15,6 +15,7 @@ from src.security_utils import safe_filename
 
 
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".bmp")
+MASK_EXTENSIONS = (".png", ".tif", ".tiff")
 
 
 class AnnotationImporter:
@@ -48,6 +49,7 @@ class AnnotationImporter:
             "yolo_txt": 0,
             "csv": 0,
             "voc_xml": 0,
+            "mask_png": 0,
             "converted": 0,
             "failed": 0,
             "csv_mapping": csv_mapping or {},
@@ -82,16 +84,23 @@ class AnnotationImporter:
                     AnnotationImporter._record_converted(report, converted)
                 elif suffix == ".csv":
                     report["csv"] += 1
+                    file_csv_mapping = AnnotationImporter._csv_mapping_for_file(csv_mapping or {}, staged_path.name)
                     rows = AnnotationImporter._read_csv_rows(staged_path)
                     for row in rows:
-                        mapped = AnnotationImporter._apply_csv_mapping(row, csv_mapping or {})
+                        mapped = AnnotationImporter._apply_csv_mapping(row, file_csv_mapping)
                         filename = (mapped.get("filename") or row.get("filename") or row.get("image") or row.get("imagePath") or "").strip()
                         if filename:
-                            grouped_csv_rows.setdefault(filename, []).append(row)
+                            row_with_source = dict(row)
+                            row_with_source["_csv_source"] = staged_path.name
+                            grouped_csv_rows.setdefault(filename, []).append(row_with_source)
                     csv_sources.append(staged_path.name)
                 elif suffix == ".xml":
                     report["voc_xml"] += 1
                     converted = AnnotationImporter._convert_voc_xml(project, layout, staged_path, labelme_dir)
+                    AnnotationImporter._record_converted(report, converted)
+                elif suffix in MASK_EXTENSIONS:
+                    report["mask_png"] += 1
+                    converted = AnnotationImporter._convert_mask_image(project, layout, staged_path, labelme_dir)
                     AnnotationImporter._record_converted(report, converted)
                 else:
                     report["failed"] += 1
@@ -103,7 +112,9 @@ class AnnotationImporter:
         if grouped_csv_rows:
             for filename, rows in grouped_csv_rows.items():
                 try:
-                    converted = AnnotationImporter._convert_csv_rows(project, layout, filename, rows, labelme_dir, csv_sources, csv_mapping or {})
+                    source_name = rows[0].get("_csv_source", "") if rows else ""
+                    file_csv_mapping = AnnotationImporter._csv_mapping_for_file(csv_mapping or {}, source_name)
+                    converted = AnnotationImporter._convert_csv_rows(project, layout, filename, rows, labelme_dir, csv_sources, file_csv_mapping)
                     AnnotationImporter._record_converted(report, converted)
                 except Exception as exc:
                     report["failed"] += len(rows)
@@ -289,6 +300,17 @@ class AnnotationImporter:
         return mapped
 
     @staticmethod
+    def _csv_mapping_for_file(csv_mapping: Dict[str, Any], file_name: str) -> Dict[str, str]:
+        if not csv_mapping:
+            return {}
+        file_mappings = csv_mapping.get("files")
+        if isinstance(file_mappings, dict):
+            file_mapping = file_mappings.get(file_name)
+            if isinstance(file_mapping, dict):
+                return {str(key): str(value) for key, value in file_mapping.items() if value}
+        return {str(key): str(value) for key, value in csv_mapping.items() if isinstance(value, str) and value}
+
+    @staticmethod
     def _accept_json(project: Dict[str, Any], layout: ProjectLayout, json_path: Path, out_dir: Path) -> Tuple[Union[Dict[str, Any], List[Dict[str, Any]]], str]:
         data = json.loads(json_path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
@@ -343,6 +365,11 @@ class AnnotationImporter:
                         points = [[polygon[idx], polygon[idx + 1]] for idx in range(0, len(polygon), 2)]
                         shapes.append(AnnotationImporter._shape(label, points, "polygon"))
                         continue
+                elif isinstance(segmentation, dict):
+                    mask_shapes = AnnotationImporter._coco_rle_to_shapes(segmentation, label, json_path.name)
+                    if mask_shapes:
+                        shapes.extend(mask_shapes)
+                        continue
 
                 bbox = annotation.get("bbox")
                 if isinstance(bbox, list) and len(bbox) >= 4:
@@ -355,6 +382,91 @@ class AnnotationImporter:
         if not converted:
             raise ValueError("No supported COCO bbox or polygon annotations found.")
         return converted
+
+    @staticmethod
+    def _coco_rle_to_shapes(segmentation: Dict[str, Any], label: str, source_file: str) -> List[Dict[str, Any]]:
+        mask = AnnotationImporter._decode_coco_rle(segmentation, source_file)
+        return AnnotationImporter._mask_to_shapes(mask, {1: label})
+
+    @staticmethod
+    def _decode_coco_rle(segmentation: Dict[str, Any], source_file: str) -> List[List[int]]:
+        size = segmentation.get("size")
+        counts = segmentation.get("counts")
+        if not isinstance(size, list) or len(size) != 2:
+            raise ValueError(f"COCO RLE in {source_file} is missing size.")
+        height, width = int(size[0]), int(size[1])
+
+        if isinstance(counts, list):
+            flat = []
+            value = 0
+            for run_length in counts:
+                flat.extend([value] * int(run_length))
+                value = 1 - value
+            expected = height * width
+            if len(flat) < expected:
+                flat.extend([0] * (expected - len(flat)))
+            flat = flat[:expected]
+            return [[flat[x * height + y] for x in range(width)] for y in range(height)]
+
+        if isinstance(counts, str):
+            try:
+                from pycocotools import mask as mask_utils  # type: ignore
+            except Exception as exc:
+                raise ValueError(f"Compressed COCO RLE in {source_file} requires pycocotools or polygon export.") from exc
+            decoded = mask_utils.decode({"size": [height, width], "counts": counts.encode("utf-8")})
+            return [[int(decoded[y][x]) for x in range(width)] for y in range(height)]
+
+        raise ValueError(f"COCO RLE in {source_file} has unsupported counts.")
+
+    @staticmethod
+    def _convert_mask_image(project: Dict[str, Any], layout: ProjectLayout, mask_path: Path, out_dir: Path) -> Dict[str, Any]:
+        image_name, width, height = AnnotationImporter._image_size(layout, mask_path.stem)
+        class_names = project.get("class_names", [])
+        with Image.open(mask_path) as mask_img:
+            mask = mask_img.convert("L").resize((width, height))
+            pixels = [[int(mask.getpixel((x, y))) for x in range(width)] for y in range(height)]
+
+        label_map = {}
+        for value in sorted({pixel for row in pixels for pixel in row if pixel != 0}):
+            idx = int(value)
+            label_map[idx] = str(class_names[idx]) if 0 <= idx < len(class_names) else f"class_{idx}"
+        shapes = AnnotationImporter._mask_to_shapes(pixels, label_map)
+        if not shapes:
+            raise ValueError("Mask image has no non-background pixels.")
+        return AnnotationImporter._write_labelme(out_dir, image_name, width, height, shapes, "mask_png", mask_path.name, [])
+
+    @staticmethod
+    def _mask_to_shapes(mask: List[List[int]], label_map: Dict[int, str]) -> List[Dict[str, Any]]:
+        try:
+            import cv2  # type: ignore
+            import numpy as np
+        except Exception:
+            return AnnotationImporter._mask_to_bbox_shapes(mask, label_map)
+
+        arr = np.array(mask, dtype=np.uint8)
+        shapes: List[Dict[str, Any]] = []
+        for value, label in label_map.items():
+            binary = (arr == int(value)).astype(np.uint8) * 255
+            contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            for contour in contours:
+                epsilon = max(1.0, 0.002 * cv2.arcLength(contour, True))
+                approx = cv2.approxPolyDP(contour, epsilon, True)
+                points = [[float(point[0][0]), float(point[0][1])] for point in approx]
+                if len(points) >= 3:
+                    shapes.append(AnnotationImporter._shape(label, points, "polygon"))
+        return shapes or AnnotationImporter._mask_to_bbox_shapes(mask, label_map)
+
+    @staticmethod
+    def _mask_to_bbox_shapes(mask: List[List[int]], label_map: Dict[int, str]) -> List[Dict[str, Any]]:
+        shapes: List[Dict[str, Any]] = []
+        for value, label in label_map.items():
+            coords = [(x, y) for y, row in enumerate(mask) for x, pixel in enumerate(row) if int(pixel) == int(value)]
+            if not coords:
+                continue
+            xs = [coord[0] for coord in coords]
+            ys = [coord[1] for coord in coords]
+            shapes.append(AnnotationImporter._shape(label, [[min(xs), min(ys)], [max(xs), max(ys)]], "rectangle"))
+        return shapes
 
     @staticmethod
     def _convert_voc_xml(project: Dict[str, Any], layout: ProjectLayout, xml_path: Path, out_dir: Path) -> Dict[str, Any]:

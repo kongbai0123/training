@@ -1380,9 +1380,28 @@ body[data-theme="light"] .labelme-step-card {
 
 .csv-mapping-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin: 12px 0;
+}
+
+.csv-file-mapping {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.csv-file-mapping h4 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.csv-mapping-grid-inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
 }
 
 .csv-map-field {
@@ -1420,6 +1439,22 @@ body[data-theme="light"] .labelme-step-card {
 
 .compact-table .data-table {
   min-width: 620px;
+}
+
+.annotation-import-report-modal-content {
+  width: min(960px, calc(100vw - 48px));
+}
+
+.modal-report-table {
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 10px 0 18px;
+}
+
+.modal-report-table .data-table {
+  min-width: 720px;
 }
 
 .labelme-progress-hero {

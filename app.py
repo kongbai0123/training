@@ -1459,7 +1459,7 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...), csv
                 continue
             
             try:
-                validate_extension(original_name, {".json", ".txt", ".csv", ".xml"})
+                validate_extension(original_name, {".json", ".txt", ".csv", ".xml", ".png", ".tif", ".tiff"})
                 cleaned_name = safe_filename(original_name)
             except ValueError as ve:
                 raise HTTPException(status_code=400, detail=str(ve))
@@ -1484,6 +1484,7 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...), csv
             "imported_csv": report.get("csv", 0),
             "imported_xml": report.get("voc_xml", 0),
             "imported_coco_json": report.get("coco_json", 0),
+            "imported_masks": report.get("mask_png", 0),
             "converted": report.get("converted", 0),
             "failed": report.get("failed", 0),
             "report": report,
