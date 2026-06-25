@@ -3000,7 +3000,7 @@ body[data-theme="light"] .toast {
 .training-readiness {
   margin-bottom: 16px;
   border-radius: var(--radius);
-  padding: 12px 16px;
+  padding: 16px;
   font-size: 0.9rem;
   line-height: 1.45;
 }
@@ -3014,10 +3014,38 @@ body[data-theme="light"] .toast {
   border: 1px solid var(--danger);
   color: #f87171;
 }
+.training-readiness-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.training-readiness p {
+  margin: 0 0 8px;
+  color: var(--text-soft);
+}
+.training-readiness ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.link-button {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 700;
+  padding: 0 0 0 6px;
+  cursor: pointer;
+}
+.link-button:hover {
+  text-decoration: underline;
+}
 
 .training-overview-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -3057,9 +3085,150 @@ body[data-theme="light"] .toast {
   gap: 16px;
   align-items: start;
 }
+.training-config-panel .status-guard {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+}
+.training-start-blocker,
+.training-recommendation-card {
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+}
+.training-start-blocker {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.08);
+}
+.training-start-blocker strong {
+  display: block;
+  color: var(--danger);
+  margin-bottom: 6px;
+}
+.training-start-blocker ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.training-recommendation-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: center;
+}
+.training-recommendation-card strong {
+  color: var(--text);
+}
+.training-recommendation-card span {
+  grid-column: 1 / -1;
+}
+.training-action-bar {
+  margin-top: 16px;
+}
+.training-empty-state {
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+  text-align: center;
+  background: var(--bg-preview);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+.training-empty-state i {
+  font-size: 1.6rem;
+  color: var(--primary);
+}
+.training-empty-state strong {
+  color: var(--text);
+}
+.hardware-telemetry-panel {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.telemetry-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.82rem;
+  margin-bottom: 4px;
+}
 .config-tabs-nav, .chart-tabs {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
+}
+.training-chart-card,
+.training-lower-grid,
+.training-run-history-card {
+  margin-top: 16px;
+}
+.training-chart-title {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.chart-control-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr);
+  gap: 16px;
+  margin-bottom: 12px;
+  align-items: start;
+}
+.chart-filters {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  background: var(--bg-panel-soft);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  flex-wrap: wrap;
+}
+.range-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  margin: 0;
+}
+.range-inline input {
+  width: 80px;
+}
+.chart-drawing-container {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  background: var(--bg-preview);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+.chart-report-container {
+  text-align: center;
+  background: var(--bg-preview);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.chart-report-container img {
+  max-height: 480px;
+  max-width: 100%;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 .chart-tabs .tab-btn {
   background: var(--bg-panel-soft);
@@ -3101,6 +3270,36 @@ body[data-theme="light"] .toast {
 .trend-diagnostic-card {
   display: flex;
   flex-direction: column;
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  min-height: 94px;
+}
+.trend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.trend-header span:first-child,
+#trend-suggestions {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.trend-stats {
+  font-size: 0.92rem;
+  font-weight: 600;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.trend-stats span {
+  color: var(--primary);
+}
+#trend-suggestions {
+  margin-top: 6px;
+  line-height: 1.35;
 }
 .trend-diagnostic-card .status-badge {
   font-size: 0.75rem;
@@ -3147,12 +3346,43 @@ body[data-theme="light"] .toast {
   color: var(--text-muted);
   font-size: 0.72rem;
 }
+.training-scroll-table {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.training-event-list {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px;
+}
+#event-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#artifact-list-container {
+  display: grid;
+  gap: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.muted-cell {
+  padding: 16px;
+  color: var(--text-muted);
+}
 
 @media (max-width: 1100px) {
   .training-overview-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .training-main-grid {
+    grid-template-columns: 1fr;
+  }
+  .chart-control-panel {
     grid-template-columns: 1fr;
   }
 }

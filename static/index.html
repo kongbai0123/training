@@ -618,31 +618,32 @@
           <div class="page-header">
             <div>
               <h1>Training Control Console</h1>
-              <p>進行模型訓練超參數配置、即時監控、繪製多指標非線性趨勢圖與版本存檔。</p>
+              <p>Check training readiness first, fix blockers, then configure and start a controlled training run.</p>
             </div>
           </div>
 
-          <!-- 1. Training Readiness Guard -->
-          <div id="training-readiness-guard" class="training-readiness">
-            <!-- 由 JS 動態注入狀態 -->
-          </div>
+          <div id="training-readiness-guard" class="training-readiness"></div>
 
-          <!-- 2. Training Overview Cards (5 欄) -->
           <div class="training-overview-grid">
             <div class="metric-card">
               <span>Dataset</span>
               <strong id="card-ds-total">--</strong>
-              <small id="card-ds-split">train: -- | val: -- | test: --</small>
+              <small id="card-ds-split">Images: --</small>
             </div>
             <div class="metric-card">
               <span>Annotation</span>
               <strong id="card-ann-status">--</strong>
-              <small id="card-ann-detail">annotated: -- | missing: --</small>
+              <small id="card-ann-detail">Annotated: --</small>
+            </div>
+            <div class="metric-card">
+              <span>Split</span>
+              <strong id="card-split-status">--</strong>
+              <small id="card-split-detail">Train / Val / Test: --</small>
             </div>
             <div class="metric-card">
               <span>Model</span>
               <strong id="card-model-name">--</strong>
-              <small id="card-model-task">task: --</small>
+              <small id="card-model-task">Task: --</small>
             </div>
             <div class="metric-card">
               <span>Hardware</span>
@@ -652,14 +653,11 @@
             <div class="metric-card">
               <span>Latest Run</span>
               <strong id="card-run-id">--</strong>
-              <small id="card-run-status">status: --</small>
+              <small id="card-run-status">Status: --</small>
             </div>
           </div>
 
-          <!-- 3. Training Main Grid (左 40% 設定，右 60% 監控) -->
           <div class="training-main-grid">
-
-            <!-- 左側: Training Configuration -->
             <section class="panel-section training-config-panel">
               <div class="section-title">
                 <h2>Training Configuration</h2>
@@ -669,20 +667,19 @@
                 </div>
               </div>
 
-              <!-- 鎖定提示 -->
-              <div id="config-lock-msg" class="status-guard warning hidden" style="margin-bottom: 12px; padding: 6px 10px;">
-                <i class="fa-solid fa-lock"></i> Training configuration is locked while a run is active.
+              <div id="config-lock-msg" class="status-guard warning hidden">
+                <i class="fa-solid fa-lock"></i>
+                <span>Training configuration is locked until readiness checks pass.</span>
               </div>
 
               <form id="form-training-config" class="form-stack">
-                <!-- Simple Mode Fields -->
                 <div id="config-simple-fields">
                   <label>
                     <span>Run Name</span>
-                    <input type="text" id="train-run-id-input" placeholder="自動生成 run_YYYYMMDD_HHMMSS">
+                    <input type="text" id="train-run-id-input" placeholder="Optional, for example run_YYYYMMDD_HHMMSS">
                   </label>
                   <label>
-                    <span>Model <span class="info-icon" data-tooltip="選擇要訓練的 YOLO 骨幹權重。分割任務強制要求選擇 *-seg.pt 模型。">i</span></span>
+                    <span>Model <span class="info-icon" data-tooltip="Select a model compatible with the current project task. Segmentation projects should use a segmentation model.">i</span></span>
                     <select id="train-model">
                       <option value="yolov8n-seg.pt">YOLOv8n Segmentation (Recommended)</option>
                       <option value="yolov8s-seg.pt">YOLOv8s Segmentation</option>
@@ -692,11 +689,20 @@
                     </select>
                   </label>
                   <label>
-                    <span>Epochs <span class="info-icon" data-tooltip="模型完整看過訓練資料一次稱為一個 epoch。輪數越多學習越飽和，但也越容易過擬合。">i</span></span>
+                    <span>Training Profile</span>
+                    <select id="train-profile">
+                      <option value="balanced" selected>Balanced</option>
+                      <option value="quick">Quick Test</option>
+                      <option value="accuracy">High Accuracy</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Epochs <span class="info-icon" data-tooltip="One epoch means the model has seen the full training dataset once. More epochs can improve learning but can also overfit.">i</span></span>
                     <input type="number" id="train-epochs" value="50" min="5" max="300">
                   </label>
                   <label>
-                    <span>Batch Size <span class="info-icon" data-tooltip="模型一次處理幾張圖片。數值越大越吃顯示卡記憶體 (VRAM)。GPU 不足時請調小。">i</span></span>
+                    <span>Batch Size <span class="info-icon" data-tooltip="Number of images processed at once. Larger batches use more VRAM.">i</span></span>
                     <select id="train-batch">
                       <option value="2">2</option>
                       <option value="4">4</option>
@@ -706,7 +712,7 @@
                     </select>
                   </label>
                   <label>
-                    <span>Image Size <span class="info-icon" data-tooltip="輸入神經網路的影像尺寸，數值越大細節越多但也越消耗記憶體。預設為 640。">i</span></span>
+                    <span>Image Size <span class="info-icon" data-tooltip="Input image size for training. Higher sizes may improve detail but use more memory.">i</span></span>
                     <select id="train-imgsz">
                       <option value="320">320</option>
                       <option value="640" selected>640</option>
@@ -715,22 +721,26 @@
                     </select>
                   </label>
                   <label>
-                    <span>Learning Rate <span class="info-icon" data-tooltip="模型每次修正錯誤時的步伐大小。過大會造成震盪，過小會收斂太慢。">i</span></span>
-                    <input type="number" id="train-lr0" value="0.01" step="0.001" min="0.0001" max="0.1">
-                  </label>
-                  <label>
-                    <span>Hardware Device <span class="info-icon" data-tooltip="訓練硬體。GPU 可加速訓練數十倍。無可用 GPU 時請選 CPU。">i</span></span>
+                    <span>Hardware Device <span class="info-icon" data-tooltip="Use GPU when CUDA is available. CPU training is possible but much slower.">i</span></span>
                     <select id="train-device">
                       <option value="gpu">GPU (CUDA)</option>
                       <option value="cpu">CPU</option>
                     </select>
                   </label>
+                  <div class="training-recommendation-card" id="training-vram-risk">
+                    <strong>Auto recommendation</strong>
+                    <span id="training-vram-risk-text">Settings will be checked after project and hardware status are loaded.</span>
+                    <button type="button" class="btn btn-sm btn-secondary" id="btn-auto-recommend">Auto Recommend Settings</button>
+                  </div>
                 </div>
 
-                <!-- Advanced Mode Fields (Collapsible) -->
                 <div id="config-advanced-fields" class="hidden">
                   <label>
-                    <span>Optimizer <span class="info-icon" data-tooltip="優化演算法。auto 會依據設定自動挑選 SGD/AdamW。">i</span></span>
+                    <span>Learning Rate <span class="info-icon" data-tooltip="Initial optimizer learning rate. Keep default unless you know why it should change.">i</span></span>
+                    <input type="number" id="train-lr0" value="0.01" step="0.001" min="0.0001" max="0.1">
+                  </label>
+                  <label>
+                    <span>Optimizer <span class="info-icon" data-tooltip="Optimizer used during training. Auto is recommended for most projects.">i</span></span>
                     <select id="train-optimizer">
                       <option value="auto" selected>auto (Recommended)</option>
                       <option value="SGD">SGD</option>
@@ -739,36 +749,37 @@
                     </select>
                   </label>
                   <label>
-                    <span>Patience <span class="info-icon" data-tooltip="Early Stopping 容忍輪數。驗證成績持續無改善達此 Epoch 數則提早中止訓練。">i</span></span>
+                    <span>Patience <span class="info-icon" data-tooltip="Early stopping patience. Training stops if validation quality does not improve for this many epochs.">i</span></span>
                     <input type="number" id="train-patience" value="20" min="0">
                   </label>
                   <label>
-                    <span>Workers <span class="info-icon" data-tooltip="資料載入執行緒數。多核心 CPU 可調高以加速資料準備。">i</span></span>
+                    <span>Workers <span class="info-icon" data-tooltip="Number of data loading worker processes. Higher values may speed loading but use more CPU and memory.">i</span></span>
                     <input type="number" id="train-workers" value="4" min="0" max="16">
                   </label>
                   <label>
-                    <span>Seed <span class="info-icon" data-tooltip="隨機種子。設定固定數值可重複一樣的訓練初始化結果。">i</span></span>
+                    <span>Seed <span class="info-icon" data-tooltip="Random seed used to make training more reproducible.">i</span></span>
                     <input type="number" id="train-seed" value="42">
                   </label>
                   <label>
-                    <span>Save Period <span class="info-icon" data-tooltip="每隔多少個 Epoch 儲存一次檢查點權重。設為 5 即每 5 epoch 儲存一次。">i</span></span>
+                    <span>Save Period <span class="info-icon" data-tooltip="Save a checkpoint every N epochs.">i</span></span>
                     <input type="number" id="train-save-period" value="5" min="1">
                   </label>
                   <label>
-                    <span>Close Mosaic Epochs <span class="info-icon" data-tooltip="在訓練結束前最後 N 個 Epoch 關閉馬賽克資料增強，以利模型收斂。">i</span></span>
+                    <span>Close Mosaic Epochs <span class="info-icon" data-tooltip="Disable mosaic augmentation near the end of training to improve convergence.">i</span></span>
                     <input type="number" id="train-close-mosaic" value="10" min="0">
                   </label>
                   <label class="checkbox-row">
                     <input type="checkbox" id="train-amp" checked>
-                    <span>AMP (Mixed Precision) <span class="info-icon" data-tooltip="啟用半精度混合訓練，可顯著降低 VRAM 使用量並加速，幾乎無損精準度。">i</span></span>
+                    <span>AMP (Mixed Precision) <span class="info-icon" data-tooltip="Mixed precision can reduce VRAM usage and speed up GPU training.">i</span></span>
                   </label>
                   <label class="checkbox-row">
                     <input type="checkbox" id="train-cache">
-                    <span>Cache Images <span class="info-icon" data-tooltip="將圖片快取至 RAM 中以極限加速讀取。非常消耗記憶體，建議大資料集不開啟。">i</span></span>
+                    <span>Cache Images <span class="info-icon" data-tooltip="Cache images in memory or disk to speed data loading. Requires enough system resources.">i</span></span>
                   </label>
                 </div>
 
-                <div class="action-bar" style="margin-top: 16px;">
+                <div id="training-start-blocker" class="training-start-blocker hidden"></div>
+                <div class="action-bar training-action-bar">
                   <button type="button" class="btn btn-primary guarded" data-requires="train-ready" id="btn-start-train">
                     <i class="fa-solid fa-play"></i> Start Training
                   </button>
@@ -779,115 +790,108 @@
               </form>
             </section>
 
-            <!-- 右側: Live Training Monitor -->
             <section class="panel-section training-monitor-panel">
               <div class="section-title"><h2>Live Training Monitor</h2></div>
-              <div class="training-status-grid">
-                <div class="metric-card"><span>Status</span><strong id="train-status-label">Idle</strong></div>
-                <div class="metric-card"><span>Progress</span><strong id="train-progress-text">Epoch 0 / 0</strong></div>
-                <div class="metric-card"><span>mAP50</span><strong id="monitor-map50">--</strong></div>
-                <div class="metric-card"><span>mAP50-95</span><strong id="monitor-map50-95">--</strong></div>
-                <div class="metric-card"><span>Loss</span><strong id="monitor-loss">--</strong></div>
+              <div id="training-monitor-empty" class="training-empty-state">
+                <i class="fa-solid fa-chart-line"></i>
+                <strong>No active training run.</strong>
+                <span>Start training after readiness checks pass.</span>
               </div>
+              <div id="training-monitor-active">
+                <div class="training-status-grid">
+                  <div class="metric-card"><span>Status</span><strong id="train-status-label">Idle</strong></div>
+                  <div class="metric-card"><span>Progress</span><strong id="train-progress-text">--</strong></div>
+                  <div class="metric-card"><span>mAP50(M)</span><strong id="monitor-map50">--</strong></div>
+                  <div class="metric-card"><span>mAP50-95(M)</span><strong id="monitor-map50-95">--</strong></div>
+                  <div class="metric-card"><span>Loss</span><strong id="monitor-loss">--</strong></div>
+                </div>
 
-              <!-- 硬體使用率 Progress Bars -->
-              <div class="hardware-telemetry-panel" style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px;">
-                <div>
-                  <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:4px;">
-                    <span>CPU Usage</span>
-                    <span id="tel-cpu-val">--</span>
+                <div class="hardware-telemetry-panel">
+                  <div>
+                    <div class="telemetry-row"><span>CPU Usage</span><span id="tel-cpu-val">--</span></div>
+                    <div class="metric-progress"><div class="bar" id="tel-cpu-bar" style="width: 0%"></div></div>
                   </div>
-                  <div class="metric-progress"><div class="bar" id="tel-cpu-bar" style="width: 0%"></div></div>
-                </div>
-                <div>
-                  <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:4px;">
-                    <span>RAM Usage</span>
-                    <span id="tel-ram-val">--</span>
+                  <div>
+                    <div class="telemetry-row"><span>RAM Usage</span><span id="tel-ram-val">--</span></div>
+                    <div class="metric-progress"><div class="bar" id="tel-ram-bar" style="width: 0%"></div></div>
                   </div>
-                  <div class="metric-progress"><div class="bar" id="tel-ram-bar" style="width: 0%"></div></div>
-                </div>
-                <div>
-                  <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:4px;">
-                    <span>GPU Usage</span>
-                    <span id="tel-gpu-val">--</span>
+                  <div>
+                    <div class="telemetry-row"><span>GPU Usage</span><span id="tel-gpu-val">--</span></div>
+                    <div class="metric-progress"><div class="bar" id="tel-gpu-bar" style="width: 0%"></div></div>
                   </div>
-                  <div class="metric-progress"><div class="bar" id="tel-gpu-bar" style="width: 0%"></div></div>
-                </div>
-                <div>
-                  <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:4px;">
-                    <span>VRAM Usage</span>
-                    <span id="tel-vram-val">--</span>
+                  <div>
+                    <div class="telemetry-row"><span>VRAM Usage</span><span id="tel-vram-val">--</span></div>
+                    <div class="metric-progress"><div class="bar" id="tel-vram-bar" style="width: 0%"></div></div>
                   </div>
-                  <div class="metric-progress"><div class="bar" id="tel-vram-bar" style="width: 0%"></div></div>
                 </div>
               </div>
             </section>
           </div>
 
-          <!-- 4. Interactive Charts Dashboard (全寬) -->
-          <section class="panel-section training-chart-card" style="margin-top: 16px;">
-            <div class="section-title" style="flex-wrap: wrap; gap: 12px;">
-              <h2>Interactive Metrics Dashboard</h2>
+          <section class="panel-section training-chart-card">
+            <div class="section-title training-chart-title">
+              <h2>Metrics Dashboard</h2>
               <div class="chart-tabs" id="metrics-chart-tabs">
                 <button class="tab-btn active" data-chart-tab="primary">Primary Metrics</button>
                 <button class="tab-btn" data-chart-tab="loss">Loss Breakdown</button>
-                <button class="tab-btn" data-chart-tab="box">Box Metrics</button>
                 <button class="tab-btn" data-chart-tab="mask">Mask Metrics</button>
+                <button class="tab-btn" data-chart-tab="box">Box Metrics</button>
                 <button class="tab-btn" data-chart-tab="hardware">Hardware Metrics</button>
                 <button class="tab-btn" data-chart-tab="report">Report View</button>
               </div>
             </div>
 
-            <!-- 圖表控制項與收斂性診斷 -->
-            <div class="chart-control-panel" style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr); gap: 16px; margin-bottom: 12px; align-items: start;">
-              <div class="chart-filters" style="display: flex; gap: 14px; align-items: center; background: var(--bg-panel-soft); padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); flex-wrap: wrap;">
-                <label class="checkbox-row" style="margin:0;">
-                  <input type="checkbox" id="chart-show-raw" checked>
-                  <span>Show Raw Curve</span>
-                </label>
-                <label class="checkbox-row" style="margin:0;">
-                  <input type="checkbox" id="chart-show-smooth" checked>
-                  <span>Show EMA Smooth</span>
-                </label>
-                <label style="display:flex; align-items:center; gap:6px; font-size:0.8rem; margin:0;">
-                  <span>Smooth Factor (&alpha;):</span>
-                  <input type="range" id="chart-ema-alpha" min="0.05" max="0.95" step="0.05" value="0.25" style="width: 80px;">
-                  <span id="chart-ema-alpha-val">0.25</span>
-                </label>
-              </div>
-              <div class="trend-diagnostic-card" style="background: var(--bg-panel-soft); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; min-height: 94px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                  <span style="font-size:0.82rem; color:var(--text-muted);">Convergence Diagnostic</span>
-                  <span class="status-badge" id="trend-health-badge">Good</span>
-                </div>
-                <div style="font-size:0.92rem; font-weight:600; display:flex; gap:16px;">
-                  <div>Best Epoch: <span id="trend-best-epoch" style="color:var(--primary);">--</span></div>
-                  <div>Platform Score: <span id="trend-platform-score" style="color:var(--success);">--</span></div>
-                </div>
-                <div id="trend-suggestions" style="font-size:0.75rem; color:var(--text-muted); margin-top:6px; line-height:1.35;">
-                  暫無診斷資料。
-                </div>
-              </div>
+            <div id="training-metrics-empty" class="training-empty-state">
+              <i class="fa-solid fa-chart-simple"></i>
+              <strong>No training metrics yet.</strong>
+              <span>Complete a training run to view charts, artifacts, and trend diagnostics.</span>
             </div>
 
-            <!-- 圖表繪製 Canvas / Report View -->
-            <div id="chart-drawing-container" style="position: relative; width: 100%; height: 320px; background: var(--bg-preview); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px;">
-              <canvas id="metrics-chart-canvas"></canvas>
-            </div>
+            <div id="training-metrics-active">
+              <div class="chart-control-panel">
+                <div class="chart-filters">
+                  <label class="checkbox-row">
+                    <input type="checkbox" id="chart-show-raw" checked>
+                    <span>Show Raw Curve</span>
+                  </label>
+                  <label class="checkbox-row">
+                    <input type="checkbox" id="chart-show-smooth" checked>
+                    <span>Show EMA Smooth</span>
+                  </label>
+                  <label class="range-inline">
+                    <span>Smooth Factor (&alpha;):</span>
+                    <input type="range" id="chart-ema-alpha" min="0.05" max="0.95" step="0.05" value="0.25">
+                    <span id="chart-ema-alpha-val">0.25</span>
+                  </label>
+                </div>
+                <div class="trend-diagnostic-card">
+                  <div class="trend-header">
+                    <span>Convergence Diagnostic</span>
+                    <span class="status-badge" id="trend-health-badge">Good</span>
+                  </div>
+                  <div class="trend-stats">
+                    <div>Best Epoch: <span id="trend-best-epoch">--</span></div>
+                    <div>Platform Score: <span id="trend-platform-score">--</span></div>
+                  </div>
+                  <div id="trend-suggestions">Complete a run to generate training suggestions.</div>
+                </div>
+              </div>
 
-            <div id="chart-report-container" class="hidden" style="text-align: center; background: var(--bg-preview); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; min-height: 320px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;">
-              <img id="static-report-img" alt="YOLO results.png" style="max-height: 480px; max-width: 100%; object-fit: contain; border: 1px solid var(--border); border-radius: var(--radius);">
-              <div style="display:flex; gap:10px;">
-                <a class="btn btn-secondary btn-sm" id="btn-download-results-png" target="_blank"><i class="fa-solid fa-download"></i> Download results.png</a>
-                <a class="btn btn-secondary btn-sm" id="btn-download-results-csv" target="_blank"><i class="fa-solid fa-file-csv"></i> Download results.csv</a>
+              <div id="chart-drawing-container" class="chart-drawing-container">
+                <canvas id="metrics-chart-canvas"></canvas>
+              </div>
+
+              <div id="chart-report-container" class="hidden chart-report-container">
+                <img id="static-report-img" alt="YOLO results.png">
+                <div class="action-bar">
+                  <a class="btn btn-secondary btn-sm" id="btn-download-results-png" target="_blank"><i class="fa-solid fa-download"></i> Download results.png</a>
+                  <a class="btn btn-secondary btn-sm" id="btn-download-results-csv" target="_blank"><i class="fa-solid fa-file-csv"></i> Download results.csv</a>
+                </div>
               </div>
             </div>
           </section>
 
-          <!-- 5. Logs & Artifacts (左右二欄) -->
-          <div class="two-column-layout" style="margin-top: 16px;">
-
-            <!-- 左欄: Epoch History & Event Log -->
+          <div class="two-column-layout training-lower-grid">
             <section class="panel-section">
               <div class="section-title">
                 <h2>History & Event Logs</h2>
@@ -896,9 +900,7 @@
                   <button type="button" class="btn btn-sm btn-secondary" data-log-tab="event">Event Log</button>
                 </div>
               </div>
-
-              <!-- Epoch History Table -->
-              <div id="log-epoch-container" class="table-wrap" style="max-height: 300px; overflow-y: auto;">
+              <div id="log-epoch-container" class="table-wrap training-scroll-table">
                 <table class="data-table epoch-history-table">
                   <thead>
                     <tr>
@@ -912,29 +914,25 @@
                     </tr>
                   </thead>
                   <tbody id="epoch-history-rows">
-                    <tr><td colspan="7" class="text-center" style="padding:16px; color:var(--text-muted);">尚無訓練歷史。</td></tr>
+                    <tr><td colspan="7" class="text-center muted-cell">No epoch history yet.</td></tr>
                   </tbody>
                 </table>
               </div>
-
-              <!-- Event Log -->
-              <div id="log-event-container" class="hidden" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px;">
-                <div class="empty-state" id="event-log-empty">尚無事件紀錄。</div>
-                <div id="event-log-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+              <div id="log-event-container" class="hidden training-event-list">
+                <div class="empty-state" id="event-log-empty">No training events yet.</div>
+                <div id="event-log-list"></div>
               </div>
             </section>
 
-            <!-- 右欄: Model Artifacts -->
             <section class="panel-section">
               <div class="section-title"><h2>Model Artifacts</h2></div>
-              <div class="artifact-grid" id="artifact-list-container" style="display: grid; gap: 10px; max-height: 340px; overflow-y: auto; padding: 4px;">
-                <div class="empty-state">目前尚未有本次 Run 的產出檔案。</div>
+              <div class="artifact-grid" id="artifact-list-container">
+                <div class="empty-state">No artifacts yet. Complete a training run to see best.pt, last.pt, metrics, and reports.</div>
               </div>
             </section>
           </div>
 
-          <!-- 6. Run History (全寬) -->
-          <section class="panel-section" style="margin-top: 16px;">
+          <section class="panel-section training-run-history-card">
             <div class="section-title"><h2>Run History</h2></div>
             <div class="table-wrap">
               <table class="data-table run-history-table">
@@ -953,7 +951,7 @@
                   </tr>
                 </thead>
                 <tbody id="run-history-rows">
-                  <tr><td colspan="10" class="text-center" style="padding:16px; color:var(--text-muted);">尚未有歷史運行紀錄。</td></tr>
+                  <tr><td colspan="10" class="text-center muted-cell">No training runs yet.</td></tr>
                 </tbody>
               </table>
             </div>

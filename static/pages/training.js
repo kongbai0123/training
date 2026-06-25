@@ -8,8 +8,12 @@ let metricsChart = null;
 let currentChartData = null; // 當前繪圖用的數據
 let activeChartTab = "primary"; // 當前選取的 Chart Tab
 
+function setMetricsDashboardActive(active) {
+  qs("#training-metrics-empty")?.classList.toggle("hidden", active);
+  qs("#training-metrics-active")?.classList.toggle("hidden", !active);
+}
+
 export function initTraining() {
-  // 1. Simple vs Advanced config mode 切換
   qs("#tab-config-simple")?.addEventListener("click", () => {
     qs("#tab-config-simple").className = "btn btn-sm btn-primary";
     qs("#tab-config-advanced").className = "btn btn-sm btn-secondary";
@@ -21,36 +25,37 @@ export function initTraining() {
     qs("#config-advanced-fields")?.classList.remove("hidden");
   });
 
-  // 2. 訓練控制按鈕綁定
+  qs("#btn-auto-recommend")?.addEventListener("click", loadRecommendedConfig);
+  ["#train-model", "#train-batch", "#train-imgsz", "#train-device", "#train-profile"].forEach((selector) => {
+    qs(selector)?.addEventListener("change", () => renderTrainingMonitor());
+  });
+
   qs("#btn-start-train")?.addEventListener("click", async () => {
     const status = getProjectStatus(appState.currentProject);
-    
-    // 額外的模型防呆檢查
-    const modelName = qs("#train-model").value;
+    const blockers = getTrainingBlockers(status);
+    const modelName = qs("#train-model")?.value || "";
     const taskType = String(status.taskType || "").toLowerCase();
     const isSegTask = taskType.includes("segmentation") || taskType.includes("seg");
     const isSegModel = modelName.includes("-seg");
-    
+
     if (isSegTask && !isSegModel) {
-      eventBus.emit("toast", "當前任務為分割任務，請選用 *-seg.pt 模型。");
+      eventBus.emit("toast", "This project is segmentation. Please select a segmentation model.");
       return;
     }
 
-    if (!status.trainReady) {
-      eventBus.emit("toast", "目前尚未滿足訓練條件，請檢查 Readiness Guard。");
+    if (blockers.length > 0) {
+      eventBus.emit("toast", "Training is blocked. Fix readiness blockers first.");
       return;
     }
 
     try {
       const configData = {
         model: modelName,
-        epochs: Number(qs("#train-epochs").value),
-        batch_size: Number(qs("#train-batch").value),
-        imgsz: Number(qs("#train-imgsz").value),
-        lr0: Number(qs("#train-lr0").value),
-        device: qs("#train-device").value,
-        
-        // 進階參數
+        epochs: Number(qs("#train-epochs")?.value || 50),
+        batch_size: Number(qs("#train-batch")?.value || 8),
+        imgsz: Number(qs("#train-imgsz")?.value || 640),
+        lr0: Number(qs("#train-lr0")?.value || 0.01),
+        device: qs("#train-device")?.value || "gpu",
         patience: Number(qs("#train-patience")?.value || 20),
         workers: Number(qs("#train-workers")?.value || 4),
         cache: qs("#train-cache")?.checked || false,
@@ -62,9 +67,7 @@ export function initTraining() {
       };
 
       const runIdInput = qs("#train-run-id-input")?.value?.trim();
-      if (runIdInput) {
-        configData.run_id = runIdInput;
-      }
+      if (runIdInput) configData.run_id = runIdInput;
 
       await apiFetch(`/api/projects/${appState.currentProjectId}/train/start`, {
         method: "POST",
@@ -72,24 +75,23 @@ export function initTraining() {
         body: JSON.stringify(configData)
       });
 
-      eventBus.emit("toast", "訓練已成功啟動");
+      eventBus.emit("toast", "Training started.");
       startMonitorWebSocket();
       eventBus.emit("refresh-project");
     } catch (err) {
-      eventBus.emit("toast", `啟動訓練失敗：${err.message}`);
+      eventBus.emit("toast", `Failed to start training: ${err.message}`);
     }
   });
 
   qs("#btn-stop-train")?.addEventListener("click", async () => {
     try {
       await apiFetch(`/api/projects/${appState.currentProjectId}/train/stop`, { method: "POST" });
-      eventBus.emit("toast", "已送出終止訓練要求，正在防禦性釋放資源...");
+      eventBus.emit("toast", "Stop request sent. Waiting for training process to exit.");
     } catch (err) {
-      eventBus.emit("toast", `中止訓練失敗：${err.message}`);
+      eventBus.emit("toast", `Failed to stop training: ${err.message}`);
     }
   });
 
-  // 3. 圖表控制項綁定
   qs("#chart-show-raw")?.addEventListener("change", updateChartVisualization);
   qs("#chart-show-smooth")?.addEventListener("change", updateChartVisualization);
   qs("#chart-ema-alpha")?.addEventListener("input", (e) => {
@@ -97,13 +99,12 @@ export function initTraining() {
     updateChartVisualization();
   });
 
-  // 4. Chart Tabs 點擊切換
   qsa("#metrics-chart-tabs .tab-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
+    btn.addEventListener("click", () => {
       qsa("#metrics-chart-tabs .tab-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       activeChartTab = btn.dataset.chartTab;
-      
+
       if (activeChartTab === "report") {
         qs("#chart-drawing-container")?.classList.add("hidden");
         qs("#chart-report-container")?.classList.remove("hidden");
@@ -116,7 +117,6 @@ export function initTraining() {
     });
   });
 
-  // 5. Logs & History Tabs 點擊切換
   qsa("#log-tabs-nav button").forEach((btn) => {
     btn.addEventListener("click", () => {
       qsa("#log-tabs-nav button").forEach((b) => {
@@ -137,97 +137,102 @@ export function initTraining() {
     });
   });
 
-  // 6. 監聽全域事件
   eventBus.on("check-training-websocket", () => {
-    if (appState.trainingStatus?.status === "training") {
-      startMonitorWebSocket();
-    }
+    if (appState.trainingStatus?.status === "training") startMonitorWebSocket();
   });
 }
 
-// 主渲染函式
 export function renderTrainingMonitor() {
   const status = getProjectStatus(appState.currentProject);
   const trainState = appState.trainingStatus || {};
-  
-  // A. 更新 KPI Overview Cards
-  setText("#card-ds-total", status.hasProject ? `${status.imageCount} imgs` : "--");
-  setText("#card-ds-split", status.hasProject ? `T:${status.splitCounts.train} | V:${status.splitCounts.val} | E:${status.splitCounts.test}` : "train: -- | val: --");
-  
+  const blockers = getTrainingBlockers(status);
+  const isReady = blockers.length === 0;
+  const isRunning = trainState.status === "training";
+  const isStopping = trainState.status === "stopping";
+  const hasMetrics = isRunning || Boolean(currentChartData?.epochs?.length);
+
+  setText("#card-ds-total", status.hasProject ? `${status.imageCount} images` : "--");
+  setText("#card-ds-split", status.hasProject ? `Images: ${status.imageCount}` : "Images: --");
   setText("#card-ann-status", status.hasProject ? `${status.annotationRate}%` : "--");
-  setText("#card-ann-detail", status.hasProject ? `annotated: ${status.annotatedCount} | missing: ${status.unannotatedCount}` : "annotated: --");
-  
+  setText("#card-ann-detail", status.hasProject ? `Annotated: ${status.annotatedCount} / Missing: ${status.unannotatedCount}` : "Annotated: --");
+  setText("#card-split-status", status.splitComplete ? "Ready" : "Missing");
+  setText("#card-split-detail", status.hasProject ? `Train / Val / Test: ${status.splitCounts.train} / ${status.splitCounts.val} / ${status.splitCounts.test}` : "Train / Val / Test: --");
   setText("#card-model-name", status.hasProject ? (qs("#train-model")?.value || "--") : "--");
-  setText("#card-model-task", status.hasProject ? `task: ${status.taskType}` : "task: --");
-  
+  setText("#card-model-task", status.hasProject ? `Task: ${status.taskType || "--"}` : "Task: --");
+
   const hw = trainState.hardware || {};
   const gpu = hw.gpu || {};
-  setText("#card-hw-device", gpu.available ? gpu.name : "CPU only");
-  setText("#card-hw-vram", gpu.available ? `${gpu.vram_total} MB` : "--");
-  
-  const currentRunId = trainState.run_id || (appState.currentProject?.training_config?.run_id) || "--";
-  setText("#card-run-id", currentRunId);
-  setText("#card-run-status", trainState.status || "Idle");
+  setText("#card-hw-device", gpu.available ? gpu.name : "CPU mode");
+  setText("#card-hw-vram", gpu.available ? `VRAM: ${gpu.vram_total} MB` : "VRAM: --");
 
-  // B. 更新 Telemetry 硬體 Progress bar
+  const currentRunId = trainState.run_id || appState.currentProject?.training_config?.run_id || "--";
+  setText("#card-run-id", currentRunId);
+  setText("#card-run-status", `Status: ${trainState.status || "Idle"}`);
+
   updateTelemetryProgress("#tel-cpu-val", "#tel-cpu-bar", hw.cpu_usage);
-  updateTelemetryProgress("#tel-ram-val", "#tel-ram-bar", hw.ram_used !== undefined ? (hw.ram_used / hw.ram_total) * 100 : undefined, hw.ram_used && hw.ram_total ? `${hw.ram_used} / ${hw.ram_total} MB` : "");
+  updateTelemetryProgress("#tel-ram-val", "#tel-ram-bar", hw.ram_used !== undefined && hw.ram_total ? (hw.ram_used / hw.ram_total) * 100 : undefined, hw.ram_used && hw.ram_total ? `${hw.ram_used} / ${hw.ram_total} MB` : "");
   updateTelemetryProgress("#tel-gpu-val", "#tel-gpu-bar", gpu.available ? gpu.usage : undefined);
   updateTelemetryProgress("#tel-vram-val", "#tel-vram-bar", gpu.available ? (gpu.vram_used / gpu.vram_total) * 100 : undefined, gpu.available ? `${gpu.vram_used} / ${gpu.vram_total} MB` : "");
 
-  // C. 訓練狀態機控制
-  const isRunning = trainState.status === "training";
-  const isStopping = trainState.status === "stopping";
   const startBtn = qs("#btn-start-train");
   const stopBtn = qs("#btn-stop-train");
-  const configForm = qs("#form-training-config");
   const lockMsg = qs("#config-lock-msg");
+  const configForm = qs("#form-training-config");
+  const startBlocker = qs("#training-start-blocker");
+  const shouldLockConfig = !isReady || isRunning || isStopping;
 
+  if (startBtn) {
+    startBtn.disabled = shouldLockConfig;
+    startBtn.title = shouldLockConfig ? "Training is blocked until readiness checks pass." : "Start training";
+  }
   if (isRunning) {
-    if (startBtn) startBtn.disabled = true;
     stopBtn?.classList.remove("hidden");
     if (stopBtn) stopBtn.disabled = false;
-    lockMsg?.classList.remove("hidden");
-    
-    // 鎖定設定表單
-    if (configForm) {
-      qsa("#form-training-config input, #form-training-config select").forEach((el) => {
-        el.disabled = true;
-      });
-    }
   } else if (isStopping) {
-    if (startBtn) startBtn.disabled = true;
+    stopBtn?.classList.remove("hidden");
     if (stopBtn) stopBtn.disabled = true;
-    lockMsg?.classList.remove("hidden");
   } else {
-    // Idle, completed, failed
-    if (startBtn) startBtn.disabled = !status.trainReady;
     stopBtn?.classList.add("hidden");
-    lockMsg?.classList.add("hidden");
-    
-    // 釋放設定表單鎖定
-    if (configForm) {
-      qsa("#form-training-config input, #form-training-config select").forEach((el) => {
-        el.disabled = false;
-      });
-    }
   }
 
-  // D. 繪製 Readiness Guard 狀態與下一步導覽
-  renderReadinessGuard(status);
+  if (lockMsg) {
+    lockMsg.classList.toggle("hidden", !shouldLockConfig);
+    const message = isRunning
+      ? "Training configuration is locked while a run is active."
+      : isStopping
+        ? "Training is stopping. Configuration remains locked."
+        : "Training configuration is locked until Dataset, LabelMe annotations, and Split are ready.";
+    lockMsg.querySelector("span") && (lockMsg.querySelector("span").textContent = message);
+  }
 
-  // E. 更新即時狀態監控卡片數值
+  if (configForm) {
+    qsa("#form-training-config input, #form-training-config select").forEach((el) => {
+      el.disabled = shouldLockConfig;
+    });
+  }
+  if (startBlocker) {
+    startBlocker.classList.toggle("hidden", isReady);
+    startBlocker.innerHTML = isReady ? "" : `<strong>Start Training is disabled.</strong><ul>${blockers.map((b) => `<li>${escapeHtml(b.text)}</li>`).join("")}</ul>`;
+  }
+
+  renderReadinessGuard(status, blockers);
+  updateTrainingRecommendation(status, gpu);
+
+  const monitorEmpty = qs("#training-monitor-empty");
+  const monitorActive = qs("#training-monitor-active");
+  const showMonitor = isRunning || isStopping || trainState.status === "completed" || trainState.status === "failed";
+  monitorEmpty?.classList.toggle("hidden", showMonitor);
+  monitorActive?.classList.toggle("hidden", !showMonitor);
+
   setText("#train-status-label", trainState.status || "Idle");
-  setText("#train-progress-text", `Epoch ${trainState.epoch || 0} / ${trainState.total_epochs || 0}`);
-  
+  setText("#train-progress-text", showMonitor ? `Epoch ${trainState.epoch || 0} / ${trainState.total_epochs || "--"}` : "--");
+
   const lastMetrics = trainState.metrics && trainState.metrics.length ? trainState.metrics[trainState.metrics.length - 1] : {};
   setText("#monitor-map50", lastMetrics.map50 !== undefined ? Number(lastMetrics.map50).toFixed(3) : "--");
   setText("#monitor-map50-95", lastMetrics.map50_95 !== undefined ? Number(lastMetrics.map50_95).toFixed(3) : "--");
   setText("#monitor-loss", lastMetrics.loss !== undefined ? Number(lastMetrics.loss).toFixed(4) : "--");
 
-  // F. 載入當前/最新 Run 的 CSV 指標並繪製圖表 (若為 training 狀態則使用 WebSocket 推送繪製)
   if (isRunning) {
-    // 如果正在訓練，動態組裝 chart 資料結構並繪製
     const wsEpochs = (trainState.metrics || []).map((m) => m.epoch);
     const wsLoss = (trainState.metrics || []).map((m) => m.loss);
     const wsMap50 = (trainState.metrics || []).map((m) => m.map50);
@@ -255,15 +260,14 @@ export function renderTrainingMonitor() {
     updateChartVisualization();
     renderEpochHistoryTable(currentChartData);
   } else {
-    // 非訓練中，載入此專案最近完成的一個 run 的資料
     loadLatestRunMetricsOnce();
   }
 
-  // G. 讀取並重新渲染歷史 Runs 與 Artifacts
+  setMetricsDashboardActive(hasMetrics);
+
   renderRunHistoryTable();
 }
 
-// 載入最推薦配置
 export async function loadRecommendedConfig() {
   if (!appState.currentProjectId) return;
   try {
@@ -312,10 +316,7 @@ export async function loadRecommendedConfig() {
 }
 
 // Readiness Guard 渲染
-function renderReadinessGuard(status) {
-  const container = qs("#training-readiness-guard");
-  if (!container) return;
-
+function getTrainingBlockers(status) {
   const blockers = [];
   const modelName = qs("#train-model")?.value || "";
   const taskType = String(status.taskType || "").toLowerCase();
@@ -323,52 +324,83 @@ function renderReadinessGuard(status) {
   const isSegModel = modelName.includes("-seg");
 
   if (!status.hasProject) {
-    blockers.push({ text: "尚未選擇或載入訓練專案。", action: "Go to Projects and create a project", nav: "projects" });
-  } else {
-    if (status.imageCount === 0) {
-      blockers.push({ text: "資料集圖片數量為 0，無訓練影像。", action: "Go to Dataset and import images", nav: "dataset" });
-    }
-    if (!status.labelme.synced) {
-      blockers.push({ text: "標註未完成或尚未與 LabelMe 轉換同步。", action: "Go to LabelMe and sync annotations", nav: "labelme" });
-    }
-    if (!status.splitComplete) {
-      blockers.push({ text: "尚未劃分 Train / Val / Test 資料集切分。", action: "Go to Split and create split", nav: "split" });
-    }
-    if (isSegTask && !isSegModel) {
-      blockers.push({ text: "分割任務 (Segmentation) 要求必須選用 *-seg.pt 格式的模型。", action: "修正模型選擇設定", nav: null });
-    }
+    blockers.push({ text: "No project is currently opened.", action: "Create or open a project.", nav: "dashboard" });
+    return blockers;
   }
+  if (!status.hasDataset || status.imageCount === 0) {
+    blockers.push({ text: "No dataset images found.", action: "Import images in Dataset.", nav: "dataset" });
+  }
+  if (!status.labelme?.synced) {
+    blockers.push({ text: "LabelMe annotations have not been synced.", action: "Sync annotations in LabelMe.", nav: "labelme" });
+  }
+  if (!status.splitComplete) {
+    blockers.push({ text: "Train / Val / Test split is missing.", action: "Create a split before training.", nav: "split" });
+  }
+  if (isSegTask && !isSegModel) {
+    blockers.push({ text: "Selected model is not compatible with segmentation training.", action: "Choose a segmentation model.", nav: null });
+  }
+  return blockers;
+}
+
+function renderReadinessGuard(status, blockers = getTrainingBlockers(status)) {
+  const container = qs("#training-readiness-guard");
+  if (!container) return;
 
   if (blockers.length > 0) {
     container.className = "training-readiness blocked";
-    const listHtml = blockers.map(b => {
-      if (b.nav) {
-        return `<li>${escapeHtml(b.text)} <a href="#" data-nav="${b.nav}" style="color: #fbbf24; text-decoration: underline; margin-left:6px;">[下一步建議：${b.action}]</a></li>`;
-      }
-      return `<li>${escapeHtml(b.text)} <strong style="color:#f87171;">[${b.action}]</strong></li>`;
-    }).join("");
-
     container.innerHTML = `
-      <div style="font-weight: 700; margin-bottom: 4px;"><i class="fa-solid fa-triangle-exclamation"></i> 訓練就緒檢查未通過 (Training Blocked)</div>
-      <ul style="margin: 0; padding-left: 20px;">${listHtml}</ul>
+      <div class="training-readiness-header">
+        <div><i class="fa-solid fa-triangle-exclamation"></i> Training Readiness: Blocked</div>
+        <span class="summary-badge badge-danger">${blockers.length} blocker${blockers.length > 1 ? "s" : ""}</span>
+      </div>
+      <p>Fix these items before editing training settings or starting a run.</p>
+      <ul>${blockers.map((b) => `<li>${escapeHtml(b.text)}${b.nav ? ` <button type="button" class="link-button" data-nav="${b.nav}">${escapeHtml(b.action)}</button>` : ` <strong>${escapeHtml(b.action)}</strong>`}</li>`).join("")}</ul>
     `;
-    
-    // 綁定動態跳轉
-    container.querySelectorAll("[data-nav]").forEach((link) => {
-      link.addEventListener("click", (e) => {
-        e.preventDefault();
-        eventBus.emit("navigate", link.dataset.nav);
-      });
+    container.querySelectorAll("[data-nav]").forEach((btn) => {
+      btn.addEventListener("click", () => eventBus.emit("navigate", btn.dataset.nav));
     });
-  } else {
-    container.className = "training-readiness ready";
-    container.innerHTML = `
-      <div><i class="fa-solid fa-circle-check"></i> 訓練準備就緒 (Training Ready): 專案、圖片、標註轉換、Splits 劃分與模型選擇皆已配置完成。</div>
-    `;
+    return;
   }
+
+  container.className = "training-readiness ready";
+  container.innerHTML = `
+    <div class="training-readiness-header">
+      <div><i class="fa-solid fa-circle-check"></i> Training Readiness: Ready</div>
+      <span class="summary-badge badge-success">Ready</span>
+    </div>
+    <p>Dataset, LabelMe annotations, split, model compatibility, and basic hardware checks are ready for training.</p>
+  `;
 }
 
-// Telemetry 進度條輔助
+function updateTrainingRecommendation(status, gpu) {
+  const el = qs("#training-vram-risk-text");
+  if (!el) return;
+  const batch = Number(qs("#train-batch")?.value || 8);
+  const imgsz = Number(qs("#train-imgsz")?.value || 640);
+  const model = qs("#train-model")?.value || "";
+  const vramMb = Number(gpu?.vram_total || 0);
+
+  if (!status.hasProject) {
+    el.textContent = "Open a project before generating training recommendations.";
+    return;
+  }
+  if (!gpu?.available) {
+    el.textContent = "GPU is not available. CPU mode is safer, but training will be slow.";
+    return;
+  }
+
+  let risk = "Low";
+  let advice = "Current settings look reasonable.";
+  if (vramMb && vramMb < 8000 && (batch >= 8 || imgsz >= 768)) {
+    risk = "High";
+    advice = "Recommended: batch 4, image size 640.";
+  } else if (vramMb && vramMb < 12000 && (batch >= 16 || imgsz >= 768 || model.includes("m-seg"))) {
+    risk = "Medium";
+    advice = "Recommended: batch 8, image size 640 for segmentation stability.";
+  }
+  el.textContent = `VRAM risk: ${risk}. ${advice}`;
+}
+
 function updateTelemetryProgress(textSelector, barSelector, value, customText = "") {
   const textEl = qs(textSelector);
   const barEl = qs(barSelector);
@@ -408,6 +440,7 @@ async function loadLatestRunMetricsOnce() {
       updateChartVisualization();
       renderEpochHistoryTable(null);
       renderArtifactList(null);
+      setMetricsDashboardActive(false);
       return;
     }
     
@@ -420,6 +453,7 @@ async function loadLatestRunMetricsOnce() {
     await loadRunMetrics(latestRun.run_id);
   } catch (err) {
     console.error("loadLatestRunMetricsOnce error", err);
+    setMetricsDashboardActive(false);
   }
 }
 
@@ -429,6 +463,7 @@ async function loadRunMetrics(runId) {
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${runId}/metrics`);
     currentChartData = data;
     lastLoadedRunId = runId;
+    setMetricsDashboardActive(Boolean(data?.epochs?.length));
     
     // 更新圖表與 Epoch 表格
     updateChartVisualization();
@@ -444,6 +479,7 @@ async function loadRunMetrics(runId) {
     currentChartData = null;
     updateChartVisualization();
     renderEpochHistoryTable(null);
+    setMetricsDashboardActive(false);
   }
 }
 

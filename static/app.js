@@ -742,27 +742,34 @@ function buildTrainingRightPanel(status) {
   const model = qs("#train-model")?.value || "--";
   const runs = appState.currentProject?.training_runs || [];
   const latestRun = runs.length > 0 ? runs[runs.length - 1] : null;
-  const formatNum = (v) => (v === null || v === undefined || v === "--") ? "--" : Number(v).toFixed(3);
   const runStatus = latestRun?.status ?? "--";
   const statusBadge = runStatus === "completed" ? "success" : runStatus === "failed" ? "danger" : runStatus === "training" ? "warning" : "neutral";
 
   const warnings = [];
-  if (!status.trainReady) warnings.push("Training is blocked until Dataset, LabelMe sync, and Split are ready.");
+  if (!status.hasDataset) warnings.push("Dataset is missing. Import images before training.");
+  if (!status.labelme.synced) warnings.push("LabelMe annotations are not synced.");
+  if (!status.splitComplete) warnings.push("Train / Val / Test split is missing.");
   if (gpu === "CPU" || gpu.includes("unavailable") || gpu.includes("Backend")) warnings.push("GPU is unavailable or backend health is missing; training may be slow.");
 
+  const actions = [];
+  if (!status.hasDataset) actions.push("Go to Dataset and import images.");
+  if (status.hasDataset && !status.labelme.synced) actions.push("Go to LabelMe and sync annotations.");
+  if (status.hasDataset && status.labelme.synced && !status.splitComplete) actions.push("Create Train / Val / Test split.");
+  if (status.trainReady) actions.push("Review settings, then start training.");
+
   return {
-    title: "Training Readiness",
+    title: "Training Context",
     rows: [
-      { label: "Dataset", value: status.hasDataset ? "Ready" : "Missing", badgeType: status.hasDataset ? "success" : "danger" },
-      { label: "Labels", value: status.labelme.synced ? "Synced" : "Not synced", badgeType: status.labelme.synced ? "success" : "danger" },
-      { label: "Split", value: status.splitComplete ? "Ready" : "Missing", badgeType: status.splitComplete ? "success" : "danger" },
+      { label: "Start status", value: status.trainReady ? "Ready" : "Blocked", badgeType: status.trainReady ? "success" : "danger" },
+      { label: "Dataset", value: status.hasDataset ? `${status.imageCount} images` : "Missing", badgeType: status.hasDataset ? "success" : "danger" },
+      { label: "Labels", value: status.labelme.synced ? `${status.annotatedCount}/${status.imageCount}` : "Not synced", badgeType: status.labelme.synced ? "success" : "danger" },
+      { label: "Split", value: status.splitComplete ? `${status.splitCounts.train}/${status.splitCounts.val}/${status.splitCounts.test}` : "Missing", badgeType: status.splitComplete ? "success" : "danger" },
       { label: "Model", value: model },
       { label: "Hardware", value: gpu, isCode: true },
       { label: "Run", value: latestRun?.run_id ?? "--", isCode: true },
-      { label: "Status", value: runStatus, badgeType: statusBadge },
-      { label: "Best mAP", value: latestRun ? formatNum(latestRun.best_map50_95_m) : "--", isCode: true }
+      { label: "Run status", value: runStatus, badgeType: statusBadge }
     ],
-    actions: ["Fix readiness blockers.", "Select model and training settings.", "Start training when all gates are ready."],
+    actions,
     warnings
   };
 }
