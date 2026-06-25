@@ -2502,6 +2502,52 @@ body[data-theme="light"] .thumb-image-frame {
   line-height: 1.25;
 }
 
+.project-context-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.project-context-compact > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.project-context-compact strong,
+.project-context-compact span {
+  min-width: 0;
+}
+
+.project-context-compact strong {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-context-compact > div > span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.right-summary-panel .summary-empty.compact {
+  min-height: 58px;
+  padding: 10px;
+}
+
+.right-summary-panel .project-context-full .path-row {
+  grid-template-columns: 64px minmax(0, 1fr);
+}
+
 .path-row span {
   color: var(--text-muted);
   font-size: 0.84rem;
