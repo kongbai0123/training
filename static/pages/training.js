@@ -157,17 +157,11 @@ export function renderTrainingMonitor() {
   setText("#card-ann-detail", status.hasProject ? `Annotated: ${status.annotatedCount} / Missing: ${status.unannotatedCount}` : "Annotated: --");
   setText("#card-split-status", status.splitComplete ? "Ready" : "Missing");
   setText("#card-split-detail", status.hasProject ? `Train / Val / Test: ${status.splitCounts.train} / ${status.splitCounts.val} / ${status.splitCounts.test}` : "Train / Val / Test: --");
-  setText("#card-model-name", status.hasProject ? (qs("#train-model")?.value || "--") : "--");
-  setText("#card-model-task", status.hasProject ? `Task: ${status.taskType || "--"}` : "Task: --");
+  setText("#card-start-status", isReady ? "Ready" : "Blocked");
+  setText("#card-start-detail", isReady ? "Readiness: pass" : `Readiness: ${blockers.length} blocker${blockers.length > 1 ? "s" : ""}`);
 
   const hw = trainState.hardware || {};
   const gpu = hw.gpu || {};
-  setText("#card-hw-device", gpu.available ? gpu.name : "CPU mode");
-  setText("#card-hw-vram", gpu.available ? `VRAM: ${gpu.vram_total} MB` : "VRAM: --");
-
-  const currentRunId = trainState.run_id || appState.currentProject?.training_config?.run_id || "--";
-  setText("#card-run-id", currentRunId);
-  setText("#card-run-status", `Status: ${trainState.status || "Idle"}`);
 
   updateTelemetryProgress("#tel-cpu-val", "#tel-cpu-bar", hw.cpu_usage);
   updateTelemetryProgress("#tel-ram-val", "#tel-ram-bar", hw.ram_used !== undefined && hw.ram_total ? (hw.ram_used / hw.ram_total) * 100 : undefined, hw.ram_used && hw.ram_total ? `${hw.ram_used} / ${hw.ram_total} MB` : "");
@@ -180,6 +174,8 @@ export function renderTrainingMonitor() {
   const configForm = qs("#form-training-config");
   const startBlocker = qs("#training-start-blocker");
   const shouldLockConfig = !isReady || isRunning || isStopping;
+  const configFields = ["#config-simple-fields", "#config-advanced-fields", "#training-vram-risk"];
+  const configTabs = qs(".training-config-panel .config-tabs-nav");
 
   if (startBtn) {
     startBtn.disabled = shouldLockConfig;
@@ -210,6 +206,18 @@ export function renderTrainingMonitor() {
       el.disabled = shouldLockConfig;
     });
   }
+  configFields.forEach((selector) => {
+    const el = qs(selector);
+    if (!el) return;
+    if (selector === "#config-advanced-fields" && isReady && qs("#tab-config-advanced")?.classList.contains("btn-primary")) {
+      el.classList.remove("hidden");
+    } else if (selector === "#config-advanced-fields") {
+      el.classList.add("hidden");
+    } else {
+      el.classList.toggle("hidden", !isReady);
+    }
+  });
+  configTabs?.classList.toggle("hidden", !isReady);
   if (startBlocker) {
     startBlocker.classList.toggle("hidden", isReady);
     startBlocker.innerHTML = isReady ? "" : `<strong>Start Training is disabled.</strong><ul>${blockers.map((b) => `<li>${escapeHtml(b.text)}</li>`).join("")}</ul>`;
@@ -220,9 +228,11 @@ export function renderTrainingMonitor() {
 
   const monitorEmpty = qs("#training-monitor-empty");
   const monitorActive = qs("#training-monitor-active");
+  const telemetryPanel = qs(".training-monitor-panel .hardware-telemetry-panel");
   const showMonitor = isRunning || isStopping || trainState.status === "completed" || trainState.status === "failed";
   monitorEmpty?.classList.toggle("hidden", showMonitor);
   monitorActive?.classList.toggle("hidden", !showMonitor);
+  telemetryPanel?.classList.toggle("hidden", !isRunning);
 
   setText("#train-status-label", trainState.status || "Idle");
   setText("#train-progress-text", showMonitor ? `Epoch ${trainState.epoch || 0} / ${trainState.total_epochs || "--"}` : "--");
