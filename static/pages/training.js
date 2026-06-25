@@ -1,5 +1,5 @@
 import { eventBus } from "../event_bus.js";
-import { appState, getProjectStatus } from "../state.js";
+import { appState, getProjectStatus, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
 
@@ -39,12 +39,12 @@ export function initTraining() {
     const isSegModel = modelName.includes("-seg");
 
     if (isSegTask && !isSegModel) {
-      eventBus.emit("toast", "This project is segmentation. Please select a segmentation model.");
+      eventBus.emit("toast", t("training.toast.segModel"));
       return;
     }
 
     if (blockers.length > 0) {
-      eventBus.emit("toast", "Training is blocked. Fix readiness blockers first.");
+      eventBus.emit("toast", t("training.toast.blocked"));
       return;
     }
 
@@ -75,20 +75,20 @@ export function initTraining() {
         body: JSON.stringify(configData)
       });
 
-      eventBus.emit("toast", "Training started.");
+      eventBus.emit("toast", t("training.toast.started"));
       startMonitorWebSocket();
       eventBus.emit("refresh-project");
     } catch (err) {
-      eventBus.emit("toast", `Failed to start training: ${err.message}`);
+      eventBus.emit("toast", t("training.toast.startFailed", { message: err.message }));
     }
   });
 
   qs("#btn-stop-train")?.addEventListener("click", async () => {
     try {
       await apiFetch(`/api/projects/${appState.currentProjectId}/train/stop`, { method: "POST" });
-      eventBus.emit("toast", "Stop request sent. Waiting for training process to exit.");
+      eventBus.emit("toast", t("training.toast.stopSent"));
     } catch (err) {
-      eventBus.emit("toast", `Failed to stop training: ${err.message}`);
+      eventBus.emit("toast", t("training.toast.stopFailed", { message: err.message }));
     }
   });
 
@@ -140,6 +140,7 @@ export function initTraining() {
   eventBus.on("check-training-websocket", () => {
     if (appState.trainingStatus?.status === "training") startMonitorWebSocket();
   });
+  eventBus.on("language-changed", () => renderTrainingMonitor());
 }
 
 export function renderTrainingMonitor() {
@@ -151,14 +152,14 @@ export function renderTrainingMonitor() {
   const isStopping = trainState.status === "stopping";
   const hasMetrics = isRunning || Boolean(currentChartData?.epochs?.length);
 
-  setText("#card-ds-total", status.hasProject ? `${status.imageCount} images` : "--");
-  setText("#card-ds-split", status.hasProject ? `Images: ${status.imageCount}` : "Images: --");
+  setText("#card-ds-total", status.hasProject ? `${status.imageCount} ${appState.settings.language === "en" ? "images" : "張"}` : "--");
+  setText("#card-ds-split", status.hasProject ? t("training.card.images", { count: status.imageCount }) : t("training.card.images", { count: "--" }));
   setText("#card-ann-status", status.hasProject ? `${status.annotationRate}%` : "--");
-  setText("#card-ann-detail", status.hasProject ? `Annotated: ${status.annotatedCount} / Missing: ${status.unannotatedCount}` : "Annotated: --");
-  setText("#card-split-status", status.splitComplete ? "Ready" : "Missing");
-  setText("#card-split-detail", status.hasProject ? `Train / Val / Test: ${status.splitCounts.train} / ${status.splitCounts.val} / ${status.splitCounts.test}` : "Train / Val / Test: --");
-  setText("#card-start-status", isReady ? "Ready" : "Blocked");
-  setText("#card-start-detail", isReady ? "Readiness: pass" : `Readiness: ${blockers.length} blocker${blockers.length > 1 ? "s" : ""}`);
+  setText("#card-ann-detail", status.hasProject ? t("training.card.annotated", { annotated: status.annotatedCount, missing: status.unannotatedCount }) : t("training.card.annotated", { annotated: "--", missing: "--" }));
+  setText("#card-split-status", status.splitComplete ? t("training.status.splitReady") : t("training.status.missing"));
+  setText("#card-split-detail", status.hasProject ? t("training.card.trainValTest", { train: status.splitCounts.train, val: status.splitCounts.val, test: status.splitCounts.test }) : t("training.card.trainValTest", { train: "--", val: "--", test: "--" }));
+  setText("#card-start-status", isReady ? t("training.status.ready") : t("training.status.blocked"));
+  setText("#card-start-detail", isReady ? t("training.card.readinessPass") : t("training.card.readinessBlocked", { count: blockers.length, plural: blockers.length > 1 ? "s" : "" }));
 
   const hw = trainState.hardware || {};
   const gpu = hw.gpu || {};
@@ -179,7 +180,7 @@ export function renderTrainingMonitor() {
 
   if (startBtn) {
     startBtn.disabled = shouldLockConfig;
-    startBtn.title = shouldLockConfig ? "Training is blocked until readiness checks pass." : "Start training";
+    startBtn.title = shouldLockConfig ? t("training.toast.blocked") : t("training.start");
   }
   if (isRunning) {
     stopBtn?.classList.remove("hidden");
@@ -194,10 +195,10 @@ export function renderTrainingMonitor() {
   if (lockMsg) {
     lockMsg.classList.toggle("hidden", !shouldLockConfig);
     const message = isRunning
-      ? "Training configuration is locked while a run is active."
+      ? t("training.config.lockedRunning")
       : isStopping
-        ? "Training is stopping. Configuration remains locked."
-        : "Training configuration is locked until Dataset, LabelMe annotations, and Split are ready.";
+        ? t("training.config.lockedStopping")
+        : t("training.config.locked");
     lockMsg.querySelector("span") && (lockMsg.querySelector("span").textContent = message);
   }
 
@@ -220,7 +221,7 @@ export function renderTrainingMonitor() {
   configTabs?.classList.toggle("hidden", !isReady);
   if (startBlocker) {
     startBlocker.classList.toggle("hidden", isReady);
-    startBlocker.innerHTML = isReady ? "" : `<strong>Start Training is disabled.</strong><ul>${blockers.map((b) => `<li>${escapeHtml(b.text)}</li>`).join("")}</ul>`;
+    startBlocker.innerHTML = isReady ? "" : `<strong>${escapeHtml(t("training.startDisabled"))}</strong><ul>${blockers.map((b) => `<li>${escapeHtml(b.text)}</li>`).join("")}</ul>`;
   }
 
   renderReadinessGuard(status, blockers);
@@ -334,20 +335,20 @@ function getTrainingBlockers(status) {
   const isSegModel = modelName.includes("-seg");
 
   if (!status.hasProject) {
-    blockers.push({ text: "No project is currently opened.", action: "Create or open a project.", nav: "dashboard" });
+    blockers.push({ text: t("training.blocker.noProject"), action: t("training.action.openProject"), nav: "dashboard" });
     return blockers;
   }
   if (!status.hasDataset || status.imageCount === 0) {
-    blockers.push({ text: "No dataset images found.", action: "Import images in Dataset.", nav: "dataset" });
+    blockers.push({ text: t("training.blocker.noDataset"), action: t("training.action.importDataset"), nav: "dataset" });
   }
   if (!status.labelme?.synced) {
-    blockers.push({ text: "LabelMe annotations have not been synced.", action: "Sync annotations in LabelMe.", nav: "labelme" });
+    blockers.push({ text: t("training.blocker.labelme"), action: t("training.action.syncLabelMe"), nav: "labelme" });
   }
   if (!status.splitComplete) {
-    blockers.push({ text: "Train / Val / Test split is missing.", action: "Create a split before training.", nav: "split" });
+    blockers.push({ text: t("training.blocker.split"), action: t("training.action.createSplit"), nav: "split" });
   }
   if (isSegTask && !isSegModel) {
-    blockers.push({ text: "Selected model is not compatible with segmentation training.", action: "Choose a segmentation model.", nav: null });
+    blockers.push({ text: t("training.blocker.model"), action: t("training.action.chooseSegModel"), nav: null });
   }
   return blockers;
 }
@@ -360,10 +361,10 @@ function renderReadinessGuard(status, blockers = getTrainingBlockers(status)) {
     container.className = "training-readiness blocked";
     container.innerHTML = `
       <div class="training-readiness-header">
-        <div><i class="fa-solid fa-triangle-exclamation"></i> Training Readiness: Blocked</div>
-        <span class="summary-badge badge-danger">${blockers.length} blocker${blockers.length > 1 ? "s" : ""}</span>
+        <div><i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(t("training.readiness.blocked"))}</div>
+        <span class="summary-badge badge-danger">${escapeHtml(t("training.card.readinessBlocked", { count: blockers.length, plural: blockers.length > 1 ? "s" : "" }))}</span>
       </div>
-      <p>Fix these items before editing training settings or starting a run.</p>
+      <p>${escapeHtml(t("training.readiness.fixBeforeStart"))}</p>
       <ul>${blockers.map((b) => `<li>${escapeHtml(b.text)}${b.nav ? ` <button type="button" class="link-button" data-nav="${b.nav}">${escapeHtml(b.action)}</button>` : ` <strong>${escapeHtml(b.action)}</strong>`}</li>`).join("")}</ul>
     `;
     container.querySelectorAll("[data-nav]").forEach((btn) => {
@@ -375,10 +376,10 @@ function renderReadinessGuard(status, blockers = getTrainingBlockers(status)) {
   container.className = "training-readiness ready";
   container.innerHTML = `
     <div class="training-readiness-header">
-      <div><i class="fa-solid fa-circle-check"></i> Training Readiness: Ready</div>
-      <span class="summary-badge badge-success">Ready</span>
+      <div><i class="fa-solid fa-circle-check"></i> ${escapeHtml(t("training.readiness.ready"))}</div>
+      <span class="summary-badge badge-success">${escapeHtml(t("training.status.ready"))}</span>
     </div>
-    <p>Dataset, LabelMe annotations, split, model compatibility, and basic hardware checks are ready for training.</p>
+    <p>${escapeHtml(t("training.readiness.readyDetail"))}</p>
   `;
 }
 
@@ -391,24 +392,21 @@ function updateTrainingRecommendation(status, gpu) {
   const vramMb = Number(gpu?.vram_total || 0);
 
   if (!status.hasProject) {
-    el.textContent = "Open a project before generating training recommendations.";
+    el.textContent = t("training.recommend.noProject");
     return;
   }
   if (!gpu?.available) {
-    el.textContent = "GPU is not available. CPU mode is safer, but training will be slow.";
+    el.textContent = t("training.recommend.noGpu");
     return;
   }
 
-  let risk = "Low";
-  let advice = "Current settings look reasonable.";
+  let key = "training.recommend.low";
   if (vramMb && vramMb < 8000 && (batch >= 8 || imgsz >= 768)) {
-    risk = "High";
-    advice = "Recommended: batch 4, image size 640.";
+    key = "training.recommend.high";
   } else if (vramMb && vramMb < 12000 && (batch >= 16 || imgsz >= 768 || model.includes("m-seg"))) {
-    risk = "Medium";
-    advice = "Recommended: batch 8, image size 640 for segmentation stability.";
+    key = "training.recommend.medium";
   }
-  el.textContent = `VRAM risk: ${risk}. ${advice}`;
+  el.textContent = t(key);
 }
 
 function updateTelemetryProgress(textSelector, barSelector, value, customText = "") {

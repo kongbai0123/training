@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css?v=20260625-training-readiness">
+  <link rel="stylesheet" href="/static/style.css?v=20260625-i18n-training">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -617,8 +617,8 @@
         <section class="page" id="page-training">
           <div class="page-header">
             <div>
-              <h1>Training Control Console</h1>
-              <p>Check training readiness first, fix blockers, then configure and start a controlled training run.</p>
+              <h1 data-i18n="training.title">Training Control Console</h1>
+              <p data-i18n="training.subtitle">Check training readiness first, fix blockers, then configure and start a controlled training run.</p>
             </div>
           </div>
 
@@ -626,22 +626,22 @@
 
           <div class="training-overview-grid">
             <div class="metric-card">
-              <span>Dataset</span>
+              <span data-i18n="training.card.dataset">Dataset</span>
               <strong id="card-ds-total">--</strong>
               <small id="card-ds-split">Images: --</small>
             </div>
             <div class="metric-card">
-              <span>Annotation</span>
+              <span data-i18n="training.card.annotation">Annotation</span>
               <strong id="card-ann-status">--</strong>
               <small id="card-ann-detail">Annotated: --</small>
             </div>
             <div class="metric-card">
-              <span>Split</span>
+              <span data-i18n="training.card.split">Split</span>
               <strong id="card-split-status">--</strong>
               <small id="card-split-detail">Train / Val / Test: --</small>
             </div>
             <div class="metric-card">
-              <span>Start Status</span>
+              <span data-i18n="training.card.startStatus">Start Status</span>
               <strong id="card-start-status">--</strong>
               <small id="card-start-detail">Readiness: --</small>
             </div>
@@ -650,26 +650,26 @@
           <div class="training-main-grid">
             <section class="panel-section training-config-panel">
               <div class="section-title">
-                <h2>Training Configuration</h2>
+                <h2 data-i18n="training.config.title">Training Configuration</h2>
                 <div class="config-tabs-nav">
-                  <button type="button" class="btn btn-sm btn-primary" id="tab-config-simple">Simple</button>
-                  <button type="button" class="btn btn-sm btn-secondary" id="tab-config-advanced">Advanced</button>
+                  <button type="button" class="btn btn-sm btn-primary" id="tab-config-simple" data-i18n="training.tab.simple">Simple</button>
+                  <button type="button" class="btn btn-sm btn-secondary" id="tab-config-advanced" data-i18n="training.tab.advanced">Advanced</button>
                 </div>
               </div>
 
               <div id="config-lock-msg" class="status-guard warning hidden">
                 <i class="fa-solid fa-lock"></i>
-                <span>Training configuration is locked until readiness checks pass.</span>
+                <span data-i18n="training.config.locked">Training configuration is locked until readiness checks pass.</span>
               </div>
 
               <form id="form-training-config" class="form-stack">
                 <div id="config-simple-fields">
                   <label>
-                    <span>Run Name</span>
-                    <input type="text" id="train-run-id-input" placeholder="Optional, for example run_YYYYMMDD_HHMMSS">
+                    <span data-i18n="training.runName">Run Name</span>
+                    <input type="text" id="train-run-id-input" placeholder="Optional, for example run_YYYYMMDD_HHMMSS" data-i18n-placeholder="training.runNamePlaceholder">
                   </label>
                   <label>
-                    <span>Model <span class="info-icon" data-tooltip="Select a model compatible with the current project task. Segmentation projects should use a segmentation model.">i</span></span>
+                    <span><span data-i18n="training.model">Model</span> <span class="info-icon" data-tooltip="Select a model compatible with the current project task. Segmentation projects should use a segmentation model." data-i18n-tooltip="training.modelTooltip">i</span></span>
                     <select id="train-model">
                       <option value="yolov8n-seg.pt">YOLOv8n Segmentation (Recommended)</option>
                       <option value="yolov8s-seg.pt">YOLOv8s Segmentation</option>
@@ -679,20 +679,20 @@
                     </select>
                   </label>
                   <label>
-                    <span>Training Profile</span>
+                    <span data-i18n="training.profile">Training Profile</span>
                     <select id="train-profile">
-                      <option value="balanced" selected>Balanced</option>
-                      <option value="quick">Quick Test</option>
-                      <option value="accuracy">High Accuracy</option>
-                      <option value="custom">Custom</option>
+                      <option value="balanced" selected data-i18n="training.profileBalanced">Balanced</option>
+                      <option value="quick" data-i18n="training.profileQuick">Quick Test</option>
+                      <option value="accuracy" data-i18n="training.profileAccuracy">High Accuracy</option>
+                      <option value="custom" data-i18n="training.profileCustom">Custom</option>
                     </select>
                   </label>
                   <label>
-                    <span>Epochs <span class="info-icon" data-tooltip="One epoch means the model has seen the full training dataset once. More epochs can improve learning but can also overfit.">i</span></span>
+                    <span><span data-i18n="training.epochs">Epochs</span> <span class="info-icon" data-tooltip="One epoch means the model has seen the full training dataset once. More epochs can improve learning but can also overfit." data-i18n-tooltip="training.epochsTooltip">i</span></span>
                     <input type="number" id="train-epochs" value="50" min="5" max="300">
                   </label>
                   <label>
-                    <span>Batch Size <span class="info-icon" data-tooltip="Number of images processed at once. Larger batches use more VRAM.">i</span></span>
+                    <span><span data-i18n="training.batch">Batch Size</span> <span class="info-icon" data-tooltip="Number of images processed at once. Larger batches use more VRAM." data-i18n-tooltip="training.batchTooltip">i</span></span>
                     <select id="train-batch">
                       <option value="2">2</option>
                       <option value="4">4</option>
@@ -702,7 +702,7 @@
                     </select>
                   </label>
                   <label>
-                    <span>Image Size <span class="info-icon" data-tooltip="Input image size for training. Higher sizes may improve detail but use more memory.">i</span></span>
+                    <span><span data-i18n="training.imgsz">Image Size</span> <span class="info-icon" data-tooltip="Input image size for training. Higher sizes may improve detail but use more memory." data-i18n-tooltip="training.imgszTooltip">i</span></span>
                     <select id="train-imgsz">
                       <option value="320">320</option>
                       <option value="640" selected>640</option>
@@ -711,26 +711,26 @@
                     </select>
                   </label>
                   <label>
-                    <span>Hardware Device <span class="info-icon" data-tooltip="Use GPU when CUDA is available. CPU training is possible but much slower.">i</span></span>
+                    <span><span data-i18n="training.device">Hardware Device</span> <span class="info-icon" data-tooltip="Use GPU when CUDA is available. CPU training is possible but much slower." data-i18n-tooltip="training.deviceTooltip">i</span></span>
                     <select id="train-device">
                       <option value="gpu">GPU (CUDA)</option>
                       <option value="cpu">CPU</option>
                     </select>
                   </label>
                   <div class="training-recommendation-card" id="training-vram-risk">
-                    <strong>Auto recommendation</strong>
-                    <span id="training-vram-risk-text">Settings will be checked after project and hardware status are loaded.</span>
-                    <button type="button" class="btn btn-sm btn-secondary" id="btn-auto-recommend">Auto Recommend Settings</button>
+                    <strong data-i18n="training.autoRecommend">Auto recommendation</strong>
+                    <span id="training-vram-risk-text" data-i18n="training.autoRecommendDefault">Settings will be checked after project and hardware status are loaded.</span>
+                    <button type="button" class="btn btn-sm btn-secondary" id="btn-auto-recommend" data-i18n="training.autoRecommendButton">Auto Recommend Settings</button>
                   </div>
                 </div>
 
                 <div id="config-advanced-fields" class="hidden">
                   <label>
-                    <span>Learning Rate <span class="info-icon" data-tooltip="Initial optimizer learning rate. Keep default unless you know why it should change.">i</span></span>
+                    <span><span data-i18n="training.lr">Learning Rate</span> <span class="info-icon" data-tooltip="Initial optimizer learning rate. Keep default unless you know why it should change." data-i18n-tooltip="training.lrTooltip">i</span></span>
                     <input type="number" id="train-lr0" value="0.01" step="0.001" min="0.0001" max="0.1">
                   </label>
                   <label>
-                    <span>Optimizer <span class="info-icon" data-tooltip="Optimizer used during training. Auto is recommended for most projects.">i</span></span>
+                    <span><span data-i18n="training.optimizer">Optimizer</span> <span class="info-icon" data-tooltip="Optimizer used during training. Auto is recommended for most projects." data-i18n-tooltip="training.optimizerTooltip">i</span></span>
                     <select id="train-optimizer">
                       <option value="auto" selected>auto (Recommended)</option>
                       <option value="SGD">SGD</option>
@@ -739,61 +739,61 @@
                     </select>
                   </label>
                   <label>
-                    <span>Patience <span class="info-icon" data-tooltip="Early stopping patience. Training stops if validation quality does not improve for this many epochs.">i</span></span>
+                    <span><span data-i18n="training.patience">Patience</span> <span class="info-icon" data-tooltip="Early stopping patience. Training stops if validation quality does not improve for this many epochs." data-i18n-tooltip="training.patienceTooltip">i</span></span>
                     <input type="number" id="train-patience" value="20" min="0">
                   </label>
                   <label>
-                    <span>Workers <span class="info-icon" data-tooltip="Number of data loading worker processes. Higher values may speed loading but use more CPU and memory.">i</span></span>
+                    <span><span data-i18n="training.workers">Workers</span> <span class="info-icon" data-tooltip="Number of data loading worker processes. Higher values may speed loading but use more CPU and memory." data-i18n-tooltip="training.workersTooltip">i</span></span>
                     <input type="number" id="train-workers" value="4" min="0" max="16">
                   </label>
                   <label>
-                    <span>Seed <span class="info-icon" data-tooltip="Random seed used to make training more reproducible.">i</span></span>
+                    <span><span data-i18n="training.seed">Seed</span> <span class="info-icon" data-tooltip="Random seed used to make training more reproducible." data-i18n-tooltip="training.seedTooltip">i</span></span>
                     <input type="number" id="train-seed" value="42">
                   </label>
                   <label>
-                    <span>Save Period <span class="info-icon" data-tooltip="Save a checkpoint every N epochs.">i</span></span>
+                    <span><span data-i18n="training.savePeriod">Save Period</span> <span class="info-icon" data-tooltip="Save a checkpoint every N epochs." data-i18n-tooltip="training.savePeriodTooltip">i</span></span>
                     <input type="number" id="train-save-period" value="5" min="1">
                   </label>
                   <label>
-                    <span>Close Mosaic Epochs <span class="info-icon" data-tooltip="Disable mosaic augmentation near the end of training to improve convergence.">i</span></span>
+                    <span><span data-i18n="training.closeMosaic">Close Mosaic Epochs</span> <span class="info-icon" data-tooltip="Disable mosaic augmentation near the end of training to improve convergence." data-i18n-tooltip="training.closeMosaicTooltip">i</span></span>
                     <input type="number" id="train-close-mosaic" value="10" min="0">
                   </label>
                   <label class="checkbox-row">
                     <input type="checkbox" id="train-amp" checked>
-                    <span>AMP (Mixed Precision) <span class="info-icon" data-tooltip="Mixed precision can reduce VRAM usage and speed up GPU training.">i</span></span>
+                    <span>AMP (Mixed Precision) <span class="info-icon" data-tooltip="Mixed precision can reduce VRAM usage and speed up GPU training." data-i18n-tooltip="training.ampTooltip">i</span></span>
                   </label>
                   <label class="checkbox-row">
                     <input type="checkbox" id="train-cache">
-                    <span>Cache Images <span class="info-icon" data-tooltip="Cache images in memory or disk to speed data loading. Requires enough system resources.">i</span></span>
+                    <span>Cache Images <span class="info-icon" data-tooltip="Cache images in memory or disk to speed data loading. Requires enough system resources." data-i18n-tooltip="training.cacheTooltip">i</span></span>
                   </label>
                 </div>
 
                 <div id="training-start-blocker" class="training-start-blocker hidden"></div>
                 <div class="action-bar training-action-bar">
                   <button type="button" class="btn btn-primary guarded" data-requires="train-ready" id="btn-start-train">
-                    <i class="fa-solid fa-play"></i> Start Training
+                    <i class="fa-solid fa-play"></i> <span data-i18n="training.start">Start Training</span>
                   </button>
                   <button type="button" class="btn btn-danger hidden" id="btn-stop-train">
-                    <i class="fa-solid fa-stop"></i> Stop Training
+                    <i class="fa-solid fa-stop"></i> <span data-i18n="training.stop">Stop Training</span>
                   </button>
                 </div>
               </form>
             </section>
 
             <section class="panel-section training-monitor-panel">
-              <div class="section-title"><h2>Live Training Monitor</h2></div>
+              <div class="section-title"><h2 data-i18n="training.monitor.title">Live Training Monitor</h2></div>
               <div id="training-monitor-empty" class="training-empty-state">
                 <i class="fa-solid fa-chart-line"></i>
-                <strong>No active training run.</strong>
-                <span>Start training after readiness checks pass.</span>
+                <strong data-i18n="training.monitor.emptyTitle">No active training run.</strong>
+                <span data-i18n="training.monitor.emptySubtitle">Start training after readiness checks pass.</span>
               </div>
               <div id="training-monitor-active">
                 <div class="training-status-grid">
-                  <div class="metric-card"><span>Status</span><strong id="train-status-label">Idle</strong></div>
-                  <div class="metric-card"><span>Progress</span><strong id="train-progress-text">--</strong></div>
+                  <div class="metric-card"><span data-i18n="training.monitor.status">Status</span><strong id="train-status-label">Idle</strong></div>
+                  <div class="metric-card"><span data-i18n="training.monitor.progress">Progress</span><strong id="train-progress-text">--</strong></div>
                   <div class="metric-card"><span>mAP50(M)</span><strong id="monitor-map50">--</strong></div>
                   <div class="metric-card"><span>mAP50-95(M)</span><strong id="monitor-map50-95">--</strong></div>
-                  <div class="metric-card"><span>Loss</span><strong id="monitor-loss">--</strong></div>
+                  <div class="metric-card"><span data-i18n="training.monitor.loss">Loss</span><strong id="monitor-loss">--</strong></div>
                 </div>
 
                 <div class="hardware-telemetry-panel">
@@ -820,21 +820,21 @@
 
           <section class="panel-section training-chart-card">
             <div class="section-title training-chart-title">
-              <h2>Metrics Dashboard</h2>
+              <h2 data-i18n="training.metrics.title">Metrics Dashboard</h2>
               <div class="chart-tabs" id="metrics-chart-tabs">
-                <button class="tab-btn active" data-chart-tab="primary">Primary Metrics</button>
-                <button class="tab-btn" data-chart-tab="loss">Loss Breakdown</button>
-                <button class="tab-btn" data-chart-tab="mask">Mask Metrics</button>
-                <button class="tab-btn" data-chart-tab="box">Box Metrics</button>
-                <button class="tab-btn" data-chart-tab="hardware">Hardware Metrics</button>
-                <button class="tab-btn" data-chart-tab="report">Report View</button>
+                <button class="tab-btn active" data-chart-tab="primary" data-i18n="training.metrics.primary">Primary Metrics</button>
+                <button class="tab-btn" data-chart-tab="loss" data-i18n="training.metrics.lossBreakdown">Loss Breakdown</button>
+                <button class="tab-btn" data-chart-tab="mask" data-i18n="training.metrics.mask">Mask Metrics</button>
+                <button class="tab-btn" data-chart-tab="box" data-i18n="training.metrics.box">Box Metrics</button>
+                <button class="tab-btn" data-chart-tab="hardware" data-i18n="training.metrics.hardware">Hardware Metrics</button>
+                <button class="tab-btn" data-chart-tab="report" data-i18n="training.metrics.report">Report View</button>
               </div>
             </div>
 
             <div id="training-metrics-empty" class="training-empty-state">
               <i class="fa-solid fa-chart-simple"></i>
-              <strong>No training metrics yet.</strong>
-              <span>Complete a training run to view charts, artifacts, and trend diagnostics.</span>
+              <strong data-i18n="training.metrics.emptyTitle">No training metrics yet.</strong>
+              <span data-i18n="training.metrics.emptySubtitle">Complete a training run to view charts, artifacts, and trend diagnostics.</span>
             </div>
 
             <div id="training-metrics-active">
@@ -842,28 +842,28 @@
                 <div class="chart-filters">
                   <label class="checkbox-row">
                     <input type="checkbox" id="chart-show-raw" checked>
-                    <span>Show Raw Curve</span>
+                    <span data-i18n="training.metrics.showRaw">Show Raw Curve</span>
                   </label>
                   <label class="checkbox-row">
                     <input type="checkbox" id="chart-show-smooth" checked>
-                    <span>Show EMA Smooth</span>
+                    <span data-i18n="training.metrics.showSmooth">Show EMA Smooth</span>
                   </label>
                   <label class="range-inline">
-                    <span>Smooth Factor (&alpha;):</span>
+                    <span data-i18n="training.metrics.smoothFactor">Smooth Factor (&alpha;):</span>
                     <input type="range" id="chart-ema-alpha" min="0.05" max="0.95" step="0.05" value="0.25">
                     <span id="chart-ema-alpha-val">0.25</span>
                   </label>
                 </div>
                 <div class="trend-diagnostic-card">
                   <div class="trend-header">
-                    <span>Convergence Diagnostic</span>
+                    <span data-i18n="training.convergence">Convergence Diagnostic</span>
                     <span class="status-badge" id="trend-health-badge">Good</span>
                   </div>
                   <div class="trend-stats">
-                    <div>Best Epoch: <span id="trend-best-epoch">--</span></div>
-                    <div>Platform Score: <span id="trend-platform-score">--</span></div>
+                    <div><span data-i18n="training.bestEpoch">Best Epoch:</span> <span id="trend-best-epoch">--</span></div>
+                    <div><span data-i18n="training.platformScore">Platform Score:</span> <span id="trend-platform-score">--</span></div>
                   </div>
-                  <div id="trend-suggestions">Complete a run to generate training suggestions.</div>
+                  <div id="trend-suggestions" data-i18n="training.suggestions.empty">Complete a run to generate training suggestions.</div>
                 </div>
               </div>
 
@@ -884,10 +884,10 @@
           <div class="two-column-layout training-lower-grid">
             <section class="panel-section">
               <div class="section-title">
-                <h2>History & Event Logs</h2>
+                <h2 data-i18n="training.logs.title">History & Event Logs</h2>
                 <div class="config-tabs-nav" id="log-tabs-nav">
-                  <button type="button" class="btn btn-sm btn-primary" data-log-tab="epoch">Epoch History</button>
-                  <button type="button" class="btn btn-sm btn-secondary" data-log-tab="event">Event Log</button>
+                  <button type="button" class="btn btn-sm btn-primary" data-log-tab="epoch" data-i18n="training.logs.epochHistory">Epoch History</button>
+                  <button type="button" class="btn btn-sm btn-secondary" data-log-tab="event" data-i18n="training.logs.eventLog">Event Log</button>
                 </div>
               </div>
               <div id="log-epoch-container" class="table-wrap training-scroll-table">
@@ -904,26 +904,26 @@
                     </tr>
                   </thead>
                   <tbody id="epoch-history-rows">
-                    <tr><td colspan="7" class="text-center muted-cell">No epoch history yet.</td></tr>
+                    <tr><td colspan="7" class="text-center muted-cell" data-i18n="training.logs.noEpoch">No epoch history yet.</td></tr>
                   </tbody>
                 </table>
               </div>
               <div id="log-event-container" class="hidden training-event-list">
-                <div class="empty-state" id="event-log-empty">No training events yet.</div>
+                <div class="empty-state" id="event-log-empty" data-i18n="training.logs.noEvent">No training events yet.</div>
                 <div id="event-log-list"></div>
               </div>
             </section>
 
             <section class="panel-section">
-              <div class="section-title"><h2>Model Artifacts</h2></div>
+              <div class="section-title"><h2 data-i18n="training.artifacts.title">Model Artifacts</h2></div>
               <div class="artifact-grid" id="artifact-list-container">
-                <div class="empty-state">No artifacts yet. Complete a training run to see best.pt, last.pt, metrics, and reports.</div>
+                <div class="empty-state" data-i18n="training.artifacts.empty">No artifacts yet. Complete a training run to see best.pt, last.pt, metrics, and reports.</div>
               </div>
             </section>
           </div>
 
           <section class="panel-section training-run-history-card">
-            <div class="section-title"><h2>Run History</h2></div>
+            <div class="section-title"><h2 data-i18n="training.runHistory.title">Run History</h2></div>
             <div class="table-wrap">
               <table class="data-table run-history-table">
                 <thead>
@@ -941,7 +941,7 @@
                   </tr>
                 </thead>
                 <tbody id="run-history-rows">
-                  <tr><td colspan="10" class="text-center muted-cell">No training runs yet.</td></tr>
+                  <tr><td colspan="10" class="text-center muted-cell" data-i18n="training.runHistory.empty">No training runs yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1437,6 +1437,6 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260625-training-readiness"></script>
+  <script type="module" src="/static/app.js?v=20260625-i18n-training"></script>
 </body>
 </html>
