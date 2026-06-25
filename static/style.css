@@ -1333,6 +1333,43 @@ body[data-theme="light"] .labelme-step-card {
   min-height: 100%;
 }
 
+.labelme-import-report-panel {
+  grid-column: 1 / -1;
+}
+
+.annotation-import-report {
+  display: grid;
+  gap: 12px;
+}
+
+.annotation-import-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.annotation-import-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.annotation-import-meta code {
+  color: var(--text);
+}
+
+.annotation-import-issues {
+  display: grid;
+  gap: 8px;
+}
+
+.annotation-import-issues .summary-warning-item {
+  display: grid;
+  gap: 4px;
+}
+
 .labelme-progress-hero {
   min-height: 112px;
   display: grid;

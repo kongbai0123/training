@@ -34,6 +34,7 @@ from src.splitter import DataSplitter
 from src.augmenter import ImageAugmenter
 from src.trainer import YOLOTrainer
 from src.labelme_adapter import LabelMeAdapter
+from src.annotation_importer import AnnotationImporter
 from src.model_registry import ModelRegistry
 from src.inference_engine import InferenceEngine
 from src.project_migrator import ProjectMigrator
@@ -1435,17 +1436,13 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    layout = ProjectLayout.from_project(project)
-    labelme_dir = layout.resolve_current_labelme_dir().path
-    labels_dir = layout.resolve_current_yolo_labels_dir().path
-
-    labelme_dir.mkdir(parents=True, exist_ok=True)
-    labels_dir.mkdir(parents=True, exist_ok=True)
-
-    imported_jsons = 0
-    imported_txts = 0
-
     from src.security_utils import safe_filename, safe_resolve_under, validate_extension
+
+    layout = ProjectLayout.from_project(project)
+    import_id = AnnotationImporter.create_import_id()
+    temp_dir = layout.tmp_dir / "annotation_import_uploads" / import_id
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    staged_files: List[Path] = []
 
     try:
         for file in files:
@@ -1454,45 +1451,65 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
                 continue
             
             try:
-                suffix = validate_extension(original_name, {".json", ".txt"})
+                validate_extension(original_name, {".json", ".txt", ".csv"})
                 cleaned_name = safe_filename(original_name)
             except ValueError as ve:
                 raise HTTPException(status_code=400, detail=str(ve))
 
-            if suffix == ".json":
-                try:
-                    target_path = safe_resolve_under(labelme_dir, labelme_dir / cleaned_name)
-                except ValueError as ve:
-                    raise HTTPException(status_code=400, detail=str(ve))
-                with open(target_path, "wb") as buffer:
-                    shutil.copyfileobj(file.file, buffer)
-                imported_jsons += 1
-            elif suffix == ".txt":
-                try:
-                    target_path = safe_resolve_under(labels_dir, labels_dir / cleaned_name)
-                except ValueError as ve:
-                    raise HTTPException(status_code=400, detail=str(ve))
-                with open(target_path, "wb") as buffer:
-                    shutil.copyfileobj(file.file, buffer)
-                imported_txts += 1
+            try:
+                target_path = safe_resolve_under(temp_dir, temp_dir / cleaned_name)
+            except ValueError as ve:
+                raise HTTPException(status_code=400, detail=str(ve))
+            with open(target_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            staged_files.append(target_path)
 
-        # Detection projects can import legacy YOLO bbox txt. Segmentation projects
-        # should keep LabelMe polygon JSON as the source of truth.
-        if should_auto_convert_yolo_to_labelme(project):
-            LabelMeAdapter.convert_yolo_to_labelme(project)
-        sync_res = LabelMeAdapter.sync_labelme_annotations(project)
+        report = AnnotationImporter.import_files(project, staged_files, import_id=import_id)
+        project["last_annotation_import"] = report
         ProjectManager.save_project(project_id, project)
 
         return {
-            "message": f"?????{imported_jsons} ??JSON ????{imported_txts} ??TXT ??",
-            "imported_jsons": imported_jsons,
-            "imported_txts": imported_txts,
-            "sync_status": sync_res
+            "message": "Annotation files imported as LabelMe draft.",
+            "import_id": import_id,
+            "imported_jsons": report.get("labelme_json", 0),
+            "imported_txts": report.get("yolo_txt", 0),
+            "imported_csv": report.get("csv", 0),
+            "converted": report.get("converted", 0),
+            "failed": report.get("failed", 0),
+            "report": report,
         }
     except HTTPException as he:
         raise he
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"??????祆??: {e}")
+        raise HTTPException(status_code=500, detail=f"Annotation import failed: {e}")
+    finally:
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@app.get("/api/projects/{project_id}/annotations/import/latest")
+def get_latest_annotation_import(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return AnnotationImporter.latest_report(project) or {}
+
+
+@app.post("/api/projects/{project_id}/annotations/import/{import_id}/apply")
+def apply_annotation_import(project_id: str, import_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        result = AnnotationImporter.apply_import(project, import_id)
+        report = LabelMeAdapter.sync_labelme_annotations(project)
+        project["last_annotation_import"] = result["report"]
+        ProjectManager.save_project(project_id, project)
+        return {"message": "Annotation import applied.", "apply": result, "sync_status": report}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to apply annotation import: {e}")
 
 
 class UpdateClassesRequest(BaseModel):

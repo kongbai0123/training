@@ -300,7 +300,7 @@
                   <p data-i18n="labelme.dropHelp">Folder drops are filtered so only supported annotation files are imported.</p>
                 </div>
               </div>
-              <input type="file" id="input-annotations-file" accept=".json,.txt" multiple style="display: none;">
+              <input type="file" id="input-annotations-file" accept=".json,.txt,.csv" multiple style="display: none;">
             </section>
 
             <section class="panel-section labelme-workspace-panel">
@@ -329,6 +329,17 @@
               </div>
               <div class="progress-track"><div class="progress-fill" id="labelme-completion-bar"></div></div>
               <div class="metric-grid labelme-metric-grid" id="labelme-progress-grid"></div>
+            </section>
+
+            <section class="panel-section labelme-import-report-panel">
+              <div class="section-title">
+                <h2 data-i18n="labelme.importReportTitle">Annotation Import Report</h2>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-apply-annotation-import" disabled>
+                  <i class="fa-solid fa-check"></i>
+                  <span data-i18n="labelme.applyImportDraft">Apply valid drafts</span>
+                </button>
+              </div>
+              <div id="annotation-import-report" class="annotation-import-report"></div>
             </section>
 
             <section class="panel-section labelme-review-panel">

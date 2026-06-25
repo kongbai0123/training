@@ -12,6 +12,7 @@ export function initLabelMe() {
   qs("#btn-sync-labelme")?.addEventListener("click", () => {
     syncLabelMeLabels(false);
   });
+  qs("#btn-apply-annotation-import")?.addEventListener("click", applyLatestAnnotationImport);
   qs("#btn-copy-images-path")?.addEventListener("click", () => copyText(qs("#labelme-images-path")?.textContent));
   qs("#btn-copy-json-path")?.addEventListener("click", () => copyText(qs("#labelme-json-path")?.textContent));
   qs("#btn-copy-labelme-command")?.addEventListener("click", () => copyText(qs("#labelme-command")?.textContent));
@@ -109,16 +110,16 @@ async function handleAnnotationUpload(files) {
   const allFiles = [...files];
   const validFiles = allFiles.filter((file) => {
     const name = file.name.toLowerCase();
-    return name.endsWith(".json") || name.endsWith(".txt");
+    return name.endsWith(".json") || name.endsWith(".txt") || name.endsWith(".csv");
   });
   const ignoredFiles = allFiles.length - validFiles.length;
 
   if (ignoredFiles > 0) {
-    eventBus.emit("toast", `Ignored ${ignoredFiles} unsupported files. Only JSON and TXT annotation files are accepted.`);
+    eventBus.emit("toast", `Ignored ${ignoredFiles} unsupported files. Only JSON, TXT, and CSV annotation files are accepted.`);
   }
 
   if (validFiles.length === 0) {
-    eventBus.emit("toast", "No .json or .txt annotation files found.");
+    eventBus.emit("toast", "No .json, .txt, or .csv annotation files found.");
     return;
   }
 
@@ -127,38 +128,43 @@ async function handleAnnotationUpload(files) {
     return;
   }
 
-  const batchSize = 200;
-  const batches = [];
-  for (let i = 0; i < validFiles.length; i += batchSize) {
-    batches.push(validFiles.slice(i, i + batchSize));
-  }
-
-  eventBus.emit("toast", `Uploading ${validFiles.length} annotation files in ${batches.length} batches...`);
-
-  let importedJsons = 0;
-  let importedTxts = 0;
+  eventBus.emit("toast", `Uploading ${validFiles.length} annotation files...`);
 
   try {
-    for (let k = 0; k < batches.length; k += 1) {
-      const currentBatch = batches[k];
-      eventBus.emit("toast", `Uploading batch ${k + 1}/${batches.length} (${currentBatch.length} files)...`);
+    const formData = new FormData();
+    validFiles.forEach((file) => formData.append("files", file, file.name));
 
-      const formData = new FormData();
-      currentBatch.forEach((file) => formData.append("files", file, file.name));
+    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-annotations`, {
+      method: "POST",
+      body: formData
+    });
 
-      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-annotations`, {
-        method: "POST",
-        body: formData
-      });
-
-      importedJsons += data.imported_jsons || 0;
-      importedTxts += data.imported_txts || 0;
-    }
-
-    eventBus.emit("toast", `Import complete. JSON: ${importedJsons}, TXT: ${importedTxts}.`);
+    appState.latestAnnotationImport = data.report || null;
+    eventBus.emit("toast", `Import complete. JSON: ${data.imported_jsons || 0}, TXT: ${data.imported_txts || 0}, CSV: ${data.imported_csv || 0}, converted: ${data.converted || 0}.`);
     eventBus.emit("refresh-project");
   } catch (err) {
     eventBus.emit("toast", `Annotation import failed: ${err.message}`);
+  }
+}
+
+async function applyLatestAnnotationImport() {
+  const report = appState.latestAnnotationImport || appState.currentProject?.last_annotation_import;
+  if (!appState.currentProjectId || !report?.import_id) {
+    eventBus.emit("toast", "No annotation import draft is available to apply.");
+    return;
+  }
+
+  const btn = qs("#btn-apply-annotation-import");
+  if (btn) btn.disabled = true;
+  try {
+    await apiFetch(`/api/projects/${appState.currentProjectId}/annotations/import/${report.import_id}/apply`, { method: "POST" });
+    eventBus.emit("toast", "Imported annotation drafts applied to current LabelMe JSON.");
+    await syncLabelMeLabels(true);
+    eventBus.emit("refresh-project");
+  } catch (err) {
+    eventBus.emit("toast", `Apply import draft failed: ${err.message}`);
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -240,6 +246,7 @@ export function renderLabelMeManager(status) {
   setText("#labelme-completion-text", `${status.labelme.completionRate}%`);
   const bar = qs("#labelme-completion-bar");
   if (bar) bar.style.width = `${status.labelme.completionRate}%`;
+  renderAnnotationImportReport();
 
   const rawImages = (appState.currentProject?.images || []).filter((img) => !img.is_augmented);
   if (rawImages.length === 0) {
@@ -347,6 +354,63 @@ export function renderLabelMeManager(status) {
       if (filename) previewLabelMeImage(filename);
     });
   });
+}
+
+function renderAnnotationImportReport() {
+  const report = appState.latestAnnotationImport || appState.currentProject?.last_annotation_import;
+  const container = qs("#annotation-import-report");
+  const applyBtn = qs("#btn-apply-annotation-import");
+  if (!container) return;
+
+  if (!report?.import_id) {
+    setHTML("#annotation-import-report", `
+      <div class="summary-empty compact">
+        <p>${escapeHtml(t("labelme.importReportEmpty"))}</p>
+      </div>
+    `);
+    if (applyBtn) applyBtn.disabled = true;
+    return;
+  }
+
+  const converted = Number(report.converted || 0);
+  const failed = Number(report.failed || 0);
+  const warnings = report.warnings || [];
+  const errors = report.errors || [];
+  if (applyBtn) applyBtn.disabled = converted === 0;
+
+  const metrics = [
+    [t("labelme.import.metric.txt"), report.yolo_txt || 0],
+    [t("labelme.import.metric.csv"), report.csv || 0],
+    [t("labelme.import.metric.json"), report.labelme_json || 0],
+    [t("labelme.import.metric.converted"), converted],
+    [t("labelme.import.metric.failed"), failed]
+  ];
+  const issueRows = [...errors, ...warnings].slice(0, 6);
+
+  setHTML("#annotation-import-report", `
+    <div class="annotation-import-summary">
+      ${metrics.map(([label, value]) => `
+        <div class="project-file-metric">
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+        </div>
+      `).join("")}
+    </div>
+    <div class="annotation-import-meta">
+      <span>${escapeHtml(t("labelme.importReportId"))}: <code>${escapeHtml(report.import_id)}</code></span>
+      <span>${escapeHtml(t("labelme.importReportCreated"))}: ${escapeHtml(report.created_at || "--")}</span>
+    </div>
+    ${issueRows.length ? `
+      <div class="annotation-import-issues">
+        ${issueRows.map((item) => `
+          <div class="summary-warning-item">
+            <strong>${escapeHtml(item.file || "--")}</strong>
+            <span>${escapeHtml(item.message || "")}</span>
+          </div>
+        `).join("")}
+      </div>
+    ` : `<p class="form-hint ready">${escapeHtml(t("labelme.importReportNoIssues"))}</p>`}
+  `);
 }
 
 async function previewLabelMeImage(filename) {
