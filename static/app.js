@@ -681,14 +681,44 @@ function buildSplitRightPanel(status) {
 }
 
 function buildAugmentationRightPanel(status) {
-  const multiplier = parseInt(qs("#aug-multiplier")?.value || qs("#multiplier")?.value || "3", 10);
+  const multiplier = parseInt(qs("#aug-multiplier")?.value || qs("#multiplier")?.value || "1", 10);
   const activePresetBtn = qs(".preset-item.active");
   const presetName = activePresetBtn ? activePresetBtn.dataset.augPreset : "custom";
   const trainCount = status.splitCounts.train || 0;
-  const valTestCount = (status.splitCounts.val || 0) + (status.splitCounts.test || 0);
+  const valCount = status.splitCounts.val || 0;
+  const testCount = status.splitCounts.test || 0;
+  const valTestCount = valCount + testCount;
+  const previewReady = qs("#aug-risk-badge")?.textContent?.trim() === "Passed";
+  const hasPreviewImage = Boolean(qs("#aug-preview-select-img")?.value);
 
-  const warnings = ["Val/Test should remain unaugmented to avoid evaluation leakage."];
-  if (!status.splitComplete) warnings.unshift("Create a split before applying train-only augmentation.");
+  let applyStatus = "Blocked";
+  if (status.hasProject && status.hasDataset && status.splitComplete && trainCount > 0) {
+    applyStatus = previewReady ? "Preview ready" : "Preview required";
+  }
+
+  const actions = [];
+  const warnings = [];
+  if (!status.hasProject) {
+    actions.push("Create or open a project.");
+    warnings.push("No project is open.");
+  } else if (!status.hasDataset) {
+    actions.push("Import images in Dataset.");
+    warnings.push("No images imported. Augmentation is blocked.");
+  } else if (!status.splitComplete || trainCount === 0) {
+    actions.push("Create Train / Val / Test split.");
+    warnings.push("Split required before train-only augmentation.");
+  } else if (!hasPreviewImage) {
+    actions.push("Sync labels or select an annotated train image.");
+    warnings.push("No preview image is available.");
+  } else if (!previewReady) {
+    actions.push("Choose a preset or custom policy.");
+    actions.push("Generate Preview before applying.");
+  } else {
+    actions.push("Review the preview result.");
+    actions.push("Apply to Train Split.");
+    actions.push("Start a new training run after augmentation.");
+  }
+  warnings.push("Val/Test remain excluded to avoid evaluation leakage.");
 
   return {
     title: "Augmentation Status",
@@ -698,9 +728,11 @@ function buildAugmentationRightPanel(status) {
       { label: "Val/Test", value: `Excluded (${valTestCount})` },
       { label: "Multiplier", value: `x${multiplier}` },
       { label: "Output", value: String(trainCount * multiplier), isCode: true },
-      { label: "Preset", value: presetName, isCode: true }
+      { label: "Preset", value: presetName, isCode: true },
+      { label: "Preview", value: previewReady ? "Ready" : "Not generated", badgeType: previewReady ? "success" : "warning" },
+      { label: "Apply", value: applyStatus, badgeType: previewReady ? "success" : "neutral" }
     ],
-    actions: ["Choose recommended or custom policies.", "Preview augmentation before applying.", "Apply only to training data."],
+    actions,
     warnings
   };
 }

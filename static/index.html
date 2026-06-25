@@ -419,178 +419,196 @@
         <section class="page" id="page-augmentation">
           <div class="page-header">
             <div>
-              <h1>Physical Augmentation</h1>
-              <p>光照、天氣、運動模糊與相機雜訊。保留現有 API，第一階段只整理操作入口。</p>
+              <h1>Physical Augmentation Console</h1>
+              <p>以 Train-only 為核心的安全擴增工作台；先確認資料範圍、預覽效果與風險，再套用到訓練集。</p>
             </div>
           </div>
+
           <div class="augmentation-workspace">
-            <section class="panel-section augmentation-settings-panel">
-              <div class="section-title">
-                <h2>Augmentation Settings <span class="info-icon" data-tooltip="Physical Augmentation 模擬真實世界光照、天氣、運動與鏡頭條件變化。">i</span></h2>
+            <section class="panel-section aug-readiness-card" id="aug-readiness-card">
+              <div class="aug-readiness-icon"><i class="fa-solid fa-shield-halved"></i></div>
+              <div class="aug-readiness-content">
+                <div class="section-title compact">
+                  <h2>Augmentation Readiness</h2>
+                  <span class="summary-badge badge-danger" id="aug-readiness-badge">Blocked</span>
+                </div>
+                <p id="aug-readiness-message">Create a project and prepare a train split before augmentation.</p>
+                <ul class="aug-readiness-reasons" id="aug-readiness-reasons"></ul>
               </div>
-              <div class="augmentation-settings-layout">
-                <div class="augmentation-block">
-                  <h3>Recommended Presets</h3>
-                  <div class="preset-list" aria-label="Recommended augmentation presets">
+              <div class="aug-readiness-actions">
+                <button type="button" class="btn btn-secondary" data-nav="dataset" id="aug-go-dataset"><i class="fa-solid fa-images"></i> Go to Dataset</button>
+                <button type="button" class="btn btn-secondary" data-nav="split" id="aug-go-split"><i class="fa-solid fa-code-branch"></i> Create Split</button>
+              </div>
+            </section>
+
+            <section class="panel-section aug-target-scope">
+              <div class="section-title compact">
+                <h2>Target Scope <span class="info-icon" data-tooltip="Physical Augmentation 只應套用到 Train split，避免 Val/Test 被污染而造成評估失真。">i</span></h2>
+              </div>
+              <div class="aug-scope-grid">
+                <div class="aug-scope-item"><span>Apply to</span><strong>Train split only</strong></div>
+                <div class="aug-scope-item"><span>Train images</span><strong id="aug-scope-train">0</strong></div>
+                <div class="aug-scope-item"><span>Val images</span><strong id="aug-scope-val">0 excluded</strong></div>
+                <div class="aug-scope-item"><span>Test images</span><strong id="aug-scope-test">0 excluded</strong></div>
+                <div class="aug-scope-item"><span>Preserve originals</span><strong>Yes</strong></div>
+                <div class="aug-scope-item"><span>Estimated output</span><strong id="aug-scope-output">0</strong></div>
+              </div>
+            </section>
+
+            <section class="augmentation-console-grid">
+              <div class="augmentation-policy-column">
+                <section class="panel-section">
+                  <div class="section-title compact">
+                    <h2>Preset Library</h2>
+                  </div>
+                  <div class="preset-list compact" aria-label="Recommended augmentation presets">
                     <button type="button" class="preset-item active" data-aug-preset="clear_day">
-                      <strong>Clear Day Baseline <span class="info-icon" data-tooltip="Brightness +0.10；Contrast +0.10；No rain / fog / blur。">i</span></strong>
-                      <span>推薦：乾淨日照、少量對比變化。</span>
+                      <strong>Clear Day</strong>
+                      <span>乾淨日照與輕微對比變化。</span>
                     </button>
                     <button type="button" class="preset-item" data-aug-preset="low_light">
-                      <strong>Low Light Scene <span class="info-icon" data-tooltip="Brightness -0.25；Shadow enabled；Camera noise +0.05。">i</span></strong>
-                      <span>推薦：夜間、陰影、低照度場景。</span>
+                      <strong>Low Light</strong>
+                      <span>夜間、陰影與低照度場景。</span>
                     </button>
                     <button type="button" class="preset-item" data-aug-preset="rainy">
-                      <strong>Rainy Surface <span class="info-icon" data-tooltip="Rain +0.40；Brightness -0.10；Motion blur +0.10。">i</span></strong>
-                      <span>推薦：濕地面、雨天與低對比場景。</span>
+                      <strong>Rainy</strong>
+                      <span>雨滴、濕面與輕微模糊。</span>
                     </button>
                     <button type="button" class="preset-item" data-aug-preset="foggy">
-                      <strong>Fog / Haze <span class="info-icon" data-tooltip="Fog +0.40；Contrast -0.15；Brightness +0.05。">i</span></strong>
-                      <span>推薦：霧氣、遠距視線變差。</span>
+                      <strong>Fog / Haze</strong>
+                      <span>霧氣、低對比與視線衰減。</span>
                     </button>
                     <button type="button" class="preset-item" data-aug-preset="motion_camera">
-                      <strong>Motion Camera <span class="info-icon" data-tooltip="Motion blur +0.35；Camera noise +0.08；Perspective +0.06。">i</span></strong>
-                      <span>推薦：行車震動、鏡頭晃動與雜訊。</span>
+                      <strong>Motion Camera</strong>
+                      <span>移動鏡頭、運動模糊與相機雜訊。</span>
                     </button>
                   </div>
-                </div>
-                <div class="augmentation-block">
-                  <h3>Custom Settings</h3>
-                  <div class="custom-settings-list">
-                    <!-- Brightness Slider -->
-                    <div class="custom-setting-item slider-item">
-                      <div class="slider-header">
-                        <span><strong>Brightness (亮度)</strong><small>調整影像整體亮度 (-0.50 到 0.50)</small></span>
-                        <span class="slider-value" id="val-brightness">0.00</span>
+                  <div class="aug-preset-detail" id="aug-preset-detail">
+                    <strong>Preset Details</strong>
+                    <p>Clear Day：適合建立輕量基準擴增，風險低。</p>
+                  </div>
+                </section>
+
+                <section class="panel-section" id="aug-settings-panel">
+                  <div class="section-title compact">
+                    <h2>Custom Policy</h2>
+                  </div>
+                  <div class="custom-settings-list grouped">
+                    <div class="aug-setting-group">
+                      <h3>Photometric</h3>
+                      <div class="custom-setting-item slider-item">
+                        <div class="slider-header">
+                          <span><strong>Brightness</strong><small>調整影像亮度 (-0.50 to 0.50)</small></span>
+                          <span class="slider-value" id="val-brightness">0.00</span>
+                        </div>
+                        <input type="range" id="aug-light-brightness" min="-0.5" max="0.5" step="0.05" value="0">
                       </div>
-                      <input type="range" id="aug-light-brightness" min="-0.5" max="0.5" step="0.05" value="0">
-                    </div>
-
-                    <!-- Contrast Slider -->
-                    <div class="custom-setting-item slider-item">
-                      <div class="slider-header">
-                        <span><strong>Contrast (對比)</strong><small>調整影像對比 (-0.50 到 0.50)</small></span>
-                        <span class="slider-value" id="val-contrast">0.00</span>
+                      <div class="custom-setting-item slider-item">
+                        <div class="slider-header">
+                          <span><strong>Contrast</strong><small>調整影像對比 (-0.50 to 0.50)</small></span>
+                          <span class="slider-value" id="val-contrast">0.00</span>
+                        </div>
+                        <input type="range" id="aug-light-contrast" min="-0.5" max="0.5" step="0.05" value="0">
                       </div>
-                      <input type="range" id="aug-light-contrast" min="-0.5" max="0.5" step="0.05" value="0">
-                    </div>
-
-                    <!-- Shadow Switch Toggle -->
-                    <div class="custom-setting-item switch-container">
-                      <span><strong>Shadow (局部陰影)</strong><small>隨機疊加半透明斑駁陰影效果</small></span>
-                      <label class="switch">
-                        <input type="checkbox" id="aug-light-shadow">
-                        <span class="switch-slider"></span>
-                      </label>
-                    </div>
-
-                    <!-- Rain Slider -->
-                    <div class="custom-setting-item slider-item">
-                      <div class="slider-header">
-                        <span><strong>Rain (雨天)</strong><small>模擬斜向白線雨滴與模糊 (0.00 到 1.00)</small></span>
-                        <span class="slider-value" id="val-rain">0.00</span>
+                      <div class="custom-setting-item switch-container">
+                        <span><strong>Shadow</strong><small>加入局部陰影效果</small></span>
+                        <label class="switch">
+                          <input type="checkbox" id="aug-light-shadow">
+                          <span class="switch-slider"></span>
+                        </label>
                       </div>
-                      <input type="range" id="aug-weather-rain" min="0.0" max="1.0" step="0.05" value="0">
                     </div>
 
-                    <!-- Fog Slider -->
-                    <div class="custom-setting-item slider-item">
-                      <div class="slider-header">
-                        <span><strong>Fog (霧氣)</strong><small>模擬白色不均勻擴散霧氣 (0.00 到 1.00)</small></span>
-                        <span class="slider-value" id="val-fog">0.00</span>
+                    <div class="aug-setting-group">
+                      <h3>Weather / Camera</h3>
+                      <div class="custom-setting-item slider-item">
+                        <div class="slider-header">
+                          <span><strong>Rain</strong><small>模擬雨滴與濕面效果 (0.00 to 1.00)</small></span>
+                          <span class="slider-value" id="val-rain">0.00</span>
+                        </div>
+                        <input type="range" id="aug-weather-rain" min="0.0" max="1.0" step="0.05" value="0">
                       </div>
-                      <input type="range" id="aug-weather-fog" min="0.0" max="1.0" step="0.05" value="0">
-                    </div>
-
-                    <!-- Motion Blur Slider -->
-                    <div class="custom-setting-item slider-item">
-                      <div class="slider-header">
-                        <span><strong>Motion blur (運動模糊)</strong><small>模擬相機移動產生的模糊 (0.00 到 1.00)</small></span>
-                        <span class="slider-value" id="val-motion-blur">0.00</span>
+                      <div class="custom-setting-item slider-item">
+                        <div class="slider-header">
+                          <span><strong>Fog</strong><small>模擬霧氣與低能見度 (0.00 to 1.00)</small></span>
+                          <span class="slider-value" id="val-fog">0.00</span>
+                        </div>
+                        <input type="range" id="aug-weather-fog" min="0.0" max="1.0" step="0.05" value="0">
                       </div>
-                      <input type="range" id="aug-motion-blur" min="0.0" max="1.0" step="0.05" value="0">
-                    </div>
-
-                    <!-- Camera Noise Slider -->
-                    <div class="custom-setting-item slider-item">
-                      <div class="slider-header">
-                        <span><strong>Camera noise (相機雜訊)</strong><small>加入高斯相機噪聲 (0.00 到 1.00)</small></span>
-                        <span class="slider-value" id="val-camera-noise">0.00</span>
+                      <div class="custom-setting-item slider-item">
+                        <div class="slider-header">
+                          <span><strong>Motion blur</strong><small>模擬移動造成的模糊 (0.00 to 1.00)</small></span>
+                          <span class="slider-value" id="val-motion-blur">0.00</span>
+                        </div>
+                        <input type="range" id="aug-motion-blur" min="0.0" max="1.0" step="0.05" value="0">
                       </div>
-                      <input type="range" id="aug-camera-noise" min="0.0" max="1.0" step="0.01" value="0">
-                    </div>
-
-                    <!-- Perspective Slider -->
-                    <div class="custom-setting-item slider-item">
-                      <div class="slider-header">
-                        <span><strong>Perspective (幾何透視)</strong><small>隨機廣角透視拉伸 (0.00 到 0.10)</small></span>
-                        <span class="slider-value" id="val-camera-perspective">0.00</span>
+                      <div class="custom-setting-item slider-item">
+                        <div class="slider-header">
+                          <span><strong>Camera noise</strong><small>加入感測器雜訊 (0.00 to 1.00)</small></span>
+                          <span class="slider-value" id="val-camera-noise">0.00</span>
+                        </div>
+                        <input type="range" id="aug-camera-noise" min="0.0" max="1.0" step="0.01" value="0">
                       </div>
-                      <input type="range" id="aug-camera-perspective" min="0.0" max="0.1" step="0.01" value="0">
                     </div>
 
-                    <!-- Multiplier -->
+                    <div class="aug-setting-group">
+                      <h3>Geometry</h3>
+                      <div class="custom-setting-item slider-item is-disabled">
+                        <div class="slider-header">
+                          <span><strong>Perspective</strong><small>Disabled - Phase 2. Requires polygon / bbox remapping.</small></span>
+                          <span class="slider-value" id="val-camera-perspective">0.00</span>
+                        </div>
+                        <input type="range" id="aug-camera-perspective" min="0.0" max="0.1" step="0.01" value="0" disabled>
+                      </div>
+                    </div>
+
                     <div class="custom-setting-item custom-setting-count">
-                      <span><strong>Multiplier (生成倍數)</strong><small>每張原始影像產生的擴充副本數量</small></span>
-                      <input type="number" id="aug-multiplier" value="1" min="1" max="5" style="width: 80px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-panel-soft); text-align: center; color: var(--text);">
+                      <span><strong>Multiplier</strong><small>每張 train image 產生的擴增副本數量</small></span>
+                      <input type="number" id="aug-multiplier" value="1" min="1" max="5">
                     </div>
-
-                    <!-- Estimated Output Count & Danger/Risk Prompt -->
-                    <div class="aug-info-alert" id="aug-info-alert" style="margin-top: 12px; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; background: rgba(245, 158, 11, 0.05); display: flex; flex-direction: column; gap: 6px;">
-                      <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                        <span>訓練集可擴充圖片:</span>
-                        <strong id="aug-info-train-count">0</strong>
-                      </div>
-                      <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                        <span>生成倍數 (Multiplier):</span>
-                        <strong id="aug-info-multiplier">1x</strong>
-                      </div>
-                      <div style="display: flex; justify-content: space-between; font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 6px;">
-                        <span>預計產生擴充影像:</span>
-                        <strong id="aug-info-total-count" style="color: var(--primary);">0 張</strong>
-                      </div>
-                      <div style="font-size: 0.78rem; color: var(--text-muted); border-top: 1px dashed var(--border); padding-top: 6px; line-height: 1.4;">
-                        <i class="fa-solid fa-circle-info" style="color: var(--primary); margin-right: 4px;"></i>
-                        <span>※ 物理擴充僅會套用於訓練集 (Train split)，驗證集 (Val) 與測試集 (Test) 將會被排除 (Excluded) 以維持評估的客觀真實性。</span>
-                      </div>
-                      <div id="aug-alert-warning" style="font-size: 0.8rem; color: #f59e0b; margin-top: 4px; display: flex; gap: 6px; align-items: flex-start;">
-                        <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px;"></i>
-                        <span id="aug-alert-text">請先點選「Generate Preview」預覽效果以評估潛在風險，才可套用擴充。</span>
-                      </div>
-                    </div>
-
-                    <button class="btn btn-primary guarded" data-requires="split" id="btn-apply-aug" disabled style="margin-top: 12px; width: 100%; display: flex; justify-content: center; gap: 8px;"><i class="fa-solid fa-wand-magic-sparkles"></i> Apply Augmentation</button>
                   </div>
-                </div>
+                </section>
               </div>
-              <div class="augmentation-preview-under-settings">
-                <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 8px;">
-                  <h2>Preview (效果預覽)</h2>
-                  <button type="button" class="btn btn-secondary" id="btn-preview-aug" style="display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-eye"></i> Generate Preview</button>
-                </div>
-                <label class="form-stack" style="margin-bottom: 12px;">
-                  <span>選擇預覽影像</span>
-                  <select id="aug-preview-select-img"></select>
-                </label>
-                
-                <div class="aug-preview-container">
-                  <!-- Before Container -->
-                  <div class="aug-preview-box">
-                    <h4>Original (原始影像)</h4>
-                    <div class="aug-preview-content">
-                      <canvas id="aug-before-canvas" style="display: none;"></canvas>
-                      <div class="preview-placeholder" id="aug-before-placeholder">選擇已標註且已 split 的影像。</div>
+
+              <div class="augmentation-preview-column">
+                <section class="panel-section">
+                  <div class="section-title compact">
+                    <h2>Preview Validation</h2>
+                    <button type="button" class="btn btn-secondary" id="btn-preview-aug"><i class="fa-solid fa-eye"></i> Generate Preview</button>
+                  </div>
+                  <label class="form-stack">
+                    <span>Preview image</span>
+                    <select id="aug-preview-select-img"></select>
+                  </label>
+                  <div class="aug-preview-container">
+                    <div class="aug-preview-box">
+                      <h4>Original</h4>
+                      <div class="aug-preview-content">
+                        <canvas id="aug-before-canvas" style="display: none;"></canvas>
+                        <div class="preview-placeholder" id="aug-before-placeholder">Select an annotated train image to preview.</div>
+                      </div>
+                    </div>
+                    <div class="aug-preview-box">
+                      <h4>Augmented</h4>
+                      <div class="aug-preview-content">
+                        <img id="aug-preview-img" alt="Augmentation preview" style="display: none;">
+                        <div class="preview-placeholder" id="aug-preview-placeholder">Generate Preview to inspect the result.</div>
+                      </div>
                     </div>
                   </div>
-                  <!-- After Container -->
-                  <div class="aug-preview-box">
-                    <h4>Augmented (擴充後影像)</h4>
-                    <div class="aug-preview-content">
-                      <img id="aug-preview-img" alt="Augmentation preview" style="display: none;">
-                      <div class="preview-placeholder" id="aug-preview-placeholder">點擊「Generate Preview」按鈕進行預覽。</div>
-                    </div>
+                </section>
+
+                <section class="panel-section aug-risk-panel">
+                  <div class="section-title compact">
+                    <h2>Risk Check</h2>
+                    <span class="summary-badge badge-warning" id="aug-risk-badge">Preview required</span>
                   </div>
-                </div>
+                  <ul class="aug-risk-list" id="aug-risk-list"></ul>
+                  <div class="aug-apply-row">
+                    <button class="btn btn-secondary" type="button" id="btn-reset-aug"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+                    <button class="btn btn-primary guarded" data-requires="split" id="btn-apply-aug" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> Apply to Train Split</button>
+                  </div>
+                </section>
               </div>
             </section>
           </div>

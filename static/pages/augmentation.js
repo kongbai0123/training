@@ -1,44 +1,47 @@
-import { eventBus } from "../event_bus.js";
+﻿import { eventBus } from "../event_bus.js";
 import { appState, augmentationPresets } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, escapeHtml } from "../utils.js";
 
-// 控制項 ID 清單
 const SLIDERS = [
   "#aug-light-brightness",
   "#aug-light-contrast",
   "#aug-weather-rain",
   "#aug-weather-fog",
   "#aug-motion-blur",
-  "#aug-camera-noise",
-  "#aug-camera-perspective"
+  "#aug-camera-noise"
 ];
 
 const SHADOW = "#aug-light-shadow";
 const MULTIPLIER = "#aug-multiplier";
 const PREVIEW_SELECT = "#aug-preview-select-img";
 
+let augmentationUiState = "blocked_no_project";
+let previewReady = false;
+let applying = false;
+let selectedPreset = "clear_day";
+
+const PRESET_DETAILS = {
+  clear_day: "Clear Day：輕量亮度與對比變化，適合建立低風險 baseline。",
+  low_light: "Low Light：模擬夜間、陰影與低照度環境，適合補強光線不足場景。",
+  rainy: "Rainy：模擬雨滴、濕面與輕微模糊，需檢查 mask 邊界是否仍清楚。",
+  foggy: "Fog / Haze：降低對比並加入霧化效果，適合測試低能見度穩定性。",
+  motion_camera: "Motion Camera：加入運動模糊與相機雜訊，適合測試移動拍攝情境。"
+};
+
 export function initAugmentation() {
-  // 監聽所有滑桿的拖拽事件，並即時更新數值
   SLIDERS.forEach((selector) => {
     const el = qs(selector);
-    if (el) {
-      el.addEventListener("input", () => {
-        updateSliderLabels();
-        invalidatePreview();
-      });
-      el.addEventListener("change", invalidatePreview);
-    }
+    if (!el) return;
+    el.addEventListener("input", () => {
+      updateSliderLabels();
+      invalidatePreview();
+    });
+    el.addEventListener("change", invalidatePreview);
   });
 
-  // 監聽 Shadow Checkbox 變更 (雙重事件監聽以確保安全)
-  const shadowEl = qs(SHADOW);
-  if (shadowEl) {
-    shadowEl.addEventListener("change", invalidatePreview);
-    shadowEl.addEventListener("input", invalidatePreview);
-  }
+  qs(SHADOW)?.addEventListener("change", invalidatePreview);
 
-  // 監聽 Multiplier 的輸入 (雙重事件監聽以確保安全)
   const multEl = qs(MULTIPLIER);
   if (multEl) {
     multEl.addEventListener("input", () => {
@@ -51,203 +54,250 @@ export function initAugmentation() {
     });
   }
 
-  // 監聽預覽圖片選單變更
   qs(PREVIEW_SELECT)?.addEventListener("change", () => {
     invalidatePreview();
     const filename = qs(PREVIEW_SELECT)?.value;
-    if (filename) {
-      drawBeforeCanvas(filename);
-    }
+    if (filename) drawBeforeCanvas(filename);
+    else resetPreviewUI();
   });
 
-  // Preset 按鈕事件
   qsa("[data-aug-preset]").forEach((button) => {
     button.addEventListener("click", () => applyAugmentationPreset(button.dataset.augPreset));
   });
 
-  // 預覽按鈕事件
-  qs("#btn-preview-aug")?.addEventListener("click", async () => {
-    await triggerAugPreview();
-  });
-
-  // Apply 按鈕事件
-  qs("#btn-apply-aug")?.addEventListener("click", async () => {
-    const applyBtn = qs("#btn-apply-aug");
-    if (applyBtn.disabled) return;
-    
-    try {
-      applyBtn.disabled = true;
-      applyBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing...`;
-      
-      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/apply-augmentation`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          target_split: "train",
-          multiplier: Number(qs(MULTIPLIER).value || 1),
-          config: getAugmentationConfig()
-        })
-      });
-      eventBus.emit("toast", data.message || "物理擴充完成");
-      eventBus.emit("refresh-project");
-    } catch (err) {
-      eventBus.emit("toast", `物理擴充失敗：${err.message}`);
-    } finally {
-      applyBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Apply Augmentation`;
-      invalidatePreview(); // 完成後重新設為需預覽狀態
-    }
-  });
+  qs("#btn-preview-aug")?.addEventListener("click", triggerAugPreview);
+  qs("#btn-reset-aug")?.addEventListener("click", resetAugmentationPolicy);
+  qs("#btn-apply-aug")?.addEventListener("click", applyAugmentationToTrainSplit);
 }
 
 export function renderAugmentationPage(status) {
-  const select = qs(PREVIEW_SELECT);
-  if (!select) return;
-  
-  // 篩選出非擴充的且已標註的影像
-  const options = (appState.currentProject?.images || [])
-    .filter((img) => !img.is_augmented && img.status === "annotated")
-    .map((img) => `<option value="${escapeHtml(img.filename)}">${escapeHtml(img.filename)}</option>`);
-  
-  select.innerHTML = options.length ? options.join("") : `<option value="">沒有可預覽的已標註圖片</option>`;
-  
-  // 預設更新 Sliders 顯示與預計產出數量
   updateSliderLabels();
   updateEstimatedCount();
-  invalidatePreview();
 
-  // 若有預覽影像，則初次繪製 Before Canvas
-  const filename = select.value;
-  if (filename) {
-    drawBeforeCanvas(filename);
-  } else {
-    resetPreviewUI();
+  const stateInfo = getAugmentationState(status);
+  augmentationUiState = stateInfo.state;
+  if (!stateInfo.canPreview) previewReady = false;
+
+  renderReadinessGuard(stateInfo);
+  renderTargetScope(status);
+  renderRiskCheck(stateInfo);
+  renderPreviewOptions(status);
+  updateControlState(stateInfo);
+}
+
+function getRawImages() {
+  return (appState.currentProject?.images || []).filter((img) => !img.is_augmented);
+}
+
+function getTrainImages() {
+  return getRawImages().filter((img) => img.split === "train");
+}
+
+function getPreviewImages() {
+  return getTrainImages().filter((img) => img.status === "annotated");
+}
+
+function getAugmentationState(status) {
+  const trainCount = status?.splitCounts?.train || 0;
+  const valCount = status?.splitCounts?.val || 0;
+  const testCount = status?.splitCounts?.test || 0;
+  const previewCount = getPreviewImages().length;
+  const reasons = [];
+
+  if (!status?.hasProject) {
+    reasons.push("No project is open.");
+    return { state: "blocked_no_project", label: "Blocked", badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
+  }
+  if (!status.hasDataset) {
+    reasons.push("No images imported.");
+    reasons.push("Import images in Dataset before configuring augmentation.");
+    return { state: "blocked_no_images", label: "Blocked", badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
+  }
+  if (!status.splitComplete || trainCount === 0) {
+    reasons.push("Train / Val / Test split has not been created.");
+    reasons.push("Create a split so augmentation can target Train only.");
+    return { state: "blocked_no_split", label: "Blocked", badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
+  }
+  if (previewCount === 0) {
+    reasons.push("No annotated train image is available for preview.");
+    return { state: "blocked_no_preview_image", label: "Blocked", badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
+  }
+  if (applying) {
+    return { state: "applying", label: "Applying", badge: "warning", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons: ["Augmentation job is running."] };
+  }
+  if (previewReady) {
+    return { state: "preview_ready", label: "Preview Ready", badge: "success", canPreview: true, canApply: true, trainCount, valCount, testCount, previewCount, reasons: ["Preview has been generated and risk checks passed."] };
+  }
+  return { state: "ready", label: "Ready", badge: "success", canPreview: true, canApply: false, trainCount, valCount, testCount, previewCount, reasons: ["Train images are available. Generate a preview before applying augmentation."] };
+}
+
+function renderReadinessGuard(info) {
+  const badge = qs("#aug-readiness-badge");
+  const message = qs("#aug-readiness-message");
+  const reasons = qs("#aug-readiness-reasons");
+  const card = qs("#aug-readiness-card");
+
+  if (badge) {
+    badge.className = `summary-badge badge-${info.badge}`;
+    badge.textContent = info.label;
+  }
+  if (message) {
+    message.textContent = getReadinessMessage(info);
+  }
+  if (reasons) {
+    reasons.innerHTML = info.reasons.map((reason) => `<li>${escapeHtml(reason)}</li>`).join("");
+  }
+  if (card) {
+    card.dataset.state = info.state;
   }
 }
 
-// 變更參數時，讓 Preview 狀態無效化
-function invalidatePreview() {
+function getReadinessMessage(info) {
+  switch (info.state) {
+    case "blocked_no_project": return "Open or create a project before configuring augmentation.";
+    case "blocked_no_images": return "Augmentation is blocked because this project has no images.";
+    case "blocked_no_split": return "Augmentation is blocked until Train / Val / Test split exists.";
+    case "blocked_no_preview_image": return "No annotated train image is available for preview.";
+    case "ready": return `${info.trainCount} train images found. Val/Test will remain excluded.`;
+    case "preview_ready": return "Preview is ready. You can apply augmentation to Train split only.";
+    case "applying": return "Applying augmentation to Train split. Please wait.";
+    default: return "Review augmentation readiness before applying.";
+  }
+}
+
+function renderTargetScope(status) {
+  const train = status?.splitCounts?.train || 0;
+  const val = status?.splitCounts?.val || 0;
+  const test = status?.splitCounts?.test || 0;
+  const multiplier = Number(qs(MULTIPLIER)?.value || 1);
+  const output = train * multiplier;
+
+  setText("#aug-scope-train", String(train));
+  setText("#aug-scope-val", `${val} excluded`);
+  setText("#aug-scope-test", `${test} excluded`);
+  setText("#aug-scope-output", `${train} -> ${train + output}`);
+  setText("#aug-info-train-count", `${train}`);
+  setText("#aug-info-multiplier", `${multiplier}x`);
+  setText("#aug-info-total-count", `${output}`);
+}
+
+function renderPreviewOptions(status) {
+  const select = qs(PREVIEW_SELECT);
+  if (!select) return;
+
+  const options = getPreviewImages().map((img) => `<option value="${escapeHtml(img.filename)}">${escapeHtml(img.filename)}</option>`);
+  select.innerHTML = options.length ? options.join("") : `<option value="">No annotated train images available</option>`;
+  select.disabled = !status?.splitComplete || options.length === 0;
+
+  if (select.value) drawBeforeCanvas(select.value);
+  else resetPreviewUI();
+}
+
+function renderRiskCheck(info) {
+  const list = qs("#aug-risk-list");
+  const badge = qs("#aug-risk-badge");
+  if (!list) return;
+
+  const checks = [
+    { ok: info.trainCount > 0, text: "Train split has target images." },
+    { ok: true, text: "Val/Test are excluded to avoid evaluation leakage." },
+    { ok: true, text: "Original images are preserved; augmented copies are generated." },
+    { ok: qs("#aug-camera-perspective")?.disabled === true, text: "Perspective is disabled until polygon / bbox remapping is verified." },
+    { ok: previewReady, text: previewReady ? "Preview generated successfully." : "Preview has not been generated yet." }
+  ];
+
+  list.innerHTML = checks.map((check) => `
+    <li class="${check.ok ? "is-ok" : "is-warning"}">
+      <i class="fa-solid ${check.ok ? "fa-circle-check" : "fa-triangle-exclamation"}"></i>
+      <span>${escapeHtml(check.text)}</span>
+    </li>
+  `).join("");
+
+  if (badge) {
+    if (info.canApply) {
+      badge.className = "summary-badge badge-success";
+      badge.textContent = "Passed";
+    } else if (info.canPreview) {
+      badge.className = "summary-badge badge-warning";
+      badge.textContent = "Preview required";
+    } else {
+      badge.className = "summary-badge badge-danger";
+      badge.textContent = "Blocked";
+    }
+  }
+}
+
+function updateControlState(info) {
+  const settingsDisabled = info.state.startsWith("blocked_") || applying;
+  qsa("#aug-settings-panel input, #aug-settings-panel button").forEach((el) => {
+    if (el.id === "aug-camera-perspective") {
+      el.disabled = true;
+      return;
+    }
+    el.disabled = settingsDisabled;
+  });
+  qsa("[data-aug-preset]").forEach((button) => {
+    button.disabled = settingsDisabled;
+  });
+
+  const previewBtn = qs("#btn-preview-aug");
+  if (previewBtn) {
+    previewBtn.disabled = !info.canPreview || applying;
+    previewBtn.innerHTML = info.state === "preview_generating"
+      ? `<i class="fa-solid fa-spinner fa-spin"></i> Rendering...`
+      : `<i class="fa-solid fa-eye"></i> Generate Preview`;
+  }
+
   const applyBtn = qs("#btn-apply-aug");
-  if (applyBtn) applyBtn.disabled = true;
-  
-  const alertBox = qs("#aug-info-alert");
-  const alertText = qs("#aug-alert-text");
-  const alertIcon = qs("#aug-info-alert i");
-  
-  if (alertBox) {
-    alertBox.style.background = "rgba(245, 158, 11, 0.05)";
-    alertBox.style.borderColor = "var(--border)";
+  if (applyBtn) {
+    applyBtn.disabled = !info.canApply || applying;
+    applyBtn.innerHTML = applying
+      ? `<i class="fa-solid fa-spinner fa-spin"></i> Applying...`
+      : `<i class="fa-solid fa-wand-magic-sparkles"></i> Apply to Train Split`;
   }
-  if (alertText) {
-    alertText.textContent = "⚠️ 參數或影像已變更。請先點選「Generate Preview」生成效果預覽，確認擴充影像與 bounding boxes/polygons 疊加正確，才可套用物理擴充。";
-    alertText.style.color = "#f59e0b";
-  }
-  if (alertIcon) {
-    alertIcon.className = "fa-solid fa-triangle-exclamation";
-    alertIcon.style.color = "#f59e0b";
-  }
-  
-  // 隱藏 After 圖片，顯示 placeholder
+}
+
+function invalidatePreview() {
+  previewReady = false;
   const img = qs("#aug-preview-img");
   const placeholder = qs("#aug-preview-placeholder");
   if (img) img.style.display = "none";
   if (placeholder) {
     placeholder.style.display = "block";
-    placeholder.textContent = "點擊「Generate Preview」按鈕進行預覽。";
+    placeholder.textContent = "Generate Preview to inspect the result.";
   }
+  renderAugmentationPage(appState.currentProject ? getStatusFromProject() : { hasProject: false });
 }
 
-// 當預覽成功時，啟用套用按鈕
 function validatePreviewSuccess() {
-  const applyBtn = qs("#btn-apply-aug");
-  if (applyBtn) applyBtn.disabled = false;
-  
-  const alertBox = qs("#aug-info-alert");
-  const alertText = qs("#aug-alert-text");
-  const alertIcon = qs("#aug-info-alert i");
-  
-  if (alertBox) {
-    alertBox.style.background = "rgba(16, 185, 129, 0.05)";
-    alertBox.style.borderColor = "rgba(16, 185, 129, 0.2)";
-  }
-  if (alertText) {
-    alertText.textContent = "✅ 預覽生成成功！物理擴充僅會套用於訓練集 (Train split)，驗證/測試集已安全排除。現在可以安全套用擴充參數。";
-    alertText.style.color = "#10b981";
-  }
-  if (alertIcon) {
-    alertIcon.className = "fa-solid fa-circle-check";
-    alertIcon.style.color = "#10b981";
-  }
+  previewReady = true;
+  renderAugmentationPage(getStatusFromProject());
 }
 
-// 更新 slider 旁邊的 label 數值
-function updateSliderLabels() {
-  SLIDERS.forEach((selector) => {
-    const el = qs(selector);
-    if (!el) return;
-    // 將 #aug-light-brightness 等轉為 #val-brightness
-    const valId = selector
-      .replace("#aug-light-", "#val-")
-      .replace("#aug-weather-", "#val-")
-      .replace("#aug-camera-", "#val-")
-      .replace("#aug-motion-", "#val-motion-");
-    const valSpan = qs(valId);
-    if (valSpan) {
-      valSpan.textContent = Number(el.value).toFixed(2);
-    }
-  });
-}
-
-// 顯示預計生成數量與提示
-function updateEstimatedCount() {
-  const trainImages = (appState.currentProject?.images || [])
-    .filter((img) => !img.is_augmented && img.status === "annotated" && img.split === "train");
-  
-  const N = trainImages.length;
-  const M = Number(qs(MULTIPLIER)?.value || 1);
-  const total = N * M;
-  
-  const trainCountSpan = qs("#aug-info-train-count");
-  const multiplierSpan = qs("#aug-info-multiplier");
-  const totalCountSpan = qs("#aug-info-total-count");
-  
-  if (trainCountSpan) trainCountSpan.textContent = `${N} 張`;
-  if (multiplierSpan) multiplierSpan.textContent = `${M}x`;
-  if (totalCountSpan) {
-    totalCountSpan.textContent = `${total} 張`;
-    if (total > 500) {
-      totalCountSpan.style.color = "#ef4444";
-    } else {
-      totalCountSpan.style.color = "var(--primary)";
-    }
-  }
-}
-
-// 重設預覽 UI
 function resetPreviewUI() {
   const beforeCanvas = qs("#aug-before-canvas");
   const beforePlaceholder = qs("#aug-before-placeholder");
   const img = qs("#aug-preview-img");
   const placeholder = qs("#aug-preview-placeholder");
-  
+
   if (beforeCanvas) beforeCanvas.style.display = "none";
   if (beforePlaceholder) {
     beforePlaceholder.style.display = "block";
-    beforePlaceholder.textContent = "選擇已標註且已 split 的影像。";
+    beforePlaceholder.textContent = "Select an annotated train image to preview.";
   }
   if (img) img.style.display = "none";
   if (placeholder) {
     placeholder.style.display = "block";
-    placeholder.textContent = "點擊「Generate Preview」按鈕進行預覽。";
+    placeholder.textContent = "Generate Preview to inspect the result.";
   }
 }
 
-// 繪製 Before Canvas (原始影像 + BBox/Polygon Overlay)
 function drawBeforeCanvas(filename) {
   const canvas = qs("#aug-before-canvas");
   const placeholder = qs("#aug-before-placeholder");
-  if (!canvas || !appState.currentProject) return;
+  if (!canvas || !appState.currentProject || !filename) return;
 
-  const imgMetadata = (appState.currentProject.images || []).find((img) => img.filename === filename);
+  const imgMetadata = getPreviewImages().find((img) => img.filename === filename);
   if (!imgMetadata) {
     resetPreviewUI();
     return;
@@ -262,134 +312,142 @@ function drawBeforeCanvas(filename) {
     canvas.width = img.width;
     canvas.height = img.height;
     ctx.drawImage(img, 0, 0);
-
-    const annotations = imgMetadata.annotations || [];
-    annotations.forEach((ann) => {
-      ctx.strokeStyle = "#10B981"; // 綠色框
-      ctx.lineWidth = Math.max(3, Math.round(img.width / 250));
-      ctx.fillStyle = "rgba(16, 185, 129, 0.15)"; // 半透明綠
-
-      let pts = [];
-      const type = ann.type || (ann.points ? "polygon" : "bbox");
-
-      if (type === "polygon" && ann.points && ann.points.length > 0) {
-        if (Array.isArray(ann.points[0])) {
-          pts = ann.points;
-        } else if (typeof ann.points[0] === "number") {
-          for (let i = 0; i < ann.points.length; i += 2) {
-            pts.push([ann.points[i], ann.points[i + 1]]);
-          }
-        }
-      }
-
-      if (pts.length >= 3) {
-        ctx.beginPath();
-        ctx.moveTo(pts[0][0], pts[0][1]);
-        for (let i = 1; i < pts.length; i++) {
-          ctx.lineTo(pts[i][0], pts[i][1]);
-        }
-        ctx.closePath();
-        ctx.stroke();
-        ctx.fill();
-
-        ctx.fillStyle = "#10B981";
-        const fontSize = Math.max(12, Math.round(img.width / 45));
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        const minX = Math.min(...pts.map((p) => p[0]));
-        const minY = Math.min(...pts.map((p) => p[1]));
-        const textWidth = ctx.measureText(ann.category).width;
-
-        ctx.fillRect(minX, Math.max(0, minY - fontSize - 6), textWidth + 10, fontSize + 6);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(ann.category, minX + 5, Math.max(fontSize, minY - 4));
-      } else if (ann.bbox && ann.bbox.length === 4) {
-        const [xc, yc, w, h] = ann.bbox;
-        const x1 = (xc - w / 2) * img.width;
-        const y1 = (yc - h / 2) * img.height;
-        const bw = w * img.width;
-        const bh = h * img.height;
-
-        ctx.beginPath();
-        ctx.rect(x1, y1, bw, bh);
-        ctx.stroke();
-        ctx.fill();
-
-        ctx.fillStyle = "#10B981";
-        const fontSize = Math.max(12, Math.round(img.width / 45));
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        const textWidth = ctx.measureText(ann.category).width;
-
-        ctx.fillRect(x1, Math.max(0, y1 - fontSize - 6), textWidth + 10, fontSize + 6);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(ann.category, x1 + 5, Math.max(fontSize, y1 - 4));
-      }
-    });
+    drawAnnotations(ctx, img, imgMetadata.annotations || []);
   };
   img.onerror = () => {
     canvas.style.display = "none";
     if (placeholder) {
       placeholder.style.display = "block";
-      placeholder.textContent = "無法載入原始影像。";
+      placeholder.textContent = "Unable to load preview image.";
     }
   };
-  img.src = `/api/projects/${appState.currentProjectId}/images/${filename}`;
+  img.src = `/api/projects/${appState.currentProjectId}/images/${encodeURIComponent(filename)}`;
 }
 
-// 物理擴充 Preset
+function drawAnnotations(ctx, img, annotations) {
+  annotations.forEach((ann) => {
+    ctx.strokeStyle = "#10B981";
+    ctx.lineWidth = Math.max(3, Math.round(img.width / 250));
+    ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
+
+    let pts = [];
+    const type = ann.type || (ann.points ? "polygon" : "bbox");
+    if (type === "polygon" && ann.points && ann.points.length > 0) {
+      if (Array.isArray(ann.points[0])) pts = ann.points;
+      else if (typeof ann.points[0] === "number") {
+        for (let i = 0; i < ann.points.length; i += 2) pts.push([ann.points[i], ann.points[i + 1]]);
+      }
+    }
+
+    if (pts.length >= 3) {
+      drawPolygon(ctx, pts, ann.category || ann.label || "label", img.width);
+    } else if (ann.bbox && ann.bbox.length === 4) {
+      drawBbox(ctx, ann.bbox, ann.category || ann.label || "label", img);
+    }
+  });
+}
+
+function drawPolygon(ctx, pts, label, width) {
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  pts.slice(1).forEach((p) => ctx.lineTo(p[0], p[1]));
+  ctx.closePath();
+  ctx.stroke();
+  ctx.fill();
+  drawLabel(ctx, label, pts[0][0], pts[0][1], width);
+}
+
+function drawBbox(ctx, bbox, label, img) {
+  const [xc, yc, w, h] = bbox;
+  const x1 = (xc - w / 2) * img.width;
+  const y1 = (yc - h / 2) * img.height;
+  const bw = w * img.width;
+  const bh = h * img.height;
+  ctx.beginPath();
+  ctx.rect(x1, y1, bw, bh);
+  ctx.stroke();
+  ctx.fill();
+  drawLabel(ctx, label, x1, y1, img.width);
+}
+
+function drawLabel(ctx, label, x, y, width) {
+  const fontSize = Math.max(12, Math.round(width / 45));
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  const labelWidth = ctx.measureText(label).width;
+  ctx.fillStyle = "#10B981";
+  ctx.fillRect(x, Math.max(0, y - fontSize - 6), labelWidth + 10, fontSize + 6);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(label, x + 5, Math.max(fontSize, y - 4));
+  ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
+}
+
 function applyAugmentationPreset(presetName) {
   const preset = augmentationPresets[presetName];
   if (!preset) return;
+  selectedPreset = presetName;
 
-  qs("#aug-light-brightness").value = preset.brightness;
-  qs("#aug-light-contrast").value = preset.contrast;
-  qs("#aug-light-shadow").checked = preset.shadow;
-  qs("#aug-weather-rain").value = preset.rain;
-  qs("#aug-weather-fog").value = preset.fog;
-  qs("#aug-motion-blur").value = preset.motionBlur;
-  qs("#aug-camera-noise").value = preset.noise;
-  qs("#aug-camera-perspective").value = preset.perspective;
+  setValue("#aug-light-brightness", preset.brightness);
+  setValue("#aug-light-contrast", preset.contrast);
+  setChecked("#aug-light-shadow", preset.shadow);
+  setValue("#aug-weather-rain", preset.rain);
+  setValue("#aug-weather-fog", preset.fog);
+  setValue("#aug-motion-blur", preset.motionBlur);
+  setValue("#aug-camera-noise", preset.noise);
+  setValue("#aug-camera-perspective", 0);
 
   qsa("[data-aug-preset]").forEach((button) => {
     button.classList.toggle("active", button.dataset.augPreset === presetName);
   });
 
+  const detail = qs("#aug-preset-detail p");
+  if (detail) detail.textContent = PRESET_DETAILS[presetName] || "Preset selected.";
+
   updateSliderLabels();
   updateEstimatedCount();
+  invalidatePreview();
+}
 
-  // Preset 點選後直接生成預覽
-  triggerAugPreview();
+function resetAugmentationPolicy() {
+  applyAugmentationPreset("clear_day");
+  setValue(MULTIPLIER, 1);
+  invalidatePreview();
 }
 
 function getAugmentationConfig() {
   return {
     light: {
-      brightness: Number(qs("#aug-light-brightness").value),
-      contrast: Number(qs("#aug-light-contrast").value),
-      shadow: qs("#aug-light-shadow").checked
+      brightness: Number(qs("#aug-light-brightness")?.value || 0),
+      contrast: Number(qs("#aug-light-contrast")?.value || 0),
+      shadow: Boolean(qs("#aug-light-shadow")?.checked)
     },
     weather: {
-      rain: Number(qs("#aug-weather-rain").value),
-      fog: Number(qs("#aug-weather-fog").value)
+      rain: Number(qs("#aug-weather-rain")?.value || 0),
+      fog: Number(qs("#aug-weather-fog")?.value || 0)
     },
     motion: {
-      motion_blur: Number(qs("#aug-motion-blur").value)
+      motion_blur: Number(qs("#aug-motion-blur")?.value || 0)
     },
     camera: {
-      noise: Number(qs("#aug-camera-noise").value),
-      perspective: Number(qs("#aug-camera-perspective").value)
-    }
+      noise: Number(qs("#aug-camera-noise")?.value || 0),
+      perspective: 0
+    },
+    preset: selectedPreset
   };
 }
 
 async function triggerAugPreview() {
+  const status = getStatusFromProject();
+  const info = getAugmentationState(status);
   const filename = qs(PREVIEW_SELECT)?.value;
-  if (!appState.currentProjectId || !filename) return;
+  if (!info.canPreview || !appState.currentProjectId || !filename) return;
 
   const btn = qs("#btn-preview-aug");
   const img = qs("#aug-preview-img");
   const placeholder = qs("#aug-preview-placeholder");
 
   try {
+    previewReady = false;
+    augmentationUiState = "preview_generating";
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Rendering...`;
@@ -406,31 +464,96 @@ async function triggerAugPreview() {
       img.style.display = "block";
     }
     if (placeholder) placeholder.style.display = "none";
-    
     validatePreviewSuccess();
   } catch (err) {
+    previewReady = false;
     if (img) img.style.display = "none";
     if (placeholder) {
       placeholder.style.display = "block";
-      placeholder.textContent = `預覽失敗：${err.message}`;
+      placeholder.textContent = `Preview failed: ${err.message}`;
     }
-    const applyBtn = qs("#btn-apply-aug");
-    if (applyBtn) applyBtn.disabled = true;
-    
-    const alertText = qs("#aug-alert-text");
-    if (alertText) {
-      alertText.textContent = `❌ 預覽失敗：${err.message}`;
-      alertText.style.color = "#ef4444";
-    }
-    const alertIcon = qs("#aug-info-alert i");
-    if (alertIcon) {
-      alertIcon.className = "fa-solid fa-circle-xmark";
-      alertIcon.style.color = "#ef4444";
-    }
+    eventBus.emit("toast", `Preview failed: ${err.message}`);
+    renderAugmentationPage(getStatusFromProject());
   } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `<i class="fa-solid fa-eye"></i> Generate Preview`;
-    }
+    if (btn) btn.innerHTML = `<i class="fa-solid fa-eye"></i> Generate Preview`;
   }
+}
+
+async function applyAugmentationToTrainSplit() {
+  const info = getAugmentationState(getStatusFromProject());
+  if (!info.canApply || !appState.currentProjectId) return;
+
+  applying = true;
+  renderAugmentationPage(getStatusFromProject());
+
+  try {
+    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/apply-augmentation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        target_split: "train",
+        multiplier: Number(qs(MULTIPLIER)?.value || 1),
+        config: getAugmentationConfig()
+      })
+    });
+    eventBus.emit("toast", data.message || "Augmentation applied to Train split.");
+    eventBus.emit("refresh-project");
+    previewReady = false;
+  } catch (err) {
+    eventBus.emit("toast", `Apply failed: ${err.message}`);
+  } finally {
+    applying = false;
+    renderAugmentationPage(getStatusFromProject());
+  }
+}
+
+function updateSliderLabels() {
+  const map = {
+    "#aug-light-brightness": "#val-brightness",
+    "#aug-light-contrast": "#val-contrast",
+    "#aug-weather-rain": "#val-rain",
+    "#aug-weather-fog": "#val-fog",
+    "#aug-motion-blur": "#val-motion-blur",
+    "#aug-camera-noise": "#val-camera-noise",
+    "#aug-camera-perspective": "#val-camera-perspective"
+  };
+  Object.entries(map).forEach(([inputSelector, labelSelector]) => {
+    const input = qs(inputSelector);
+    const label = qs(labelSelector);
+    if (input && label) label.textContent = Number(input.value || 0).toFixed(2);
+  });
+}
+
+function updateEstimatedCount() {
+  renderTargetScope(getStatusFromProject());
+}
+
+function getStatusFromProject() {
+  const project = appState.currentProject;
+  const rawImages = getRawImages();
+  const splitCounts = rawImages.reduce((acc, img) => {
+    if (img.split) acc[img.split] = (acc[img.split] || 0) + 1;
+    return acc;
+  }, { train: 0, val: 0, test: 0 });
+  return {
+    hasProject: Boolean(project),
+    hasDataset: rawImages.length > 0,
+    splitCounts,
+    splitComplete: splitCounts.train > 0 && splitCounts.val > 0
+  };
+}
+
+function setText(selector, value) {
+  const el = qs(selector);
+  if (el) el.textContent = value;
+}
+
+function setValue(selector, value) {
+  const el = qs(selector);
+  if (el) el.value = value;
+}
+
+function setChecked(selector, value) {
+  const el = qs(selector);
+  if (el) el.checked = Boolean(value);
 }
