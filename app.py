@@ -349,6 +349,18 @@ def apply_layout_migration(project_id: str):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.post("/api/projects/{project_id}/save")
+def save_project_state(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not ProjectManager.save_project(project_id, project):
+        raise HTTPException(status_code=500, detail="Unable to save project")
+    saved_project = ProjectManager.get_project(project_id)
+    if not saved_project:
+        raise HTTPException(status_code=500, detail="Unable to reload saved project")
+    return saved_project
+
 @app.delete("/api/projects/{project_id}")
 def delete_project(project_id: str):
     success = ProjectManager.delete_project(project_id)

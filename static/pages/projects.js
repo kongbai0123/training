@@ -1,5 +1,5 @@
 import { eventBus } from "../event_bus.js";
-import { appState } from "../state.js";
+import { appState, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
 
@@ -83,7 +83,7 @@ function renderHistoryModal() {
     : `${(appState.projects || []).length} projects`;
 
   setText("#project-history-result-count", resultText);
-  setHTML("#modal-project-list", renderProjectList(filtered, { includeDelete: false, showFiles: true }));
+  setHTML("#modal-project-list", renderProjectList(filtered, { includeDelete: true, showFiles: true }));
   bindProjectListButtons();
 }
 
@@ -127,8 +127,8 @@ function renderProjectCard(project, options = {}) {
           <p>${escapeHtml(progressText)} · Updated ${escapeHtml(updatedAt || "--")}</p>
         </div>
         <div class="button-row">
-          <button class="btn btn-secondary btn-sm" data-open-project="${escapeHtml(project.project_id)}">Open</button>
-          ${options.includeDelete ? `<button class="icon-btn" data-delete-project="${escapeHtml(project.project_id)}" title="Delete"><i class="fa-solid fa-trash"></i></button>` : ""}
+          <button class="btn btn-secondary btn-sm" data-open-project="${escapeHtml(project.project_id)}">${escapeHtml(t("historyOpen"))}</button>
+          ${options.includeDelete ? `<button class="btn btn-danger btn-sm" data-delete-project="${escapeHtml(project.project_id)}"><i class="fa-solid fa-trash"></i><span>${escapeHtml(t("historyDelete"))}</span></button>` : ""}
         </div>
       </div>
       ${options.showFiles ? `
@@ -171,6 +171,7 @@ export function bindProjectListButtons() {
   });
   qsa("[data-delete-project]").forEach((btn) => {
     btn.addEventListener("click", () => {
+      closeHistoryModal();
       openDeleteProjectModal(btn.dataset.deleteProject);
     });
   });

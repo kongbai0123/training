@@ -45,9 +45,9 @@
           <strong id="header-health-label">Checking</strong>
         </div>
         <span id="current-project-title">No project opened</span>
-        <button class="btn btn-primary btn-sm" data-nav="projects">
-          <i class="fa-solid fa-plus"></i>
-          <span>New Project</span>
+        <button class="btn btn-primary btn-sm" id="btn-header-save-project" type="button">
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span data-i18n="headerSave">Save</span>
         </button>
         <button class="btn btn-secondary btn-sm" id="btn-theme-toggle" type="button" aria-label="Toggle background brightness">
           <i class="fa-solid fa-sun"></i>
@@ -1263,6 +1263,6 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260625-workflow-i18n-models"></script>
+  <script type="module" src="/static/app.js?v=20260625-save-history-delete"></script>
 </body>
 </html>

@@ -5,7 +5,8 @@ import {
   initPreferences, 
   applyLanguage, 
   updateLabelMeState, 
-  getProjectStatus 
+  getProjectStatus,
+  t
 } from "./state.js";
 import { apiFetch } from "./api.js";
 import { 
@@ -249,6 +250,7 @@ function bindGlobalNavigation() {
   });
 
   // History Modal 觸發與關閉
+  qs("#btn-header-save-project")?.addEventListener("click", saveCurrentProject);
   qs("#btn-header-history")?.addEventListener("click", openHistoryModal);
   qs("#btn-close-history")?.addEventListener("click", closeHistoryModal);
   qs("#project-history-modal")?.addEventListener("click", (event) => {
@@ -385,6 +387,65 @@ async function openProject(projectId, options = {}) {
   }
 }
 
+async function saveCurrentProject() {
+  const projectId = appState.currentProjectId;
+  if (!projectId) {
+    showToast(t("headerSaveNoProject"));
+    return;
+  }
+
+  const btn = qs("#btn-header-save-project");
+  const originalHtml = btn?.innerHTML;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>${escapeHtml(t("headerSave"))}</span>`;
+  }
+
+  try {
+    appState.currentProject = await requestProjectSave(projectId);
+    appState.currentProjectId = projectId;
+    appState.currentProjectClasses = [...(appState.currentProject?.class_names || [])];
+    setText("#current-project-title", appState.currentProject.project_name || projectId);
+    updateLabelMeState();
+    await checkCurrentTrainStatus();
+    renderAll();
+    showToast(t("headerSaveDone"));
+  } catch (err) {
+    showToast(t("headerSaveFailed", { message: err.message }));
+  } finally {
+    if (btn) {
+      btn.disabled = !appState.currentProjectId;
+      btn.innerHTML = originalHtml || `<i class="fa-solid fa-floppy-disk"></i><span data-i18n="headerSave">${escapeHtml(t("headerSave"))}</span>`;
+      applyLanguage(appState.settings.language);
+    }
+  }
+}
+
+async function requestProjectSave(projectId) {
+  const headers = {};
+  if (appState.bootstrap?.token) {
+    headers["X-VTS-Token"] = appState.bootstrap.token;
+  }
+
+  const res = await fetch(`/api/projects/${projectId}/save`, {
+    method: "POST",
+    headers,
+  });
+  if (res.ok) return res.json();
+  if (res.status === 404 || res.status === 405) {
+    return apiFetch(`/api/projects/${projectId}`);
+  }
+
+  let detail = "";
+  try {
+    const data = await res.json();
+    detail = data.detail || JSON.stringify(data);
+  } catch {
+    detail = await res.text();
+  }
+  throw new Error(detail || `HTTP ${res.status}`);
+}
+
 async function checkCurrentTrainStatus() {
   if (!appState.currentProjectId) return;
   try {
@@ -415,6 +476,12 @@ function renderHeaderStatus() {
   if (dot) {
     dot.classList.toggle("online", isHealthy);
     dot.classList.toggle("offline", !isHealthy);
+  }
+
+  const saveBtn = qs("#btn-header-save-project");
+  if (saveBtn) {
+    saveBtn.disabled = !appState.currentProjectId;
+    saveBtn.classList.toggle("btn-disabled", !appState.currentProjectId);
   }
 }
 
