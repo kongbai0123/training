@@ -1431,7 +1431,12 @@ def import_zip_dataset(project_id: str, file: UploadFile = File(...)):
             shutil.rmtree(temp_zip_dir)
 
 @app.post("/api/projects/{project_id}/import-annotations")
-def import_annotations(project_id: str, files: List[UploadFile] = File(...), csv_mapping: Optional[str] = Form(None)):
+def import_annotations(
+    project_id: str,
+    files: List[UploadFile] = File(...),
+    csv_mapping: Optional[str] = Form(None),
+    auto_apply: bool = Form(True),
+):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -1473,6 +1478,13 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...), csv
             staged_files.append(target_path)
 
         report = AnnotationImporter.import_files(project, staged_files, import_id=import_id, csv_mapping=parsed_csv_mapping)
+        apply_result = None
+        sync_report = None
+        if auto_apply and report.get("converted", 0) > 0:
+            apply_result = AnnotationImporter.apply_import(project, import_id)
+            sync_report = LabelMeAdapter.sync_labelme_annotations(project)
+            report = apply_result["report"]
+
         project["last_annotation_import"] = report
         ProjectManager.save_project(project_id, project)
 
@@ -1487,6 +1499,10 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...), csv
             "imported_masks": report.get("mask_png", 0),
             "converted": report.get("converted", 0),
             "failed": report.get("failed", 0),
+            "auto_applied": bool(apply_result),
+            "applied_count": apply_result.get("applied_count", 0) if apply_result else 0,
+            "skipped_duplicates": apply_result.get("skipped_duplicates", 0) if apply_result else 0,
+            "sync_status": sync_report,
             "report": report,
         }
     except HTTPException as he:

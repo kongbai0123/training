@@ -157,7 +157,10 @@ async function uploadAnnotationFiles(validFiles, csvMapping = null) {
     });
 
     appState.latestAnnotationImport = data.report || null;
-    eventBus.emit("toast", `Import complete. JSON: ${data.imported_jsons || 0}, COCO: ${data.imported_coco_json || 0}, TXT: ${data.imported_txts || 0}, CSV: ${data.imported_csv || 0}, XML: ${data.imported_xml || 0}, Mask: ${data.imported_masks || 0}, converted: ${data.converted || 0}.`);
+    const appliedText = data.auto_applied
+      ? ` Applied ${data.applied_count || 0} shapes, skipped ${data.skipped_duplicates || 0} duplicates.`
+      : "";
+    eventBus.emit("toast", `Import complete. JSON: ${data.imported_jsons || 0}, COCO: ${data.imported_coco_json || 0}, TXT: ${data.imported_txts || 0}, CSV: ${data.imported_csv || 0}, XML: ${data.imported_xml || 0}, Mask: ${data.imported_masks || 0}, converted: ${data.converted || 0}.${appliedText}`);
     eventBus.emit("refresh-project");
   } catch (err) {
     eventBus.emit("toast", `Annotation import failed: ${err.message}`);
