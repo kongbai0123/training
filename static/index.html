@@ -291,16 +291,28 @@
             <section class="panel-section labelme-import-panel" id="annotations-drop-card">
               <div class="section-title">
                 <h2 data-i18n="labelme.importTitle">Import Label Files</h2>
-                <span class="badge badge-muted">JSON / TXT / Folder</span>
+                <span class="badge badge-muted">JSON / TXT / CSV / XML / Folder</span>
               </div>
               <div class="zip-drop-zone labelme-drop-zone" id="annotations-drop-zone">
                 <i class="fa-solid fa-file-import"></i>
                 <div>
-                  <strong data-i18n="labelme.dropTitle">Drop LabelMe JSON, YOLO TXT, or a folder</strong>
+                  <strong data-i18n="labelme.dropTitle">Drop LabelMe JSON, YOLO TXT, CSV, VOC XML, or a folder</strong>
                   <p data-i18n="labelme.dropHelp">Folder drops are filtered so only supported annotation files are imported.</p>
                 </div>
               </div>
-              <input type="file" id="input-annotations-file" accept=".json,.txt,.csv" multiple style="display: none;">
+              <input type="file" id="input-annotations-file" accept=".json,.txt,.csv,.xml" multiple style="display: none;">
+              <div class="csv-mapping-wizard" id="csv-mapping-wizard" hidden>
+                <div class="section-title compact">
+                  <h3 data-i18n="labelme.csvMappingTitle">CSV Column Mapping</h3>
+                  <span class="badge badge-warning" data-i18n="labelme.csvMappingBadge">Review before import</span>
+                </div>
+                <p class="form-hint" data-i18n="labelme.csvMappingHelp">Map your CSV columns so the platform can convert rows into LabelMe JSON drafts.</p>
+                <div class="csv-mapping-grid" id="csv-mapping-grid"></div>
+                <div class="button-row">
+                  <button type="button" class="btn btn-primary" id="btn-confirm-csv-import"><i class="fa-solid fa-file-import"></i> <span data-i18n="labelme.csvImportConfirm">Import with mapping</span></button>
+                  <button type="button" class="btn btn-secondary" id="btn-cancel-csv-import"><span data-i18n="labelme.csvImportCancel">Cancel</span></button>
+                </div>
+              </div>
             </section>
 
             <section class="panel-section labelme-workspace-panel">

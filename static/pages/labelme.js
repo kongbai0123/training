@@ -3,6 +3,8 @@ import { appState, getProjectStatus, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, setText, setHTML, escapeHtml, copyText, collectDroppedFiles, colorForLabel } from "../utils.js";
 
+let pendingAnnotationFiles = [];
+
 export function initLabelMe() {
   eventBus.on("language-changed", () => renderLabelMeManager(getProjectStatus(appState.currentProject)));
   qs("#btn-open-labelme")?.addEventListener("click", openExternalLabelMe);
@@ -13,6 +15,8 @@ export function initLabelMe() {
     syncLabelMeLabels(false);
   });
   qs("#btn-apply-annotation-import")?.addEventListener("click", applyLatestAnnotationImport);
+  qs("#btn-confirm-csv-import")?.addEventListener("click", confirmCsvMappedImport);
+  qs("#btn-cancel-csv-import")?.addEventListener("click", clearCsvMappingWizard);
   qs("#btn-copy-images-path")?.addEventListener("click", () => copyText(qs("#labelme-images-path")?.textContent));
   qs("#btn-copy-json-path")?.addEventListener("click", () => copyText(qs("#labelme-json-path")?.textContent));
   qs("#btn-copy-labelme-command")?.addEventListener("click", () => copyText(qs("#labelme-command")?.textContent));
@@ -110,16 +114,16 @@ async function handleAnnotationUpload(files) {
   const allFiles = [...files];
   const validFiles = allFiles.filter((file) => {
     const name = file.name.toLowerCase();
-    return name.endsWith(".json") || name.endsWith(".txt") || name.endsWith(".csv");
+    return name.endsWith(".json") || name.endsWith(".txt") || name.endsWith(".csv") || name.endsWith(".xml");
   });
   const ignoredFiles = allFiles.length - validFiles.length;
 
   if (ignoredFiles > 0) {
-    eventBus.emit("toast", `Ignored ${ignoredFiles} unsupported files. Only JSON, TXT, and CSV annotation files are accepted.`);
+    eventBus.emit("toast", `Ignored ${ignoredFiles} unsupported files. Only JSON, TXT, CSV, and XML annotation files are accepted.`);
   }
 
   if (validFiles.length === 0) {
-    eventBus.emit("toast", "No .json, .txt, or .csv annotation files found.");
+    eventBus.emit("toast", "No .json, .txt, .csv, or .xml annotation files found.");
     return;
   }
 
@@ -128,11 +132,22 @@ async function handleAnnotationUpload(files) {
     return;
   }
 
+  const csvFile = validFiles.find((file) => file.name.toLowerCase().endsWith(".csv"));
+  if (csvFile) {
+    await showCsvMappingWizard(validFiles, csvFile);
+    return;
+  }
+
+  await uploadAnnotationFiles(validFiles);
+}
+
+async function uploadAnnotationFiles(validFiles, csvMapping = null) {
   eventBus.emit("toast", `Uploading ${validFiles.length} annotation files...`);
 
   try {
     const formData = new FormData();
     validFiles.forEach((file) => formData.append("files", file, file.name));
+    if (csvMapping) formData.append("csv_mapping", JSON.stringify(csvMapping));
 
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-annotations`, {
       method: "POST",
@@ -140,11 +155,99 @@ async function handleAnnotationUpload(files) {
     });
 
     appState.latestAnnotationImport = data.report || null;
-    eventBus.emit("toast", `Import complete. JSON: ${data.imported_jsons || 0}, TXT: ${data.imported_txts || 0}, CSV: ${data.imported_csv || 0}, converted: ${data.converted || 0}.`);
+    eventBus.emit("toast", `Import complete. JSON: ${data.imported_jsons || 0}, COCO: ${data.imported_coco_json || 0}, TXT: ${data.imported_txts || 0}, CSV: ${data.imported_csv || 0}, XML: ${data.imported_xml || 0}, converted: ${data.converted || 0}.`);
     eventBus.emit("refresh-project");
   } catch (err) {
     eventBus.emit("toast", `Annotation import failed: ${err.message}`);
   }
+}
+
+async function showCsvMappingWizard(files, csvFile) {
+  const wizard = qs("#csv-mapping-wizard");
+  const grid = qs("#csv-mapping-grid");
+  if (!wizard || !grid) {
+    await uploadAnnotationFiles(files);
+    return;
+  }
+
+  const text = await csvFile.text();
+  const firstLine = text.split(/\r?\n/).find((line) => line.trim());
+  const headers = parseCsvHeader(firstLine || "");
+  if (headers.length === 0) {
+    eventBus.emit("toast", "CSV header row is empty. Import cancelled.");
+    return;
+  }
+
+  pendingAnnotationFiles = files;
+  const fields = [
+    ["filename", "Image filename", ["filename", "image", "imagePath", "file_name"]],
+    ["label", "Label", ["label", "class", "category", "name"]],
+    ["xmin", "X min", ["xmin", "x_min", "left"]],
+    ["ymin", "Y min", ["ymin", "y_min", "top"]],
+    ["xmax", "X max", ["xmax", "x_max", "right"]],
+    ["ymax", "Y max", ["ymax", "y_max", "bottom"]],
+    ["points", "Polygon points", ["points", "polygon", "segmentation"]]
+  ];
+  setHTML("#csv-mapping-grid", fields.map(([key, label, aliases]) => {
+    const selected = guessCsvColumn(headers, aliases);
+    return `
+      <label class="csv-map-field">
+        <span>${escapeHtml(label)}</span>
+        <select data-csv-map="${escapeHtml(key)}">
+          <option value="">--</option>
+          ${headers.map((header) => `<option value="${escapeHtml(header)}" ${header === selected ? "selected" : ""}>${escapeHtml(header)}</option>`).join("")}
+        </select>
+      </label>
+    `;
+  }).join(""));
+  wizard.hidden = false;
+  eventBus.emit("toast", "CSV detected. Please confirm column mapping before import.");
+}
+
+function parseCsvHeader(line) {
+  const headers = [];
+  let current = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (char === '"') {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      headers.push(current.trim().replace(/^"|"$/g, ""));
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  if (current || line.endsWith(",")) headers.push(current.trim().replace(/^"|"$/g, ""));
+  return headers.filter(Boolean);
+}
+
+function guessCsvColumn(headers, aliases) {
+  const normalized = headers.map((header) => [header, header.toLowerCase().replace(/[\s-]/g, "_")]);
+  for (const alias of aliases) {
+    const match = normalized.find(([, normalizedHeader]) => normalizedHeader === alias.toLowerCase());
+    if (match) return match[0];
+  }
+  return "";
+}
+
+async function confirmCsvMappedImport() {
+  if (!pendingAnnotationFiles.length) return;
+  const mapping = {};
+  qsa("[data-csv-map]").forEach((select) => {
+    if (select.value) mapping[select.dataset.csvMap] = select.value;
+  });
+  clearCsvMappingWizard(false);
+  await uploadAnnotationFiles(pendingAnnotationFiles, mapping);
+  pendingAnnotationFiles = [];
+}
+
+function clearCsvMappingWizard(clearPending = true) {
+  const wizard = qs("#csv-mapping-wizard");
+  if (wizard) wizard.hidden = true;
+  setHTML("#csv-mapping-grid", "");
+  if (clearPending) pendingAnnotationFiles = [];
 }
 
 async function applyLatestAnnotationImport() {
@@ -382,10 +485,13 @@ function renderAnnotationImportReport() {
     [t("labelme.import.metric.txt"), report.yolo_txt || 0],
     [t("labelme.import.metric.csv"), report.csv || 0],
     [t("labelme.import.metric.json"), report.labelme_json || 0],
+    ["COCO JSON", report.coco_json || 0],
+    ["VOC XML", report.voc_xml || 0],
     [t("labelme.import.metric.converted"), converted],
     [t("labelme.import.metric.failed"), failed]
   ];
-  const issueRows = [...errors, ...warnings].slice(0, 6);
+  const issueRows = [...errors, ...warnings];
+  const convertedFiles = report.converted_files || [];
 
   setHTML("#annotation-import-report", `
     <div class="annotation-import-summary">
@@ -400,14 +506,35 @@ function renderAnnotationImportReport() {
       <span>${escapeHtml(t("labelme.importReportId"))}: <code>${escapeHtml(report.import_id)}</code></span>
       <span>${escapeHtml(t("labelme.importReportCreated"))}: ${escapeHtml(report.created_at || "--")}</span>
     </div>
+    <details class="annotation-import-details">
+      <summary>View detailed report</summary>
+      <div class="table-wrap compact-table">
+        <table class="data-table">
+          <thead>
+            <tr><th>Output</th><th>Source</th><th>Format</th><th>Shapes</th></tr>
+          </thead>
+          <tbody>
+            ${convertedFiles.length ? convertedFiles.map((item) => `
+              <tr>
+                <td><code>${escapeHtml(item.file || "--")}</code></td>
+                <td>${escapeHtml(item.source_file || "--")}</td>
+                <td>${escapeHtml(item.source_format || "--")}</td>
+                <td>${escapeHtml(item.shape_count ?? "--")}</td>
+              </tr>
+            `).join("") : `<tr><td colspan="4">No converted files.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </details>
     ${issueRows.length ? `
       <div class="annotation-import-issues">
-        ${issueRows.map((item) => `
+        ${issueRows.slice(0, 12).map((item) => `
           <div class="summary-warning-item">
             <strong>${escapeHtml(item.file || "--")}</strong>
             <span>${escapeHtml(item.message || "")}</span>
           </div>
         `).join("")}
+        ${issueRows.length > 12 ? `<p class="form-hint">Showing 12 of ${issueRows.length} issues. See import_report.json for the full list.</p>` : ""}
       </div>
     ` : `<p class="form-hint ready">${escapeHtml(t("labelme.importReportNoIssues"))}</p>`}
   `);

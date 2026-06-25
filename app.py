@@ -1431,7 +1431,7 @@ def import_zip_dataset(project_id: str, file: UploadFile = File(...)):
             shutil.rmtree(temp_zip_dir)
 
 @app.post("/api/projects/{project_id}/import-annotations")
-def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
+def import_annotations(project_id: str, files: List[UploadFile] = File(...), csv_mapping: Optional[str] = Form(None)):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -1443,6 +1443,14 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
     temp_dir = layout.tmp_dir / "annotation_import_uploads" / import_id
     temp_dir.mkdir(parents=True, exist_ok=True)
     staged_files: List[Path] = []
+    parsed_csv_mapping: Optional[Dict[str, str]] = None
+    if csv_mapping:
+        try:
+            parsed_csv_mapping = json.loads(csv_mapping)
+            if not isinstance(parsed_csv_mapping, dict):
+                raise ValueError("csv_mapping must be a JSON object")
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid csv_mapping: {exc}")
 
     try:
         for file in files:
@@ -1451,7 +1459,7 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
                 continue
             
             try:
-                validate_extension(original_name, {".json", ".txt", ".csv"})
+                validate_extension(original_name, {".json", ".txt", ".csv", ".xml"})
                 cleaned_name = safe_filename(original_name)
             except ValueError as ve:
                 raise HTTPException(status_code=400, detail=str(ve))
@@ -1464,7 +1472,7 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
                 shutil.copyfileobj(file.file, buffer)
             staged_files.append(target_path)
 
-        report = AnnotationImporter.import_files(project, staged_files, import_id=import_id)
+        report = AnnotationImporter.import_files(project, staged_files, import_id=import_id, csv_mapping=parsed_csv_mapping)
         project["last_annotation_import"] = report
         ProjectManager.save_project(project_id, project)
 
@@ -1474,6 +1482,8 @@ def import_annotations(project_id: str, files: List[UploadFile] = File(...)):
             "imported_jsons": report.get("labelme_json", 0),
             "imported_txts": report.get("yolo_txt", 0),
             "imported_csv": report.get("csv", 0),
+            "imported_xml": report.get("voc_xml", 0),
+            "imported_coco_json": report.get("coco_json", 0),
             "converted": report.get("converted", 0),
             "failed": report.get("failed", 0),
             "report": report,
