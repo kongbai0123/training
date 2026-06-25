@@ -1,5 +1,6 @@
-import { appState } from "../state.js";
+import { appState, t } from "../state.js";
 import { apiFetch } from "../api.js";
+import { eventBus } from "../event_bus.js";
 import { qs, qsa, setHTML, setText, escapeHtml, showToast } from "../utils.js";
 
 let selectedAutoLabelModelId = "";
@@ -12,6 +13,7 @@ export function initAutoLabeling() {
   initModelImportDropZone();
   initSourceOptions();
   initModelSourceTabs();
+  eventBus.on("language-changed", () => renderAutoLabelingPage());
 }
 
 export function renderAutoLabelingPage(status) {
@@ -68,14 +70,14 @@ function initModelImportDropZone() {
     if (!file) return;
     const name = String(file.name || "");
     if (!/\.(pt|onnx)$/i.test(name)) {
-      status.textContent = "\u53ea\u63a5\u53d7 .pt \u6216 .onnx \u6a21\u578b\u6a94\u3002";
+      status.textContent = t("autoLabel.toast.invalidModel");
       registerButton?.setAttribute("disabled", "disabled");
-      showToast("\u6a21\u578b\u532f\u5165\u53ea\u63a5\u53d7 .pt \u6216 .onnx \u6a94\u3002");
+      showToast(t("autoLabel.toast.invalidModel"));
       return;
     }
-    status.textContent = `${name} (${formatBytes(file.size)}) \u5df2\u9078\u64c7\uff0c\u7b49\u5f85\u5f8c\u7aef Register API\u3002`;
+    status.textContent = `${name} (${formatBytes(file.size)}) ${t("autoLabel.toast.selectedModel")}`;
     registerButton?.setAttribute("disabled", "disabled");
-    showToast("\u5df2\u9078\u64c7\u6a21\u578b\u6a94\uff1b\u76ee\u524d\u53ea\u5b8c\u6210\u532f\u5165 UI\uff0c\u5c1a\u672a\u5beb\u5165 Model Registry\u3002");
+    showToast(t("autoLabel.toast.selectedModel"));
   };
 
   browseButton?.addEventListener("click", () => fileInput.click());
@@ -123,7 +125,7 @@ async function loadAutoLabelModels(force) {
     selectedAutoLabelModelId = "";
     setHTML("#auto-label-model-list", `
       <div class="empty-state">
-        <strong>Model Registry \u8f09\u5165\u5931\u6557</strong>
+        <strong>${escapeHtml(t("autoLabel.modelLoadFailed"))}</strong>
         <p>${escapeHtml(err.message)}</p>
       </div>
     `);
@@ -148,18 +150,18 @@ function renderStartReason(status = null) {
   const reason = qs("#auto-start-reason");
   if (!reason) return;
   if (!status?.hasProject) {
-    reason.textContent = "\u8acb\u5148\u5efa\u7acb\u6216\u958b\u555f\u5c08\u6848\u3002";
+    reason.textContent = t("autoLabel.startReason.noProject");
     return;
   }
   if (!status?.hasDataset) {
-    reason.textContent = "\u8acb\u5148\u5728 Dataset \u532f\u5165\u5f71\u50cf\u8cc7\u6599\u3002";
+    reason.textContent = t("autoLabel.startReason.noDataset");
     return;
   }
   if (!(appState.models || []).length) {
-    reason.textContent = "\u5c1a\u672a\u627e\u5230\u53ef\u7528\u6b0a\u91cd\uff1b\u8acb\u5148\u5b8c\u6210 Training\uff0c\u6216\u7b49\u5f85\u5916\u90e8\u6a21\u578b Register API\u3002";
+    reason.textContent = t("autoLabel.startReason.noModel");
     return;
   }
-  reason.textContent = "\u5f8c\u7aef\u81ea\u52d5\u6a19\u8a3b API \u5c1a\u672a\u63a5\u5165\uff1b\u76ee\u524d\u5148\u5b8c\u6210\u5b89\u5168\u5de5\u4f5c\u6d41\u4ecb\u9762\u3002";
+  reason.textContent = t("autoLabel.startReason.apiPending");
 }
 
 function renderAutoLabelModelList(status = null) {
@@ -167,12 +169,12 @@ function renderAutoLabelModelList(status = null) {
   if (!container) return;
 
   if (!appState.currentProjectId) {
-    setHTML("#auto-label-model-list", `<div class="empty-state">\u8acb\u5148\u5efa\u7acb\u6216\u958b\u555f\u5c08\u6848\u3002</div>`);
+    setHTML("#auto-label-model-list", `<div class="empty-state">${escapeHtml(t("autoLabel.startReason.noProject"))}</div>`);
     return;
   }
 
   if (loadingModels) {
-    setHTML("#auto-label-model-list", `<div class="empty-state">\u6b63\u5728\u6383\u63cf\u53ef\u7528\u6a21\u578b\u6b0a\u91cd...</div>`);
+    setHTML("#auto-label-model-list", `<div class="empty-state">${escapeHtml(t("autoLabel.modelLoading"))}</div>`);
     return;
   }
 
@@ -182,8 +184,8 @@ function renderAutoLabelModelList(status = null) {
   if (!models.length) {
     setHTML("#auto-label-model-list", `
       <div class="empty-state">
-        <strong>No trained weights found.</strong>
-        <p>\u8acb\u5148\u5b8c\u6210 Training\uff0cModel Registry \u624d\u80fd\u6383\u63cf best.pt \u6216 last.pt\u3002</p>
+        <strong>${escapeHtml(t("autoLabel.noWeights"))}</strong>
+        <p>${escapeHtml(t("autoLabel.noWeightsHelp"))}</p>
       </div>
     `);
     return;
@@ -191,9 +193,9 @@ function renderAutoLabelModelList(status = null) {
 
   const projectTask = status?.taskType || appState.currentProject?.task_type || "";
   const groups = [
-    ["best", "Recommended project model (best.pt)", "\u9a57\u8b49\u8868\u73fe\u6700\u4f73\uff0c\u5efa\u8b70\u512a\u5148\u7528\u65bc\u81ea\u52d5\u6a19\u8a3b\u3002"],
-    ["last", "Alternative checkpoint (last.pt)", "\u6700\u5f8c\u4e00\u6b21 checkpoint\uff0c\u9069\u5408\u6aa2\u67e5\u6700\u65b0\u8a13\u7df4\u72c0\u614b\uff0c\u4e0d\u4e00\u5b9a\u662f\u6700\u4f73\u6a21\u578b\u3002"],
-    ["other", "Other weights", "\u5176\u4ed6\u53ef\u7528\u6b0a\u91cd\u3002"],
+    ["best", t("autoLabel.model.best"), t("autoLabel.model.bestHelp")],
+    ["last", t("autoLabel.model.last"), t("autoLabel.model.lastHelp")],
+    ["other", t("autoLabel.model.other"), t("autoLabel.model.otherHelp")],
   ];
 
   const groupedHtml = groups.map(([type, title, description]) => {
@@ -228,8 +230,8 @@ function renderModelButton(model, projectTask) {
   const compatible = isModelCompatible(projectTask, model.task_type);
   const weightType = String(model.weight_type || "").toLowerCase();
   const badgeText = compatible
-    ? (weightType === "last" ? "Checkpoint" : "Recommended")
-    : "Task mismatch";
+    ? (weightType === "last" ? t("autoLabel.model.checkpoint") : t("autoLabel.model.recommended"))
+    : t("autoLabel.model.mismatch");
   return `
     <button type="button" class="model-registry-item ${selected} ${weightType === "last" ? "checkpoint" : ""}" data-auto-model-id="${escapeHtml(model.model_id)}">
       <div class="model-registry-main">

@@ -1,5 +1,5 @@
 import { eventBus } from "../event_bus.js";
-import { appState } from "../state.js";
+import { appState, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, setText, setHTML, escapeHtml } from "../utils.js";
 
@@ -19,7 +19,7 @@ export function initSplit() {
     const val = Number(qs("#input-ratio-val").value) / 100;
     const test = Number(qs("#input-ratio-test").value) / 100;
     if (Math.abs(train + val + test - 1) > 0.01) {
-      eventBus.emit("toast", "Train / Val / Test 比例總和必須為 100%");
+      eventBus.emit("toast", t("split.toast.ratio"));
       return;
     }
     try {
@@ -32,10 +32,10 @@ export function initSplit() {
         })
       });
       renderSplitReportUI(data.report);
-      eventBus.emit("toast", "資料分散完成");
+      eventBus.emit("toast", t("split.toast.done"));
       eventBus.emit("refresh-project");
     } catch (err) {
-      eventBus.emit("toast", `資料分散失敗：${err.message}`);
+      eventBus.emit("toast", t("split.toast.failed", { message: err.message }));
     }
   });
 }
@@ -52,8 +52,8 @@ function renderSplitReportUI(report) {
   if (!report) return;
   setHTML("#split-report-card", `
     <div class="status-guard ${report.score >= 80 ? "success" : report.score >= 50 ? "warning" : "danger"}">
-      <div class="guard-title">Split quality score: ${escapeHtml(report.score ?? "--")}</div>
-      <ul>${(report.warnings || ["沒有明顯警告"]).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      <div class="guard-title">${escapeHtml(t("split.report.score", { score: report.score ?? "--" }))}</div>
+      <ul>${(report.warnings || [t("split.report.noWarnings")]).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
     </div>
   `);
 }

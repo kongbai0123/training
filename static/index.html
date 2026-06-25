@@ -383,20 +383,20 @@
         <section class="page" id="page-split">
           <div class="page-header">
             <div>
-              <h1>Split Manager</h1>
-              <p>設定 Train / Val / Test。可進入頁面，但執行 split 前會檢查資料與標註狀態。</p>
+              <h1 data-i18n="split.title">Split Manager</h1>
+              <p data-i18n="split.subtitle">Create Train / Val / Test splits and check split quality and leakage risk.</p>
             </div>
           </div>
           <section class="panel-section narrow-form">
-            <div class="section-title"><h2>Train / Val / Test</h2></div>
+            <div class="section-title"><h2 data-i18n="split.formTitle">Train / Val / Test Settings</h2></div>
             <form id="form-split-dataset" class="form-stack">
               <label>
-                <span>Split method <span class="info-icon" data-tooltip="Stratified Split 盡量維持各類別在 Train / Val / Test 中的比例。Group Split 依影片或來源分組，降低 dataset leakage。">i</span></span>
+                <span><span data-i18n="split.method">Split method</span> <span class="info-icon" data-tooltip="Stratified Split keeps class balance where possible. Group Split keeps source groups together to reduce dataset leakage." data-i18n-tooltip="split.methodTooltip">i</span></span>
                 <select id="split-method">
-                  <option value="stratified">Class-balanced Stratified Split</option>
-                  <option value="group">Group Split</option>
-                  <option value="scene">Scene-aware Split</option>
-                  <option value="basic">Basic Random</option>
+                  <option value="stratified" data-i18n="split.method.stratified">Class-balanced Stratified Split</option>
+                  <option value="group" data-i18n="split.method.group">Group Split</option>
+                  <option value="scene" data-i18n="split.method.scene">Scene-aware Split</option>
+                  <option value="basic" data-i18n="split.method.basic">Basic Random</option>
                 </select>
               </label>
               <div class="ratio-grid">
@@ -404,8 +404,8 @@
                 <label><span>Val</span><input type="number" id="input-ratio-val" value="20" min="5" max="45"></label>
                 <label><span>Test</span><input type="number" id="input-ratio-test" value="10" min="5" max="45"></label>
               </div>
-              <div class="split-ratio-total">Total <strong id="split-ratio-total">100%</strong></div>
-              <button type="submit" class="btn btn-primary guarded" data-requires="dataset" id="btn-run-split"><i class="fa-solid fa-code-branch"></i> Run Split</button>
+              <div class="split-ratio-total"><span data-i18n="split.total">Total</span> <strong id="split-ratio-total">100%</strong></div>
+              <button type="submit" class="btn btn-primary guarded" data-requires="dataset" id="btn-run-split"><i class="fa-solid fa-code-branch"></i> <span data-i18n="split.run">Run Split</span></button>
             </form>
             <div id="split-report-card" class="report-box"></div>
           </section>
@@ -556,16 +556,39 @@
                     <span data-i18n="training.runName">Run Name</span>
                     <input type="text" id="train-run-id-input" placeholder="Optional, for example run_YYYYMMDD_HHMMSS" data-i18n-placeholder="training.runNamePlaceholder">
                   </label>
-                  <label>
-                    <span><span data-i18n="training.model">Model</span> <span class="info-icon" data-tooltip="Select a model compatible with the current project task. Segmentation projects should use a segmentation model." data-i18n-tooltip="training.modelTooltip">i</span></span>
-                    <select id="train-model">
-                      <option value="yolov8n-seg.pt">YOLOv8n Segmentation (Recommended)</option>
-                      <option value="yolov8s-seg.pt">YOLOv8s Segmentation</option>
-                      <option value="yolov8m-seg.pt">YOLOv8m Segmentation</option>
-                      <option value="yolov8n.pt">YOLOv8n (Detection only)</option>
-                      <option value="yolov8s.pt">YOLOv8s (Detection only)</option>
-                    </select>
-                  </label>
+                  <div class="training-model-registry-shell">
+                    <div class="model-registry-header">
+                      <div>
+                        <strong data-i18n="training.modelRegistry.title">Model Registry Preview</strong>
+                        <span data-i18n="training.modelRegistry.subtitle">This is the future Model Registry selector skeleton. Training still uses the built-in model list in this phase.</span>
+                      </div>
+                      <button type="button" class="btn btn-secondary btn-sm" id="btn-training-open-model-hub" disabled data-i18n="training.modelRegistry.openHub">Open Model Hub</button>
+                    </div>
+                    <label>
+                      <span><span data-i18n="training.model">Model</span> <span class="info-icon" data-tooltip="Select a model compatible with the current project task. Segmentation projects should use a segmentation model." data-i18n-tooltip="training.modelTooltip">i</span></span>
+                      <select id="train-model">
+                        <option value="yolov8n-seg.pt">YOLOv8n Segmentation (Recommended)</option>
+                        <option value="yolov8s-seg.pt">YOLOv8s Segmentation</option>
+                        <option value="yolov8m-seg.pt">YOLOv8m Segmentation</option>
+                        <option value="yolov8n.pt">YOLOv8n (Detection only)</option>
+                        <option value="yolov8s.pt">YOLOv8s (Detection only)</option>
+                      </select>
+                    </label>
+                    <div class="training-model-registry-card" id="training-model-registry-card">
+                      <div class="model-registry-main">
+                        <span data-i18n="training.modelRegistry.selected">Selected</span>
+                        <strong id="training-model-selected-name">--</strong>
+                      </div>
+                      <div class="model-registry-meta-grid">
+                        <div><span data-i18n="training.modelRegistry.source">Source</span><code data-i18n="training.modelRegistry.sourceBuiltIn">Built-in candidate</code></div>
+                        <div><span data-i18n="training.modelRegistry.backend">Backend</span><code>Ultralytics</code></div>
+                        <div><span data-i18n="training.modelRegistry.task">Task</span><code id="training-model-task">--</code></div>
+                        <div><span data-i18n="training.modelRegistry.license">License status</span><code data-i18n="training.modelRegistry.licenseReview">Commercial license review required</code></div>
+                      </div>
+                      <div class="model-registry-note" id="training-model-compatibility">--</div>
+                      <div class="form-hint" data-i18n="training.modelRegistry.hubPending">Model Hub and custom model import will be connected in the next phase. This phase only adds the selector skeleton.</div>
+                    </div>
+                  </div>
                   <label>
                     <span data-i18n="training.profile">Training Profile</span>
                     <select id="train-profile">
@@ -819,13 +842,13 @@
         <section class="page" id="page-evaluation">
           <div class="page-header">
             <div>
-              <h1>Evaluation Console</h1>
-              <p>保留評估入口；完整 mAP、IoU、confusion matrix 後續接回模型結果。</p>
+              <h1 data-i18n="evaluation.title">Evaluation Console</h1>
+              <p data-i18n="evaluation.subtitle">Review model evaluation results including mAP, IoU, Precision, Recall, and plots.</p>
             </div>
           </div>
           <div class="metric-grid">
-            <div class="metric-card"><span>mAP <span class="info-icon" data-tooltip="mAP 衡量模型偵測結果與標註答案的整體吻合程度。">i</span></span><strong id="eval-map50">--</strong></div>
-            <div class="metric-card"><span>IoU <span class="info-icon" data-tooltip="IoU 是預測區域與標註區域的重疊比例。">i</span></span><strong id="eval-iou">--</strong></div>
+            <div class="metric-card"><span>mAP <span class="info-icon" data-tooltip="mAP measures how well model predictions match annotated ground truth overall." data-i18n-tooltip="evaluation.mapTooltip">i</span></span><strong id="eval-map50">--</strong></div>
+            <div class="metric-card"><span>IoU <span class="info-icon" data-tooltip="IoU is the overlap ratio between prediction and annotation areas." data-i18n-tooltip="evaluation.iouTooltip">i</span></span><strong id="eval-iou">--</strong></div>
             <div class="metric-card"><span>Precision</span><strong id="eval-precision">--</strong></div>
             <div class="metric-card"><span>Recall</span><strong id="eval-recall">--</strong></div>
           </div>
@@ -936,219 +959,154 @@
         <section class="page" id="page-auto-labeling">
           <div class="page-header">
             <div>
-              <h1>Auto-Labeling Console</h1>
-              <p>Generate draft annotations from project models, review them, and safely apply accepted labels.</p>
+              <h1 data-i18n="autoLabel.title">Auto-Labeling Console</h1>
+              <p data-i18n="autoLabel.subtitle">Generate draft annotations from project models, review them, and safely apply accepted labels.</p>
             </div>
             <div class="page-actions">
               <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-auto-label-models">
-                <i class="fa-solid fa-rotate"></i> Refresh Models
+                <i class="fa-solid fa-rotate"></i> <span data-i18n="autoLabel.refreshModels">Refresh Models</span>
               </button>
             </div>
           </div>
 
           <div class="auto-label-status-strip">
-            <div class="metric-card"><span>Unlabeled images</span><strong id="auto-stat-unlabeled">--</strong></div>
-            <div class="metric-card"><span>Draft annotations</span><strong id="auto-stat-drafts">0</strong></div>
-            <div class="metric-card"><span>Available models</span><strong id="auto-stat-models">--</strong></div>
-            <div class="metric-card"><span>Review queue</span><strong id="auto-stat-review">0</strong></div>
-            <div class="metric-card"><span>Target</span><strong>Draft only</strong></div>
+            <div class="metric-card"><span data-i18n="autoLabel.stat.unlabeled">Unlabeled images</span><strong id="auto-stat-unlabeled">--</strong></div>
+            <div class="metric-card"><span data-i18n="autoLabel.stat.drafts">Draft annotations</span><strong id="auto-stat-drafts">0</strong></div>
+            <div class="metric-card"><span data-i18n="autoLabel.stat.models">Available models</span><strong id="auto-stat-models">--</strong></div>
+            <div class="metric-card"><span data-i18n="autoLabel.stat.review">Review queue</span><strong id="auto-stat-review">0</strong></div>
+            <div class="metric-card"><span data-i18n="autoLabel.stat.target">Target</span><strong data-i18n="autoLabel.draftOnly">Draft only</strong></div>
           </div>
 
           <div class="status-guard info compact-guard">
-            <div class="guard-title">Auto-Labeling &#24037;&#20316;&#21407;&#21063;</div>
+            <div class="guard-title" data-i18n="autoLabel.principleTitle">Auto-Labeling workflow rules</div>
             <ul>
-              <li>&#27492;&#38913;&#29992;&#20358;&#24314;&#31435; draft annotation job&#65292;&#19981;&#26159;&#27169;&#22411;&#28204;&#35430;&#38913;&#65292;&#20063;&#19981;&#26159; LabelMe &#26367;&#20195;&#21697;&#12290;</li>
-              <li>P0 &#38542;&#27573;&#25152;&#26377;&#36664;&#20986;&#19968;&#24459;&#23531;&#20837; drafts&#65292;&#19981;&#26371;&#30452;&#25509;&#35206;&#33995; annotations/current&#12290;</li>
-              <li>best.pt &#33287; last.pt &#20173;&#20445;&#30041;&#22312; training/runs/*/weights&#65292;&#20171;&#38754;&#21482;&#20570;&#24314;&#35696;&#27402;&#37325;&#33287; checkpoint &#20998;&#39006;&#12290;</li>
+              <li data-i18n="autoLabel.principle1">This page creates draft annotation jobs. It is not a model test page or a LabelMe replacement.</li>
+              <li data-i18n="autoLabel.principle2">In P0, all outputs are written to drafts and never overwrite annotations/current directly.</li>
+              <li data-i18n="autoLabel.principle3">best.pt and last.pt remain in training/runs/*/weights; the UI only groups recommended weights and checkpoints.</li>
             </ul>
           </div>
 
           <div class="auto-label-workbench">
             <section class="panel-section auto-job-builder">
               <div class="section-title">
-                <h2>Create Draft Job</h2>
-                <span class="info-icon" data-tooltip="Create Draft Job;&#33258;&#21205;&#27161;&#35387;&#30340;&#26680;&#24515;&#26159;&#26367;&#26410;&#27161;&#35387;&#25110;&#38656;&#35079;&#26597;&#36039;&#26009;&#29986;&#29983;&#33609;&#31295;&#27161;&#35387;&#12290;&#38918;&#24207;&#25033;&#26159;&#20808;&#36984;&#36039;&#26009;&#20358;&#28304;&#65292;&#20877;&#36984;&#27169;&#22411;&#65292;&#20877;&#35373;&#23450;&#33609;&#31295;&#35215;&#21063;&#12290;">i</span>
+                <h2 data-i18n="autoLabel.createJob">Create Draft Job</h2>
+                <span class="info-icon" data-tooltip="Create draft annotations from input source, model source, and draft rules." data-i18n-tooltip="autoLabel.principle1">i</span>
               </div>
 
               <div class="auto-step-block active">
-                <div class="auto-step-heading"><span>1</span><strong>Input Source</strong></div>
+                <div class="auto-step-heading"><span>1</span><strong data-i18n="autoLabel.step.input">Input Source</strong></div>
                 <div class="source-option-grid auto-source-grid">
-                  <button type="button" class="source-option active" data-auto-source="unlabeled">
-                    <i class="fa-solid fa-image"></i>
-                    <strong>Unlabeled images</strong>
-                    <span>&#27794;&#26377;&#26377;&#25928; LabelMe JSON &#30340;&#24433;&#20687;</span>
-                  </button>
-                  <button type="button" class="source-option" data-auto-source="invalid-json">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <strong>Invalid annotations</strong>
-                    <span>JSON &#32570;&#22833;&#12289;&#31354;&#27161;&#35387;&#25110;&#38656;&#35079;&#26597;</span>
-                  </button>
-                  <button type="button" class="source-option disabled" disabled>
-                    <i class="fa-solid fa-folder-open"></i>
-                    <strong>Selected folder</strong>
-                    <span>Phase 2</span>
-                  </button>
+                  <button type="button" class="source-option active" data-auto-source="unlabeled"><i class="fa-solid fa-image"></i><strong data-i18n="autoLabel.source.unlabeled">Unlabeled images</strong><span data-i18n="autoLabel.source.unlabeledHelp">Images without valid LabelMe JSON</span></button>
+                  <button type="button" class="source-option" data-auto-source="invalid-json"><i class="fa-solid fa-triangle-exclamation"></i><strong data-i18n="autoLabel.source.invalid">Invalid annotations</strong><span data-i18n="autoLabel.source.invalidHelp">Missing JSON, empty annotations, or items that need review</span></button>
+                  <button type="button" class="source-option disabled" disabled><i class="fa-solid fa-folder-open"></i><strong data-i18n="autoLabel.source.folder">Selected folder</strong><span>Phase 2</span></button>
                 </div>
-                <div class="drop-zone compact disabled-drop source-drop-preview">
-                  <i class="fa-solid fa-cloud-arrow-up"></i>
-                  <strong>Drop images or folder here</strong>
-                  <span>&#36039;&#26009;&#20358;&#28304;&#25302;&#26355;&#26371;&#22312; upload / folder scan API &#25509;&#20837;&#24460;&#21855;&#29992;&#12290;</span>
-                </div>
+                <div class="drop-zone compact disabled-drop source-drop-preview"><i class="fa-solid fa-cloud-arrow-up"></i><strong data-i18n="autoLabel.dropSource">Drop images or folder here</strong><span data-i18n="autoLabel.dropSourceHelp">Source drag-and-drop will be enabled after upload / folder scan APIs are connected.</span></div>
               </div>
 
               <div class="auto-step-block">
-                <div class="auto-step-heading"><span>2</span><strong>Model Source</strong></div>
+                <div class="auto-step-heading"><span>2</span><strong data-i18n="autoLabel.step.model">Model Source</strong></div>
                 <div class="model-source-tabs">
-                  <button type="button" class="model-source-tab active" data-model-source="project">Project model</button>
-                  <button type="button" class="model-source-tab" data-model-source="external">External model</button>
-                  <button type="button" class="model-source-tab" disabled>Foundation model ? Phase 2</button>
+                  <button type="button" class="model-source-tab active" data-model-source="project" data-i18n="autoLabel.model.project">Project model</button>
+                  <button type="button" class="model-source-tab" data-model-source="external" data-i18n="autoLabel.model.external">External model</button>
+                  <button type="button" class="model-source-tab" disabled data-i18n="autoLabel.model.foundation">Foundation model ? Phase 2</button>
                 </div>
                 <div id="auto-label-model-list" class="model-registry-list grouped"></div>
                 <details class="advanced-collapse model-import-collapse">
-                  <summary>External model import</summary>
+                  <summary data-i18n="autoLabel.importExternal">External model import</summary>
                   <label class="drop-zone model-drop-zone" id="auto-model-drop-zone" for="auto-model-file-input">
                     <input type="file" id="auto-model-file-input" accept=".pt,.onnx" hidden>
                     <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <strong>Drop .pt / .onnx model here</strong>
-                    <span id="auto-model-drop-status">&#25302;&#26355;&#27169;&#22411;&#27284;&#21040;&#27492;&#34389;&#65292;&#25110;&#40670;&#25802;&#36984;&#25799;&#27169;&#22411;&#27284;&#12290;</span>
+                    <strong data-i18n="autoLabel.dropModel">Drop .pt / .onnx model here</strong>
+                    <span id="auto-model-drop-status" data-i18n="autoLabel.dropModelHelp">Drop a model file here, or click to choose a model file.</span>
                   </label>
                   <div class="model-import-actions">
-                    <button class="btn btn-secondary btn-sm" id="btn-browse-auto-model" type="button">Browse Model</button>
-                    <button class="btn btn-secondary btn-sm" id="btn-register-auto-model" type="button" disabled>Register Model</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-browse-auto-model" type="button" data-i18n="autoLabel.browseModel">Browse Model</button>
+                    <button class="btn btn-secondary btn-sm" id="btn-register-auto-model" type="button" disabled data-i18n="autoLabel.registerModel">Register Model</button>
                   </div>
-                  <p class="muted-note">&#22806;&#37096;&#27169;&#22411;&#38656;&#27298;&#26597; task type&#12289;class map &#33287;&#27402;&#37325;&#23433;&#20840;&#24615;&#12290;P0 &#21482;&#20445;&#30041; UI&#12290;</p>
+                  <p class="muted-note" data-i18n="autoLabel.importNote">External models require task type, class map, and weight safety checks. P0 keeps UI only.</p>
                 </details>
               </div>
 
               <div class="auto-step-block">
-                <div class="auto-step-heading"><span>3</span><strong>Draft Rules</strong></div>
+                <div class="auto-step-heading"><span>3</span><strong data-i18n="autoLabel.step.rules">Draft Rules</strong></div>
                 <div class="auto-basic-settings expanded">
                   <label><span>Confidence</span><input type="number" id="auto-confidence" value="0.35" min="0.01" max="1" step="0.01" disabled></label>
                   <label><span>IoU</span><input type="number" id="auto-iou" value="0.50" min="0.01" max="1" step="0.01" disabled></label>
-                  <label><span>Class filter</span><input type="text" id="auto-class-filter" placeholder="class_a, class_b" disabled></label>
-                  <label><span>Minimum mask area</span><input type="number" value="400" min="0" disabled></label>
-                  <label><span>Max detections</span><input type="number" value="20" min="1" disabled></label>
-                  <label><span>Output mode</span><select disabled><option>Mask / Polygon draft</option><option>BBox draft</option></select></label>
+                  <label><span data-i18n="autoLabel.classFilter">Class filter</span><input type="text" id="auto-class-filter" placeholder="class_a, class_b" disabled></label>
+                  <label><span data-i18n="autoLabel.minMaskArea">Minimum mask area</span><input type="number" value="400" min="0" disabled></label>
+                  <label><span data-i18n="autoLabel.maxDetections">Max detections</span><input type="number" value="20" min="1" disabled></label>
+                  <label><span data-i18n="autoLabel.outputMode">Output mode</span><select disabled><option>Mask / Polygon draft</option><option>BBox draft</option></select></label>
                 </div>
                 <details class="advanced-collapse">
-                  <summary>Review priority rules</summary>
+                  <summary data-i18n="autoLabel.reviewRules">Review priority rules</summary>
                   <div class="compact-strategy-list">
-                    <div><strong>Low-confidence policy</strong><span>&#20302;&#26044;&#38272;&#27323;&#30340;&#38928;&#28204;&#21482;&#36914;&#20837; review queue&#65292;&#19981;&#30452;&#25509;&#25509;&#21463;&#12290;</span></div>
-                    <div><strong>Unknown class policy</strong><span>&#39006;&#21029;&#19981;&#22312; class_names &#20013;&#26178;&#27161;&#35352;&#28858; unknown&#65292;&#38656;&#20154;&#24037;&#34389;&#29702;&#12290;</span></div>
-                    <div><strong>Mask quality filter</strong><span>&#36942;&#23567;&#12289;&#36942;&#22823;&#12289;&#30772;&#30862;&#25110;&#24190;&#20046;&#20840;&#22294;&#30340; mask &#26371;&#27161;&#35352;&#28858;&#38656;&#35079;&#26597;&#12290;</span></div>
-                    <div><strong>Draft only protection</strong><span>&#33258;&#21205;&#27161;&#35387;&#20808;&#23531;&#20837; annotations/drafts/auto_label/{job_id}&#12290;</span></div>
+                    <div><strong data-i18n="autoLabel.lowConfidence">Low-confidence policy</strong><span data-i18n="autoLabel.lowConfidenceHelp">Predictions below threshold enter the review queue and are not accepted directly.</span></div>
+                    <div><strong data-i18n="autoLabel.unknownClass">Unknown class policy</strong><span data-i18n="autoLabel.unknownClassHelp">Labels outside class_names are marked unknown and require manual review.</span></div>
+                    <div><strong data-i18n="autoLabel.maskQuality">Mask quality filter</strong><span data-i18n="autoLabel.maskQualityHelp">Tiny, huge, fragmented, or almost full-image masks are marked for review.</span></div>
+                    <div><strong data-i18n="autoLabel.draftProtection">Draft only protection</strong><span data-i18n="autoLabel.draftProtectionHelp">Auto-labeling writes first to annotations/drafts/auto_label/{job_id}.</span></div>
                   </div>
                 </details>
               </div>
 
               <div class="auto-step-block output-target-block">
-                <div class="auto-step-heading"><span>4</span><strong>Output Target</strong></div>
-                <div class="target-card safe-target">
-                  <i class="fa-solid fa-shield-halved"></i>
-                  <div><strong>Draft only</strong><span>Save to annotations/drafts/auto_label/{job_id}. Do not write to current annotations.</span></div>
-                </div>
-                <button class="btn btn-primary btn-disabled" id="btn-start-auto-label" disabled>
-                  <i class="fa-solid fa-wand-magic-sparkles"></i> Start Auto-Label Job
-                </button>
-                <p class="muted-note" id="auto-start-reason">&#24460;&#31471;&#33258;&#21205;&#27161;&#35387; API &#23578;&#26410;&#25509;&#20837;&#65307;&#30446;&#21069;&#20808;&#23436;&#25104;&#23433;&#20840;&#24037;&#20316;&#27969;&#20171;&#38754;&#12290;</p>
+                <div class="auto-step-heading"><span>4</span><strong data-i18n="autoLabel.step.target">Output Target</strong></div>
+                <div class="target-card safe-target"><i class="fa-solid fa-shield-halved"></i><div><strong data-i18n="autoLabel.draftOnly">Draft only</strong><span data-i18n="autoLabel.targetHelp">Save to annotations/drafts/auto_label/{job_id}. Do not write to current annotations.</span></div></div>
+                <button class="btn btn-primary btn-disabled" id="btn-start-auto-label" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="autoLabel.start">Start Auto-Label Job</span></button>
+                <p class="muted-note" id="auto-start-reason" data-i18n="autoLabel.startReason.apiPending">The backend auto-labeling API is not connected yet. The safe workflow UI is prepared first.</p>
               </div>
             </section>
 
             <section class="panel-section auto-review-panel">
-              <div class="section-title">
-                <h2>Draft Preview / Review</h2>
-                <span class="info-icon" data-tooltip="Draft Preview / Review;&#36889;&#35041;&#29992;&#20358;&#27298;&#26597;&#33258;&#21205;&#27161;&#35387;&#33609;&#31295;&#26159;&#21542;&#21487;&#25509;&#21463;&#12290;P0 &#20808;&#39023;&#31034;&#23529;&#26680;&#24037;&#20316;&#21488;&#39592;&#26550;&#65292;&#24460;&#32396;&#25509;&#20837;&#33609;&#31295; overlay &#33287; accept/reject API&#12290;">i</span>
-              </div>
+              <div class="section-title"><h2 data-i18n="autoLabel.previewTitle">Draft Preview / Review</h2><span class="info-icon" data-tooltip="Use this area to review whether draft annotations are acceptable." data-i18n-tooltip="autoLabel.previewTooltip">i</span></div>
               <div class="review-preview-grid">
-                <div class="preview-tile">
-                  <h3>Original Image</h3>
-                  <div class="preview-placeholder">&#23578;&#26410;&#29986;&#29983;&#33609;&#31295;&#27161;&#35387;&#12290;</div>
-                </div>
-                <div class="preview-tile">
-                  <h3>Draft Overlay</h3>
-                  <div class="preview-placeholder">Mask / bbox / polygon overlay &#26371;&#39023;&#31034;&#22312;&#36889;&#35041;&#12290;</div>
-                </div>
+                <div class="preview-tile"><h3 data-i18n="autoLabel.original">Original Image</h3><div class="preview-placeholder" data-i18n="autoLabel.noDraft">No draft annotations generated yet.</div></div>
+                <div class="preview-tile"><h3 data-i18n="autoLabel.overlay">Draft Overlay</h3><div class="preview-placeholder" data-i18n="autoLabel.overlayHelp">Mask / bbox / polygon overlay will appear here.</div></div>
               </div>
               <div class="draft-inspector">
-                <div class="summary-row"><span>Prediction class</span><code>--</code></div>
-                <div class="summary-row"><span>Confidence</span><code>--</code></div>
-                <div class="summary-row"><span>Warning reason</span><code>--</code></div>
-                <div class="summary-row"><span>Review state</span><code>Waiting for job</code></div>
+                <div class="summary-row"><span data-i18n="autoLabel.predictionClass">Prediction class</span><code>--</code></div>
+                <div class="summary-row"><span data-i18n="autoLabel.confidence">Confidence</span><code>--</code></div>
+                <div class="summary-row"><span data-i18n="autoLabel.warningReason">Warning reason</span><code>--</code></div>
+                <div class="summary-row"><span data-i18n="autoLabel.reviewState">Review state</span><code data-i18n="autoLabel.waiting">Waiting for job</code></div>
               </div>
               <div class="auto-review-toolbar compact-toolbar">
-                <button class="btn btn-secondary" disabled><i class="fa-solid fa-check"></i> Accept</button>
-                <button class="btn btn-secondary" disabled><i class="fa-solid fa-xmark"></i> Reject</button>
-                <button class="btn btn-secondary" disabled><i class="fa-solid fa-forward-step"></i> Skip</button>
-                <button class="btn btn-secondary" disabled><i class="fa-solid fa-pen-nib"></i> Edit in LabelMe</button>
-                <button class="btn btn-secondary" disabled><i class="fa-solid fa-flag"></i> Hard Case</button>
+                <button class="btn btn-secondary" disabled><i class="fa-solid fa-check"></i> <span data-i18n="autoLabel.accept">Accept</span></button>
+                <button class="btn btn-secondary" disabled><i class="fa-solid fa-xmark"></i> <span data-i18n="autoLabel.reject">Reject</span></button>
+                <button class="btn btn-secondary" disabled><i class="fa-solid fa-forward-step"></i> <span data-i18n="autoLabel.skip">Skip</span></button>
+                <button class="btn btn-secondary" disabled><i class="fa-solid fa-pen-nib"></i> <span data-i18n="autoLabel.editLabelMe">Edit in LabelMe</span></button>
+                <button class="btn btn-secondary" disabled><i class="fa-solid fa-flag"></i> <span data-i18n="autoLabel.hardCase">Hard Case</span></button>
               </div>
             </section>
           </div>
 
           <div class="auto-label-bottom-grid redesigned">
-            <section class="panel-section">
-              <div class="section-title"><h2>Job History</h2></div>
-              <div class="data-table compact-table">
-                <table>
-                  <thead><tr><th>Job</th><th>Source</th><th>Model</th><th>Status</th><th>Drafts</th></tr></thead>
-                  <tbody id="auto-job-history-body">
-                    <tr><td colspan="5">&#23578;&#28961; auto-label job&#12290;&#21151;&#33021;&#25509;&#20837;&#24460;&#26371;&#39023;&#31034; job_id&#12289;&#20358;&#28304;&#12289;&#27169;&#22411;&#33287;&#33609;&#31295;&#25976;&#12290;</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-            <section class="panel-section">
-              <div class="section-title"><h2>Draft Review Queue</h2></div>
-              <div class="data-table compact-table">
-                <table>
-                  <thead><tr><th>Image</th><th>Class</th><th>Confidence</th><th>Issue</th><th>Action</th></tr></thead>
-                  <tbody id="auto-review-queue-body">
-                    <tr><td colspan="5">&#23578;&#28961;&#24453;&#23529;&#26680;&#33609;&#31295;&#12290;&#29986;&#29983; draft job &#24460;&#26371;&#21015;&#20986;&#38656;&#35079;&#26597;&#38917;&#30446;&#12290;</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
+            <section class="panel-section"><div class="section-title"><h2 data-i18n="autoLabel.jobHistory">Job History</h2></div><div class="data-table compact-table"><table><thead><tr><th>Job</th><th>Source</th><th>Model</th><th>Status</th><th>Drafts</th></tr></thead><tbody id="auto-job-history-body"><tr><td colspan="5" data-i18n="autoLabel.emptyJobs">No auto-label job yet. Connected functionality will show job_id, source, model, and draft count.</td></tr></tbody></table></div></section>
+            <section class="panel-section"><div class="section-title"><h2 data-i18n="autoLabel.reviewQueue">Draft Review Queue</h2></div><div class="data-table compact-table"><table><thead><tr><th>Image</th><th>Class</th><th>Confidence</th><th>Issue</th><th>Action</th></tr></thead><tbody id="auto-review-queue-body"><tr><td colspan="5" data-i18n="autoLabel.emptyQueue">No drafts waiting for review. Draft jobs will list review items here.</td></tr></tbody></table></div></section>
           </div>
         </section>
+
         <section class="page" id="page-export">
           <div class="page-header">
             <div>
-              <h1>Export & Deployment</h1>
-              <p>匯出模型與報告。若沒有最佳模型，匯出操作會 disabled 或由後端回報原因。</p>
+              <h1 data-i18n="export.title">Export & Deployment</h1>
+              <p data-i18n="export.subtitle">Select a trained model and export it for deployment. Export actions are disabled until a model is available.</p>
             </div>
           </div>
           <div class="control-card-grid compact" style="grid-template-columns: 1fr; margin-bottom: 20px;">
             <article class="control-card">
-              <div class="card-heading"><i class="fa-solid fa-cube"></i><h3>選擇要匯出的模型版本</h3></div>
+              <div class="card-heading"><i class="fa-solid fa-cube"></i><h3 data-i18n="export.selectorTitle">Select exportable model</h3></div>
               <div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
                 <select id="export-model-select" class="form-control" style="flex: 1; max-width: 400px; padding: 8px; border-radius: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">
-                  <option value="">-- 使用預設最佳模型 --</option>
+                  <option value="" data-i18n="export.selectPlaceholder">-- Select model weight --</option>
                 </select>
-                <button class="btn btn-secondary" id="btn-refresh-export-models" style="padding: 8px 12px;"><i class="fa-solid fa-rotate"></i> 整理</button>
+                <button class="btn btn-secondary" id="btn-refresh-export-models" style="padding: 8px 12px;"><i class="fa-solid fa-rotate"></i> <span data-i18n="export.refresh">Refresh</span></button>
               </div>
             </article>
           </div>
           <div class="control-card-grid compact">
-            <article class="control-card">
-              <div class="card-heading"><i class="fa-solid fa-file-code"></i><h3>PyTorch</h3></div>
-              <p>匯出 `.pt` 權重供 Python / Ultralytics 使用。</p>
-              <button class="btn btn-secondary guarded" data-requires="project" id="btn-export-pt">Export PT</button>
-            </article>
-            <article class="control-card">
-              <div class="card-heading"><i class="fa-solid fa-diagram-project"></i><h3>ONNX <span class="info-icon" data-tooltip="ONNX 是跨平台模型格式，常用於部署到 ONNX Runtime 或邊緣設備。">i</span></h3></div>
-              <p>匯出 ONNX 供部署推論。</p>
-              <button class="btn btn-secondary guarded" data-requires="project" id="btn-export-onnx">Export ONNX</button>
-            </article>
-            <article class="control-card">
-              <div class="card-heading"><i class="fa-solid fa-file-lines"></i><h3>Report</h3></div>
-              <p>產生 Markdown 訓練報告。</p>
-              <button class="btn btn-primary guarded" data-requires="project" id="btn-export-report">Generate Report</button>
-            </article>
-            <article class="control-card muted">
-              <div class="card-heading"><i class="fa-solid fa-bolt"></i><h3>TensorRT <span class="info-icon" data-tooltip="TensorRT 是 NVIDIA GPU 常用的高效推論引擎，通常需要對應硬體與模型轉換流程。">i</span></h3></div>
-              <p>Phase 2 backend required.</p>
-              <button class="btn btn-disabled" disabled>Export TensorRT</button>
-            </article>
+            <article class="control-card"><div class="card-heading"><i class="fa-solid fa-file-code"></i><h3>PyTorch</h3></div><p data-i18n="export.ptHelp">Export PyTorch .pt weights for Python / Ultralytics workflows.</p><button class="btn btn-secondary guarded" data-requires="project" id="btn-export-pt">Export PT</button></article>
+            <article class="control-card"><div class="card-heading"><i class="fa-solid fa-diagram-project"></i><h3>ONNX <span class="info-icon" data-tooltip="ONNX is a cross-framework model format for ONNX Runtime or other deployment tools." data-i18n-tooltip="export.onnxTooltip">i</span></h3></div><p data-i18n="export.onnxHelp">Export ONNX for cross-platform inference and ONNX Runtime.</p><button class="btn btn-secondary guarded" data-requires="project" id="btn-export-onnx">Export ONNX</button></article>
+            <article class="control-card"><div class="card-heading"><i class="fa-solid fa-file-lines"></i><h3>Report</h3></div><p data-i18n="export.reportHelp">Generate a Markdown project and training report.</p><button class="btn btn-primary guarded" data-requires="project" id="btn-export-report" data-i18n="export.report">Generate Report</button></article>
+            <article class="control-card muted"><div class="card-heading"><i class="fa-solid fa-bolt"></i><h3>TensorRT <span class="info-icon" data-tooltip="TensorRT can accelerate inference on NVIDIA GPUs but requires compatible GPU, driver, and conversion backend." data-i18n-tooltip="export.tensorRtTooltip">i</span></h3></div><p data-i18n="export.tensorRtHelp">Phase 2 backend required.</p><button class="btn btn-disabled" disabled data-i18n="export.tensorrt">Export TensorRT</button></article>
           </div>
         </section>
 
@@ -1305,6 +1263,6 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260625-i18n-pages"></script>
+  <script type="module" src="/static/app.js?v=20260625-workflow-i18n-models"></script>
 </body>
 </html>

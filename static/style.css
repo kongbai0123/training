@@ -2119,6 +2119,78 @@ select:focus {
   opacity: 0.52;
 }
 
+.training-model-registry-shell {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.model-registry-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.model-registry-header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.model-registry-header span,
+.model-registry-note,
+.training-model-registry-card .form-hint {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.training-model-registry-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
+
+.model-registry-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.model-registry-meta-grid > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  background: var(--bg-subtle);
+}
+
+.model-registry-meta-grid span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.model-registry-meta-grid code {
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+
+.model-registry-note.is-compatible {
+  color: var(--success);
+}
+
+.model-registry-note.is-warning {
+  color: var(--warning);
+}
+
 .model-import-collapse {
   margin-top: 0;
 }

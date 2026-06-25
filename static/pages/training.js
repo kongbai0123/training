@@ -29,6 +29,9 @@ export function initTraining() {
   ["#train-model", "#train-batch", "#train-imgsz", "#train-device", "#train-profile"].forEach((selector) => {
     qs(selector)?.addEventListener("change", () => renderTrainingMonitor());
   });
+  qs("#btn-training-open-model-hub")?.addEventListener("click", () => {
+    eventBus.emit("toast", t("training.modelRegistry.hubPending"));
+  });
 
   qs("#btn-start-train")?.addEventListener("click", async () => {
     const status = getProjectStatus(appState.currentProject);
@@ -219,6 +222,7 @@ export function renderTrainingMonitor() {
   }
 
   renderReadinessGuard(status, blockers);
+  updateTrainingModelRegistrySkeleton(status);
   updateTrainingRecommendation(status, gpu);
 
   const monitorEmpty = qs("#training-monitor-empty");
@@ -401,6 +405,34 @@ function updateTrainingRecommendation(status, gpu) {
     key = "training.recommend.medium";
   }
   el.textContent = t(key);
+}
+
+function updateTrainingModelRegistrySkeleton(status) {
+  const select = qs("#train-model");
+  if (!select) return;
+  const modelName = select.value || "--";
+  const taskEl = qs("#training-model-task");
+  const nameEl = qs("#training-model-selected-name");
+  const noteEl = qs("#training-model-compatibility");
+  const taskType = String(status.taskType || "").toLowerCase();
+  const isSegTask = taskType.includes("segmentation") || taskType.includes("seg");
+  const isSegModel = modelName.includes("-seg");
+  const modelTask = isSegModel
+    ? t("training.modelRegistry.yoloV8Seg")
+    : t("training.modelRegistry.yoloV8Det");
+  const compatible = !isSegTask || isSegModel;
+
+  setText("#training-model-selected-name", modelName);
+  setText("#training-model-task", modelTask);
+  if (nameEl) nameEl.title = modelName;
+  if (taskEl) taskEl.title = modelTask;
+  if (noteEl) {
+    noteEl.textContent = compatible
+      ? t("training.modelRegistry.compatible")
+      : t("training.modelRegistry.incompatible");
+    noteEl.classList.toggle("is-compatible", compatible);
+    noteEl.classList.toggle("is-warning", !compatible);
+  }
 }
 
 

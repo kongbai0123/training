@@ -1,9 +1,10 @@
-import { appState } from "../state.js";
+import { appState, t } from "../state.js";
+import { eventBus } from "../event_bus.js";
 import { setText, qs, escapeHtml } from "../utils.js";
 import { apiFetch } from "../api.js";
 
 export function initEvaluation() {
-  // 目前僅進行指標呈現，保留日後擴充
+  eventBus.on("language-changed", () => renderEvaluationPage());
 }
 
 export async function renderEvaluationPage() {
@@ -50,7 +51,7 @@ export async function renderEvaluationPage() {
         </div>
       `).join("");
     } else {
-      plotsGrid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; text-align: center; color: var(--text-muted);">目前尚無可用的評估圖表與指標。請先完成模型訓練。</div>`;
+      plotsGrid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; text-align: center; color: var(--text-muted);">${escapeHtml(t("evaluation.empty"))}</div>`;
     }
   } catch (err) {
     console.error("Failed to load evaluation metrics:", err);
