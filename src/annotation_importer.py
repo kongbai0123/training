@@ -147,16 +147,80 @@ class AnnotationImporter:
         current_labelme = layout.resolve_current_labelme_dir().path
         current_labelme.mkdir(parents=True, exist_ok=True)
 
-        copied = 0
+        applied = 0
+        merged_files = 0
+        skipped_duplicates = 0
         for json_file in draft_labelme.glob("*.json"):
-            shutil.copy2(json_file, current_labelme / json_file.name)
-            copied += 1
+            result = AnnotationImporter._merge_labelme_json(json_file, current_labelme / json_file.name)
+            applied += result["added"]
+            merged_files += 1
+            skipped_duplicates += result["duplicates"]
 
         report = json.loads(report_path.read_text(encoding="utf-8"))
         report["applied_at"] = datetime.now().isoformat()
-        report["applied_count"] = copied
+        report["applied_count"] = applied
+        report["applied_files"] = merged_files
+        report["skipped_duplicates"] = skipped_duplicates
         report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
-        return {"import_id": import_id, "applied_count": copied, "report": report}
+        return {
+            "import_id": import_id,
+            "applied_count": applied,
+            "applied_files": merged_files,
+            "skipped_duplicates": skipped_duplicates,
+            "report": report,
+        }
+
+    @staticmethod
+    def _merge_labelme_json(source_path: Path, target_path: Path) -> Dict[str, int]:
+        source = json.loads(source_path.read_text(encoding="utf-8"))
+        source_shapes = source.get("shapes", [])
+        if not isinstance(source_shapes, list):
+            source_shapes = []
+
+        if target_path.exists():
+            target = json.loads(target_path.read_text(encoding="utf-8"))
+            target_shapes = target.get("shapes", [])
+            if not isinstance(target_shapes, list):
+                target_shapes = []
+        else:
+            target = dict(source)
+            target_shapes = []
+
+        existing_keys = {AnnotationImporter._shape_key(shape) for shape in target_shapes}
+        added = 0
+        duplicates = 0
+        for shape in source_shapes:
+            key = AnnotationImporter._shape_key(shape)
+            if key in existing_keys:
+                duplicates += 1
+                continue
+            target_shapes.append(shape)
+            existing_keys.add(key)
+            added += 1
+
+        target["version"] = target.get("version") or source.get("version") or "5.0.1"
+        target["flags"] = target.get("flags") if isinstance(target.get("flags"), dict) else {}
+        target["imagePath"] = target.get("imagePath") or source.get("imagePath") or source_path.with_suffix("").name
+        target["imageHeight"] = target.get("imageHeight") or source.get("imageHeight")
+        target["imageWidth"] = target.get("imageWidth") or source.get("imageWidth")
+        target["imageData"] = None
+        target["shapes"] = target_shapes
+        target_path.write_text(json.dumps(target, indent=2, ensure_ascii=False), encoding="utf-8")
+        return {"added": added, "duplicates": duplicates}
+
+    @staticmethod
+    def _shape_key(shape: Dict[str, Any]) -> Tuple[Any, ...]:
+        points = shape.get("points", [])
+        normalized_points = []
+        if isinstance(points, list):
+            for point in points:
+                if isinstance(point, list) and len(point) >= 2:
+                    normalized_points.append((round(float(point[0]), 3), round(float(point[1]), 3)))
+        return (
+            str(shape.get("label", "")),
+            str(shape.get("shape_type", "")),
+            tuple(normalized_points),
+        )
 
     @staticmethod
     def _record_converted(report: Dict[str, Any], converted: Union[Dict[str, Any], List[Dict[str, Any]]]) -> None:
@@ -331,9 +395,16 @@ class AnnotationImporter:
         if not isinstance(data.get("shapes"), list):
             raise ValueError("LabelMe JSON shapes must be a list.")
 
-        out_path = out_dir / Path(image_name).with_suffix(".json").name
-        out_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-        return {"file": out_path.name, "source_file": json_path.name, "source_format": "labelme_json", "warnings": []}
+        return AnnotationImporter._write_labelme(
+            out_dir,
+            image_name,
+            int(data["imageWidth"]),
+            int(data["imageHeight"]),
+            data.get("shapes", []),
+            "labelme_json",
+            json_path.name,
+            [],
+        )
 
     @staticmethod
     def _convert_coco_json(project: Dict[str, Any], layout: ProjectLayout, json_path: Path, out_dir: Path, data: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -521,5 +592,25 @@ class AnnotationImporter:
             "imageWidth": width,
         }
         out_path = out_dir / Path(image_name).with_suffix(".json").name
-        out_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-        return {"file": out_path.name, "source_file": source_file, "source_format": source_format, "shape_count": len(shapes), "warnings": warnings}
+        if out_path.exists():
+            temp_path = out_path.with_suffix(".incoming.json")
+            temp_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+            merge_result = AnnotationImporter._merge_labelme_json(temp_path, out_path)
+            temp_path.unlink(missing_ok=True)
+            shape_count = len(json.loads(out_path.read_text(encoding="utf-8")).get("shapes", []))
+            added_count = merge_result["added"]
+            duplicate_count = merge_result["duplicates"]
+        else:
+            out_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+            shape_count = len(shapes)
+            added_count = len(shapes)
+            duplicate_count = 0
+        return {
+            "file": out_path.name,
+            "source_file": source_file,
+            "source_format": source_format,
+            "shape_count": shape_count,
+            "added_shapes": added_count,
+            "duplicate_shapes": duplicate_count,
+            "warnings": warnings,
+        }

@@ -281,8 +281,15 @@ async function applyLatestAnnotationImport() {
   const btn = qs("#btn-apply-annotation-import");
   if (btn) btn.disabled = true;
   try {
-    await apiFetch(`/api/projects/${appState.currentProjectId}/annotations/import/${report.import_id}/apply`, { method: "POST" });
-    eventBus.emit("toast", "Imported annotation drafts applied to current LabelMe JSON.");
+    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/annotations/import/${report.import_id}/apply`, { method: "POST" });
+    const added = result?.apply?.applied_count ?? 0;
+    const duplicates = result?.apply?.skipped_duplicates ?? 0;
+    if (result?.apply?.report) {
+      appState.latestAnnotationImport = result.apply.report;
+      if (appState.currentProject) appState.currentProject.last_annotation_import = result.apply.report;
+      renderAnnotationImportReport();
+    }
+    eventBus.emit("toast", `Drafts merged into current LabelMe JSON. Added ${added} shapes, skipped ${duplicates} duplicates.`);
     await syncLabelMeLabels(true);
     eventBus.emit("refresh-project");
   } catch (err) {
@@ -520,7 +527,9 @@ function renderAnnotationImportReport() {
     ["VOC XML", report.voc_xml || 0],
     ["Mask PNG", report.mask_png || 0],
     [t("labelme.import.metric.converted"), converted],
-    [t("labelme.import.metric.failed"), failed]
+    [t("labelme.import.metric.failed"), failed],
+    ["Applied shapes", report.applied_count ?? 0],
+    ["Skipped duplicates", report.skipped_duplicates ?? 0]
   ];
   const issueRows = [...errors, ...warnings];
   const convertedFiles = report.converted_files || [];
@@ -543,7 +552,7 @@ function renderAnnotationImportReport() {
       <div class="table-wrap compact-table">
         <table class="data-table">
           <thead>
-            <tr><th>Output</th><th>Source</th><th>Format</th><th>Shapes</th></tr>
+            <tr><th>Output</th><th>Source</th><th>Format</th><th>Shapes</th><th>Added</th><th>Duplicates</th></tr>
           </thead>
           <tbody>
             ${convertedFiles.length ? convertedFiles.map((item) => `
@@ -552,8 +561,10 @@ function renderAnnotationImportReport() {
                 <td>${escapeHtml(item.source_file || "--")}</td>
                 <td>${escapeHtml(item.source_format || "--")}</td>
                 <td>${escapeHtml(item.shape_count ?? "--")}</td>
+                <td>${escapeHtml(item.added_shapes ?? "--")}</td>
+                <td>${escapeHtml(item.duplicate_shapes ?? 0)}</td>
               </tr>
-            `).join("") : `<tr><td colspan="4">No converted files.</td></tr>`}
+            `).join("") : `<tr><td colspan="6">No converted files.</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -601,10 +612,10 @@ function openImportReportModal() {
       <h3>Converted files</h3>
       <div class="table-wrap modal-report-table">
         <table class="data-table">
-          <thead><tr><th>Output</th><th>Source</th><th>Format</th><th>Shapes</th></tr></thead>
+          <thead><tr><th>Output</th><th>Source</th><th>Format</th><th>Shapes</th><th>Added</th><th>Duplicates</th></tr></thead>
           <tbody>${convertedFiles.length ? convertedFiles.map((item) => `
-            <tr><td><code>${escapeHtml(item.file || "--")}</code></td><td>${escapeHtml(item.source_file || "--")}</td><td>${escapeHtml(item.source_format || "--")}</td><td>${escapeHtml(item.shape_count ?? "--")}</td></tr>
-          `).join("") : `<tr><td colspan="4">No converted files.</td></tr>`}</tbody>
+            <tr><td><code>${escapeHtml(item.file || "--")}</code></td><td>${escapeHtml(item.source_file || "--")}</td><td>${escapeHtml(item.source_format || "--")}</td><td>${escapeHtml(item.shape_count ?? "--")}</td><td>${escapeHtml(item.added_shapes ?? "--")}</td><td>${escapeHtml(item.duplicate_shapes ?? 0)}</td></tr>
+          `).join("") : `<tr><td colspan="6">No converted files.</td></tr>`}</tbody>
         </table>
       </div>
       <h3>Errors / warnings</h3>
