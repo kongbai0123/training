@@ -1,9 +1,10 @@
 import { eventBus } from "../event_bus.js";
-import { appState } from "../state.js";
+import { appState, getProjectStatus, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, setText, setHTML, escapeHtml, copyText, collectDroppedFiles, colorForLabel } from "../utils.js";
 
 export function initLabelMe() {
+  eventBus.on("language-changed", () => renderLabelMeManager(getProjectStatus(appState.currentProject)));
   qs("#btn-open-labelme")?.addEventListener("click", openExternalLabelMe);
   qs("#btn-refresh-labelme")?.addEventListener("click", async () => {
     await syncLabelMeLabels(true);
@@ -26,7 +27,7 @@ export function initLabelMe() {
     qs(id)?.addEventListener("click", async () => {
       const btn = qs(id);
       if (btn) btn.disabled = true;
-      eventBus.emit("toast", `Converting LabelMe annotations to ${type}...`);
+      eventBus.emit("toast", t("labelme.toast.converting", { type }));
       try {
         const data = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/convert`, {
           method: "POST",
@@ -168,14 +169,14 @@ async function openExternalLabelMe() {
   }
   const btn = qs("#btn-open-labelme");
   if (btn) btn.disabled = true;
-  eventBus.emit("toast", "Opening LabelMe...");
+  eventBus.emit("toast", t("labelme.toast.opening"));
   try {
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/open`, { method: "POST" });
-    eventBus.emit("toast", data.message || "LabelMe launched.");
+    eventBus.emit("toast", data.message || t("labelme.toast.launched"));
   } catch (err) {
     const message = err.message === "Not Found"
-      ? "LabelMe open API is not available. Please check that the FastAPI server is up to date."
-      : `LabelMe launch failed: ${err.message}`;
+      ? t("labelme.toast.openUnavailable")
+      : t("labelme.toast.openFailed", { message: err.message });
     eventBus.emit("toast", message);
   } finally {
     if (btn) btn.disabled = false;
@@ -185,7 +186,7 @@ async function openExternalLabelMe() {
 async function syncLabelMeLabels(silent = false) {
   const btn = qs("#btn-sync-labelme");
   if (btn) btn.disabled = true;
-  if (!silent) eventBus.emit("toast", "Syncing LabelMe JSON annotations...");
+  if (!silent) eventBus.emit("toast", t("labelme.toast.syncing"));
 
   try {
     const report = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/sync`, { method: "POST" });
@@ -199,9 +200,9 @@ async function syncLabelMeLabels(silent = false) {
     appState.labelme.unknownClasses = report.unknown_classes;
 
     eventBus.emit("refresh-project");
-    if (!silent) eventBus.emit("toast", "LabelMe sync complete.");
+    if (!silent) eventBus.emit("toast", t("labelme.toast.syncComplete"));
   } catch (err) {
-    eventBus.emit("toast", `LabelMe sync failed: ${err.message}`);
+    eventBus.emit("toast", t("labelme.toast.syncFailed", { message: err.message }));
   } finally {
     if (btn) btn.disabled = false;
   }
@@ -226,12 +227,12 @@ export function renderLabelMeManager(status) {
   const unknownLabelsDetail = labelmeProgress.unknown_labels_detail || {};
 
   const metrics = [
-    ["Total images", status.labelme.totalImages],
-    ["LabelMe JSON files", status.labelme.jsonCount],
-    ["Missing JSON", status.labelme.missingJson],
-    ["Empty JSON", labelmeProgress.empty_json || 0],
-    ["Unknown labels", labelmeProgress.unknown_labels ? labelmeProgress.unknown_labels.length : 0],
-    ["Invalid JSON", labelmeProgress.invalid_json || 0]
+    [t("labelme.metric.totalImages"), status.labelme.totalImages],
+    [t("labelme.metric.jsonFiles"), status.labelme.jsonCount],
+    [t("labelme.metric.missingJson"), status.labelme.missingJson],
+    [t("labelme.metric.emptyJson"), labelmeProgress.empty_json || 0],
+    [t("labelme.metric.unknownLabels"), labelmeProgress.unknown_labels ? labelmeProgress.unknown_labels.length : 0],
+    [t("labelme.metric.invalidJson"), labelmeProgress.invalid_json || 0]
   ];
   setHTML("#labelme-progress-grid", metrics.map(([label, value]) => `
     <div class="metric-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
@@ -243,7 +244,7 @@ export function renderLabelMeManager(status) {
   const rawImages = (appState.currentProject?.images || []).filter((img) => !img.is_augmented);
   if (rawImages.length === 0) {
     setHTML("#labelme-check-table", `
-      <tr><td colspan="5" style="text-align:center;">No images found. Import images in Dataset first.</td></tr>
+      <tr><td colspan="5" style="text-align:center;">${escapeHtml(t("labelme.empty.noImages"))}</td></tr>
     `);
     return;
   }
@@ -268,7 +269,7 @@ export function renderLabelMeManager(status) {
       <tr>
         <td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">
           <i class="fa-solid fa-circle-check" style="color: var(--success); margin-right: 6px; font-size: 1.1rem;"></i>
-          All files pass the current LabelMe checks.
+          ${escapeHtml(t("labelme.empty.allPass"))}
         </td>
       </tr>
     `);
@@ -279,7 +280,7 @@ export function renderLabelMeManager(status) {
     const jsonFilename = img.filename.replace(/\.[^/.]+$/, ".json");
     let statusText = "Unannotated";
     let issueText = "Missing JSON";
-    let fixText = "Use LabelMe to annotate";
+    let fixText = t("labelme.fix.annotate");
     let rowClass = "row-missing";
 
     const isCorrupted = corruptedJsons.includes(jsonFilename);
@@ -295,7 +296,7 @@ export function renderLabelMeManager(status) {
     } else if (img.status === "flagged") {
       statusText = "Flagged";
       issueText = "Flagged for review";
-      fixText = "Review annotations in LabelMe";
+      fixText = t("labelme.fix.review");
       rowClass = "row-warning";
     } else if (img.status === "skipped") {
       statusText = "Skipped";
@@ -307,24 +308,24 @@ export function renderLabelMeManager(status) {
     if (needsPolygon) {
       statusText = "Needs polygon";
       issueText = "Segmentation project contains rectangle / bbox shapes";
-      fixText = "Open LabelMe and redraw these labels with polygon";
+      fixText = t("labelme.fix.redrawPolygon");
       rowClass = "row-warning";
     }
 
     if (isCorrupted) {
       statusText = "Corrupted JSON";
       issueText = "JSON cannot be parsed";
-      fixText = "Open and save again in LabelMe";
+      fixText = t("labelme.fix.saveAgain");
       rowClass = "row-missing";
     } else if (isEmpty) {
       statusText = "Empty JSON";
       issueText = "JSON has no shapes";
-      fixText = "Add annotations in LabelMe";
+      fixText = t("labelme.fix.addAnnotations");
       rowClass = "row-warning";
     } else if (unknownLabels.length > 0) {
       statusText = "Unknown labels";
       issueText = `Unknown labels: ${unknownLabels.join(", ")}`;
-      fixText = "Update class list or fix labels in LabelMe";
+      fixText = t("labelme.fix.updateClasses");
       rowClass = "row-warning";
     }
 

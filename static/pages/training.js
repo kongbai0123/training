@@ -3,10 +3,10 @@ import { appState, getProjectStatus, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
 
-// Chart.js 實例與資料快取
+// Training UI helper
 let metricsChart = null;
-let currentChartData = null; // 當前繪圖用的數據
-let activeChartTab = "primary"; // 當前選取的 Chart Tab
+let currentChartData = null; // Training UI helper
+let activeChartTab = "primary"; // Training UI helper
 
 function setMetricsDashboardActive(active) {
   qs("#training-metrics-empty")?.classList.toggle("hidden", active);
@@ -152,22 +152,16 @@ export function renderTrainingMonitor() {
   const isStopping = trainState.status === "stopping";
   const hasMetrics = isRunning || Boolean(currentChartData?.epochs?.length);
 
-  setText("#card-ds-total", status.hasProject ? `${status.imageCount} ${appState.settings.language === "en" ? "images" : "張"}` : "--");
+  setText("#card-ds-total", status.hasProject ? t("training.card.imageCount", { count: status.imageCount }) : "--");
   setText("#card-ds-split", status.hasProject ? t("training.card.images", { count: status.imageCount }) : t("training.card.images", { count: "--" }));
   setText("#card-ann-status", status.hasProject ? `${status.annotationRate}%` : "--");
   setText("#card-ann-detail", status.hasProject ? t("training.card.annotated", { annotated: status.annotatedCount, missing: status.unannotatedCount }) : t("training.card.annotated", { annotated: "--", missing: "--" }));
   setText("#card-split-status", status.splitComplete ? t("training.status.splitReady") : t("training.status.missing"));
   setText("#card-split-detail", status.hasProject ? t("training.card.trainValTest", { train: status.splitCounts.train, val: status.splitCounts.val, test: status.splitCounts.test }) : t("training.card.trainValTest", { train: "--", val: "--", test: "--" }));
-  setText("#card-start-status", isReady ? t("training.status.ready") : t("training.status.blocked"));
-  setText("#card-start-detail", isReady ? t("training.card.readinessPass") : t("training.card.readinessBlocked", { count: blockers.length, plural: blockers.length > 1 ? "s" : "" }));
 
   const hw = trainState.hardware || {};
   const gpu = hw.gpu || {};
 
-  updateTelemetryProgress("#tel-cpu-val", "#tel-cpu-bar", hw.cpu_usage);
-  updateTelemetryProgress("#tel-ram-val", "#tel-ram-bar", hw.ram_used !== undefined && hw.ram_total ? (hw.ram_used / hw.ram_total) * 100 : undefined, hw.ram_used && hw.ram_total ? `${hw.ram_used} / ${hw.ram_total} MB` : "");
-  updateTelemetryProgress("#tel-gpu-val", "#tel-gpu-bar", gpu.available ? gpu.usage : undefined);
-  updateTelemetryProgress("#tel-vram-val", "#tel-vram-bar", gpu.available ? (gpu.vram_used / gpu.vram_total) * 100 : undefined, gpu.available ? `${gpu.vram_used} / ${gpu.vram_total} MB` : "");
 
   const startBtn = qs("#btn-start-train");
   const stopBtn = qs("#btn-stop-train");
@@ -229,11 +223,11 @@ export function renderTrainingMonitor() {
 
   const monitorEmpty = qs("#training-monitor-empty");
   const monitorActive = qs("#training-monitor-active");
-  const telemetryPanel = qs(".training-monitor-panel .hardware-telemetry-panel");
+
   const showMonitor = isRunning || isStopping || trainState.status === "completed" || trainState.status === "failed";
   monitorEmpty?.classList.toggle("hidden", showMonitor);
   monitorActive?.classList.toggle("hidden", !showMonitor);
-  telemetryPanel?.classList.toggle("hidden", !isRunning);
+
 
   setText("#train-status-label", trainState.status || "Idle");
   setText("#train-progress-text", showMonitor ? `Epoch ${trainState.epoch || 0} / ${trainState.total_epochs || "--"}` : "--");
@@ -284,13 +278,13 @@ export async function loadRecommendedConfig() {
   try {
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/recommend`);
     
-    // 設定預設模型 (分割任務強制使用 -seg 模型)
+    // Training UI helper
     const modelSelect = qs("#train-model");
     if (modelSelect) {
       modelSelect.value = data.model;
     }
     
-    // 設定其他推薦超參數
+    // Training UI helper
     const fields = {
       "#train-epochs": data.epochs,
       "#train-batch": data.batch_size,
@@ -326,7 +320,7 @@ export async function loadRecommendedConfig() {
   }
 }
 
-// Readiness Guard 渲染
+// Training UI helper
 function getTrainingBlockers(status) {
   const blockers = [];
   const modelName = qs("#train-model")?.value || "";
@@ -409,38 +403,13 @@ function updateTrainingRecommendation(status, gpu) {
   el.textContent = t(key);
 }
 
-function updateTelemetryProgress(textSelector, barSelector, value, customText = "") {
-  const textEl = qs(textSelector);
-  const barEl = qs(barSelector);
-  if (!textEl || !barEl) return;
 
-  if (value === undefined || isNaN(value)) {
-    textEl.textContent = "--";
-    barEl.style.width = "0%";
-    barEl.className = "bar";
-    return;
-  }
-
-  const intVal = Math.round(value);
-  textEl.textContent = customText || `${intVal}%`;
-  barEl.style.width = `${intVal}%`;
-  
-  // 級距顏色樣式
-  if (intVal < 70) {
-    barEl.className = "bar normal";
-  } else if (intVal < 90) {
-    barEl.className = "bar warning";
-  } else {
-    barEl.className = "bar danger";
-  }
-}
-
-// 載入最近一次 Run 的 Metrics 指標重繪
+// Training UI helper
 let lastLoadedRunId = null;
 async function loadLatestRunMetricsOnce() {
   if (!appState.currentProjectId) return;
   
-  // 取得最新 Run
+  // Training UI helper
   try {
     const runs = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs`);
     if (!runs || runs.length === 0) {
@@ -452,10 +421,10 @@ async function loadLatestRunMetricsOnce() {
       return;
     }
     
-    // 如果最近一個 run 的 id 改變了，重新讀取 metrics
+    // Training UI helper
     const latestRun = runs[0];
     if (latestRun.run_id === lastLoadedRunId && currentChartData) {
-      return; // 已經載入過，不重複發送請求
+      return; // Training UI helper
     }
     
     await loadRunMetrics(latestRun.run_id);
@@ -465,7 +434,7 @@ async function loadLatestRunMetricsOnce() {
   }
 }
 
-// 載入特定 run 指標與 artifacts
+// Training UI helper
 async function loadRunMetrics(runId) {
   try {
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${runId}/metrics`);
@@ -473,14 +442,14 @@ async function loadRunMetrics(runId) {
     lastLoadedRunId = runId;
     setMetricsDashboardActive(Boolean(data?.epochs?.length));
     
-    // 更新圖表與 Epoch 表格
+    // Training UI helper
     updateChartVisualization();
     renderEpochHistoryTable(currentChartData);
     
-    // 更新 Trend Diagnostic UI
+    // Training UI helper
     updateTrendDiagnostic(runId);
     
-    // 讀取該 run 的 artifacts
+    // Training UI helper
     await loadRunArtifacts(runId);
   } catch (err) {
     console.error("loadRunMetrics error", err);
@@ -491,7 +460,7 @@ async function loadRunMetrics(runId) {
   }
 }
 
-// 載入特定 run 的 artifacts
+// Training UI helper
 async function loadRunArtifacts(runId) {
   try {
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${runId}/artifacts`);
@@ -502,38 +471,40 @@ async function loadRunArtifacts(runId) {
   }
 }
 
-// 渲染 Trend Diagnostic 資訊
+// Training UI helper
 async function updateTrendDiagnostic(runId) {
   try {
     const runs = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs`);
-    const run = runs.find(r => r.run_id === runId);
+    const run = runs.find((item) => item.run_id === runId);
     if (!run || !run.health) {
       setText("#trend-best-epoch", "--");
       setText("#trend-platform-score", "--");
-      setHTML("#trend-suggestions", "尚無診斷數據。");
-      qs("#trend-health-badge").className = "status-badge Good";
-      qs("#trend-health-badge").textContent = "Good";
+      setHTML("#trend-suggestions", escapeHtml(t("training.suggestions.empty")));
+      const badge = qs("#trend-health-badge");
+      if (badge) {
+        badge.className = "status-badge Good";
+        badge.textContent = "Good";
+      }
       return;
     }
-    
+
     setText("#trend-best-epoch", run.best_epoch || "--");
     setText("#trend-platform-score", run.platform_score !== undefined ? Number(run.platform_score).toFixed(4) : "--");
-    
+
     const health = run.health;
     const badge = qs("#trend-health-badge");
     if (badge) {
       badge.textContent = health.health_status || "Good";
       badge.className = `status-badge ${health.health_status || "Good"}`;
     }
-    
-    const suggs = health.suggestions || [];
-    setHTML("#trend-suggestions", suggs.map(s => `<div>• ${escapeHtml(s)}</div>`).join(""));
+
+    const suggestions = health.suggestions || [];
+    setHTML("#trend-suggestions", suggestions.length ? suggestions.map((item) => `<div>- ${escapeHtml(item)}</div>`).join("") : escapeHtml(t("training.suggestions.empty")));
   } catch (err) {
     console.error("updateTrendDiagnostic error", err);
   }
 }
 
-// 繪製 Chart.js 圖表
 function updateChartVisualization() {
   const canvas = qs("#metrics-chart-canvas");
   if (!canvas) return;
@@ -544,13 +515,13 @@ function updateChartVisualization() {
   }
 
   if (!currentChartData || !currentChartData.epochs || currentChartData.epochs.length === 0) {
-    // 繪製空的 Canvas 背景
+    // Training UI helper
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#95a1b1";
     ctx.font = "14px Inter";
     ctx.textAlign = "center";
-    ctx.fillText("尚無可用指標數據繪圖", canvas.width / 2, canvas.height / 2);
+    ctx.fillText(t("training.metrics.emptyTitle"), canvas.width / 2, canvas.height / 2);
     return;
   }
 
@@ -562,19 +533,19 @@ function updateChartVisualization() {
   const datasets = [];
   const raw = currentChartData.raw || {};
   
-  // 計算 EMA (EMA 前端動態平滑)
+  // Training UI helper
   const computeEma = (arr) => {
     if (!arr || arr.length === 0) return [];
     const ema = [];
     let curr = arr[0];
     for (const val of arr) {
       curr = alpha * val + (1 - alpha) * curr;
-      ema.append ? ema.push(curr) : ema.push(curr); // 防禦性寫法
+      ema.append ? ema.push(curr) : ema.push(curr); // Training UI helper
     }
     return ema;
   };
 
-  // 根據 tab-btn 名稱選擇指標
+  // Training UI helper
   let keysToRender = [];
   let colors = {
     primary1: { raw: "rgba(59, 130, 246, 0.4)", smooth: "#3b82f6" }, // mAP50-95
@@ -585,7 +556,7 @@ function updateChartVisualization() {
   };
 
   if (activeChartTab === "primary") {
-    // 優先尋找 Segmentation Mask 指標，再 Fallback Box 指標
+    // Training UI helper
     const map50_95_key = "metrics/mAP50-95(M)" in raw ? "metrics/mAP50-95(M)" : "metrics/mAP50-95(B)";
     const map50_key = "metrics/mAP50(M)" in raw ? "metrics/mAP50(M)" : "metrics/mAP50(B)";
     
@@ -594,7 +565,7 @@ function updateChartVisualization() {
       { key: map50_key, label: "mAP50", color: colors.primary2 }
     ];
   } else if (activeChartTab === "loss") {
-    // 找出所有 Loss
+    // Training UI helper
     const losses = [
       { key: "train/box_loss", label: "Train Box Loss", color: colors.loss1 },
       { key: "val/box_loss", label: "Val Box Loss", color: colors.primary1 },
@@ -691,7 +662,7 @@ function updateChartVisualization() {
   });
 }
 
-// 點擊 Report View 更新 results.png 靜態圖片路徑
+// Training UI helper
 function updateReportTabImage() {
   if (!appState.currentProjectId) return;
   const runId = lastLoadedRunId || "train";
@@ -713,59 +684,44 @@ function updateReportTabImage() {
   if (downloadCsvBtn) downloadCsvBtn.href = resultsCsvUrl;
 }
 
-// 渲染 Epoch History 表格
+// Training UI helper
 function renderEpochHistoryTable(data) {
   const tbody = qs("#epoch-history-rows");
   if (!tbody) return;
 
   if (!data || !data.epochs || data.epochs.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding:16px; color:var(--text-muted);">尚無訓練歷史。</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding:16px; color:var(--text-muted);">${escapeHtml(t("training.logs.noEpoch"))}</td></tr>`;
     return;
   }
 
   const epochs = data.epochs;
   const raw = data.raw || {};
-  
-  // 決定主 mAP 列顯示
-  const mAP50_key = "metrics/mAP50(M)" in raw ? "metrics/mAP50(M)" : "metrics/mAP50(B)";
-  const mAP50_95_key = "metrics/mAP50-95(M)" in raw ? "metrics/mAP50-95(M)" : "metrics/mAP50-95(B)";
-  const prec_key = "metrics/precision(M)" in raw ? "metrics/precision(M)" : "metrics/precision(B)";
-  const rec_key = "metrics/recall(M)" in raw ? "metrics/recall(M)" : "metrics/recall(B)";
-  const loss_key = "train/box_loss" in raw ? "train/box_loss" : "train/seg_loss";
+  const mAP50Key = "metrics/mAP50(M)" in raw ? "metrics/mAP50(M)" : "metrics/mAP50(B)";
+  const mAP5095Key = "metrics/mAP50-95(M)" in raw ? "metrics/mAP50-95(M)" : "metrics/mAP50-95(B)";
+  const precisionKey = "metrics/precision(M)" in raw ? "metrics/precision(M)" : "metrics/precision(B)";
+  const recallKey = "metrics/recall(M)" in raw ? "metrics/recall(M)" : "metrics/recall(B)";
+  const lossKey = "train/box_loss" in raw ? "train/box_loss" : "train/seg_loss";
 
   const rows = [];
-  // 降序呈現 Epoch 數
-  for (let i = epochs.length - 1; i >= 0; i--) {
+  for (let i = epochs.length - 1; i >= 0; i -= 1) {
     const ep = epochs[i];
-    const loss = raw[loss_key] ? Number(raw[loss_key][i]).toFixed(4) : "--";
-    const map50 = raw[mAP50_key] ? Number(raw[mAP50_key][i]).toFixed(3) : "--";
-    const map50_95 = raw[mAP50_95_key] ? Number(raw[mAP50_95_key][i]).toFixed(3) : "--";
-    const precision = raw[prec_key] ? Number(raw[prec_key][i]).toFixed(3) : "--";
-    const recall = raw[rec_key] ? Number(raw[rec_key][i]).toFixed(3) : "--";
-
-    rows.push(`
-      <tr>
-        <td><strong>${ep}</strong></td>
-        <td><code>${loss}</code></td>
-        <td>${map50}</td>
-        <td>${map50_95}</td>
-        <td>${precision}</td>
-        <td>${recall}</td>
-        <td><span class="badge badge-success">Completed</span></td>
-      </tr>
-    `);
+    const loss = raw[lossKey] ? Number(raw[lossKey][i]).toFixed(4) : "--";
+    const map50 = raw[mAP50Key] ? Number(raw[mAP50Key][i]).toFixed(3) : "--";
+    const map5095 = raw[mAP5095Key] ? Number(raw[mAP5095Key][i]).toFixed(3) : "--";
+    const precision = raw[precisionKey] ? Number(raw[precisionKey][i]).toFixed(3) : "--";
+    const recall = raw[recallKey] ? Number(raw[recallKey][i]).toFixed(3) : "--";
+    rows.push(`<tr><td><strong>${ep}</strong></td><td><code>${loss}</code></td><td>${map50}</td><td>${map5095}</td><td>${precision}</td><td>${recall}</td><td><span class="badge badge-success">Completed</span></td></tr>`);
   }
 
   tbody.innerHTML = rows.join("");
 }
 
-// 渲染 Artifact 清單
 function renderArtifactList(artifacts, runId) {
   const container = qs("#artifact-list-container");
   if (!container) return;
 
   if (!artifacts || artifacts.length === 0) {
-    container.innerHTML = `<div class="empty-state">此 Run 尚無產生任何實體檔案成果。</div>`;
+    container.innerHTML = `<div class="empty-state">${escapeHtml(t("training.artifacts.empty"))}</div>`;
     return;
   }
 
@@ -773,67 +729,44 @@ function renderArtifactList(artifacts, runId) {
     const filename = art.filename;
     const sizeKb = (art.size / 1024).toFixed(1);
     const downloadUrl = `/api/projects/${appState.currentProjectId}/train/runs/${runId}/artifacts/download/${filename}?path=${encodeURIComponent(art.rel_path)}`;
-    
-    let actions = `
-      <a href="${downloadUrl}" class="btn btn-secondary btn-sm" target="_blank" download>
-        <i class="fa-solid fa-download"></i> 下載
-      </a>
-    `;
-
-    // 額外支持 weights/best.pt 匯出 ONNX
+    let actions = `<a href="${downloadUrl}" class="btn btn-secondary btn-sm" target="_blank" download><i class="fa-solid fa-download"></i> Download</a>`;
     if (filename === "best.pt") {
-      actions += `
-        <button class="btn btn-primary btn-sm" onclick="exportArtifactOnnx('${runId}')" style="margin-left: 6px;">
-          <i class="fa-solid fa-file-export"></i> 匯出 ONNX
-        </button>
-      `;
+      actions += `<button class="btn btn-primary btn-sm" onclick="exportArtifactOnnx('${runId}')" style="margin-left: 6px;"><i class="fa-solid fa-file-export"></i> Export ONNX</button>`;
     }
-
-    return `
-      <div class="artifact-row">
-        <div class="art-info">
-          <span>${escapeHtml(filename)}</span>
-          <small>Size: ${sizeKb} KB | Path: ${escapeHtml(art.rel_path)}</small>
-        </div>
-        <div style="display:flex; align-items:center;">
-          ${actions}
-        </div>
-      </div>
-    `;
+    return `<div class="artifact-row"><div class="art-info"><span>${escapeHtml(filename)}</span><small>Size: ${sizeKb} KB | Path: ${escapeHtml(art.rel_path)}</small></div><div style="display:flex; align-items:center;">${actions}</div></div>`;
   });
 
   container.innerHTML = rows.join("");
 }
 
-// 匯出 ONNX 全域函式綁定
 window.exportArtifactOnnx = async function(runId) {
-  eventBus.emit("toast", "正在將 best.pt 模型轉換並匯出成 ONNX 格式...");
+  eventBus.emit("toast", "Exporting best.pt to ONNX...");
   try {
     const res = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${runId}/export-onnx`, { method: "POST" });
     if (res.success) {
-      eventBus.emit("toast", "ONNX 模型已成功匯出，並備份至 exports 目錄！");
-      // 重新加載檔案清單
+      eventBus.emit("toast", "ONNX export complete. Check the exports folder.");
       await loadRunArtifacts(runId);
     }
   } catch (err) {
-    eventBus.emit("toast", `ONNX 匯出失敗：${err.message}`);
+    eventBus.emit("toast", `ONNX export failed: ${err.message}`);
   }
 };
 
-// 渲染 Run History 歷史紀錄表格
+// Training UI helper
 async function renderRunHistoryTable() {
   const tbody = qs("#run-history-rows");
   if (!tbody) return;
 
+  const emptyRow = `<tr><td colspan="10" class="text-center" style="padding:16px; color:var(--text-muted);">${escapeHtml(t("training.runHistory.empty"))}</td></tr>`;
   if (!appState.currentProjectId) {
-    tbody.innerHTML = `<tr><td colspan="10" class="text-center" style="padding:16px; color:var(--text-muted);">尚未有歷史運行紀錄。</td></tr>`;
+    tbody.innerHTML = emptyRow;
     return;
   }
 
   try {
     const runs = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs`);
     if (!runs || runs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="10" class="text-center" style="padding:16px; color:var(--text-muted);">尚未有歷史運行紀錄。</td></tr>`;
+      tbody.innerHTML = emptyRow;
       return;
     }
 
@@ -841,79 +774,48 @@ async function renderRunHistoryTable() {
       const runId = run.run_id;
       const date = run.completed_at ? new Date(run.completed_at).toLocaleString() : "--";
       const config = run.best_metrics || {};
-      
       const runTaskType = String(run.task_type || "").toLowerCase();
       const isSeg = runTaskType.includes("segmentation") || runTaskType.includes("seg");
       const suffix = isSeg ? "(M)" : "(B)";
-      
-      const mAP50 = config[`metrics/mAP50${suffix}`] !== undefined ? Number(config[`metrics/mAP50${suffix}`]).toFixed(3) : "--";
-      const mAP50_95 = config[`metrics/mAP50-95${suffix}`] !== undefined ? Number(config[`metrics/mAP50-95${suffix}`]).toFixed(3) : "--";
-      
+      const map50 = config[`metrics/mAP50${suffix}`] !== undefined ? Number(config[`metrics/mAP50${suffix}`]).toFixed(3) : "--";
+      const map5095 = config[`metrics/mAP50-95${suffix}`] !== undefined ? Number(config[`metrics/mAP50-95${suffix}`]).toFixed(3) : "--";
       let statusBadge = `<span class="badge badge-success">Completed</span>`;
-      if (run.status === "failed") {
-        statusBadge = `<span class="badge badge-danger">Failed</span>`;
-      } else if (run.status === "stopped") {
-        statusBadge = `<span class="badge badge-warning">Stopped</span>`;
-      } else if (run.status === "training") {
-        statusBadge = `<span class="badge badge-success fa-spin"><i class="fa-solid fa-spinner"></i> Running</span>`;
-      }
-
-      return `
-        <tr data-run-id="${escapeHtml(runId)}" class="${runId === lastLoadedRunId ? "row-success" : ""}" style="cursor:pointer;">
-          <td><code>${escapeHtml(runId)}</code></td>
-          <td>${date}</td>
-          <td>${escapeHtml(run.model || "--")}</td>
-          <td>${run.epochs || "--"}</td>
-          <td>${run.imgsz || "--"}</td>
-          <td>${run.batch_size || "--"}</td>
-          <td>${mAP50}</td>
-          <td>${mAP50_95}</td>
-          <td>${statusBadge}</td>
-          <td>
-            <button class="btn btn-secondary btn-sm btn-view-run" data-run-id="${escapeHtml(runId)}">
-              <i class="fa-solid fa-chart-line"></i> View
-            </button>
-          </td>
-        </tr>
-      `;
+      if (run.status === "failed") statusBadge = `<span class="badge badge-danger">Failed</span>`;
+      else if (run.status === "stopped") statusBadge = `<span class="badge badge-warning">Stopped</span>`;
+      else if (run.status === "training") statusBadge = `<span class="badge badge-success fa-spin"><i class="fa-solid fa-spinner"></i> Running</span>`;
+      return `<tr data-run-id="${escapeHtml(runId)}" class="${runId === lastLoadedRunId ? "row-success" : ""}" style="cursor:pointer;"><td><code>${escapeHtml(runId)}</code></td><td>${date}</td><td>${escapeHtml(run.model || "--")}</td><td>${run.epochs || "--"}</td><td>${run.imgsz || "--"}</td><td>${run.batch_size || "--"}</td><td>${map50}</td><td>${map5095}</td><td>${statusBadge}</td><td><button class="btn btn-secondary btn-sm btn-view-run" data-run-id="${escapeHtml(runId)}"><i class="fa-solid fa-chart-line"></i> View</button></td></tr>`;
     });
 
     tbody.innerHTML = rows.join("");
-
-    // 綁定歷史行點擊與「View」載入
     qsa("#run-history-rows tr").forEach((row) => {
       const runId = row.dataset.runId;
-      row.querySelector(".btn-view-run")?.addEventListener("click", async (e) => {
-        e.stopPropagation();
+      row.querySelector(".btn-view-run")?.addEventListener("click", async (event) => {
+        event.stopPropagation();
         await selectRunIdAndRender(runId);
       });
-      row.addEventListener("click", async () => {
-        await selectRunIdAndRender(runId);
-      });
+      row.addEventListener("click", async () => selectRunIdAndRender(runId));
     });
-
   } catch (err) {
     console.error("renderRunHistoryTable error", err);
-    tbody.innerHTML = `<tr><td colspan="10" class="text-center" style="padding:16px; color:var(--text-danger);">讀取運行歷史失敗。</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="text-center" style="padding:16px; color:var(--text-danger);">Failed to load run history.</td></tr>`;
   }
 }
 
-// 切換選擇 Run
 async function selectRunIdAndRender(runId) {
-  eventBus.emit("toast", `正在載入 ${runId} 的訓練數據...`);
+  eventBus.emit("toast", `Loading run ${runId} metrics...`);
   await loadRunMetrics(runId);
   
-  // 重新渲染歷史表格的 highlight
+  // Training UI helper
   qsa("#run-history-rows tr").forEach((row) => {
     row.classList.toggle("row-success", row.dataset.runId === runId);
   });
 }
 
-// WebSocket 監聽即時訓練進度
+// Training UI helper
 function startMonitorWebSocket() {
   if (!appState.currentProjectId) return;
   
-  // 防重複建立連線
+  // Training UI helper
   if (appState.wsConn) {
     if (appState.wsConn.readyState === WebSocket.OPEN || appState.wsConn.readyState === WebSocket.CONNECTING) {
       return;
@@ -930,13 +832,13 @@ function startMonitorWebSocket() {
     const data = JSON.parse(event.data);
     appState.trainingStatus = data;
     
-    // 即時渲染進度與テレメトリー
+    // Training UI helper
     renderTrainingMonitor();
     
-    // 全域事件更新通知
+    // Training UI helper
     eventBus.emit("state-changed");
     
-    // 如果狀態不是 training，關閉 websocket 連線
+    // Training UI helper
     if (data.status !== "training") {
       try {
         appState.wsConn.close();
@@ -948,9 +850,8 @@ function startMonitorWebSocket() {
   appState.wsConn.onclose = () => {
     appState.wsConn = null;
   };
-  
   appState.wsConn.onerror = () => {
-    eventBus.emit("toast", "訓練即時監控連線 WebSocket 發生錯誤。");
+    eventBus.emit("toast", "Training monitor WebSocket failed.");
     appState.wsConn = null;
   };
 }

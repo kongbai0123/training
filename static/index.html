@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css?v=20260625-i18n-training">
+  <link rel="stylesheet" href="/static/style.css?v=20260625-i18n-pages">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -133,43 +133,41 @@
         <section class="page" id="page-dataset">
           <div class="page-header">
             <div>
-              <h1>Dataset Manager</h1>
-              <p>匯入圖片、影片抽幀、檢查資料品質。頁面可進入，操作會依狀態開關。</p>
+              <h1 data-i18n="dataset.title">Dataset Manager</h1>
+              <p data-i18n="dataset.subtitle">Import images, ZIP packages, or video frames into the active project without mixing unrelated files.</p>
             </div>
           </div>
           <div class="dataset-manager-layout">
             <section class="panel-section dataset-import-card" style="grid-row: span 2;">
-              <div class="section-title"><h2>Dataset Import Center (資料匯入中心)</h2></div>
-              <p class="section-help">支援掃描本機資料夾路徑導入圖片，或直接拖曳上傳 ZIP 檔案進行自動解壓與導入。</p>
+              <div class="section-title"><h2 data-i18n="dataset.importTitle">Dataset Import Center</h2></div>
+              <p class="section-help" data-i18n="dataset.importHelp">Drop a folder or ZIP. The system filters image files and keeps packages separate from training data.</p>
 
               <div class="form-stack" style="gap: 16px; margin-top: 12px;">
-                <!-- Path Input Source -->
                 <div style="display: grid; gap: 8px;">
-                  <label for="input-local-folder" style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);">本機圖片資料夾路徑 (Scan Local Folder)</label>
+                  <label for="input-local-folder" style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);" data-i18n="dataset.localFolderLabel">Scan local image folder</label>
                   <div class="class-entry-row">
-                    <input type="text" id="input-local-folder" placeholder="例如 D:\datasets\images" style="flex: 1;">
+                    <input type="text" id="input-local-folder" placeholder="D:\\datasets\\images" data-i18n-placeholder="dataset.localFolderPlaceholder" style="flex: 1;">
                     <button class="btn btn-primary guarded" data-requires="project" id="btn-import-local" style="min-width: 100px;">
-                      <i class="fa-solid fa-folder-open"></i> 掃描導入
+                      <i class="fa-solid fa-folder-open"></i> <span data-i18n="dataset.importButton">Import</span>
                     </button>
                   </div>
                 </div>
 
                 <div style="border-top: 1px solid var(--border); margin: 6px 0;"></div>
 
-                <!-- ZIP Upload Source -->
                 <div style="display: grid; gap: 8px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                    <span style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);">Upload ZIP or Folder</span>
+                    <span style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);" data-i18n="dataset.uploadTitle">Upload ZIP or folder</span>
                     <div style="display: flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--text-muted);">
-                      <span>儲存路徑: <code id="dataset-zip-storage-path" style="background: var(--bg-panel-soft); padding: 2px 6px; border-radius: 4px; font-family: monospace; word-break: break-all; white-space: normal;">尚未載入</code></span>
+                      <span><span data-i18n="dataset.zipStorage">ZIP storage</span>: <code id="dataset-zip-storage-path" style="background: var(--bg-panel-soft); padding: 2px 6px; border-radius: 4px; font-family: monospace; word-break: break-all; white-space: normal;">Not loaded</code></span>
                       <button class="icon-btn guarded" data-requires="project" id="btn-copy-zip-path" title="Copy" style="width: 22px; height: 22px; font-size: 0.7rem; display: inline-grid; place-items: center;"><i class="fa-regular fa-copy"></i></button>
                     </div>
                   </div>
                   <div class="zip-drop-zone" id="zip-drop-zone" style="cursor: pointer; min-height: 96px; padding: 14px;">
                     <i class="fa-solid fa-file-zipper" style="font-size: 1.2rem; width: 38px; height: 38px;"></i>
                     <div>
-                      <strong>ZIP or folder upload area</strong>
-                      <p style="font-size: 0.78rem;">Drop a ZIP file or a folder. The system imports images, LabelMe JSON, and YOLO TXT labels.</p>
+                      <strong data-i18n="dataset.dropTitle">Drop ZIP, images, or a folder</strong>
+                      <p style="font-size: 0.78rem;" data-i18n="dataset.dropHelp">Only image files are imported here. Videos and annotation files are filtered with a friendly notice.</p>
                     </div>
                   </div>
                   <input type="file" id="input-zip-file" accept=".zip" style="display: none;">
@@ -178,39 +176,36 @@
             </section>
 
             <section class="panel-section dataset-import-card">
-              <div class="section-title"><h2>Extract Video Frames (影片抽幀中心)</h2></div>
-              <p class="section-help">支援掃描本機影片路徑抽幀，或直接拖曳影片（MP4、AVI 等）自動上傳並提取影格。</p>
+              <div class="section-title"><h2 data-i18n="dataset.videoTitle">Extract Video Frames</h2></div>
+              <p class="section-help" data-i18n="dataset.videoHelp">Import video files and extract frames into the project image dataset.</p>
 
               <div class="form-stack" style="gap: 12px; margin-top: 12px;">
-                <!-- Common FPS Settings -->
                 <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.84rem; color: var(--text-soft); gap: 12px;">
-                  <span>抽幀頻率 (FPS / 每秒幾幀)</span>
+                  <span data-i18n="dataset.fpsLabel">Frames per second</span>
                   <input type="number" id="input-video-fps" value="1" min="1" max="10" style="width: 80px; min-height: 32px; text-align: center;">
                 </div>
 
                 <div style="border-top: 1px solid var(--border); margin: 2px 0;"></div>
 
-                <!-- Local Path Input Source -->
                 <div style="display: grid; gap: 6px;">
-                  <label for="input-video-path" style="font-weight: 600; font-size: 0.82rem; color: var(--text-soft);">本機影片路徑 (Scan Local Video)</label>
+                  <label for="input-video-path" style="font-weight: 600; font-size: 0.82rem; color: var(--text-soft);" data-i18n="dataset.videoPathLabel">Scan local video file</label>
                   <div class="class-entry-row">
-                    <input type="text" id="input-video-path" placeholder="例如 D:\videos\route_1.mp4" style="flex: 1;">
+                    <input type="text" id="input-video-path" placeholder="D:\\videos\\route_1.mp4" data-i18n-placeholder="dataset.videoPathPlaceholder" style="flex: 1;">
                     <button class="btn btn-primary guarded" data-requires="project" id="btn-import-video" style="min-width: 90px; min-height: 38px;">
-                      <i class="fa-solid fa-video"></i> 抽幀
+                      <i class="fa-solid fa-video"></i> <span data-i18n="dataset.extractButton">Extract</span>
                     </button>
                   </div>
                 </div>
 
                 <div style="border-top: 1px solid var(--border); margin: 2px 0;"></div>
 
-                <!-- Video Upload Dropzone Source -->
                 <div style="display: grid; gap: 6px;">
-                  <span style="font-weight: 600; font-size: 0.82rem; color: var(--text-soft);">上傳影片檔案 (Upload Video File)</span>
+                  <span style="font-weight: 600; font-size: 0.82rem; color: var(--text-soft);" data-i18n="dataset.videoUploadTitle">Upload video file</span>
                   <div class="zip-drop-zone" id="video-drop-zone" style="cursor: pointer; min-height: 96px; padding: 14px;">
                     <i class="fa-solid fa-file-video" style="font-size: 1.2rem; width: 38px; height: 38px; background: rgba(59, 130, 246, 0.16); color: var(--primary);"></i>
                     <div>
-                      <strong>Video upload area (拖曳或點選影片)</strong>
-                      <p style="font-size: 0.78rem;">支援拖入 MP4, AVI, MKV 等格式自動上傳抽幀。</p>
+                      <strong data-i18n="dataset.videoDropTitle">Drop video files</strong>
+                      <p style="font-size: 0.78rem;" data-i18n="dataset.videoDropHelp">Supported formats include MP4, AVI, MKV, MOV, WMV, FLV, and WEBM.</p>
                     </div>
                   </div>
                   <input type="file" id="input-video-file" accept="video/*" style="display: none;">
@@ -219,16 +214,16 @@
             </section>
 
             <section class="panel-section dataset-classes-card">
-              <div class="section-title"><h2>Class Name Management</h2></div>
-              <p class="section-help">管理此資料集的目標類別。修改類別後將同步更新標註與訓練設定。</p>
+              <div class="section-title"><h2 data-i18n="dataset.classesTitle">Class Name Management</h2></div>
+              <p class="section-help" data-i18n="dataset.classesHelp">Add or remove project classes used by LabelMe, conversion, split, and training.</p>
               <div class="form-stack">
                 <div class="class-entry-row">
-                  <input type="text" id="input-dataset-new-class" placeholder="新類別名稱，如 car">
-                  <button class="btn btn-secondary" id="btn-dataset-add-class" style="min-width: 68px;"><i class="fa-solid fa-plus"></i> 新增</button>
+                  <input type="text" id="input-dataset-new-class" placeholder="Example: defect" data-i18n-placeholder="dataset.classPlaceholder">
+                  <button class="btn btn-secondary" id="btn-dataset-add-class" style="min-width: 68px;"><i class="fa-solid fa-plus"></i> <span data-i18n="dataset.addClass">Add</span></button>
                 </div>
                 <div class="class-list-box" id="dataset-classes-list-box" style="margin-top: 8px;"></div>
                 <button class="btn btn-primary btn-block guarded" data-requires="project" id="btn-save-dataset-classes" style="margin-top: 8px;">
-                  <i class="fa-solid fa-floppy-disk"></i> 儲存類別變更
+                  <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="dataset.saveClasses">Save classes</span>
                 </button>
               </div>
             </section>
@@ -236,24 +231,24 @@
             <section class="panel-section dataset-browser-card">
               <div class="section-title dataset-browser-header">
                 <div>
-                  <h2>Image Browser</h2>
-                  <p class="section-help">瀏覽已匯入圖片，依標註狀態篩選。</p>
+                  <h2 data-i18n="dataset.browserTitle">Image Browser</h2>
+                  <p class="section-help" data-i18n="dataset.browserHelp">Thumbnails are loaded lazily to keep large datasets responsive.</p>
                 </div>
                 <div class="dataset-browser-tools">
-                  <input type="text" id="search-image" placeholder="Search image">
+                  <input type="text" id="search-image" placeholder="Search image" data-i18n-placeholder="dataset.searchPlaceholder">
                   <select id="filter-status">
-                    <option value="all">All</option>
-                    <option value="unannotated">Unannotated</option>
-                    <option value="annotated">Annotated</option>
-                    <option value="flagged">Flagged</option>
-                    <option value="skipped">Skipped</option>
+                    <option value="all" data-i18n="dataset.filterAll">All</option>
+                    <option value="unannotated" data-i18n="dataset.filterUnannotated">Unannotated</option>
+                    <option value="annotated" data-i18n="dataset.filterAnnotated">Annotated</option>
+                    <option value="flagged" data-i18n="dataset.filterFlagged">Flagged</option>
+                    <option value="skipped" data-i18n="dataset.filterSkipped">Skipped</option>
                   </select>
                 </div>
               </div>
               <div class="dataset-meta-row">
-                <span>Images: <strong id="dataset-count-total">0</strong></span>
-                <span>Health: <strong id="health-score-val">--</strong></span>
-                <button class="btn btn-secondary btn-sm guarded" data-requires="dataset" id="btn-trigger-quality"><i class="fa-solid fa-circle-check"></i> Run Quality Check</button>
+                <span><span data-i18n="dataset.images">Images</span>: <strong id="dataset-count-total">0</strong></span>
+                <span><span data-i18n="dataset.health">Health</span>: <strong id="health-score-val">--</strong></span>
+                <button class="btn btn-secondary btn-sm guarded" data-requires="dataset" id="btn-trigger-quality"><i class="fa-solid fa-circle-check"></i> <span data-i18n="dataset.qualityCheck">Run Quality Check</span></button>
               </div>
               <div id="dataset-thumbnails" class="thumbnail-grid"></div>
             </section>
@@ -264,15 +259,15 @@
           <div class="page-header labelme-page-header">
             <div>
               <h1>
-                LabelMe Annotation Manager
-                <span class="info-icon" data-tooltip="LabelMe 是外部標註工具。本頁負責管理圖片路徑、JSON 同步、檢查結果與轉換入口。">i</span>
+                <span data-i18n="labelme.title">LabelMe Annotation Manager</span>
+                <span class="info-icon" data-tooltip="LabelMe is an external annotation tool. This page manages paths, JSON sync, review, and conversion." data-i18n-tooltip="labelme.titleTooltip">i</span>
               </h1>
-              <p>管理 LabelMe 工作區、同步 JSON 標註，並在轉換訓練格式前完成檢查。</p>
+              <p data-i18n="labelme.subtitle">Manage the LabelMe workspace, sync JSON annotations, and review issues before conversion.</p>
             </div>
             <div class="page-actions">
-              <span class="badge badge-success">Backend Connected</span>
+              <span class="badge badge-success" data-i18n="labelme.backendConnected">Backend Connected</span>
               <button class="btn btn-primary guarded" data-requires="project" id="btn-sync-labelme">
-                <i class="fa-solid fa-arrows-rotate"></i> Sync JSON
+                <i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="labelme.syncJson">Sync JSON</span>
               </button>
             </div>
           </div>
@@ -281,28 +276,28 @@
             <section class="labelme-step-strip" aria-label="LabelMe workflow steps">
               <article class="labelme-step-card">
                 <i class="fa-solid fa-images"></i>
-                <div><strong>1. Import Images</strong><span>先在 Dataset 匯入圖片或影片抽幀。</span></div>
+                <div><strong data-i18n="labelme.step1Title">1. Import Images</strong><span data-i18n="labelme.step1Help">Import images or video frames from Dataset first.</span></div>
               </article>
               <article class="labelme-step-card">
                 <i class="fa-solid fa-pen-nib"></i>
-                <div><strong>2. Annotate in LabelMe</strong><span>使用 LabelMe 建立 polygon 或 rectangle JSON。</span></div>
+                <div><strong data-i18n="labelme.step2Title">2. Annotate in LabelMe</strong><span data-i18n="labelme.step2Help">Create polygon or rectangle JSON files in LabelMe.</span></div>
               </article>
               <article class="labelme-step-card">
                 <i class="fa-solid fa-circle-check"></i>
-                <div><strong>3. Sync & Review</strong><span>同步 JSON，檢查缺檔、空標註與未知類別。</span></div>
+                <div><strong data-i18n="labelme.step3Title">3. Sync & Review</strong><span data-i18n="labelme.step3Help">Sync JSON, review issues, then convert when ready.</span></div>
               </article>
             </section>
 
             <section class="panel-section labelme-import-panel" id="annotations-drop-card">
               <div class="section-title">
-                <h2>Import Label Files</h2>
+                <h2 data-i18n="labelme.importTitle">Import Label Files</h2>
                 <span class="badge badge-muted">JSON / TXT / Folder</span>
               </div>
               <div class="zip-drop-zone labelme-drop-zone" id="annotations-drop-zone">
                 <i class="fa-solid fa-file-import"></i>
                 <div>
-                  <strong>Drop LabelMe JSON, YOLO TXT, or a folder</strong>
-                  <p>系統會篩選 .json 與 .txt 標註檔；不符合格式的檔案會被忽略。</p>
+                  <strong data-i18n="labelme.dropTitle">Drop LabelMe JSON, YOLO TXT, or a folder</strong>
+                  <p data-i18n="labelme.dropHelp">Folder drops are filtered so only supported annotation files are imported.</p>
                 </div>
               </div>
               <input type="file" id="input-annotations-file" accept=".json,.txt" multiple style="display: none;">
@@ -310,27 +305,27 @@
 
             <section class="panel-section labelme-workspace-panel">
               <div class="section-title">
-                <h2>Workspace</h2>
-                <span class="info-icon" data-tooltip="Images folder 給 LabelMe 開啟圖片；LabelMe JSON folder 是 JSON 輸出位置。">i</span>
+                <h2 data-i18n="labelme.workspace">Workspace</h2>
+                <span class="info-icon" data-tooltip="Images folder is opened by LabelMe. JSON folder stores annotation output." data-i18n-tooltip="labelme.workspaceTooltip">i</span>
               </div>
               <div class="path-list labelme-path-list">
-                <div class="path-row"><span>Images</span><code id="labelme-images-path">No project loaded</code><button class="icon-btn guarded" data-requires="project" id="btn-copy-images-path" title="Copy"><i class="fa-regular fa-copy"></i></button></div>
-                <div class="path-row"><span>JSON</span><code id="labelme-json-path">No project loaded</code><button class="icon-btn guarded" data-requires="project" id="btn-copy-json-path" title="Copy"><i class="fa-regular fa-copy"></i></button></div>
-                <div class="path-row"><span>Output</span><code id="labelme-output-path">No project loaded</code></div>
-                <div class="path-row"><span>Classes</span><code id="labelme-classes">--</code></div>
-                <div class="path-row"><span>Command</span><code id="labelme-command">No project loaded</code><button class="icon-btn guarded" data-requires="project" id="btn-copy-labelme-command" title="Copy"><i class="fa-regular fa-copy"></i></button></div>
+                <div class="path-row"><span data-i18n="labelme.imagesPath">Images</span><code id="labelme-images-path">No project loaded</code><button class="icon-btn guarded" data-requires="project" id="btn-copy-images-path" title="Copy"><i class="fa-regular fa-copy"></i></button></div>
+                <div class="path-row"><span data-i18n="labelme.jsonPath">JSON</span><code id="labelme-json-path">No project loaded</code><button class="icon-btn guarded" data-requires="project" id="btn-copy-json-path" title="Copy"><i class="fa-regular fa-copy"></i></button></div>
+                <div class="path-row"><span data-i18n="labelme.outputPath">Output</span><code id="labelme-output-path">No project loaded</code></div>
+                <div class="path-row"><span data-i18n="labelme.classes">Classes</span><code id="labelme-classes">--</code></div>
+                <div class="path-row"><span data-i18n="labelme.command">Command</span><code id="labelme-command">No project loaded</code><button class="icon-btn guarded" data-requires="project" id="btn-copy-labelme-command" title="Copy"><i class="fa-regular fa-copy"></i></button></div>
               </div>
               <div class="button-row labelme-primary-actions">
-                <button class="btn btn-primary guarded" data-requires="project" id="btn-open-labelme"><i class="fa-solid fa-up-right-from-square"></i> Open LabelMe</button>
-                <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-labelme"><i class="fa-solid fa-rotate"></i> Refresh Status</button>
+                <button class="btn btn-primary guarded" data-requires="project" id="btn-open-labelme"><i class="fa-solid fa-up-right-from-square"></i> <span data-i18n="labelme.openLabelMe">Open LabelMe</span></button>
+                <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-labelme"><i class="fa-solid fa-rotate"></i> <span data-i18n="labelme.refreshStatus">Refresh Status</span></button>
               </div>
             </section>
 
             <section class="panel-section labelme-progress-panel">
-              <div class="section-title"><h2>Annotation Progress</h2></div>
+              <div class="section-title"><h2 data-i18n="labelme.progressTitle">Annotation Progress</h2></div>
               <div class="labelme-progress-hero">
                 <strong id="labelme-completion-text">0%</strong>
-                <span>Completion rate</span>
+                <span data-i18n="labelme.completionRate">Completion rate</span>
               </div>
               <div class="progress-track"><div class="progress-fill" id="labelme-completion-bar"></div></div>
               <div class="metric-grid labelme-metric-grid" id="labelme-progress-grid"></div>
@@ -338,20 +333,20 @@
 
             <section class="panel-section labelme-review-panel">
               <div class="section-title">
-                <h2>Review Queue</h2>
+                <h2 data-i18n="labelme.reviewQueue">Review Queue</h2>
                 <label class="checkbox-row labelme-issue-toggle">
-                  <input type="checkbox" id="chk-show-issues-only" checked> Show issues only
+                  <input type="checkbox" id="chk-show-issues-only" checked> <span data-i18n="labelme.showIssuesOnly">Show issues only</span>
                 </label>
               </div>
               <div class="table-wrap labelme-review-table">
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>File</th>
-                      <th>Image</th>
-                      <th>Status</th>
-                      <th>Issue</th>
-                      <th>Suggested Fix</th>
+                      <th data-i18n="labelme.table.file">File</th>
+                      <th data-i18n="labelme.table.image">Image</th>
+                      <th data-i18n="labelme.table.status">Status</th>
+                      <th data-i18n="labelme.table.issue">Issue</th>
+                      <th data-i18n="labelme.table.fix">Suggested Fix</th>
                     </tr>
                   </thead>
                   <tbody id="labelme-check-table"></tbody>
@@ -360,11 +355,11 @@
             </section>
 
             <section class="panel-section labelme-preview-card">
-              <div class="section-title"><h2>Preview</h2></div>
+              <div class="section-title"><h2 data-i18n="labelme.preview">Preview</h2></div>
               <div class="preview-panel" id="labelme-preview-panel">
                 <div class="preview-placeholder">
                   <i class="fa-solid fa-draw-polygon"></i>
-                  <p>Select a review row to preview LabelMe shapes.</p>
+                  <p data-i18n="labelme.previewEmpty">Select a review row to preview LabelMe shapes.</p>
                 </div>
               </div>
             </section>
@@ -372,14 +367,14 @@
             <section class="panel-section labelme-export-card">
               <details class="labelme-export-details">
                 <summary>
-                  <span><i class="fa-solid fa-file-export"></i> Export Formats</span>
-                  <small>Open after JSON checks pass</small>
+                  <span><i class="fa-solid fa-file-export"></i> <span data-i18n="labelme.exportFormats">Export Formats</span></span>
+                  <small data-i18n="labelme.exportHelp">Open after JSON checks pass</small>
                 </summary>
                 <div class="conversion-list labelme-conversion-grid">
-                  <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-det">YOLO Detection <span class="info-icon" data-tooltip="適合 rectangle / bbox 標註。">i</span></button>
-                  <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-seg">YOLO Segmentation <span class="info-icon" data-tooltip="適合 polygon segmentation 標註。">i</span></button>
-                  <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-coco">COCO <span class="info-icon" data-tooltip="輸出 COCO detection / segmentation 格式。">i</span></button>
-                  <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-mask">Semantic Mask <span class="info-icon" data-tooltip="輸出語意分割 mask，需要 class map。">i</span></button>
+                  <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-det">YOLO Detection <span class="info-icon" data-tooltip="Use rectangle or bbox annotations for detection." data-i18n-tooltip="labelme.yoloDetTooltip">i</span></button>
+                  <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-yolo-seg">YOLO Segmentation <span class="info-icon" data-tooltip="Use polygon annotations for segmentation." data-i18n-tooltip="labelme.yoloSegTooltip">i</span></button>
+                  <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-coco">COCO <span class="info-icon" data-tooltip="Export COCO detection or segmentation format." data-i18n-tooltip="labelme.cocoTooltip">i</span></button>
+                  <button class="btn btn-secondary guarded" data-requires="project" id="btn-convert-mask">Semantic Mask <span class="info-icon" data-tooltip="Export semantic masks. Requires a class map." data-i18n-tooltip="labelme.maskTooltip">i</span></button>
                 </div>
               </details>
             </section>
@@ -419,8 +414,8 @@
         <section class="page" id="page-augmentation">
           <div class="page-header">
             <div>
-              <h1>Physical Augmentation Console</h1>
-              <p>以 Train-only 為核心的安全擴增工作台；先確認資料範圍、預覽效果與風險，再套用到訓練集。</p>
+              <h1 data-i18n="augmentation.title">Physical Augmentation Console</h1>
+              <p data-i18n="augmentation.subtitle">Apply physical augmentation safely to Train split only, after preview and risk checks pass.</p>
             </div>
           </div>
 
@@ -429,29 +424,29 @@
               <div class="aug-readiness-icon"><i class="fa-solid fa-shield-halved"></i></div>
               <div class="aug-readiness-content">
                 <div class="section-title compact">
-                  <h2>Augmentation Readiness</h2>
+                  <h2 data-i18n="augmentation.readinessTitle">Augmentation Readiness</h2>
                   <span class="summary-badge badge-danger" id="aug-readiness-badge">Blocked</span>
                 </div>
                 <p id="aug-readiness-message">Create a project and prepare a train split before augmentation.</p>
                 <ul class="aug-readiness-reasons" id="aug-readiness-reasons"></ul>
               </div>
               <div class="aug-readiness-actions">
-                <button type="button" class="btn btn-secondary" data-nav="dataset" id="aug-go-dataset"><i class="fa-solid fa-images"></i> Go to Dataset</button>
-                <button type="button" class="btn btn-secondary" data-nav="split" id="aug-go-split"><i class="fa-solid fa-code-branch"></i> Create Split</button>
+                <button type="button" class="btn btn-secondary" data-nav="dataset" id="aug-go-dataset"><i class="fa-solid fa-images"></i> <span data-i18n="augmentation.goDataset">Go to Dataset</span></button>
+                <button type="button" class="btn btn-secondary" data-nav="split" id="aug-go-split"><i class="fa-solid fa-code-branch"></i> <span data-i18n="augmentation.createSplit">Create Split</span></button>
               </div>
             </section>
 
             <section class="panel-section aug-target-scope">
               <div class="section-title compact">
-                <h2>Target Scope <span class="info-icon" data-tooltip="Physical Augmentation 只應套用到 Train split，避免 Val/Test 被污染而造成評估失真。">i</span></h2>
+                <h2><span data-i18n="augmentation.targetScope">Target Scope</span> <span class="info-icon" data-tooltip="Physical augmentation should apply to Train split only to avoid Val/Test leakage." data-i18n-tooltip="augmentation.targetTooltip">i</span></h2>
               </div>
               <div class="aug-scope-grid">
-                <div class="aug-scope-item"><span>Apply to</span><strong>Train split only</strong></div>
-                <div class="aug-scope-item"><span>Train images</span><strong id="aug-scope-train">0</strong></div>
-                <div class="aug-scope-item"><span>Val images</span><strong id="aug-scope-val">0 excluded</strong></div>
-                <div class="aug-scope-item"><span>Test images</span><strong id="aug-scope-test">0 excluded</strong></div>
-                <div class="aug-scope-item"><span>Preserve originals</span><strong>Yes</strong></div>
-                <div class="aug-scope-item"><span>Estimated output</span><strong id="aug-scope-output">0</strong></div>
+                <div class="aug-scope-item"><span data-i18n="augmentation.applyTo">Apply to</span><strong data-i18n="augmentation.trainOnly">Train split only</strong></div>
+                <div class="aug-scope-item"><span data-i18n="augmentation.trainImages">Train images</span><strong id="aug-scope-train">0</strong></div>
+                <div class="aug-scope-item"><span data-i18n="augmentation.valImages">Val images</span><strong id="aug-scope-val">0 excluded</strong></div>
+                <div class="aug-scope-item"><span data-i18n="augmentation.testImages">Test images</span><strong id="aug-scope-test">0 excluded</strong></div>
+                <div class="aug-scope-item"><span data-i18n="augmentation.preserveOriginals">Preserve originals</span><strong data-i18n="augmentation.yes">Yes</strong></div>
+                <div class="aug-scope-item"><span data-i18n="augmentation.estimatedOutput">Estimated output</span><strong id="aug-scope-output">0</strong></div>
               </div>
             </section>
 
@@ -459,155 +454,53 @@
               <div class="augmentation-policy-column">
                 <section class="panel-section">
                   <div class="section-title compact">
-                    <h2>Preset Library</h2>
+                    <h2 data-i18n="augmentation.presetLibrary">Preset Library</h2>
                   </div>
                   <div class="preset-list compact" aria-label="Recommended augmentation presets">
-                    <button type="button" class="preset-item active" data-aug-preset="clear_day">
-                      <strong>Clear Day</strong>
-                      <span>乾淨日照與輕微對比變化。</span>
-                    </button>
-                    <button type="button" class="preset-item" data-aug-preset="low_light">
-                      <strong>Low Light</strong>
-                      <span>夜間、陰影與低照度場景。</span>
-                    </button>
-                    <button type="button" class="preset-item" data-aug-preset="rainy">
-                      <strong>Rainy</strong>
-                      <span>雨滴、濕面與輕微模糊。</span>
-                    </button>
-                    <button type="button" class="preset-item" data-aug-preset="foggy">
-                      <strong>Fog / Haze</strong>
-                      <span>霧氣、低對比與視線衰減。</span>
-                    </button>
-                    <button type="button" class="preset-item" data-aug-preset="motion_camera">
-                      <strong>Motion Camera</strong>
-                      <span>移動鏡頭、運動模糊與相機雜訊。</span>
-                    </button>
+                    <button type="button" class="preset-item active" data-aug-preset="clear_day"><strong data-i18n="augmentation.preset.clearDay">Clear Day</strong><span data-i18n="augmentation.preset.clearDayHelp">Low-risk brightness and contrast baseline.</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="low_light"><strong data-i18n="augmentation.preset.lowLight">Low Light</strong><span data-i18n="augmentation.preset.lowLightHelp">Simulate dark, shadowed, or underexposed scenes.</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="rainy"><strong data-i18n="augmentation.preset.rainy">Rainy</strong><span data-i18n="augmentation.preset.rainyHelp">Add wet-surface and light rain variation.</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="foggy"><strong data-i18n="augmentation.preset.foggy">Fog / Haze</strong><span data-i18n="augmentation.preset.foggyHelp">Lower visibility and contrast.</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="motion_camera"><strong data-i18n="augmentation.preset.motion">Motion Camera</strong><span data-i18n="augmentation.preset.motionHelp">Simulate motion blur and camera noise.</span></button>
                   </div>
-                  <div class="aug-preset-detail" id="aug-preset-detail">
-                    <strong>Preset Details</strong>
-                    <p>Clear Day：適合建立輕量基準擴增，風險低。</p>
-                  </div>
+                  <div class="aug-preset-detail" id="aug-preset-detail"><strong data-i18n="augmentation.presetDetails">Preset Details</strong><p data-i18n="augmentation.preset.clearDayDetail">Clear Day keeps augmentation low-risk with mild brightness and contrast variation.</p></div>
                 </section>
 
                 <section class="panel-section" id="aug-settings-panel">
-                  <div class="section-title compact">
-                    <h2>Custom Policy</h2>
-                  </div>
+                  <div class="section-title compact"><h2 data-i18n="augmentation.customPolicy">Custom Policy</h2></div>
                   <div class="custom-settings-list grouped">
                     <div class="aug-setting-group">
-                      <h3>Photometric</h3>
-                      <div class="custom-setting-item slider-item">
-                        <div class="slider-header">
-                          <span><strong>Brightness</strong><small>調整影像亮度 (-0.50 to 0.50)</small></span>
-                          <span class="slider-value" id="val-brightness">0.00</span>
-                        </div>
-                        <input type="range" id="aug-light-brightness" min="-0.5" max="0.5" step="0.05" value="0">
-                      </div>
-                      <div class="custom-setting-item slider-item">
-                        <div class="slider-header">
-                          <span><strong>Contrast</strong><small>調整影像對比 (-0.50 to 0.50)</small></span>
-                          <span class="slider-value" id="val-contrast">0.00</span>
-                        </div>
-                        <input type="range" id="aug-light-contrast" min="-0.5" max="0.5" step="0.05" value="0">
-                      </div>
-                      <div class="custom-setting-item switch-container">
-                        <span><strong>Shadow</strong><small>加入局部陰影效果</small></span>
-                        <label class="switch">
-                          <input type="checkbox" id="aug-light-shadow">
-                          <span class="switch-slider"></span>
-                        </label>
-                      </div>
+                      <h3 data-i18n="augmentation.photometric">Photometric</h3>
+                      <div class="custom-setting-item slider-item"><div class="slider-header"><span><strong data-i18n="augmentation.brightness">Brightness</strong><small data-i18n="augmentation.brightnessHelp">Adjust image brightness (-0.50 to 0.50)</small></span><span class="slider-value" id="val-brightness">0.00</span></div><input type="range" id="aug-light-brightness" min="-0.5" max="0.5" step="0.05" value="0"></div>
+                      <div class="custom-setting-item slider-item"><div class="slider-header"><span><strong data-i18n="augmentation.contrast">Contrast</strong><small data-i18n="augmentation.contrastHelp">Adjust image contrast (-0.50 to 0.50)</small></span><span class="slider-value" id="val-contrast">0.00</span></div><input type="range" id="aug-light-contrast" min="-0.5" max="0.5" step="0.05" value="0"></div>
+                      <div class="custom-setting-item switch-container"><span><strong data-i18n="augmentation.shadow">Shadow</strong><small data-i18n="augmentation.shadowHelp">Add random shadow effect</small></span><label class="switch"><input type="checkbox" id="aug-light-shadow"><span class="switch-slider"></span></label></div>
                     </div>
-
                     <div class="aug-setting-group">
-                      <h3>Weather / Camera</h3>
-                      <div class="custom-setting-item slider-item">
-                        <div class="slider-header">
-                          <span><strong>Rain</strong><small>模擬雨滴與濕面效果 (0.00 to 1.00)</small></span>
-                          <span class="slider-value" id="val-rain">0.00</span>
-                        </div>
-                        <input type="range" id="aug-weather-rain" min="0.0" max="1.0" step="0.05" value="0">
-                      </div>
-                      <div class="custom-setting-item slider-item">
-                        <div class="slider-header">
-                          <span><strong>Fog</strong><small>模擬霧氣與低能見度 (0.00 to 1.00)</small></span>
-                          <span class="slider-value" id="val-fog">0.00</span>
-                        </div>
-                        <input type="range" id="aug-weather-fog" min="0.0" max="1.0" step="0.05" value="0">
-                      </div>
-                      <div class="custom-setting-item slider-item">
-                        <div class="slider-header">
-                          <span><strong>Motion blur</strong><small>模擬移動造成的模糊 (0.00 to 1.00)</small></span>
-                          <span class="slider-value" id="val-motion-blur">0.00</span>
-                        </div>
-                        <input type="range" id="aug-motion-blur" min="0.0" max="1.0" step="0.05" value="0">
-                      </div>
-                      <div class="custom-setting-item slider-item">
-                        <div class="slider-header">
-                          <span><strong>Camera noise</strong><small>加入感測器雜訊 (0.00 to 1.00)</small></span>
-                          <span class="slider-value" id="val-camera-noise">0.00</span>
-                        </div>
-                        <input type="range" id="aug-camera-noise" min="0.0" max="1.0" step="0.01" value="0">
-                      </div>
+                      <h3 data-i18n="augmentation.weatherCamera">Weather / Camera</h3>
+                      <div class="custom-setting-item slider-item"><div class="slider-header"><span><strong data-i18n="augmentation.rain">Rain</strong><small data-i18n="augmentation.rainHelp">Simulate rain streaks (0.00 to 1.00)</small></span><span class="slider-value" id="val-rain">0.00</span></div><input type="range" id="aug-weather-rain" min="0.0" max="1.0" step="0.05" value="0"></div>
+                      <div class="custom-setting-item slider-item"><div class="slider-header"><span><strong data-i18n="augmentation.fog">Fog</strong><small data-i18n="augmentation.fogHelp">Simulate haze and low contrast (0.00 to 1.00)</small></span><span class="slider-value" id="val-fog">0.00</span></div><input type="range" id="aug-weather-fog" min="0.0" max="1.0" step="0.05" value="0"></div>
+                      <div class="custom-setting-item slider-item"><div class="slider-header"><span><strong data-i18n="augmentation.motionBlur">Motion blur</strong><small data-i18n="augmentation.motionBlurHelp">Simulate movement blur (0.00 to 1.00)</small></span><span class="slider-value" id="val-motion-blur">0.00</span></div><input type="range" id="aug-motion-blur" min="0.0" max="1.0" step="0.05" value="0"></div>
+                      <div class="custom-setting-item slider-item"><div class="slider-header"><span><strong data-i18n="augmentation.cameraNoise">Camera noise</strong><small data-i18n="augmentation.cameraNoiseHelp">Add camera noise (0.00 to 1.00)</small></span><span class="slider-value" id="val-camera-noise">0.00</span></div><input type="range" id="aug-camera-noise" min="0.0" max="1.0" step="0.01" value="0"></div>
                     </div>
-
-                    <div class="aug-setting-group">
-                      <h3>Geometry</h3>
-                      <div class="custom-setting-item slider-item is-disabled">
-                        <div class="slider-header">
-                          <span><strong>Perspective</strong><small>Disabled - Phase 2. Requires polygon / bbox remapping.</small></span>
-                          <span class="slider-value" id="val-camera-perspective">0.00</span>
-                        </div>
-                        <input type="range" id="aug-camera-perspective" min="0.0" max="0.1" step="0.01" value="0" disabled>
-                      </div>
-                    </div>
-
-                    <div class="custom-setting-item custom-setting-count">
-                      <span><strong>Multiplier</strong><small>每張 train image 產生的擴增副本數量</small></span>
-                      <input type="number" id="aug-multiplier" value="1" min="1" max="5">
-                    </div>
+                    <div class="aug-setting-group"><h3 data-i18n="augmentation.geometry">Geometry</h3><div class="custom-setting-item slider-item is-disabled"><div class="slider-header"><span><strong data-i18n="augmentation.perspective">Perspective</strong><small data-i18n="augmentation.perspectiveHelp">Disabled - Phase 2. Requires polygon / bbox remapping.</small></span><span class="slider-value" id="val-camera-perspective">0.00</span></div><input type="range" id="aug-camera-perspective" min="0.0" max="0.1" step="0.01" value="0" disabled></div></div>
+                    <div class="custom-setting-item custom-setting-count"><span><strong data-i18n="augmentation.multiplier">Multiplier</strong><small data-i18n="augmentation.multiplierHelp">Augmented copies generated per train image</small></span><input type="number" id="aug-multiplier" value="1" min="1" max="5"></div>
                   </div>
                 </section>
               </div>
 
               <div class="augmentation-preview-column">
                 <section class="panel-section">
-                  <div class="section-title compact">
-                    <h2>Preview Validation</h2>
-                    <button type="button" class="btn btn-secondary" id="btn-preview-aug"><i class="fa-solid fa-eye"></i> Generate Preview</button>
-                  </div>
-                  <label class="form-stack">
-                    <span>Preview image</span>
-                    <select id="aug-preview-select-img"></select>
-                  </label>
+                  <div class="section-title compact"><h2 data-i18n="augmentation.previewValidation">Preview Validation</h2><button type="button" class="btn btn-secondary" id="btn-preview-aug"><i class="fa-solid fa-eye"></i> <span data-i18n="augmentation.generatePreview">Generate Preview</span></button></div>
+                  <label class="form-stack"><span data-i18n="augmentation.previewImage">Preview image</span><select id="aug-preview-select-img"></select></label>
                   <div class="aug-preview-container">
-                    <div class="aug-preview-box">
-                      <h4>Original</h4>
-                      <div class="aug-preview-content">
-                        <canvas id="aug-before-canvas" style="display: none;"></canvas>
-                        <div class="preview-placeholder" id="aug-before-placeholder">Select an annotated train image to preview.</div>
-                      </div>
-                    </div>
-                    <div class="aug-preview-box">
-                      <h4>Augmented</h4>
-                      <div class="aug-preview-content">
-                        <img id="aug-preview-img" alt="Augmentation preview" style="display: none;">
-                        <div class="preview-placeholder" id="aug-preview-placeholder">Generate Preview to inspect the result.</div>
-                      </div>
-                    </div>
+                    <div class="aug-preview-box"><h4 data-i18n="augmentation.original">Original</h4><div class="aug-preview-content"><canvas id="aug-before-canvas" style="display: none;"></canvas><div class="preview-placeholder" id="aug-before-placeholder" data-i18n="augmentation.beforePlaceholder">Select an annotated train image to preview.</div></div></div>
+                    <div class="aug-preview-box"><h4 data-i18n="augmentation.augmented">Augmented</h4><div class="aug-preview-content"><img id="aug-preview-img" alt="Augmentation preview" style="display: none;"><div class="preview-placeholder" id="aug-preview-placeholder" data-i18n="augmentation.previewPlaceholder">Generate Preview to inspect the result.</div></div></div>
                   </div>
                 </section>
-
                 <section class="panel-section aug-risk-panel">
-                  <div class="section-title compact">
-                    <h2>Risk Check</h2>
-                    <span class="summary-badge badge-warning" id="aug-risk-badge">Preview required</span>
-                  </div>
+                  <div class="section-title compact"><h2 data-i18n="augmentation.riskCheck">Risk Check</h2><span class="summary-badge badge-warning" id="aug-risk-badge">Preview required</span></div>
                   <ul class="aug-risk-list" id="aug-risk-list"></ul>
-                  <div class="aug-apply-row">
-                    <button class="btn btn-secondary" type="button" id="btn-reset-aug"><i class="fa-solid fa-rotate-left"></i> Reset</button>
-                    <button class="btn btn-primary guarded" data-requires="split" id="btn-apply-aug" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> Apply to Train Split</button>
-                  </div>
+                  <div class="aug-apply-row"><button class="btn btn-secondary" type="button" id="btn-reset-aug"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="augmentation.reset">Reset</span></button><button class="btn btn-primary guarded" data-requires="split" id="btn-apply-aug" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="augmentation.applyTrain">Apply to Train Split</span></button></div>
                 </section>
               </div>
             </section>
@@ -639,11 +532,6 @@
               <span data-i18n="training.card.split">Split</span>
               <strong id="card-split-status">--</strong>
               <small id="card-split-detail">Train / Val / Test: --</small>
-            </div>
-            <div class="metric-card">
-              <span data-i18n="training.card.startStatus">Start Status</span>
-              <strong id="card-start-status">--</strong>
-              <small id="card-start-detail">Readiness: --</small>
             </div>
           </div>
 
@@ -795,25 +683,6 @@
                   <div class="metric-card"><span>mAP50-95(M)</span><strong id="monitor-map50-95">--</strong></div>
                   <div class="metric-card"><span data-i18n="training.monitor.loss">Loss</span><strong id="monitor-loss">--</strong></div>
                 </div>
-
-                <div class="hardware-telemetry-panel">
-                  <div>
-                    <div class="telemetry-row"><span>CPU Usage</span><span id="tel-cpu-val">--</span></div>
-                    <div class="metric-progress"><div class="bar" id="tel-cpu-bar" style="width: 0%"></div></div>
-                  </div>
-                  <div>
-                    <div class="telemetry-row"><span>RAM Usage</span><span id="tel-ram-val">--</span></div>
-                    <div class="metric-progress"><div class="bar" id="tel-ram-bar" style="width: 0%"></div></div>
-                  </div>
-                  <div>
-                    <div class="telemetry-row"><span>GPU Usage</span><span id="tel-gpu-val">--</span></div>
-                    <div class="metric-progress"><div class="bar" id="tel-gpu-bar" style="width: 0%"></div></div>
-                  </div>
-                  <div>
-                    <div class="telemetry-row"><span>VRAM Usage</span><span id="tel-vram-val">--</span></div>
-                    <div class="metric-progress"><div class="bar" id="tel-vram-bar" style="width: 0%"></div></div>
-                  </div>
-                </div>
               </div>
             </section>
           </div>
@@ -826,7 +695,6 @@
                 <button class="tab-btn" data-chart-tab="loss" data-i18n="training.metrics.lossBreakdown">Loss Breakdown</button>
                 <button class="tab-btn" data-chart-tab="mask" data-i18n="training.metrics.mask">Mask Metrics</button>
                 <button class="tab-btn" data-chart-tab="box" data-i18n="training.metrics.box">Box Metrics</button>
-                <button class="tab-btn" data-chart-tab="hardware" data-i18n="training.metrics.hardware">Hardware Metrics</button>
                 <button class="tab-btn" data-chart-tab="report" data-i18n="training.metrics.report">Report View</button>
               </div>
             </div>
@@ -1437,6 +1305,6 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260625-i18n-training"></script>
+  <script type="module" src="/static/app.js?v=20260625-i18n-pages"></script>
 </body>
 </html>

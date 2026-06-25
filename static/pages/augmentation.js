@@ -1,5 +1,5 @@
 ﻿import { eventBus } from "../event_bus.js";
-import { appState, augmentationPresets } from "../state.js";
+import { appState, augmentationPresets, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, escapeHtml } from "../utils.js";
 
@@ -22,14 +22,15 @@ let applying = false;
 let selectedPreset = "clear_day";
 
 const PRESET_DETAILS = {
-  clear_day: "Clear Day：輕量亮度與對比變化，適合建立低風險 baseline。",
-  low_light: "Low Light：模擬夜間、陰影與低照度環境，適合補強光線不足場景。",
-  rainy: "Rainy：模擬雨滴、濕面與輕微模糊，需檢查 mask 邊界是否仍清楚。",
-  foggy: "Fog / Haze：降低對比並加入霧化效果，適合測試低能見度穩定性。",
-  motion_camera: "Motion Camera：加入運動模糊與相機雜訊，適合測試移動拍攝情境。"
+  clear_day: "augmentation.preset.clearDayDetail",
+  low_light: "augmentation.preset.lowLightHelp",
+  rainy: "augmentation.preset.rainyHelp",
+  foggy: "augmentation.preset.foggyHelp",
+  motion_camera: "augmentation.preset.motionHelp"
 };
 
 export function initAugmentation() {
+  eventBus.on("language-changed", () => renderAugmentationPage(getStatusFromProject()));
   SLIDERS.forEach((selector) => {
     const el = qs(selector);
     if (!el) return;
@@ -123,12 +124,12 @@ function getAugmentationState(status) {
     return { state: "blocked_no_preview_image", label: "Blocked", badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
   }
   if (applying) {
-    return { state: "applying", label: "Applying", badge: "warning", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons: ["Augmentation job is running."] };
+    return { state: "applying", label: t("augmentation.state.applying"), badge: "warning", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons: [t("augmentation.reason.running")] };
   }
   if (previewReady) {
-    return { state: "preview_ready", label: "Preview Ready", badge: "success", canPreview: true, canApply: true, trainCount, valCount, testCount, previewCount, reasons: ["Preview has been generated and risk checks passed."] };
+    return { state: "preview_ready", label: t("augmentation.state.previewReady"), badge: "success", canPreview: true, canApply: true, trainCount, valCount, testCount, previewCount, reasons: [t("augmentation.reason.previewDone")] };
   }
-  return { state: "ready", label: "Ready", badge: "success", canPreview: true, canApply: false, trainCount, valCount, testCount, previewCount, reasons: ["Train images are available. Generate a preview before applying augmentation."] };
+  return { state: "ready", label: t("augmentation.state.ready"), badge: "success", canPreview: true, canApply: false, trainCount, valCount, testCount, previewCount, reasons: [t("augmentation.reason.ready")] };
 }
 
 function renderReadinessGuard(info) {
@@ -154,14 +155,14 @@ function renderReadinessGuard(info) {
 
 function getReadinessMessage(info) {
   switch (info.state) {
-    case "blocked_no_project": return "Open or create a project before configuring augmentation.";
-    case "blocked_no_images": return "Augmentation is blocked because this project has no images.";
-    case "blocked_no_split": return "Augmentation is blocked until Train / Val / Test split exists.";
-    case "blocked_no_preview_image": return "No annotated train image is available for preview.";
-    case "ready": return `${info.trainCount} train images found. Val/Test will remain excluded.`;
-    case "preview_ready": return "Preview is ready. You can apply augmentation to Train split only.";
-    case "applying": return "Applying augmentation to Train split. Please wait.";
-    default: return "Review augmentation readiness before applying.";
+    case "blocked_no_project": return t("augmentation.message.noProject");
+    case "blocked_no_images": return t("augmentation.message.noImages");
+    case "blocked_no_split": return t("augmentation.message.noSplit");
+    case "blocked_no_preview_image": return t("augmentation.message.noPreviewImage");
+    case "ready": return t("augmentation.message.ready", { count: info.trainCount });
+    case "preview_ready": return t("augmentation.message.previewReady");
+    case "applying": return t("augmentation.message.applying");
+    default: return t("augmentation.subtitle");
   }
 }
 
@@ -173,8 +174,8 @@ function renderTargetScope(status) {
   const output = train * multiplier;
 
   setText("#aug-scope-train", String(train));
-  setText("#aug-scope-val", `${val} excluded`);
-  setText("#aug-scope-test", `${test} excluded`);
+  setText("#aug-scope-val", t("augmentation.excluded", { count: val }));
+  setText("#aug-scope-test", t("augmentation.excluded", { count: test }));
   setText("#aug-scope-output", `${train} -> ${train + output}`);
   setText("#aug-info-train-count", `${train}`);
   setText("#aug-info-multiplier", `${multiplier}x`);
@@ -186,7 +187,7 @@ function renderPreviewOptions(status) {
   if (!select) return;
 
   const options = getPreviewImages().map((img) => `<option value="${escapeHtml(img.filename)}">${escapeHtml(img.filename)}</option>`);
-  select.innerHTML = options.length ? options.join("") : `<option value="">No annotated train images available</option>`;
+  select.innerHTML = options.length ? options.join("") : `<option value="">${escapeHtml(t("augmentation.noPreviewOption"))}</option>`;
   select.disabled = !status?.splitComplete || options.length === 0;
 
   if (select.value) drawBeforeCanvas(select.value);
@@ -199,11 +200,11 @@ function renderRiskCheck(info) {
   if (!list) return;
 
   const checks = [
-    { ok: info.trainCount > 0, text: "Train split has target images." },
-    { ok: true, text: "Val/Test are excluded to avoid evaluation leakage." },
-    { ok: true, text: "Original images are preserved; augmented copies are generated." },
-    { ok: qs("#aug-camera-perspective")?.disabled === true, text: "Perspective is disabled until polygon / bbox remapping is verified." },
-    { ok: previewReady, text: previewReady ? "Preview generated successfully." : "Preview has not been generated yet." }
+    { ok: info.trainCount > 0, text: t("augmentation.risk.train") },
+    { ok: true, text: t("augmentation.risk.valTest") },
+    { ok: true, text: t("augmentation.risk.originals") },
+    { ok: qs("#aug-camera-perspective")?.disabled === true, text: t("augmentation.risk.perspective") },
+    { ok: previewReady, text: previewReady ? t("augmentation.risk.previewOk") : t("augmentation.risk.previewMissing") }
   ];
 
   list.innerHTML = checks.map((check) => `
@@ -216,13 +217,13 @@ function renderRiskCheck(info) {
   if (badge) {
     if (info.canApply) {
       badge.className = "summary-badge badge-success";
-      badge.textContent = "Passed";
+      badge.textContent = t("augmentation.risk.passed");
     } else if (info.canPreview) {
       badge.className = "summary-badge badge-warning";
-      badge.textContent = "Preview required";
+      badge.textContent = t("augmentation.risk.previewRequired");
     } else {
       badge.className = "summary-badge badge-danger";
-      badge.textContent = "Blocked";
+      badge.textContent = t("augmentation.state.blocked");
     }
   }
 }
@@ -264,7 +265,7 @@ function invalidatePreview() {
   if (img) img.style.display = "none";
   if (placeholder) {
     placeholder.style.display = "block";
-    placeholder.textContent = "Generate Preview to inspect the result.";
+    placeholder.textContent = t("augmentation.previewPlaceholder");
   }
   renderAugmentationPage(appState.currentProject ? getStatusFromProject() : { hasProject: false });
 }
@@ -283,7 +284,7 @@ function resetPreviewUI() {
   if (beforeCanvas) beforeCanvas.style.display = "none";
   if (beforePlaceholder) {
     beforePlaceholder.style.display = "block";
-    beforePlaceholder.textContent = "Select an annotated train image to preview.";
+    beforePlaceholder.textContent = t("augmentation.beforePlaceholder");
   }
   if (img) img.style.display = "none";
   if (placeholder) {
@@ -318,7 +319,7 @@ function drawBeforeCanvas(filename) {
     canvas.style.display = "none";
     if (placeholder) {
       placeholder.style.display = "block";
-      placeholder.textContent = "Unable to load preview image.";
+      placeholder.textContent = t("augmentation.loadPreviewFailed");
     }
   };
   img.src = `/api/projects/${appState.currentProjectId}/images/${encodeURIComponent(filename)}`;
@@ -400,7 +401,7 @@ function applyAugmentationPreset(presetName) {
   });
 
   const detail = qs("#aug-preset-detail p");
-  if (detail) detail.textContent = PRESET_DETAILS[presetName] || "Preset selected.";
+  if (detail) detail.textContent = t(PRESET_DETAILS[presetName] || "augmentation.preset.clearDayDetail");
 
   updateSliderLabels();
   updateEstimatedCount();
@@ -450,7 +451,7 @@ async function triggerAugPreview() {
     augmentationUiState = "preview_generating";
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Rendering...`;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t("augmentation.previewRendering"))}`;
     }
 
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/augment-preview`, {
@@ -470,12 +471,12 @@ async function triggerAugPreview() {
     if (img) img.style.display = "none";
     if (placeholder) {
       placeholder.style.display = "block";
-      placeholder.textContent = `Preview failed: ${err.message}`;
+      placeholder.textContent = t("augmentation.previewFailed", { message: err.message });
     }
-    eventBus.emit("toast", `Preview failed: ${err.message}`);
+    eventBus.emit("toast", t("augmentation.previewFailed", { message: err.message }));
     renderAugmentationPage(getStatusFromProject());
   } finally {
-    if (btn) btn.innerHTML = `<i class="fa-solid fa-eye"></i> Generate Preview`;
+    if (btn) btn.innerHTML = `<i class="fa-solid fa-eye"></i> ${escapeHtml(t("augmentation.generatePreview"))}`;
   }
 }
 
@@ -496,11 +497,11 @@ async function applyAugmentationToTrainSplit() {
         config: getAugmentationConfig()
       })
     });
-    eventBus.emit("toast", data.message || "Augmentation applied to Train split.");
+    eventBus.emit("toast", data.message || t("augmentation.applyDone"));
     eventBus.emit("refresh-project");
     previewReady = false;
   } catch (err) {
-    eventBus.emit("toast", `Apply failed: ${err.message}`);
+    eventBus.emit("toast", t("augmentation.applyFailed", { message: err.message }));
   } finally {
     applying = false;
     renderAugmentationPage(getStatusFromProject());
