@@ -1506,6 +1506,19 @@ def get_latest_annotation_import(project_id: str):
     return AnnotationImporter.latest_report(project) or {}
 
 
+@app.get("/api/projects/{project_id}/annotations/import/{import_id}/summary")
+def preview_annotation_import_apply(project_id: str, import_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        return AnnotationImporter.preview_apply_import(project, import_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to preview annotation import: {e}")
+
+
 @app.post("/api/projects/{project_id}/annotations/import/{import_id}/apply")
 def apply_annotation_import(project_id: str, import_id: str):
     project = ProjectManager.get_project(project_id)

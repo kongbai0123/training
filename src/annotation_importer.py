@@ -171,7 +171,38 @@ class AnnotationImporter:
         }
 
     @staticmethod
-    def _merge_labelme_json(source_path: Path, target_path: Path) -> Dict[str, int]:
+    def preview_apply_import(project: Dict[str, Any], import_id: str) -> Dict[str, Any]:
+        layout = ProjectLayout.from_project(project)
+        root = AnnotationImporter.draft_root(layout, import_id)
+        report_path = root / "import_report.json"
+        draft_labelme = root / "labelme"
+        if not report_path.exists() or not draft_labelme.exists():
+            raise ValueError(f"Import draft not found: {import_id}")
+
+        current_labelme = layout.resolve_current_labelme_dir().path
+        files: List[Dict[str, Any]] = []
+        total_add = 0
+        total_duplicates = 0
+        for json_file in draft_labelme.glob("*.json"):
+            result = AnnotationImporter._merge_labelme_json(json_file, current_labelme / json_file.name, dry_run=True)
+            file_summary = {
+                "file": json_file.name,
+                "will_add": result["added"],
+                "duplicates": result["duplicates"],
+            }
+            files.append(file_summary)
+            total_add += result["added"]
+            total_duplicates += result["duplicates"]
+
+        return {
+            "import_id": import_id,
+            "will_add": total_add,
+            "duplicates": total_duplicates,
+            "files": files,
+        }
+
+    @staticmethod
+    def _merge_labelme_json(source_path: Path, target_path: Path, dry_run: bool = False) -> Dict[str, int]:
         source = json.loads(source_path.read_text(encoding="utf-8"))
         source_shapes = source.get("shapes", [])
         if not isinstance(source_shapes, list):
@@ -191,12 +222,15 @@ class AnnotationImporter:
         duplicates = 0
         for shape in source_shapes:
             key = AnnotationImporter._shape_key(shape)
-            if key in existing_keys:
+            if key in existing_keys or any(AnnotationImporter._is_duplicate_shape(shape, existing) for existing in target_shapes):
                 duplicates += 1
                 continue
             target_shapes.append(shape)
             existing_keys.add(key)
             added += 1
+
+        if dry_run:
+            return {"added": added, "duplicates": duplicates}
 
         target["version"] = target.get("version") or source.get("version") or "5.0.1"
         target["flags"] = target.get("flags") if isinstance(target.get("flags"), dict) else {}
@@ -221,6 +255,74 @@ class AnnotationImporter:
             str(shape.get("shape_type", "")),
             tuple(normalized_points),
         )
+
+    @staticmethod
+    def _is_duplicate_shape(candidate: Dict[str, Any], existing: Dict[str, Any]) -> bool:
+        if str(candidate.get("label", "")) != str(existing.get("label", "")):
+            return False
+
+        candidate_type = str(candidate.get("shape_type", ""))
+        existing_type = str(existing.get("shape_type", ""))
+        candidate_bbox = AnnotationImporter._shape_bbox(candidate)
+        existing_bbox = AnnotationImporter._shape_bbox(existing)
+        bbox_iou = AnnotationImporter._bbox_iou(candidate_bbox, existing_bbox)
+
+        if candidate_type == "rectangle" or existing_type == "rectangle":
+            return bbox_iou >= 0.95
+
+        candidate_area = AnnotationImporter._polygon_area(candidate)
+        existing_area = AnnotationImporter._polygon_area(existing)
+        area_similarity = AnnotationImporter._area_similarity(candidate_area, existing_area)
+        return bbox_iou >= 0.95 and area_similarity >= 0.97
+
+    @staticmethod
+    def _shape_bbox(shape: Dict[str, Any]) -> Tuple[float, float, float, float]:
+        points = shape.get("points", [])
+        coords = []
+        if isinstance(points, list):
+            for point in points:
+                if isinstance(point, list) and len(point) >= 2:
+                    coords.append((float(point[0]), float(point[1])))
+        if not coords:
+            return (0.0, 0.0, 0.0, 0.0)
+        xs = [point[0] for point in coords]
+        ys = [point[1] for point in coords]
+        return (min(xs), min(ys), max(xs), max(ys))
+
+    @staticmethod
+    def _bbox_iou(a: Tuple[float, float, float, float], b: Tuple[float, float, float, float]) -> float:
+        ax1, ay1, ax2, ay2 = a
+        bx1, by1, bx2, by2 = b
+        inter_w = max(0.0, min(ax2, bx2) - max(ax1, bx1))
+        inter_h = max(0.0, min(ay2, by2) - max(ay1, by1))
+        inter = inter_w * inter_h
+        area_a = max(0.0, ax2 - ax1) * max(0.0, ay2 - ay1)
+        area_b = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
+        union = area_a + area_b - inter
+        return inter / union if union > 0 else 0.0
+
+    @staticmethod
+    def _polygon_area(shape: Dict[str, Any]) -> float:
+        points = shape.get("points", [])
+        coords: List[Tuple[float, float]] = []
+        if isinstance(points, list):
+            for point in points:
+                if isinstance(point, list) and len(point) >= 2:
+                    coords.append((float(point[0]), float(point[1])))
+        if len(coords) < 3:
+            x1, y1, x2, y2 = AnnotationImporter._shape_bbox(shape)
+            return max(0.0, x2 - x1) * max(0.0, y2 - y1)
+        area = 0.0
+        for idx, (x1, y1) in enumerate(coords):
+            x2, y2 = coords[(idx + 1) % len(coords)]
+            area += x1 * y2 - x2 * y1
+        return abs(area) / 2.0
+
+    @staticmethod
+    def _area_similarity(area_a: float, area_b: float) -> float:
+        larger = max(area_a, area_b)
+        smaller = min(area_a, area_b)
+        return smaller / larger if larger > 0 else 0.0
 
     @staticmethod
     def _record_converted(report: Dict[str, Any], converted: Union[Dict[str, Any], List[Dict[str, Any]]]) -> None:

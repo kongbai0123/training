@@ -723,7 +723,7 @@ function buildLabelMeRightPanel(status) {
       { label: "Invalid", value: String(lm.invalidJson || 0), badgeType: lm.invalidJson > 0 ? "danger" : null },
       { label: "Completion", value: `${status.labelme.completionRate || 0}%`, badgeType: (status.labelme.completionRate || 0) >= 95 ? "success" : "neutral" }
     ],
-    actions: ["Open LabelMe with the project image folder.", "Sync JSON after annotation.", "Review invalid or unknown labels before Split."],
+    actions: ["Open LabelMe with the project image folder.", "Rescan annotation status after editing.", "Review invalid or unknown labels before Split."],
     warnings
   };
 }
@@ -993,8 +993,8 @@ function renderPageGuards(pageId, status) {
     guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未匯入資料集。"], "前往 Dataset 匯入圖片。"));
   }
   if (status.hasDataset && !status.labelme.synced) {
-    guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未同步 LabelMe 標註。"], "前往 LabelMe 頁同步 JSON，再轉換為訓練格式。"));
-    guards.split.push(statusGuard("info", "LabelMe 尚未同步", ["此階段仍可設定 split UI，但正式訓練應等待 LabelMe JSON 轉換完成。"], "前往 LabelMe 頁同步 JSON 與執行轉換。"));
+    guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未重新掃描 LabelMe 標註狀態。"], "前往 LabelMe 頁重新掃描標註狀態，再轉換為訓練格式。"));
+    guards.split.push(statusGuard("info", "LabelMe 尚未掃描", ["此階段仍可設定 split UI，但正式訓練應等待 LabelMe JSON 轉換完成。"], "前往 LabelMe 頁重新掃描標註狀態與執行轉換。"));
   }
   if (status.hasDataset && !status.splitComplete) {
     guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未建立 Train / Val / Test。"], "前往 Split 建立資料分散。"));

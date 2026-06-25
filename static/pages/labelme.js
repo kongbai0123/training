@@ -281,6 +281,17 @@ async function applyLatestAnnotationImport() {
   const btn = qs("#btn-apply-annotation-import");
   if (btn) btn.disabled = true;
   try {
+    const summary = await apiFetch(`/api/projects/${appState.currentProjectId}/annotations/import/${report.import_id}/summary`);
+    const shouldApply = window.confirm([
+      "Apply imported annotation drafts?",
+      "",
+      `Will add: ${summary.will_add ?? 0} shapes`,
+      `Will skip duplicates: ${summary.duplicates ?? 0} shapes`,
+      "",
+      "Existing LabelMe JSON files will be merged, not overwritten."
+    ].join("\n"));
+    if (!shouldApply) return;
+
     const result = await apiFetch(`/api/projects/${appState.currentProjectId}/annotations/import/${report.import_id}/apply`, { method: "POST" });
     const added = result?.apply?.applied_count ?? 0;
     const duplicates = result?.apply?.skipped_duplicates ?? 0;
@@ -380,7 +391,9 @@ export function renderLabelMeManager(status) {
   renderAnnotationImportReport();
 
   const rawImages = (appState.currentProject?.images || []).filter((img) => !img.is_augmented);
+  const report = appState.latestAnnotationImport || appState.currentProject?.last_annotation_import;
   const draftByJson = draftImportMap();
+  const showDraftDiff = !!report?.import_id && !report?.applied_at;
   if (rawImages.length === 0) {
     setHTML("#labelme-check-table", `
       <tr><td colspan="5" style="text-align:center;">${escapeHtml(t("labelme.empty.noImages"))}</td></tr>
@@ -399,7 +412,7 @@ export function renderLabelMeManager(status) {
         const isEmpty = emptyJsons.includes(jsonFilename);
         const hasUnknown = !!unknownLabelsDetail[jsonFilename];
         const needsPolygon = hasSegmentationBbox(img);
-        const hasDraft = !!draftByJson[jsonFilename];
+        const hasDraft = showDraftDiff && !!draftByJson[jsonFilename];
         return img.status !== "annotated" || needsPolygon || isCorrupted || isEmpty || hasUnknown || hasDraft;
       })
     : rawImages;
@@ -427,7 +440,8 @@ export function renderLabelMeManager(status) {
     const isEmpty = emptyJsons.includes(jsonFilename);
     const unknownLabels = unknownLabelsDetail[jsonFilename] || [];
     const needsPolygon = hasSegmentationBbox(img);
-    const draftInfo = draftByJson[jsonFilename];
+    const draftInfo = showDraftDiff ? draftByJson[jsonFilename] : null;
+    const currentShapeCount = (img.annotations || []).length;
 
     if (img.status === "annotated") {
       statusText = "Annotated";
@@ -446,9 +460,12 @@ export function renderLabelMeManager(status) {
       rowClass = "row-muted";
     }
 
-    if (draftInfo && img.status !== "annotated") {
+    if (draftInfo) {
+      const draftShapeCount = Number(draftInfo.shape_count || 0);
+      const addedShapes = draftInfo.added_shapes ?? draftShapeCount;
+      const duplicateShapes = draftInfo.duplicate_shapes ?? 0;
       statusText = "Draft ready";
-      issueText = `Draft from ${draftInfo.source_format || "import"}`;
+      issueText = `Current ${currentShapeCount} / Draft ${draftShapeCount}; add ${addedShapes}, duplicate ${duplicateShapes}`;
       fixText = "Apply valid drafts";
       rowClass = "row-warning";
     }
