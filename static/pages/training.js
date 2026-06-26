@@ -2,6 +2,7 @@ import { eventBus } from "../event_bus.js";
 import { appState, getProjectStatus, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
+import { initTrainingModeSidebar } from "./training_modes.js";
 
 // Training UI helper
 let metricsChart = null;
@@ -14,6 +15,8 @@ function setMetricsDashboardActive(active) {
 }
 
 export function initTraining() {
+  initTrainingModeSidebar();
+
   qs("#tab-config-simple")?.addEventListener("click", () => {
     qs("#tab-config-simple").className = "btn btn-sm btn-primary";
     qs("#tab-config-advanced").className = "btn btn-sm btn-secondary";

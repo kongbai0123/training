@@ -33,6 +33,7 @@ from src.dataset_utils import DatasetUtils
 from src.splitter import DataSplitter
 from src.augmenter import ImageAugmenter
 from src.trainer import YOLOTrainer
+from src.training.dispatcher import TrainerDispatcher
 from src.labelme_adapter import LabelMeAdapter
 from src.annotation_importer import AnnotationImporter
 from src.model_registry import ModelRegistry
@@ -1882,9 +1883,9 @@ def start_training(project_id: str, config: TrainConfigRequest):
         raise HTTPException(status_code=404, detail="Project not found")
 
     # ????箏????箸虜??喟???
-    from src.training.readiness import validate_training_readiness
     config_dict = config.dict() if hasattr(config, "dict") else config.__dict__
-    readiness_errors = validate_training_readiness(project, config_dict)
+    backend = TrainerDispatcher.resolve_backend(project, config_dict)
+    readiness_errors = backend.validate_readiness(project, config_dict)
     if readiness_errors:
         raise HTTPException(status_code=400, detail="?格??????喟??鈭???" + "\n".join(readiness_errors))
 
@@ -1919,7 +1920,7 @@ def start_training(project_id: str, config: TrainConfigRequest):
     ProjectManager.save_project(project_id, project)
 
     # ????格?
-    YOLOTrainer.start_training(project)
+    TrainerDispatcher.start_training(project)
     return {"status": "started", "message": "Training started.", "run_id": run_id}
 
 @app.get("/api/projects/{project_id}/train/recommend")
@@ -2096,12 +2097,14 @@ def export_run_onnx(project_id: str, run_id: str):
 
 @app.post("/api/projects/{project_id}/train/stop")
 def stop_training(project_id: str):
-    YOLOTrainer.stop_training(project_id)
+    project = ProjectManager.get_project(project_id)
+    TrainerDispatcher.stop_training(project_id, project)
     return {"status": "stopped", "message": "?格???餈恍???????格??.."}
 
 @app.get("/api/projects/{project_id}/train/status")
 def get_train_status(project_id: str):
-    return YOLOTrainer.get_status(project_id)
+    project = ProjectManager.get_project(project_id)
+    return TrainerDispatcher.get_status(project_id, project)
 
 # --- WebSocket ????? ---
 @app.websocket("/api/projects/{project_id}/monitor")
@@ -2111,7 +2114,8 @@ async def monitor_training(websocket: WebSocket, project_id: str):
     try:
         while True:
             # ???????????格????撞??GPU/CPU telemetry
-            status = YOLOTrainer.get_status(project_id)
+            project = ProjectManager.get_project(project_id)
+            status = TrainerDispatcher.get_status(project_id, project)
             await websocket.send_json(status)
 
             # ?鈭??箸虜甇????嚗??蝎孵??漲??箸??箸?????????????箸??亙??

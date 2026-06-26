@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
@@ -62,19 +62,40 @@
 
     <div class="app-body">
       <aside class="sidebar">
+        <div class="training-mode-toggle">
+          <button type="button" id="training-mode-rnn" data-training-mode="rnn">RNN</button>
+          <button type="button" id="training-mode-cnn" data-training-mode="cnn" class="active">CNN</button>
+        </div>
         <nav class="sidebar-nav" aria-label="Main navigation">
-          <button class="sidebar-item active" data-page="dashboard"><i class="fa-solid fa-grid-2"></i><span data-i18n="navDashboard">Dashboard</span></button>
-          <button class="sidebar-item" data-page="dataset"><i class="fa-solid fa-images"></i><span data-i18n="navDataset">Dataset</span></button>
-          <button class="sidebar-item" data-page="labelme"><i class="fa-solid fa-pen-nib"></i><span data-i18n="navLabelMe">LabelMe</span></button>
-          <button class="sidebar-item" data-page="split"><i class="fa-solid fa-code-branch"></i><span data-i18n="navSplit">Split</span></button>
-          <button class="sidebar-item" data-page="augmentation"><i class="fa-solid fa-wand-magic-sparkles"></i><span data-i18n="navAugmentation">Augmentation</span></button>
-          <button class="sidebar-item" data-page="training"><i class="fa-solid fa-microchip"></i><span data-i18n="navTraining">Training</span></button>
-          <button class="sidebar-item" data-page="evaluation"><i class="fa-solid fa-chart-line"></i><span data-i18n="navEvaluation">Evaluation</span></button>
-          <button class="sidebar-item" data-page="inference"><i class="fa-solid fa-magnifying-glass-chart"></i><span data-i18n="navInference">Inference Lab</span></button>
-          <button class="sidebar-item" data-page="auto-labeling"><i class="fa-solid fa-wand-sparkles"></i><span data-i18n="navAutoLabeling">Auto-Labeling</span></button>
-          <button class="sidebar-item" data-page="export"><i class="fa-solid fa-file-export"></i><span data-i18n="navExport">Export</span></button>
-          <button class="sidebar-item" data-page="history"><i class="fa-solid fa-clock"></i><span data-i18n="navHistory">History</span></button>
-          <button class="sidebar-item" data-page="settings"><i class="fa-solid fa-gear"></i><span data-i18n="navSettings">Settings</span></button>
+          <div class="training-shared-nav">
+            <button class="sidebar-item active" data-mode-nav="overview"><i class="fa-solid fa-grid-2"></i><span>總覽</span></button>
+            <button class="sidebar-item" data-page="history" data-mode-nav="history"><i class="fa-solid fa-clock"></i><span>歷史紀錄</span></button>
+            <button class="sidebar-item" data-page="settings" data-mode-nav="settings"><i class="fa-solid fa-gear"></i><span>設定</span></button>
+          </div>
+
+          <div class="training-sidebar-divider"></div>
+
+          <div id="cnn-mode-nav" class="training-mode-nav">
+            <button class="sidebar-item" data-page="dataset" data-cnn-nav="dataset"><i class="fa-solid fa-images"></i><span>資料集</span></button>
+            <button class="sidebar-item" data-page="labelme" data-cnn-nav="labelme"><i class="fa-solid fa-pen-nib"></i><span>LabelMe</span></button>
+            <button class="sidebar-item" data-page="split" data-cnn-nav="split"><i class="fa-solid fa-code-branch"></i><span>資料分散</span></button>
+            <button class="sidebar-item" data-page="augmentation" data-cnn-nav="augmentation"><i class="fa-solid fa-wand-magic-sparkles"></i><span>物理擴充</span></button>
+            <button class="sidebar-item" data-page="training" data-cnn-nav="training"><i class="fa-solid fa-microchip"></i><span>模型訓練</span></button>
+            <button class="sidebar-item" data-page="evaluation" data-cnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>評估</span></button>
+            <button class="sidebar-item" data-page="inference" data-cnn-nav="inference"><i class="fa-solid fa-magnifying-glass-chart"></i><span>模型測試</span></button>
+            <button class="sidebar-item" data-page="auto-labeling" data-cnn-nav="auto-labeling"><i class="fa-solid fa-wand-sparkles"></i><span>自動標註</span></button>
+            <button class="sidebar-item" data-page="export" data-cnn-nav="export"><i class="fa-solid fa-file-export"></i><span>匯出</span></button>
+          </div>
+
+          <div id="rnn-mode-nav" class="training-mode-nav hidden">
+            <button class="sidebar-item active" data-rnn-nav="sequence-dataset"><i class="fa-solid fa-table-list"></i><span>序列資料集</span></button>
+            <button class="sidebar-item" data-rnn-nav="features-labels"><i class="fa-solid fa-tag"></i><span>特徵與標籤</span></button>
+            <button class="sidebar-item" data-rnn-nav="windowing"><i class="fa-solid fa-crop-simple"></i><span>序列切片</span></button>
+            <button class="sidebar-item" data-rnn-nav="training"><i class="fa-solid fa-sliders"></i><span>模型訓練</span></button>
+            <button class="sidebar-item" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>評估</span></button>
+            <button class="sidebar-item" data-rnn-nav="sequence-test"><i class="fa-regular fa-circle-play"></i><span>序列測試</span></button>
+            <button class="sidebar-item" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i><span>匯出</span></button>
+          </div>
         </nav>
       </aside>
 
@@ -547,6 +568,9 @@
             </div>
           </div>
 
+          <div class="training-mode-layout">
+            <main class="training-mode-main">
+              <section id="cnn-workspace" class="training-workspace active">
           <div id="training-readiness-guard" class="training-readiness"></div>
 
           <div class="training-overview-grid">
@@ -869,6 +893,136 @@
               </table>
             </div>
           </section>
+              </section>
+
+              <section id="rnn-workspace" class="training-workspace hidden">
+                <div class="rnn-disabled-banner">
+                  <div>
+                    <strong>RNN Preview</strong>
+                    <span>Schema Only · Training Disabled · Readiness Coming Later</span>
+                  </div>
+                  <span class="rnn-disabled-action-hitbox">
+                    <button type="button" class="btn btn-disabled" id="btn-start-rnn" disabled>
+                      <i class="fa-solid fa-lock"></i> Start RNN Disabled
+                    </button>
+                  </span>
+                </div>
+
+                <div id="rnn-overview-panel" class="rnn-panel active" data-rnn-panel="overview">
+                  <div class="rnn-preview-grid">
+                    <section class="rnn-preview-card">
+                      <div class="section-title"><h2>序列資料集摘要</h2><span class="summary-badge badge-warning">Preview</span></div>
+                      <div class="summary-row"><span>Manifest</span><code>sequence_manifest.json not connected</code></div>
+                      <div class="summary-row"><span>Source</span><code>CSV / Feature Sequence planned</code></div>
+                      <div class="summary-row"><span>Split</span><code>-- / -- / --</code></div>
+                    </section>
+                    <section class="rnn-preview-card">
+                      <div class="section-title"><h2>特徵與標籤摘要</h2><span class="summary-badge badge-neutral">Schema only</span></div>
+                      <div class="summary-row"><span>Feature columns</span><code>not parsed</code></div>
+                      <div class="summary-row"><span>Target column</span><code>not selected</code></div>
+                      <div class="summary-row"><span>Feature dim</span><code>--</code></div>
+                    </section>
+                    <section class="rnn-preview-card">
+                      <div class="section-title"><h2>序列切片設定摘要</h2><span class="summary-badge badge-warning">Not Ready</span></div>
+                      <div class="summary-row"><span>Sequence length</span><code>16</code></div>
+                      <div class="summary-row"><span>Stride</span><code>8</code></div>
+                      <div class="summary-row"><span>Horizon</span><code>1</code></div>
+                    </section>
+                    <section class="rnn-preview-card">
+                      <div class="section-title"><h2>模型設定摘要</h2><span class="summary-badge badge-neutral">pytorch_lstm</span></div>
+                      <div class="summary-row"><span>Model</span><code>LSTM / GRU / BiLSTM</code></div>
+                      <div class="summary-row"><span>Task head</span><code>classification / regression</code></div>
+                      <div class="summary-row"><span>Readiness</span><code>Not Ready / Preview</code></div>
+                    </section>
+                  </div>
+                </div>
+
+                <div id="rnn-sequence-dataset-panel" class="rnn-panel" data-rnn-panel="sequence-dataset">
+                  <section class="rnn-preview-card">
+                    <div class="section-title"><h2>序列資料集</h2><span class="summary-badge badge-warning">Phase 2B</span></div>
+                    <p class="form-hint">sequence_manifest.json 尚未接入。CSV / Feature Sequence 匯入與檢查會在 Phase 2B 實作。</p>
+                    <div class="rnn-placeholder-box">sequence_id, timestep, feature_1, feature_2, target</div>
+                  </section>
+                </div>
+
+                <div id="rnn-features-labels-panel" class="rnn-panel" data-rnn-panel="features-labels">
+                  <section class="rnn-preview-card">
+                    <div class="section-title"><h2>特徵與標籤</h2><span class="summary-badge badge-neutral">Parser pending</span></div>
+                    <div class="rnn-schema-grid">
+                      <label><span>Feature columns</span><input id="rnn-feature-columns" type="text" value="feature_1, feature_2, feature_3" disabled></label>
+                      <label><span>Target column</span><input id="rnn-target-column" type="text" value="target" disabled></label>
+                      <label><span>Feature dim</span><input id="rnn-feature-dim" type="number" value="3" disabled></label>
+                    </div>
+                  </section>
+                </div>
+
+                <div id="rnn-windowing-panel" class="rnn-panel" data-rnn-panel="windowing">
+                  <section class="rnn-preview-card">
+                    <div class="section-title"><h2>序列切片</h2><span class="summary-badge badge-neutral">Schema only</span></div>
+                    <div class="rnn-schema-grid">
+                      <label><span>sequence_length</span><input id="rnn-sequence-length" type="number" value="16" disabled></label>
+                      <label><span>stride</span><input id="rnn-stride" type="number" value="8" disabled></label>
+                      <label><span>horizon</span><input id="rnn-horizon" type="number" value="1" disabled></label>
+                    </div>
+                  </section>
+                </div>
+
+                <div id="rnn-training-panel" class="rnn-panel" data-rnn-panel="training">
+                  <section class="rnn-preview-card">
+                    <div class="section-title"><h2>模型訓練</h2><span class="summary-badge badge-warning">Training disabled</span></div>
+                    <div class="rnn-schema-grid">
+                      <label><span>Model</span><select id="rnn-model-family" disabled><option>LSTM</option><option>GRU</option><option>BiLSTM</option></select></label>
+                      <label><span>Task Head</span><select id="rnn-task-head" disabled><option>Classification</option><option>Regression</option></select></label>
+                      <label><span>Backend</span><input id="rnn-backend" type="text" value="pytorch_lstm" disabled></label>
+                    </div>
+                    <details class="advanced-collapse">
+                      <summary>Advanced</summary>
+                      <div class="rnn-schema-grid">
+                        <label><span>Hidden Size</span><input id="rnn-hidden-size" type="number" value="128" disabled></label>
+                        <label><span>Layers</span><input id="rnn-layers" type="number" value="2" disabled></label>
+                        <label><span>Dropout</span><input id="rnn-dropout" type="number" value="0.2" disabled></label>
+                      </div>
+                    </details>
+                    <span class="rnn-disabled-action-hitbox">
+                      <button type="button" class="btn btn-disabled" id="rnn-training-disabled-action" disabled>RNN training will be enabled after readiness validation</button>
+                    </span>
+                  </section>
+                </div>
+
+                <div id="rnn-evaluation-panel" class="rnn-panel" data-rnn-panel="evaluation">
+                  <section class="rnn-preview-card">
+                    <div class="section-title"><h2>評估</h2><span class="summary-badge badge-neutral">Metrics placeholder</span></div>
+                    <div class="metric-grid compact">
+                      <div class="metric-card"><span>MAE</span><strong>--</strong></div>
+                      <div class="metric-card"><span>RMSE</span><strong>--</strong></div>
+                      <div class="metric-card"><span>Accuracy</span><strong>--</strong></div>
+                      <div class="metric-card"><span>Macro-F1</span><strong>--</strong></div>
+                    </div>
+                  </section>
+                </div>
+
+                <div id="rnn-sequence-test-panel" class="rnn-panel" data-rnn-panel="sequence-test">
+                  <section class="rnn-preview-card">
+                    <div class="section-title"><h2>序列測試</h2><span class="summary-badge badge-warning">Inference pending</span></div>
+                    <div class="rnn-placeholder-box">Sequence inference preview will appear here after RNNBackend MVP.</div>
+                  </section>
+                </div>
+
+                <div id="rnn-export-panel" class="rnn-panel" data-rnn-panel="export">
+                  <section class="rnn-preview-card">
+                    <div class="section-title"><h2>匯出</h2><span class="summary-badge badge-neutral">Future artifacts</span></div>
+                    <div class="rnn-artifact-list">
+                      <code>model.pt</code>
+                      <code>model.onnx</code>
+                      <code>feature_schema.json</code>
+                      <code>label_encoder.json</code>
+                      <code>normalization_stats.json</code>
+                    </div>
+                  </section>
+                </div>
+              </section>
+            </main>
+          </div>
         </section>
 
         <section class="page" id="page-evaluation">
@@ -1311,3 +1465,4 @@
   <script type="module" src="/static/app.js?v=20260626-aug-job-history"></script>
 </body>
 </html>
+

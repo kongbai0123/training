@@ -34,11 +34,13 @@ class ModelRegistry:
             run_id = run_dir.name
             metrics = ModelRegistry._read_run_metrics(run_dir)
             training_config = ModelRegistry._read_training_config(project, run_dir)
+            backend_contract = ModelRegistry._read_backend_contract(run_dir)
+            artifact_meta = ModelRegistry._read_artifact_metadata(run_dir, weight_path)
             stat = weight_path.stat()
             weight_type = weight_path.stem
             task_type = ModelRegistry._infer_task_type(project, training_config, weight_path, run_dir)
 
-            models.append({
+            model_record = {
                 "model_id": ModelRegistry._model_id(project_id, run_id, weight_type),
                 "project_id": project_id,
                 "run_id": run_id,
@@ -53,7 +55,17 @@ class ModelRegistry:
                 "best_map50_95_m": metrics.get("best_map50_95_m"),
                 "status": "ready",
                 "source": "project_training_runs"
-            })
+            }
+            if backend_contract:
+                if backend_contract.get("architecture"):
+                    model_record["architecture"] = backend_contract["architecture"]
+                if backend_contract.get("backend"):
+                    model_record["backend"] = backend_contract["backend"]
+            if artifact_meta:
+                if artifact_meta.get("role"):
+                    model_record["artifact_role"] = artifact_meta["role"]
+                model_record["artifact_source"] = "artifact_manifest"
+            models.append(model_record)
 
         models.sort(key=lambda item: item.get("created_at") or "", reverse=True)
         return models
@@ -114,6 +126,7 @@ class ModelRegistry:
         candidates = [
             run_dir / "config.json",
             run_dir / "args.json",
+            run_dir / "train_config.json",
             run_dir / "training_config.json",
         ]
         for path in candidates:
@@ -125,6 +138,33 @@ class ModelRegistry:
                 except Exception:
                     pass
         return project.get("training_config", {}) or {}
+
+    @staticmethod
+    def _read_backend_contract(run_dir: Path) -> Dict[str, Any]:
+        path = run_dir / "backend.json"
+        if not path.exists():
+            return {}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    @staticmethod
+    def _read_artifact_metadata(run_dir: Path, weight_path: Path) -> Dict[str, Any]:
+        path = run_dir / "artifact_manifest.json"
+        if not path.exists():
+            return {}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            artifacts = data.get("artifacts", []) if isinstance(data, dict) else []
+            weight_rel = weight_path.resolve().relative_to(run_dir.resolve()).as_posix()
+            for artifact in artifacts:
+                if isinstance(artifact, dict) and artifact.get("path") == weight_rel:
+                    return artifact
+        except Exception:
+            return {}
+        return {}
 
     @staticmethod
     def _read_run_metrics(run_dir: Path) -> Dict[str, Optional[float]]:

@@ -4,7 +4,10 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from src.training.artifact_manifest import write_artifact_manifest
+from src.training.contracts import build_backend_contract
 from src.training.metrics_collector import MetricsCollector
+from src.training.metric_schema import build_yolo_metric_schema
 from src.training.trend_analyzer import TrendAnalyzer
 
 class RunManager:
@@ -68,6 +71,12 @@ class RunManager:
         run_dir.mkdir(parents=True, exist_ok=True)
 
         # 2. 確保基本快照檔案存在
+        completed_at = datetime.now().isoformat()
+        try:
+            created_at = datetime.fromtimestamp(run_dir.stat().st_ctime).isoformat()
+        except Exception:
+            created_at = completed_at
+
         config_file = run_dir / "train_config.json"
         if not config_file.exists():
             try:
@@ -130,7 +139,7 @@ class RunManager:
             "platform_score": platform_score,
             "health": health_analysis,
             "error": error_msg,
-            "completed_at": datetime.now().isoformat()
+            "completed_at": completed_at
         }
 
         try:
@@ -138,6 +147,30 @@ class RunManager:
                 json.dump(summary, f, indent=2, ensure_ascii=False)
         except Exception as e:
             print(f"[RunManager] Failed to write run_summary.json: {e}")
+
+        # Phase 0 contract files are best-effort. A manifest write failure must
+        # not change the outcome of the YOLO training run.
+        try:
+            backend_contract = build_backend_contract(
+                run_id=run_dir.name,
+                architecture="cnn",
+                backend="ultralytics_yolo",
+                task_type=task_type,
+                status=status,
+                created_at=created_at,
+                completed_at=completed_at,
+            )
+            with open(run_dir / "backend.json", "w", encoding="utf-8") as f:
+                json.dump(backend_contract, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"[RunManager] Failed to write backend.json: {e}")
+
+        try:
+            metric_schema = build_yolo_metric_schema(task_type)
+            with open(run_dir / "metric_schema.json", "w", encoding="utf-8") as f:
+                json.dump(metric_schema, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"[RunManager] Failed to write metric_schema.json: {e}")
 
         # 6. 生成寫入 project.json 的摘要
         is_seg = "segmentation" in task_type or "seg" in task_type
@@ -169,6 +202,11 @@ class RunManager:
                     shutil.copy(legacy_yaml, target_data_yaml)
                 except Exception:
                     pass
+
+        try:
+            write_artifact_manifest(run_dir, run_dir.name)
+        except Exception as e:
+            print(f"[RunManager] Failed to write artifact_manifest.json: {e}")
 
         return {
             "run_id": run_dir.name,
