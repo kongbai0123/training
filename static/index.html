@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css?v=20260625-augmentation-p0">
+  <link rel="stylesheet" href="/static/style.css?v=20260626-aug-job-history">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -522,6 +522,17 @@
                   <div class="section-title compact"><h2>風險檢查 / Risk Check</h2><span class="summary-badge badge-warning" id="aug-risk-badge">Preview required</span></div>
                   <ul class="aug-risk-list" id="aug-risk-list"></ul>
                   <div class="aug-apply-row"><button class="btn btn-secondary" type="button" id="btn-reset-aug"><i class="fa-solid fa-rotate-left"></i> 重設</button><button type="button" class="btn btn-secondary" id="btn-preview-aug"><i class="fa-solid fa-eye"></i> 產生預覽</button><button class="btn btn-primary guarded" data-requires="split" id="btn-apply-aug" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> 套用到 Train Split</button></div>
+                </section>
+                <section class="panel-section aug-job-history-card">
+                  <div class="section-title compact">
+                    <h2>擴充紀錄 / Job History</h2>
+                    <button type="button" class="btn btn-sm btn-secondary" id="btn-refresh-aug-jobs">
+                      <i class="fa-solid fa-rotate"></i> 重新整理
+                    </button>
+                  </div>
+                  <div class="aug-job-history-list" id="aug-job-history-list">
+                    <div class="empty-state">尚無擴充紀錄。套用到 Train Split 後會顯示在這裡。</div>
+                  </div>
                 </section>
               </div>
             </section>
@@ -1297,6 +1308,6 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260625-augmentation-p0"></script>
+  <script type="module" src="/static/app.js?v=20260626-aug-job-history"></script>
 </body>
 </html>

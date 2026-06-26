@@ -21,6 +21,9 @@ let previewState = "not_generated";
 let applying = false;
 let applied = false;
 let selectedPreset = "clear_day";
+let augmentationJobs = [];
+let augmentationJobsProjectId = null;
+let augmentationJobsLoading = false;
 
 const GROUP_BY_PRESET = {
   clear_day: "light",
@@ -137,9 +140,11 @@ export function initAugmentation() {
   qs("#btn-preview-aug")?.addEventListener("click", triggerAugPreview);
   qs("#btn-reset-aug")?.addEventListener("click", resetAugmentationPolicy);
   qs("#btn-apply-aug")?.addEventListener("click", applyAugmentationToTrainSplit);
+  qs("#btn-refresh-aug-jobs")?.addEventListener("click", () => loadAugmentationJobs(true));
   renderPresetDetails(selectedPreset);
   expandRelevantGroup(selectedPreset);
   highlightPresetSettings(selectedPreset);
+  renderAugmentationJobHistory();
 }
 
 export function renderAugmentationPage(status) {
@@ -158,6 +163,8 @@ export function renderAugmentationPage(status) {
   renderRiskCheck(stateInfo);
   renderPreviewOptions(status);
   updateControlState(stateInfo);
+  loadAugmentationJobs(false);
+  renderAugmentationJobHistory();
 }
 
 function getRawImages() {
@@ -652,6 +659,7 @@ async function applyAugmentationToTrainSplit() {
     });
     eventBus.emit("toast", data.message || "已套用到 Train Split。");
     eventBus.emit("refresh-project");
+    await loadAugmentationJobs(true);
     applied = true;
     previewState = "not_generated";
   } catch (err) {
@@ -660,6 +668,97 @@ async function applyAugmentationToTrainSplit() {
     applying = false;
     renderAugmentationPage(getStatusFromProject());
   }
+}
+
+async function loadAugmentationJobs(force = false) {
+  const projectId = appState.currentProjectId;
+  if (!projectId) {
+    augmentationJobs = [];
+    augmentationJobsProjectId = null;
+    renderAugmentationJobHistory();
+    return;
+  }
+  if (!force && augmentationJobsProjectId === projectId) return;
+  if (augmentationJobsLoading) return;
+
+  augmentationJobsLoading = true;
+  augmentationJobsProjectId = projectId;
+  renderAugmentationJobHistory();
+  try {
+    const data = await apiFetch(`/api/projects/${projectId}/augmentation/jobs`);
+    augmentationJobs = Array.isArray(data.jobs) ? data.jobs : [];
+  } catch (err) {
+    augmentationJobs = [];
+    eventBus.emit("toast", `讀取擴充紀錄失敗：${err.message}`);
+  } finally {
+    augmentationJobsLoading = false;
+    renderAugmentationJobHistory();
+  }
+}
+
+function renderAugmentationJobHistory() {
+  const list = qs("#aug-job-history-list");
+  if (!list) return;
+
+  if (!appState.currentProjectId) {
+    list.innerHTML = `<div class="empty-state">尚未開啟專案。</div>`;
+    return;
+  }
+  if (augmentationJobsLoading) {
+    list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> 正在讀取擴充紀錄...</div>`;
+    return;
+  }
+  if (!augmentationJobs.length) {
+    list.innerHTML = `<div class="empty-state">尚無擴充紀錄。套用到 Train Split 後會顯示在這裡。</div>`;
+    return;
+  }
+
+  list.innerHTML = augmentationJobs.slice(0, 6).map((job) => {
+    const created = formatJobTime(job.created_at);
+    const generated = Number(job.generated_count || 0);
+    const sourceTrain = Number(job.source_train_count || 0);
+    const multiplier = Number(job.multiplier || 1);
+    const status = job.status || "completed";
+    const risk = job.val_test_policy === "excluded" ? "Val/Test excluded" : "Check output policy";
+    const params = Array.isArray(job.applied_parameters) && job.applied_parameters.length
+      ? job.applied_parameters.join(", ")
+      : "default";
+    const outputPath = job.outputs?.images || "-";
+    return `
+      <article class="aug-job-card">
+        <div class="aug-job-main">
+          <div>
+            <strong>${escapeHtml(job.job_id || "augmentation_job")}</strong>
+            <span>${escapeHtml(created)}</span>
+          </div>
+          <span class="summary-badge ${status === "completed" ? "badge-success" : "badge-warning"}">${escapeHtml(status)}</span>
+        </div>
+        <div class="aug-job-stats">
+          <span><b>+${generated}</b><small>generated</small></span>
+          <span><b>${sourceTrain}</b><small>train source</small></span>
+          <span><b>${multiplier}x</b><small>multiplier</small></span>
+        </div>
+        <dl class="aug-job-meta">
+          <div><dt>Policy</dt><dd>${escapeHtml(risk)}</dd></div>
+          <div><dt>Params</dt><dd>${escapeHtml(params)}</dd></div>
+          <div><dt>Output</dt><dd title="${escapeHtml(outputPath)}">${escapeHtml(outputPath)}</dd></div>
+        </dl>
+      </article>
+    `;
+  }).join("");
+}
+
+function formatJobTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(appState.language === "en" ? "en-US" : "zh-TW", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
 function updateSliderLabels() {
