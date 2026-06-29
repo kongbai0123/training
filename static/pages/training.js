@@ -146,6 +146,7 @@ export function initTraining() {
   eventBus.on("check-training-websocket", () => {
     if (appState.trainingStatus?.status === "training") startMonitorWebSocket();
   });
+  eventBus.on("start-training-monitor", () => startMonitorWebSocket());
   eventBus.on("language-changed", () => renderTrainingMonitor());
 }
 
