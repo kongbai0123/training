@@ -15,7 +15,11 @@ export const trainingModeState = {
     trainingEnabled: false,
     readiness: null,
     readinessLoading: false,
-    trainingStarting: false
+    trainingStarting: false,
+    inferenceModels: [],
+    inferenceLoading: false,
+    inferenceRunning: false,
+    inferenceResult: null
   }
 };
 
@@ -32,6 +36,7 @@ export function initTrainingModeSidebar() {
       renderTrainingModeSidebar();
       renderTrainingWorkspace();
       loadRnnReadiness();
+      if (trainingModeState.activeRnnPanel === "sequence-test") loadRnnInferenceModels();
     });
   });
 
@@ -128,6 +133,23 @@ export function initRnnPreviewEvents() {
   ["#rnn-start-disabled", "#rnn-training-disabled-action"].forEach((selector) => {
     qs(selector)?.addEventListener("click", startRnnTraining);
   });
+  qs("#rnn-refresh-models")?.addEventListener("click", () => loadRnnInferenceModels({ force: true }));
+  qs("#rnn-inference-model")?.addEventListener("change", updateRnnInferenceControls);
+  qs("#rnn-inference-csv-file")?.addEventListener("change", () => {
+    if (qs("#rnn-inference-csv-file")?.files?.[0]) {
+      const pathInput = qs("#rnn-inference-csv-path");
+      if (pathInput) pathInput.value = "";
+    }
+    updateRnnInferenceControls();
+  });
+  qs("#rnn-inference-csv-path")?.addEventListener("input", () => {
+    if (qs("#rnn-inference-csv-path")?.value?.trim()) {
+      const fileInput = qs("#rnn-inference-csv-file");
+      if (fileInput) fileInput.value = "";
+    }
+    updateRnnInferenceControls();
+  });
+  qs("#rnn-run-sequence-inference")?.addEventListener("click", runRnnSequenceInference);
 }
 
 async function loadRnnReadiness(options = {}) {
@@ -214,6 +236,135 @@ function renderRnnReadiness() {
       </li>`;
     }).join("");
   }
+}
+
+async function loadRnnInferenceModels(options = {}) {
+  if (!appState.currentProjectId || (trainingModeState.rnn.inferenceLoading && !options.force)) {
+    renderRnnInferenceModels();
+    return;
+  }
+  if (!options.force && trainingModeState.rnn.inferenceModels.length) {
+    renderRnnInferenceModels();
+    return;
+  }
+
+  trainingModeState.rnn.inferenceLoading = true;
+  renderRnnInferenceModels();
+  try {
+    const models = await apiFetch(`/api/projects/${appState.currentProjectId}/models`);
+    trainingModeState.rnn.inferenceModels = (Array.isArray(models) ? models : []).filter((model) =>
+      model.architecture === "rnn" || model.backend === trainingModeState.rnn.backend
+    );
+  } catch (err) {
+    trainingModeState.rnn.inferenceModels = [];
+    eventBus.emit("toast", `Failed to load RNN models: ${err.message}`);
+  } finally {
+    trainingModeState.rnn.inferenceLoading = false;
+    renderRnnInferenceModels();
+  }
+}
+
+function renderRnnInferenceModels() {
+  const select = qs("#rnn-inference-model");
+  if (!select) return;
+  const current = select.value;
+  const models = trainingModeState.rnn.inferenceModels;
+  if (trainingModeState.rnn.inferenceLoading) {
+    select.innerHTML = `<option value="">Loading RNN models...</option>`;
+  } else if (!models.length) {
+    select.innerHTML = `<option value="">No RNN model found</option>`;
+  } else {
+    select.innerHTML = `<option value="">Select RNN model</option>${models.map((model) => {
+      const label = `${model.run_id || "run"} / ${model.weight_type || "weight"} / ${model.model_name || "RNN"}`;
+      return `<option value="${escapeHtml(model.model_id)}">${escapeHtml(label)}</option>`;
+    }).join("")}`;
+    if (models.some((model) => model.model_id === current)) select.value = current;
+  }
+  updateRnnInferenceControls();
+}
+
+function updateRnnInferenceControls() {
+  const btn = qs("#rnn-run-sequence-inference");
+  const reason = qs("#rnn-inference-reason");
+  if (!btn) return;
+  const message = getRnnInferenceBlockerMessage();
+  const canRun = !message;
+  btn.disabled = !canRun;
+  btn.classList.toggle("btn-primary", canRun);
+  btn.classList.toggle("btn-disabled", !canRun);
+  if (reason) reason.textContent = message || "Ready to run CSV sequence inference.";
+}
+
+function getRnnInferenceBlockerMessage() {
+  if (!appState.currentProjectId) return "Open a project before sequence inference.";
+  if (trainingModeState.rnn.inferenceLoading) return "Loading RNN models.";
+  if (trainingModeState.rnn.inferenceRunning) return "Sequence inference is running.";
+  if (!qs("#rnn-inference-model")?.value) return "Select an RNN model.";
+  const hasFile = Boolean(qs("#rnn-inference-csv-file")?.files?.[0]);
+  const hasPath = Boolean(qs("#rnn-inference-csv-path")?.value?.trim());
+  if (!hasFile && !hasPath) return "Provide a CSV feature sequence file or project CSV path.";
+  return "";
+}
+
+async function runRnnSequenceInference(event) {
+  event?.preventDefault();
+  const blocker = getRnnInferenceBlockerMessage();
+  if (blocker) {
+    eventBus.emit("toast", blocker);
+    updateRnnInferenceControls();
+    return;
+  }
+
+  const form = new FormData();
+  form.append("model_id", qs("#rnn-inference-model")?.value || "");
+  form.append("device", qs("#rnn-inference-device")?.value || "cpu");
+  const file = qs("#rnn-inference-csv-file")?.files?.[0];
+  const csvPath = qs("#rnn-inference-csv-path")?.value?.trim();
+  if (file) form.append("file", file);
+  else if (csvPath) form.append("csv_path", csvPath);
+
+  trainingModeState.rnn.inferenceRunning = true;
+  updateRnnInferenceControls();
+  try {
+    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/inference/sequence`, {
+      method: "POST",
+      body: form
+    });
+    trainingModeState.rnn.inferenceResult = result;
+    renderRnnInferenceResult();
+    eventBus.emit("toast", "RNN sequence inference completed.");
+  } catch (err) {
+    eventBus.emit("toast", `RNN sequence inference failed: ${err.message}`);
+  } finally {
+    trainingModeState.rnn.inferenceRunning = false;
+    updateRnnInferenceControls();
+  }
+}
+
+function renderRnnInferenceResult() {
+  const container = qs("#rnn-inference-result");
+  const result = trainingModeState.rnn.inferenceResult;
+  if (!container) return;
+  if (!result) {
+    container.textContent = "No sequence inference result yet.";
+    return;
+  }
+  const summary = result.summary || {};
+  const predictions = result.predictions || [];
+  const firstRows = predictions.slice(0, 6).map((item) => {
+    const confidence = item.confidence !== undefined ? ` (${Number(item.confidence).toFixed(3)})` : "";
+    return `<li><code>${escapeHtml(item.sequence_id)}</code> -> <strong>${escapeHtml(item.prediction)}</strong>${confidence}</li>`;
+  }).join("");
+  container.innerHTML = `
+    <div class="summary-row"><span>Job</span><code>${escapeHtml(result.job_id || "--")}</code></div>
+    <div class="summary-row"><span>Sequences</span><code>${escapeHtml(summary.sequence_count ?? predictions.length)}</code></div>
+    <div class="summary-row"><span>Latency</span><code>${escapeHtml(summary.inference_time_ms ?? "--")} ms</code></div>
+    <ul class="rnn-inference-list">${firstRows || "<li>No predictions returned.</li>"}</ul>
+    <div class="inline-actions">
+      ${result.urls?.prediction_json ? `<a class="btn btn-secondary btn-sm" target="_blank" href="${escapeHtml(result.urls.prediction_json)}">prediction.json</a>` : ""}
+      ${result.urls?.prediction_csv ? `<a class="btn btn-secondary btn-sm" target="_blank" href="${escapeHtml(result.urls.prediction_csv)}">predictions.csv</a>` : ""}
+    </div>
+  `;
 }
 
 function canStartRnnTraining() {

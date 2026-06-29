@@ -3472,6 +3472,17 @@ body[data-theme="light"] .toast {
 .rnn-readiness-item.danger {
   border-color: rgba(239, 68, 68, 0.35);
 }
+
+.rnn-inference-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--text);
+}
+
+.rnn-inference-list li + li {
+  margin-top: 6px;
+}
+
 .training-readiness {
   margin-bottom: 16px;
   border-radius: var(--radius);

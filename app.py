@@ -39,6 +39,7 @@ from src.labelme_adapter import LabelMeAdapter
 from src.annotation_importer import AnnotationImporter
 from src.model_registry import ModelRegistry
 from src.inference_engine import InferenceEngine
+from src.rnn_inference_engine import RNNSequenceInferenceEngine
 from src.project_migrator import ProjectMigrator
 from src.local_session import current_bootstrap, validate_token
 from src.feature_gate import require_feature
@@ -485,6 +486,61 @@ async def run_image_inference(
                 "class_filter": class_filter,
                 "original_filename": Path(file.filename).name if file and file.filename else (Path(image_path).name if image_path else "")
             },
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+@app.post("/api/projects/{project_id}/inference/sequence")
+async def run_sequence_inference(
+    project_id: str,
+    model_id: str = Form(...),
+    device: str = Form("cpu"),
+    csv_path: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+):
+    require_feature("inference")()
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        model = ModelRegistry.resolve_model(project, model_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    inference_dirs = ModelRegistry.ensure_inference_dirs(project)
+    inputs_dir = inference_dirs["jobs"].parent / "inputs" / "sequences"
+    inputs_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        if file and file.filename:
+            import uuid
+            ext = Path(file.filename).suffix.lower()
+            if ext != ".csv":
+                raise HTTPException(status_code=400, detail="Only CSV feature sequence files are supported")
+            safe_name = f"upload_{uuid.uuid4().hex}{ext}"
+            input_path = inputs_dir / safe_name
+            with open(input_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        elif csv_path:
+            if not LOCAL_TRUSTED_MODE:
+                raise HTTPException(status_code=403, detail="Local CSV path inference requires Local Trusted Mode")
+            try:
+                from src.security_utils import safe_resolve_under
+                project_base = ProjectLayout.from_project(project).project_dir.resolve()
+                input_path = safe_resolve_under(project_base, Path(csv_path))
+            except ValueError as e:
+                raise HTTPException(status_code=403, detail=str(e))
+        else:
+            raise HTTPException(status_code=400, detail="Please provide a CSV file or csv_path")
+
+        return RNNSequenceInferenceEngine.run_csv_sequence_inference(
+            project=project,
+            model=model,
+            input_path=input_path,
+            settings={"device": device, "original_filename": Path(file.filename).name if file and file.filename else (Path(csv_path).name if csv_path else "")},
         )
     except HTTPException:
         raise

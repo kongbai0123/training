@@ -1013,8 +1013,21 @@
 
                 <div id="rnn-sequence-test-panel" class="rnn-panel" data-rnn-panel="sequence-test">
                   <section class="rnn-preview-card">
-                    <div class="section-title"><h2>序列測試</h2><span class="summary-badge badge-warning">Inference pending</span></div>
-                    <div class="rnn-placeholder-box">Sequence inference preview will appear here after RNNBackend MVP.</div>
+                    <div class="section-title"><h2>序列測試</h2><span class="summary-badge badge-neutral">CSV only</span></div>
+                    <div class="rnn-schema-grid">
+                      <label><span>RNN model</span><select id="rnn-inference-model"><option value="">Select RNN model</option></select></label>
+                      <label><span>Device</span><select id="rnn-inference-device"><option value="cpu">CPU</option><option value="gpu">GPU</option></select></label>
+                    </div>
+                    <div class="rnn-schema-grid">
+                      <label><span>Upload CSV</span><input id="rnn-inference-csv-file" type="file" accept=".csv,text/csv"></label>
+                      <label><span>Project CSV path</span><input id="rnn-inference-csv-path" type="text" placeholder="sequences/features.csv"></label>
+                    </div>
+                    <div class="inline-actions">
+                      <button type="button" class="btn btn-secondary" id="rnn-refresh-models">Refresh Models</button>
+                      <button type="button" class="btn btn-primary" id="rnn-run-sequence-inference" disabled>Run Sequence Test</button>
+                    </div>
+                    <p class="form-hint" id="rnn-inference-reason">Select an RNN model and provide a CSV feature sequence.</p>
+                    <div class="rnn-placeholder-box" id="rnn-inference-result">No sequence inference result yet.</div>
                   </section>
                 </div>
 
