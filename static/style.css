@@ -1125,6 +1125,35 @@ body[data-theme="light"] .workflow-card {
   margin-top: 10px;
 }
 
+.project-data-migration-actions {
+  margin-top: 12px;
+}
+
+.inline-checkbox,
+.migration-candidate-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--text);
+}
+
+.inline-checkbox input,
+.migration-candidate-title input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  flex: 0 0 auto;
+}
+
+.migration-candidate-card {
+  margin-top: 10px;
+}
+
+.migration-candidate-title > div {
+  min-width: 0;
+}
+
 @media (max-width: 760px) {
   .history-filter-row,
   .history-search-row {

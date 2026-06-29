@@ -42,6 +42,7 @@ from src.inference_engine import InferenceEngine
 from src.inference_history import InferenceHistory
 from src.rnn_inference_engine import RNNSequenceInferenceEngine
 from src.project_migrator import ProjectMigrator
+from src.project_data_migration import ProjectDataMigrationTool
 from src.local_session import current_bootstrap, validate_token
 from src.feature_gate import require_feature
 from src.license_manager import build_license_report
@@ -272,7 +273,12 @@ def health_check():
 def export_diagnostics_report(_token=Depends(require_api_token)):
     report_path = generate_diagnostics_zip()
     return FileResponse(str(report_path), filename=report_path.name, media_type="application/zip")
+
 # --- Pydantic Models ---
+class ProjectDataMigrationRequest(BaseModel):
+    project_ids: Optional[List[str]] = None
+    delete_source: bool = False
+
 class ProjectCreate(BaseModel):
     project_name: str
     task_type: str
@@ -355,6 +361,17 @@ class TrainConfigRequest(BaseModel):
 # --- API Endpoints ---
 
 # 1. ????? API
+@app.get("/api/projects/data-migration/scan")
+def scan_project_data_migration():
+    return ProjectDataMigrationTool.scan()
+
+@app.post("/api/projects/data-migration/apply")
+def apply_project_data_migration(request: ProjectDataMigrationRequest):
+    return ProjectDataMigrationTool.migrate(
+        project_ids=request.project_ids,
+        delete_source=request.delete_source,
+    )
+
 @app.get("/api/projects")
 def list_projects():
     return ProjectManager.get_all_projects()

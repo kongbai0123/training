@@ -1371,6 +1371,25 @@
               <div class="path-row"><span>Conversion backend</span><code>Connected</code></div>
             </div>
           </section>
+          <section class="panel-section narrow-form settings-system-panel">
+            <div class="section-title">
+              <h2>Project Data Migration</h2>
+              <button class="btn btn-secondary btn-sm" id="btn-scan-data-migration" type="button">Scan C Drive</button>
+            </div>
+            <p class="section-help">Scan legacy C drive projects, copy selected projects into the managed project folder, and delete the C drive source only after explicit confirmation.</p>
+            <div class="path-list" id="project-data-migration-paths">
+              <div class="path-row"><span>Source</span><code>Not scanned</code></div>
+              <div class="path-row"><span>Target</span><code>Not scanned</code></div>
+            </div>
+            <div class="history-filter-row project-data-migration-actions">
+              <label class="inline-checkbox">
+                <input type="checkbox" id="migration-delete-source">
+                <span>Delete C drive source after verified copy</span>
+              </label>
+              <button class="btn btn-primary btn-disabled" id="btn-apply-data-migration" type="button" disabled>Copy Selected Projects</button>
+            </div>
+            <div id="project-data-migration-list" class="list-stack"></div>
+          </section>
         </section>
       </main>
 
