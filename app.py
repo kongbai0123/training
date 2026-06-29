@@ -341,6 +341,15 @@ class TrainConfigRequest(BaseModel):
     close_mosaic: Optional[int] = 10
     optimizer: Optional[str] = "auto"
     run_id: Optional[str] = None
+    backend: Optional[str] = None
+    sequence_length: Optional[int] = None
+    stride: Optional[int] = None
+    horizon: Optional[int] = None
+    task_head: Optional[str] = None
+    hidden_size: Optional[int] = None
+    num_layers: Optional[int] = None
+    dropout: Optional[float] = None
+    bidirectional: Optional[bool] = None
 # --- API Endpoints ---
 
 # 1. ????? API
@@ -1918,6 +1927,12 @@ def start_training(project_id: str, config: TrainConfigRequest):
         "optimizer": config.optimizer,
         "run_id": run_id
     }
+    if config.backend:
+        project["training_config"]["backend"] = config.backend
+    for key in ("sequence_length", "stride", "horizon", "task_head", "hidden_size", "num_layers", "dropout", "bidirectional"):
+        value = getattr(config, key, None)
+        if value is not None:
+            project["training_config"][key] = value
     ProjectManager.save_project(project_id, project)
 
     # ????格?

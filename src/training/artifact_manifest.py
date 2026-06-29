@@ -47,6 +47,9 @@ def build_artifact_manifest(run_dir: Path, run_id: str) -> Dict[str, Any]:
         ("train_config.json", "training_config", "config"),
         ("dataset_snapshot.json", "dataset_snapshot", "dataset"),
         ("data.yaml", "dataset_config", "dataset"),
+        ("preprocess/feature_schema.json", "feature_schema", "preprocess"),
+        ("preprocess/label_encoder.json", "label_encoder", "preprocess"),
+        ("preprocess/normalization_stats.json", "normalizer", "preprocess"),
     ]
 
     artifacts: List[Dict[str, Any]] = []
