@@ -81,21 +81,21 @@
             <button class="sidebar-item" data-page="labelme" data-cnn-nav="labelme"><i class="fa-solid fa-pen-nib"></i><span>LabelMe</span></button>
             <button class="sidebar-item" data-page="split" data-cnn-nav="split"><i class="fa-solid fa-code-branch"></i><span>資料分散</span></button>
             <button class="sidebar-item" data-page="augmentation" data-cnn-nav="augmentation"><i class="fa-solid fa-wand-magic-sparkles"></i><span>物理擴充</span></button>
-            <button class="sidebar-item" data-page="training" data-cnn-nav="training"><i class="fa-solid fa-microchip"></i><span>模型訓練</span></button>
-            <button class="sidebar-item" data-page="evaluation" data-cnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>評估</span></button>
+            <button class="sidebar-item" data-page="training" data-cnn-nav="training"><i class="fa-solid fa-microchip"></i><span>CNN 模型訓練</span></button>
+            <button class="sidebar-item" data-page="evaluation" data-cnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>CNN 評估</span></button>
             <button class="sidebar-item" data-page="inference" data-cnn-nav="inference"><i class="fa-solid fa-magnifying-glass-chart"></i><span>模型測試</span></button>
             <button class="sidebar-item" data-page="auto-labeling" data-cnn-nav="auto-labeling"><i class="fa-solid fa-wand-sparkles"></i><span>自動標註</span></button>
-            <button class="sidebar-item" data-page="export" data-cnn-nav="export"><i class="fa-solid fa-file-export"></i><span>匯出</span></button>
+            <button class="sidebar-item" data-page="export" data-cnn-nav="export"><i class="fa-solid fa-file-export"></i><span>CNN 匯出</span></button>
           </div>
 
           <div id="rnn-mode-nav" class="training-mode-nav hidden">
             <button class="sidebar-item active" data-rnn-nav="sequence-dataset"><i class="fa-solid fa-table-list"></i><span>序列資料集</span></button>
             <button class="sidebar-item" data-rnn-nav="features-labels"><i class="fa-solid fa-tag"></i><span>特徵與標籤</span></button>
             <button class="sidebar-item" data-rnn-nav="windowing"><i class="fa-solid fa-crop-simple"></i><span>序列切片</span></button>
-            <button class="sidebar-item" data-rnn-nav="training"><i class="fa-solid fa-sliders"></i><span>模型訓練</span></button>
-            <button class="sidebar-item" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>評估</span></button>
+            <button class="sidebar-item" data-rnn-nav="training"><i class="fa-solid fa-sliders"></i><span>RNN 模型訓練</span></button>
+            <button class="sidebar-item" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>RNN 評估</span></button>
             <button class="sidebar-item" data-rnn-nav="sequence-test"><i class="fa-regular fa-circle-play"></i><span>序列測試</span></button>
-            <button class="sidebar-item" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i><span>匯出</span></button>
+            <button class="sidebar-item" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i><span>RNN 匯出</span></button>
           </div>
         </nav>
       </aside>
@@ -577,10 +577,10 @@
                     <div>
                       <span class="summary-badge badge-neutral">CNN / YOLO</span>
                       <h2>CNN 總覽</h2>
-                      <p>影像 / 物件偵測工作區。這裡只顯示資料、標註、切分、訓練與模型狀態摘要；正式訓練請進入「模型訓練」。</p>
+                      <p>影像 / 物件偵測工作區。這裡只顯示資料、標註、切分、訓練與模型狀態摘要；正式訓練請進入「CNN 模型訓練」。</p>
                     </div>
                     <button type="button" class="btn btn-primary" data-cnn-nav="training" data-page="training">
-                      <i class="fa-solid fa-microchip"></i> 前往模型訓練
+                      <i class="fa-solid fa-microchip"></i> 前往 CNN 模型訓練
                     </button>
                   </section>
 
@@ -1018,7 +1018,7 @@
 
                 <div id="rnn-training-panel" class="rnn-panel" data-rnn-panel="training">
                   <section class="rnn-preview-card">
-                    <div class="section-title"><h2>模型訓練</h2><span class="summary-badge badge-warning" id="rnn-training-state-badge">Readiness required</span></div>
+                    <div class="section-title"><h2>RNN 模型訓練</h2><span class="summary-badge badge-warning" id="rnn-training-state-badge">Readiness required</span></div>
                     <div class="rnn-schema-grid">
                       <label><span>Model</span><select id="rnn-model-family"><option value="lstm">LSTM</option><option value="gru">GRU</option><option value="bilstm">BiLSTM</option></select></label>
                       <label><span>Task Head</span><select id="rnn-task-head"><option value="classification">Classification</option><option value="regression">Regression</option></select></label>
@@ -1043,7 +1043,7 @@
 
                 <div id="rnn-evaluation-panel" class="rnn-panel" data-rnn-panel="evaluation">
                   <section class="rnn-preview-card">
-                    <div class="section-title"><h2>評估</h2><span class="summary-badge badge-neutral">Metrics placeholder</span></div>
+                    <div class="section-title"><h2>RNN 評估</h2><span class="summary-badge badge-neutral">Metrics placeholder</span></div>
                     <div class="metric-grid compact">
                       <div class="metric-card"><span>MAE</span><strong>--</strong></div>
                       <div class="metric-card"><span>RMSE</span><strong>--</strong></div>
@@ -1075,7 +1075,7 @@
 
                 <div id="rnn-export-panel" class="rnn-panel" data-rnn-panel="export">
                   <section class="rnn-preview-card">
-                    <div class="section-title"><h2>匯出</h2><span class="summary-badge badge-neutral">Future artifacts</span></div>
+                    <div class="section-title"><h2>RNN 匯出</h2><span class="summary-badge badge-neutral">Future artifacts</span></div>
                     <div class="rnn-artifact-list">
                       <code>model.pt</code>
                       <code>model.onnx</code>
