@@ -4,6 +4,7 @@ import { apiFetch } from "../api.js";
 import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
 
 let historySearchQuery = "";
+let historyModeFilter = "all";
 
 export function initProjects() {
   qs("#btn-reload-projects")?.addEventListener("click", () => {
@@ -49,6 +50,13 @@ export function initProjects() {
     if (input) input.value = "";
     renderHistoryModal();
   });
+  qsa("[data-history-filter]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      historyModeFilter = btn.dataset.historyFilter || "all";
+      renderProjectsPage();
+      renderHistoryModal();
+    });
+  });
 
   eventBus.on("render-recent-projects-list", (subset) => {
     setHTML("#recent-projects-list", renderProjectList(subset, { includeDelete: false, compact: true }));
@@ -63,7 +71,10 @@ export function initProjects() {
 export function renderProjectsPage() {
   const html = renderProjectList(appState.projects, { includeDelete: true, showFiles: true });
   setHTML("#project-history-list", html);
-  setHTML("#history-list", html);
+  const historyProjects = filterProjects(appState.projects || [], "", historyModeFilter);
+  setHTML("#history-list", renderProjectList(historyProjects, { includeDelete: true, showFiles: true }));
+  syncHistoryFilterControls();
+  setText("#history-page-result-count", buildHistoryResultText(historyProjects.length, appState.projects || [], ""));
   renderHistoryModal();
   bindProjectListButtons();
 }
@@ -77,33 +88,85 @@ export function renderProjectList(projects, options = {}) {
 }
 
 function renderHistoryModal() {
-  const filtered = filterProjects(appState.projects || [], historySearchQuery);
-  const resultText = historySearchQuery.trim()
-    ? `${filtered.length} / ${(appState.projects || []).length} projects`
-    : `${(appState.projects || []).length} projects`;
+  const filtered = filterProjects(appState.projects || [], historySearchQuery, historyModeFilter);
+  const resultText = buildHistoryResultText(filtered.length, appState.projects || [], historySearchQuery);
 
+  syncHistoryFilterControls();
   setText("#project-history-result-count", resultText);
   setHTML("#modal-project-list", renderProjectList(filtered, { includeDelete: true, showFiles: true }));
   bindProjectListButtons();
 }
 
-function filterProjects(projects, query) {
+function filterProjects(projects, query, mode = "all") {
   const needle = String(query || "").trim().toLowerCase();
-  if (!needle) return projects;
 
   return projects.filter((project) => {
+    if (!matchesHistoryMode(project, mode)) return false;
+    if (!needle) return true;
+
     const files = project.file_summary || {};
     const classes = Array.isArray(project.class_names) ? project.class_names.join(" ") : "";
     const searchable = [
       project.project_name,
       project.project_id,
       project.task_type,
+      getProjectHistoryModeLabel(project),
       project.path,
       files.project_root,
       files.layout_mode,
       classes,
     ].filter(Boolean).join(" ").toLowerCase();
     return searchable.includes(needle);
+  });
+}
+
+function matchesHistoryMode(project, mode) {
+  if (!mode || mode === "all") return true;
+  const category = getProjectHistoryCategory(project);
+  if (category === "both") return mode === "cnn" || mode === "rnn";
+  return category === mode;
+}
+
+function getProjectHistoryCategory(project) {
+  const taskType = String(project?.task_type || "").toLowerCase();
+  const files = project?.file_summary || {};
+  const hasRnnSources = Boolean(
+    files.sequence_manifest ||
+    Number(files.sequence_csv_files || 0) > 0 ||
+    Number(files.sequence_files || 0) > 0
+  );
+  const isRnnTask = ["sequence", "time_series", "timeseries", "rnn"].some((token) => taskType.includes(token));
+  const hasCnnSources = Boolean(
+    Number(files.images || 0) > 0 ||
+    Number(files.labelme_json || 0) > 0 ||
+    Number(files.yolo_labels || 0) > 0 ||
+    Number(files.best_weights || 0) > 0 ||
+    Number(files.last_weights || 0) > 0 ||
+    ["detection", "segmentation", "classification", "pose", "obb"].some((token) => taskType.includes(token))
+  );
+
+  if ((hasRnnSources || isRnnTask) && hasCnnSources) return "both";
+  if (hasRnnSources || isRnnTask) return "rnn";
+  return "cnn";
+}
+
+function getProjectHistoryModeLabel(project) {
+  const category = getProjectHistoryCategory(project);
+  if (category === "both") return "CNN/RNN";
+  return category.toUpperCase();
+}
+
+function buildHistoryResultText(filteredCount, projects, query = historySearchQuery) {
+  const total = projects.length;
+  const modeLabel = historyModeFilter === "all" ? "全部" : historyModeFilter.toUpperCase();
+  const hasSearch = String(query || "").trim();
+  if (hasSearch || historyModeFilter !== "all") return `${filteredCount} / ${total} projects · ${modeLabel}`;
+  return `${total} projects`;
+}
+
+function syncHistoryFilterControls() {
+  qsa("[data-history-filter]").forEach((btn) => {
+    btn.classList.toggle("active", (btn.dataset.historyFilter || "all") === historyModeFilter);
   });
 }
 
@@ -122,6 +185,7 @@ function renderProjectCard(project, options = {}) {
         <div>
           <div class="project-history-title-row">
             <h3>${escapeHtml(project.project_name || project.project_id)}</h3>
+            <span class="badge badge-info">${escapeHtml(getProjectHistoryModeLabel(project))}</span>
             <span class="badge badge-muted">${escapeHtml(project.task_type || "--")}</span>
           </div>
           <p>${escapeHtml(progressText)} · Updated ${escapeHtml(updatedAt || "--")}</p>
@@ -142,6 +206,8 @@ function renderProjectCard(project, options = {}) {
           ${fileMetric("last.pt", files.last_weights ?? 0)}
           ${fileMetric("Inference jobs", files.inference_jobs ?? 0)}
           ${fileMetric("Exports", files.exports ?? 0)}
+          ${fileMetric("Sequence manifest", files.sequence_manifest ? "Ready" : "None", files.sequence_manifest ? "success" : "muted")}
+          ${fileMetric("Sequence CSV", files.sequence_csv_files ?? 0)}
         </div>
         <div class="project-file-details">
           <div><span>Project ID</span><code>${escapeHtml(project.project_id || "--")}</code></div>

@@ -81,6 +81,8 @@ class ProjectManager:
         exports_dir = project_dir / "exports"
         split_current = project_dir / "splits" / "current_split.json"
         videos_raw = project_dir / "dataset" / "videos" / "raw"
+        sequences_dir = layout.sequences_dir()
+        sequence_manifest = layout.sequence_manifest_path()
 
         best_weights = list(training_runs.rglob("weights/best.pt")) if training_runs.exists() else []
         last_weights = list(training_runs.rglob("weights/last.pt")) if training_runs.exists() else []
@@ -96,6 +98,9 @@ class ProjectManager:
             "training_runs": count_files(training_runs, None) if training_runs.exists() else 0,
             "best_weights": len(best_weights),
             "last_weights": len(last_weights),
+            "sequence_manifest": sequence_manifest.exists(),
+            "sequence_csv_files": count_files(sequences_dir, {".csv"}) if sequences_dir.exists() else 0,
+            "sequence_files": count_files(sequences_dir, None) if sequences_dir.exists() else 0,
             "inference_jobs": len([p for p in inference_jobs.iterdir() if p.is_dir()]) if inference_jobs.exists() else 0,
             "exports": len([p for p in exports_dir.iterdir() if p.is_dir()]) if exports_dir.exists() else 0,
             "latest_file_updated_at": latest_file_mtime(project_dir),

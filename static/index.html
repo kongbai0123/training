@@ -1310,6 +1310,14 @@
               <p>最近專案與操作紀錄。</p>
             </div>
           </div>
+          <div class="history-filter-row">
+            <div class="history-mode-filter" role="group" aria-label="History category filter">
+              <button type="button" class="active" data-history-filter="all">全部</button>
+              <button type="button" data-history-filter="cnn">CNN</button>
+              <button type="button" data-history-filter="rnn">RNN</button>
+            </div>
+            <span id="history-page-result-count" class="history-result-count">0 projects</span>
+          </div>
           <div id="history-list" class="list-stack"></div>
         </section>
 
@@ -1428,6 +1436,11 @@
         <div class="history-search-box">
           <i class="fa-solid fa-magnifying-glass"></i>
           <input type="search" id="project-history-search" placeholder="Search project name, ID, class, task, path">
+        </div>
+        <div class="history-mode-filter" role="group" aria-label="Browse history category filter">
+          <button type="button" class="active" data-history-filter="all">全部</button>
+          <button type="button" data-history-filter="cnn">CNN</button>
+          <button type="button" data-history-filter="rnn">RNN</button>
         </div>
         <button class="btn btn-secondary btn-sm" id="btn-clear-history-search" type="button">Clear</button>
         <span id="project-history-result-count" class="history-result-count">0 projects</span>

@@ -990,8 +990,48 @@ body[data-theme="light"] .workflow-card {
   text-align: left;
 }
 
+.history-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
+.history-mode-filter {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(68px, auto);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.history-mode-filter button {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.history-mode-filter button:hover {
+  color: var(--text);
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.history-mode-filter button.active {
+  color: #fff;
+  background: var(--primary);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.22);
+}
+
 .project-history-modal-content {
-  width: min(720px, calc(100vw - 28px));
+  width: min(860px, calc(100vw - 28px));
   max-height: min(88vh, 760px);
   overflow: hidden;
   display: flex;
@@ -1000,7 +1040,7 @@ body[data-theme="light"] .workflow-card {
 
 .history-search-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 10px;
   margin: 4px 0 12px;
@@ -1047,6 +1087,22 @@ body[data-theme="light"] .workflow-card {
 
 .project-history-scroll .project-history-card:nth-child(n + 3) {
   margin-top: 12px;
+}
+
+@media (max-width: 760px) {
+  .history-filter-row,
+  .history-search-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .history-filter-row {
+    display: grid;
+  }
+
+  .history-mode-filter {
+    width: 100%;
+  }
 }
 
 @media (max-width: 1500px) {
