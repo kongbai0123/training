@@ -1088,9 +1088,20 @@ function showToast(message) {
 
 async function openHistoryModal() {
   const modal = qs("#project-history-modal");
-  await loadProjects({ autoOpenLatest: false });
-  eventBus.emit("render-project-history-modal");
   if (modal) modal.hidden = false;
+  setText("#project-history-result-count", "Loading projects...");
+  setHTML("#modal-project-list", `<div class="empty-state">Loading project history...</div>`);
+  try {
+    appState.projects = await apiFetch("/api/projects");
+    qs("#api-status-dot")?.classList.add("online");
+    qs("#api-status-dot")?.classList.remove("offline");
+    renderAll();
+    eventBus.emit("render-project-history-modal");
+  } catch (err) {
+    qs("#api-status-dot")?.classList.add("offline");
+    setText("#project-history-result-count", "Load failed");
+    setHTML("#modal-project-list", `<div class="empty-state">Failed to load project history: ${escapeHtml(err.message)}</div>`);
+  }
 }
 
 function closeHistoryModal() {
