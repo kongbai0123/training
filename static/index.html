@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css?v=20260629-mode-overview-split">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/static/style.css?v=20260629-pdf-stabilization">
+  <script async src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -84,6 +84,7 @@
             <button class="sidebar-item" data-page="training" data-cnn-nav="training"><i class="fa-solid fa-microchip"></i><span>CNN 模型訓練</span></button>
             <button class="sidebar-item" data-page="evaluation" data-cnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>CNN 評估</span></button>
             <button class="sidebar-item" data-page="inference" data-cnn-nav="inference"><i class="fa-solid fa-magnifying-glass-chart"></i><span>模型測試</span></button>
+            <button class="sidebar-item" data-page="model-compare" data-cnn-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span>模型比較</span></button>
             <button class="sidebar-item" data-page="auto-labeling" data-cnn-nav="auto-labeling"><i class="fa-solid fa-wand-sparkles"></i><span>自動標註</span></button>
             <button class="sidebar-item" data-page="export" data-cnn-nav="export"><i class="fa-solid fa-file-export"></i><span>CNN 匯出</span></button>
           </div>
@@ -95,6 +96,7 @@
             <button class="sidebar-item" data-rnn-nav="training"><i class="fa-solid fa-sliders"></i><span>RNN 模型訓練</span></button>
             <button class="sidebar-item" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>RNN 評估</span></button>
             <button class="sidebar-item" data-rnn-nav="sequence-test"><i class="fa-regular fa-circle-play"></i><span>序列測試</span></button>
+            <button class="sidebar-item" data-rnn-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span>RNN 模型比較</span></button>
             <button class="sidebar-item" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i><span>RNN 匯出</span></button>
           </div>
         </nav>
@@ -1110,6 +1112,139 @@
           </div>
         </section>
 
+        <section class="page" id="page-model-compare">
+          <div class="page-header">
+            <div>
+              <h1>Model Compare Center</h1>
+              <p>CNN / YOLO run comparison for deployment decisions. RNN comparison remains gated until RNN run history is available.</p>
+            </div>
+            <div class="page-actions">
+              <button class="btn btn-secondary guarded" data-requires="project" id="btn-compare-refresh">
+                <i class="fa-solid fa-rotate"></i> Refresh Runs
+              </button>
+              <button class="btn btn-primary" id="btn-run-compare" disabled>
+                <i class="fa-solid fa-chart-line"></i> Compare Selected
+              </button>
+              <button class="btn btn-secondary" id="btn-export-compare-report" disabled>
+                <i class="fa-solid fa-file-arrow-down"></i> Export Report
+              </button>
+            </div>
+          </div>
+
+          <div id="compare-alert" class="status-guard warning hidden"></div>
+
+          <section class="panel-section model-compare-mode-card">
+            <div class="section-title">
+              <h2>Compare Mode</h2>
+              <span class="summary-badge badge-neutral" id="compare-mode-badge">CNN / YOLO</span>
+            </div>
+            <div class="compare-mode-row">
+              <div class="compare-mode-toggle" role="group" aria-label="Compare architecture">
+                <button type="button" id="compare-mode-cnn" class="active" data-compare-architecture="cnn">CNN / YOLO</button>
+                <button type="button" id="compare-mode-rnn" data-compare-architecture="rnn">RNN / Sequence</button>
+              </div>
+              <p id="compare-mode-note">Phase 3B supports completed CNN runs. Select 2 to 4 compatible runs for metric comparison.</p>
+            </div>
+          </section>
+
+          <div class="model-compare-layout">
+            <section class="panel-section">
+              <div class="section-title">
+                <h2>Available Runs</h2>
+                <span id="compare-run-count" class="summary-badge badge-neutral">0 runs</span>
+              </div>
+              <div id="compare-run-list" class="compare-run-list"></div>
+            </section>
+
+            <section class="panel-section">
+              <div class="section-title">
+                <h2>Selected Models</h2>
+                <span class="summary-badge badge-neutral">2-4 runs</span>
+              </div>
+              <div id="compare-selected-tray" class="compare-selected-tray"></div>
+            </section>
+          </div>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <h2>Decision Summary</h2>
+              <span id="compare-recommendation-badge" class="summary-badge badge-neutral">No comparison</span>
+            </div>
+            <div id="compare-decision-summary" class="compare-decision-summary"></div>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <h2>Trend Comparison</h2>
+              <div id="compare-chart-tabs" class="inline-actions"></div>
+            </div>
+            <div class="compare-chart-shell">
+              <canvas id="compare-trend-chart"></canvas>
+              <div id="compare-chart-empty" class="empty-state">Select 2 to 4 completed CNN runs and run comparison.</div>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <h2>Output Comparison</h2>
+              <span class="summary-badge badge-neutral">Same image / selected runs</span>
+            </div>
+            <div class="compare-output-controls">
+              <label>
+                <span>Test image</span>
+                <input type="file" id="compare-output-image-file" accept=".jpg,.jpeg,.png,.bmp,.webp,image/*">
+              </label>
+              <label>
+                <span>Confidence</span>
+                <input type="number" id="compare-output-conf" value="0.25" min="0.01" max="1" step="0.01">
+              </label>
+              <label>
+                <span>IoU</span>
+                <input type="number" id="compare-output-iou" value="0.70" min="0.01" max="1" step="0.01">
+              </label>
+              <label>
+                <span>Image size</span>
+                <select id="compare-output-imgsz">
+                  <option value="320">320</option>
+                  <option value="640" selected>640</option>
+                  <option value="768">768</option>
+                  <option value="960">960</option>
+                </select>
+              </label>
+              <label>
+                <span>Device</span>
+                <select id="compare-output-device">
+                  <option value="cpu" selected>CPU</option>
+                  <option value="gpu">GPU</option>
+                </select>
+              </label>
+              <button class="btn btn-primary" id="btn-run-output-compare" disabled>
+                <i class="fa-solid fa-images"></i> Compare Outputs
+              </button>
+            </div>
+            <div id="compare-output-empty" class="empty-state">Select 2 to 4 runs and upload one test image to compare prediction overlays.</div>
+            <div id="compare-output-results" class="compare-output-grid"></div>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <h2>Config Difference</h2>
+              <span class="summary-badge badge-neutral">Read-only</span>
+            </div>
+            <div id="compare-config-diff" class="compare-config-diff"></div>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <h2>Compare Report</h2>
+              <span id="compare-report-badge" class="summary-badge badge-neutral">Not exported</span>
+            </div>
+            <div id="compare-report-files" class="compare-report-files">
+              <div class="empty-state">Export a report after comparison to download JSON, Markdown, CSV, and PDF files.</div>
+            </div>
+          </section>
+        </section>
+
         <section class="page" id="page-inference">
           <div class="page-header">
             <div>
@@ -1586,8 +1721,8 @@
 
   <div class="toast" id="toast" hidden></div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260629-rnn-create-layout2"></script>
+  <script async src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
+  <script type="module" src="/static/app.js?v=20260629-pdf-stabilization"></script>
 </body>
 </html>
 

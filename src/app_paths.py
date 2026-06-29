@@ -16,11 +16,22 @@ def _resolve_app_home() -> Path:
     return base.resolve()
 
 
+def _find_portable_root(start: Path) -> Path | None:
+    for candidate_root in [start, *start.parents]:
+        if (candidate_root / "version.json").exists() or (candidate_root / "run.bat").exists():
+            return candidate_root.resolve()
+    return None
+
+
 def _resolve_user_data_root() -> Path:
     explicit = os.environ.get("VTS_USER_DATA_DIR")
     if explicit:
         return Path(explicit).expanduser().resolve()
     if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).resolve().parent
+        portable_root = _find_portable_root(exe_dir)
+        if portable_root:
+            return portable_root
         local_app_data = os.environ.get("LOCALAPPDATA")
         if local_app_data:
             return (Path(local_app_data).expanduser() / "VisionTrainingStudio").resolve()
@@ -34,10 +45,9 @@ def _resolve_projects_dir(user_data_dir: Path) -> Path:
         return Path(explicit).expanduser().resolve()
     if getattr(sys, "frozen", False):
         exe_dir = Path(sys.executable).resolve().parent
-        for candidate_root in [exe_dir, *exe_dir.parents]:
-            if not ((candidate_root / "version.json").exists() or (candidate_root / "run.bat").exists()):
-                continue
-            candidate = candidate_root / "projects"
+        portable_root = _find_portable_root(exe_dir)
+        if portable_root:
+            candidate = portable_root / "projects"
             if candidate.exists():
                 return candidate.resolve()
     return user_data_dir / "projects"

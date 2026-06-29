@@ -33,7 +33,9 @@ from src.dataset_utils import DatasetUtils
 from src.splitter import DataSplitter
 from src.augmenter import ImageAugmenter
 from src.trainer import YOLOTrainer
+from src.training.compare_service import CompareService, CompareServiceError
 from src.training.dispatcher import TrainerDispatcher
+from src.training.output_compare_service import CNNOutputCompareService, OutputCompareServiceError
 from src.training.rnn_readiness import build_rnn_readiness_report
 from src.labelme_adapter import LabelMeAdapter
 from src.annotation_importer import AnnotationImporter
@@ -359,6 +361,12 @@ class TrainConfigRequest(BaseModel):
     num_layers: Optional[int] = None
     dropout: Optional[float] = None
     bidirectional: Optional[bool] = None
+
+
+class CompareRequest(BaseModel):
+    architecture: str
+    run_ids: List[str]
+    baseline_run_id: Optional[str] = None
 # --- API Endpoints ---
 
 # 1. ????? API
@@ -2103,6 +2111,183 @@ def get_rnn_readiness(
         stride=stride,
         horizon=horizon,
     )
+
+
+@app.get("/api/projects/{project_id}/compare/runs")
+def list_compare_runs(project_id: str, architecture: str = "cnn"):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        return CompareService.list_comparable_runs(project, architecture)
+    except CompareServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/api/projects/{project_id}/compare")
+def compare_project_runs(project_id: str, request: CompareRequest):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        return CompareService.compare_runs(
+            project=project,
+            architecture=request.architecture,
+            run_ids=request.run_ids,
+            baseline_run_id=request.baseline_run_id,
+        )
+    except CompareServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/api/projects/{project_id}/compare/report")
+def export_compare_report(project_id: str, request: CompareRequest):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        return CompareService.export_report(
+            project=project,
+            architecture=request.architecture,
+            run_ids=request.run_ids,
+            baseline_run_id=request.baseline_run_id,
+        )
+    except CompareServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/api/projects/{project_id}/compare/reports")
+def list_compare_reports(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        return CompareService.list_reports(project)
+    except CompareServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.delete("/api/projects/{project_id}/compare/reports/{report_id}")
+def delete_compare_report(project_id: str, report_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        return CompareService.delete_report(project, report_id)
+    except CompareServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/api/projects/{project_id}/compare/reports/{report_id}/download/{filename}")
+def download_compare_report_file(project_id: str, report_id: str, filename: str, _token=Depends(require_api_token)):
+    import re
+
+    if not re.fullmatch(r"[A-Za-z0-9_\-\.]+", report_id):
+        raise HTTPException(status_code=400, detail="Invalid report_id")
+    if filename not in {"report.json", "report.md", "summary.csv", "report.pdf"}:
+        raise HTTPException(status_code=400, detail="Invalid report filename")
+
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    reports_root = (ProjectLayout.from_project(project).project_dir / "exports" / "compare_reports").resolve()
+    file_path = (reports_root / report_id / filename).resolve()
+    try:
+        file_path.relative_to(reports_root)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Access denied: invalid report path")
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Compare report file not found")
+
+    media_type = {
+        ".json": "application/json",
+        ".md": "text/markdown",
+        ".csv": "text/csv",
+        ".pdf": "application/pdf",
+    }.get(file_path.suffix.lower(), "application/octet-stream")
+    return FileResponse(str(file_path), filename=filename, media_type=media_type)
+
+
+@app.post("/api/projects/{project_id}/compare/output-image")
+async def compare_project_image_outputs(
+    project_id: str,
+    run_ids_json: str = Form(...),
+    conf: float = Form(0.25),
+    iou: float = Form(0.7),
+    imgsz: int = Form(640),
+    device: str = Form("cpu"),
+    mask_opacity: float = Form(0.45),
+    show_mask: bool = Form(True),
+    show_bbox: bool = Form(True),
+    class_filter: Optional[str] = Form(None),
+    image_path: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+):
+    require_feature("inference")()
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        run_ids = json.loads(run_ids_json)
+        if not isinstance(run_ids, list):
+            raise ValueError("run_ids_json must be a JSON array")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid run_ids_json: {exc}")
+
+    inference_dirs = ModelRegistry.ensure_inference_dirs(project)
+
+    try:
+        if file and file.filename:
+            import uuid
+            ext = Path(file.filename).suffix.lower()
+            if ext not in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}:
+                raise HTTPException(status_code=400, detail="Only image files are supported")
+            safe_name = f"compare_upload_{uuid.uuid4().hex}{ext}"
+            input_path = inference_dirs["inputs_images"] / safe_name
+            with open(input_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        elif image_path:
+            if not LOCAL_TRUSTED_MODE:
+                raise HTTPException(status_code=403, detail="Local image path compare requires Local Trusted Mode")
+            try:
+                from src.security_utils import safe_resolve_under
+                project_base = ProjectLayout.from_project(project).project_dir.resolve()
+                input_path = safe_resolve_under(project_base, Path(image_path))
+            except ValueError as exc:
+                raise HTTPException(status_code=403, detail=str(exc))
+        else:
+            raise HTTPException(status_code=400, detail="Please provide an image file or image_path")
+
+        return CNNOutputCompareService.compare_image_outputs(
+            project=project,
+            run_ids=run_ids,
+            input_path=input_path,
+            settings={
+                "conf": conf,
+                "iou": iou,
+                "imgsz": imgsz,
+                "device": device,
+                "mask_opacity": mask_opacity,
+                "show_mask": show_mask,
+                "show_bbox": show_bbox,
+                "class_filter": class_filter,
+                "original_filename": Path(file.filename).name if file and file.filename else (Path(image_path).name if image_path else ""),
+            },
+        )
+    except HTTPException:
+        raise
+    except OutputCompareServiceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
 
 @app.get("/api/projects/{project_id}/train/runs")
 def list_runs(project_id: str):

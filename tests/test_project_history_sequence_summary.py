@@ -31,6 +31,17 @@ class ProjectHistorySequenceSummaryTests(unittest.TestCase):
             self.assertEqual(summary["sequence_csv_files"], 0)
             self.assertEqual(summary["sequence_files"], 0)
 
+    def test_file_summary_reports_compare_reports(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = Path(tmp)
+            report_dir = project_dir / "exports" / "compare_reports" / "compare_cnn_001"
+            report_dir.mkdir(parents=True)
+            (report_dir / "report.md").write_text("# report\n", encoding="utf-8")
+
+            summary = ProjectManager.build_project_file_summary(project_dir, {"layout": {"mode": "v3"}})
+
+            self.assertEqual(summary["compare_reports"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -115,6 +115,7 @@ class ProjectManager:
         training_runs = layout.training_runs_dir()
         inference_jobs = layout.inference_jobs_dir()
         exports_dir = project_dir / "exports"
+        compare_reports_dir = exports_dir / "compare_reports"
         split_current = project_dir / "splits" / "current_split.json"
         videos_raw = project_dir / "dataset" / "videos" / "raw"
         sequences_dir = layout.sequences_dir()
@@ -139,6 +140,7 @@ class ProjectManager:
             "sequence_files": count_files(sequences_dir, None) if sequences_dir.exists() else 0,
             "inference_jobs": len([p for p in inference_jobs.iterdir() if p.is_dir()]) if inference_jobs.exists() else 0,
             "exports": len([p for p in exports_dir.iterdir() if p.is_dir()]) if exports_dir.exists() else 0,
+            "compare_reports": len([p for p in compare_reports_dir.iterdir() if p.is_dir()]) if compare_reports_dir.exists() else 0,
             "latest_file_updated_at": latest_file_mtime(project_dir),
         }
 

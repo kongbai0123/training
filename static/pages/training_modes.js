@@ -33,6 +33,13 @@ export function initTrainingModeSidebar() {
     button.addEventListener("click", () => {
       trainingModeState.activeMode = "rnn";
       trainingModeState.activeRnnPanel = button.dataset.rnnNav;
+      if (trainingModeState.activeRnnPanel === "model-compare") {
+        eventBus.emit("set-compare-architecture", "rnn");
+        eventBus.emit("navigate", "model-compare");
+        renderTrainingModeSidebar();
+        renderTrainingWorkspace();
+        return;
+      }
       eventBus.emit("navigate", "training");
       ensureTrainingPageActive();
       renderTrainingModeSidebar();

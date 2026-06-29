@@ -17,7 +17,7 @@ import {
   escapeHtml 
 } from "./utils.js";
 
-// 載入頁面元件
+// 頛??辣
 import { initDashboard, renderDashboard } from "./pages/dashboard.js";
 import { initProjects, renderProjectsPage } from "./pages/projects.js";
 import { initDataset, renderDatasetPage } from "./pages/dataset.js";
@@ -25,23 +25,20 @@ import { initLabelMe, renderLabelMeManager } from "./pages/labelme.js";
 import { initSplit, renderSplitPage } from "./pages/split.js";
 import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js?v=20260625-augmentation-p0";
 import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js";
-import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260629-rnn-create-layout2";
+import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260629-pdf-stabilization";
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js";
+import { initModelCompare, renderModelComparePage } from "./pages/model_compare.js?v=20260629-pdf-stabilization";
 import { initInference, renderInferencePage } from "./pages/inference.js";
 import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260624-auto-label-readable";
 import { initExport, renderExportPage } from "./pages/export.js";
 import { initSettings, renderSettingsPage } from "./pages/settings.js";
 
-document.addEventListener("DOMContentLoaded", async () => {
+async function bootstrapApp() {
   initPreferences();
-  await bootstrapSession();
   bindGlobalNavigation();
   bindInfoTooltips();
-  
-  // 載入硬體系統狀態（非阻塞，超時超控）
-  fetchSystemHealth();
 
-  // 初始化所有頁面
+  // ????????
   initDashboard();
   initProjects();
   initDataset();
@@ -50,15 +47,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   initAugmentation();
   initTraining();
   initEvaluation();
+  initModelCompare();
   initInference();
   initAutoLabeling();
   initExport();
   initSettings();
 
-  // 載入專案並預設跳轉到 Dashboard
+  await bootstrapSession();
+
+  // 頛蝖祇?蝟餌絞????憛?頞?頞嚗?
+  fetchSystemHealth();
+
+  // 頛撠?銝阡?閮剛歲頧 Dashboard
   await loadProjects({ autoOpenLatest: true });
   navigate("dashboard");
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    bootstrapApp().catch((err) => console.error("Application bootstrap failed:", err));
+  }, { once: true });
+} else {
+  bootstrapApp().catch((err) => console.error("Application bootstrap failed:", err));
+}
 
 async function bootstrapSession() {
   try {
@@ -100,7 +111,7 @@ async function fetchSystemHealth() {
   }
 }
 
-// 全域導覽與事件訂閱
+// ?典?撠汗??隞嗉???
 function bindInfoTooltips() {
   let tooltip = qs("#floating-tooltip");
   if (!tooltip) {
@@ -250,7 +261,7 @@ function bindGlobalNavigation() {
     navigate(navTarget.dataset.nav);
   });
 
-  // History Modal 觸發與關閉
+  // History Modal 閫貊????
   qs("#btn-header-save-project")?.addEventListener("click", saveCurrentProject);
   qs("#btn-header-history")?.addEventListener("click", openHistoryModal);
   qs("#btn-close-history")?.addEventListener("click", closeHistoryModal);
@@ -258,7 +269,7 @@ function bindGlobalNavigation() {
     if (event.target.id === "project-history-modal") closeHistoryModal();
   });
 
-  // EventBus 事件監聽
+  // EventBus 鈭辣??
   eventBus.on("state-changed", () => {
     renderAll();
   });
@@ -287,7 +298,7 @@ function bindGlobalNavigation() {
     if (appState.currentProjectId) {
       await openProject(appState.currentProjectId, { stayOnPage: true });
     }
-    showToast("狀態已重新整理");
+    showToast("??歇??渡?");
   });
 
   eventBus.on("project-deleted", async (projectId) => {
@@ -296,7 +307,7 @@ function bindGlobalNavigation() {
       appState.currentProject = null;
       appState.trainingStatus = null;
       updateLabelMeState();
-      setText("#current-project-title", "尚未載入專案");
+      setText("#current-project-title", "撠頛撠?");
       if (appState.wsConn) {
         appState.wsConn.close();
         appState.wsConn = null;
@@ -323,7 +334,7 @@ function renderAll() {
   
   renderHeaderStatus();
 
-  // 觸發各子頁面渲染
+  // 閫貊???皜脫?
   renderDashboard(status);
   renderRightPanel(appState.currentPage, status);
   renderPageGuards(appState.currentPage, status);
@@ -335,6 +346,7 @@ function renderAll() {
   renderTrainingModeSidebar();
   renderTrainingWorkspace();
   renderEvaluationPage(status);
+  renderModelComparePage();
   renderInferencePage(status);
   renderAutoLabelingPage(status);
   renderExportPage(status);
@@ -345,7 +357,7 @@ function renderAll() {
   applyLanguage(appState.settings.language);
 }
 
-// 載入與開啟專案
+// 頛????獢?
 async function loadProjects(options = {}) {
   try {
     appState.projects = await apiFetch("/api/projects");
@@ -358,7 +370,7 @@ async function loadProjects(options = {}) {
     renderAll();
   } catch (err) {
     qs("#api-status-dot")?.classList.add("offline");
-    showToast(`無法讀取專案清單：${err.message}`);
+    showToast(`?⊥?霈??獢??殷?${err.message}`);
     renderAll();
   }
 }
@@ -372,9 +384,9 @@ async function openProject(projectId, options = {}) {
     syncTrainingModeForProject(appState.currentProject, options.page || appState.currentPage);
     setText("#current-project-title", appState.currentProject.project_name || projectId);
     updateLabelMeState();
-    // 檢查並重設訓練 WebSocket
+    // 瑼Ｘ銝阡?閮剛?蝺?WebSocket
     await checkCurrentTrainStatus();
-    // 載入該專案的模型清單
+    // 頛閰脣?獢?璅∪?皜
     try {
       const models = await apiFetch(`/api/projects/${projectId}/models`);
       appState.models = Array.isArray(models) ? models : [];
@@ -382,12 +394,12 @@ async function openProject(projectId, options = {}) {
       console.warn("Failed to prefetch models:", e.message);
       appState.models = [];
     }
-    // 載入最推薦配置
+    // 頛??刻?蔭
     await loadRecommendedConfig();
     renderAll();
     if (!options.stayOnPage) navigate(options.page || "dashboard");
   } catch (err) {
-    showToast(`無法載入專案：${err.message}`);
+    showToast(`?⊥?頛撠?嚗?{err.message}`);
   }
 }
 
@@ -454,7 +466,7 @@ async function checkCurrentTrainStatus() {
   if (!appState.currentProjectId) return;
   try {
     appState.trainingStatus = await apiFetch(`/api/projects/${appState.currentProjectId}/train/status`);
-    // 觸發訓練 WebSocket 狀態監聽檢查
+    // 閫貊閮毀 WebSocket ???賣炎??
     eventBus.emit("check-training-websocket");
   } catch {
     appState.trainingStatus = null;
@@ -489,7 +501,7 @@ function renderHeaderStatus() {
   }
 }
 
-// UI 面板渲染
+// UI ?Ｘ皜脫?
 function renderProjectSummary(status, pageId = appState.currentPage) {
   const taskLabel = String(status.taskType || "--")
     .replace(/_/g, " ")
@@ -547,7 +559,7 @@ const RIGHT_PANEL_CONFIG = {
   settings: buildSettingsRightPanel
 };
 
-// 統一的渲染引擎 (Separation of Concerns & XSS 防護)
+// 蝯曹??葡????(Separation of Concerns & XSS ?脰風)
 function renderRightPanel(pageId, status) {
   renderProjectSummary(status, pageId);
 
@@ -776,33 +788,33 @@ function buildAugmentationRightPanel(status) {
 
   const actions = [];
   const warnings = [];
-  const notes = ["Val/Test 維持排除，避免評估資料洩漏。"];
+  const notes = ["Val/Test 蝬剜??嚗??隡啗??援瞍?];
   if (!status.hasProject) {
-    actions.push("建立或開啟專案。");
-    warnings.push("尚未開啟專案。");
+    actions.push("撱箇?????獢?);
+    warnings.push("撠??撠???);
   } else if (!status.hasDataset) {
-    actions.push("前往 Dataset 匯入圖片。");
-    actions.push("同步標註。");
-    actions.push("建立 Train / Val / Test split。");
-    warnings.push("尚未匯入圖片，無法進行擴充。");
+    actions.push("?? Dataset ?臬????);
+    actions.push("?郊璅酉??);
+    actions.push("撱箇? Train / Val / Test split??);
+    warnings.push("撠?臬??嚗瘜脰??游???);
   } else if (!status.splitComplete || trainCount === 0) {
-    actions.push("建立 Train / Val / Test split。");
-    warnings.push("套用 Train-only augmentation 前必須先建立 split。");
+    actions.push("撱箇? Train / Val / Test split??);
+    warnings.push("憟 Train-only augmentation ????撱箇? split??);
   } else if (!hasPreviewImage) {
-    actions.push("確認 Train split 中有可預覽圖片。");
-    warnings.push("目前沒有可預覽圖片。");
+    actions.push("蝣箄? Train split 銝剜??舫?閬賢???);
+    warnings.push("?桀?瘝??舫?閬賢???);
   } else if (previewStale) {
-    actions.push("重新產生 Preview。");
-    actions.push("檢查 Risk Check。");
-    warnings.push("設定已變更，Preview 需要重新產生。");
+    actions.push("??Ｙ? Preview??);
+    actions.push("瑼Ｘ Risk Check??);
+    warnings.push("閮剖?撌脰??湛?Preview ?閬??啁??);
   } else if (!previewReady) {
-    actions.push("選擇 preset 或自訂策略。");
-    actions.push("產生 Preview。");
-    actions.push("檢查 Risk Check。");
+    actions.push("?豢? preset ?閮??乓?);
+    actions.push("?Ｙ? Preview??);
+    actions.push("瑼Ｘ Risk Check??);
   } else {
-    actions.push("檢查預覽結果。");
-    actions.push("套用到 Train Split。");
-    actions.push("進行模型訓練。");
+    actions.push("瑼Ｘ?汗蝯???);
+    actions.push("憟??Train Split??);
+    actions.push("?脰?璅∪?閮毀??);
   }
 
   return {
@@ -999,25 +1011,25 @@ function renderPageGuards(pageId, status) {
   };
 
   if (!status.hasProject) {
-    const guard = statusGuard("warning", "尚未載入專案", ["此頁可瀏覽，但操作已停用。"], "前往 Projects 建立或開啟專案。");
+    const guard = statusGuard("warning", "撠頛撠?", ["甇日??舐汗嚗???撌脣??具?], "?? Projects 撱箇?????獢?);
     Object.keys(guards).forEach((key) => guards[key].push(guard));
   }
   if (status.hasProject && !status.hasDataset) {
-    guards.labelme.push(statusGuard("warning", "尚未匯入資料集", ["Images folder 目前沒有圖片。"], "前往 Dataset 匯入圖片或影片抽幀。"));
-    guards.split.push(statusGuard("warning", "尚未匯入資料集", ["不能建立 Train / Val / Test。"], "先完成 Dataset 匯入。"));
-    guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未匯入資料集。"], "前往 Dataset 匯入圖片。"));
+    guards.labelme.push(statusGuard("warning", "撠?臬鞈???, ["Images folder ?桀?瘝?????], "?? Dataset ?臬???蔣?撟??));
+    guards.split.push(statusGuard("warning", "撠?臬鞈???, ["銝撱箇? Train / Val / Test??], "????Dataset ?臬??));
+    guards.training.push(statusGuard("danger", "?桀??⊥???閮毀", ["撠?臬鞈???], "?? Dataset ?臬????));
   }
   if (status.hasDataset && !status.labelme.synced) {
-    guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未重新掃描 LabelMe 標註狀態。"], "前往 LabelMe 頁重新掃描標註狀態，再轉換為訓練格式。"));
-    guards.split.push(statusGuard("info", "LabelMe 尚未掃描", ["此階段仍可設定 split UI，但正式訓練應等待 LabelMe JSON 轉換完成。"], "前往 LabelMe 頁重新掃描標註狀態與執行轉換。"));
+    guards.training.push(statusGuard("danger", "?桀??⊥???閮毀", ["撠??? LabelMe 璅酉???], "?? LabelMe ???唳???閮餌??????閮毀?澆???));
+    guards.split.push(statusGuard("info", "LabelMe 撠??", ["甇日?畾萎??航身摰?split UI嚗?甇??閮毀??敺?LabelMe JSON 頧?摰???], "?? LabelMe ???唳???閮餌????瑁?頧???));
   }
   if (status.hasDataset && !status.splitComplete) {
-    guards.training.push(statusGuard("danger", "目前無法開始訓練", ["尚未建立 Train / Val / Test。"], "前往 Split 建立資料分散。"));
-    guards.augmentation.push(statusGuard("warning", "尚未完成 split", ["套用 augmentation 前需要知道 target split。"], "前往 Split 建立 Train / Val / Test。"));
+    guards.training.push(statusGuard("danger", "?桀??⊥???閮毀", ["撠撱箇? Train / Val / Test??], "?? Split 撱箇?鞈????));
+    guards.augmentation.push(statusGuard("warning", "撠摰? split", ["憟 augmentation ??閬??target split??], "?? Split 撱箇? Train / Val / Test??));
   }
   if (!status.bestModelExists) {
-    guards.evaluation.push(statusGuard("warning", "目前沒有可評估模型", ["尚未完成訓練或尚未產生 best model。"], "完成訓練後再查看 mAP / IoU。"));
-    guards.export.push(statusGuard("warning", "目前沒有可匯出模型", ["尚未找到最佳模型權重。"], "完成訓練後再匯出 PT / ONNX。"));
+    guards.evaluation.push(statusGuard("warning", "?桀?瘝??航?隡唳芋??, ["撠摰?閮毀???芰??best model??], "摰?閮毀敺??亦? mAP / IoU??));
+    guards.export.push(statusGuard("warning", "?桀?瘝??臬?箸芋??, ["撠?曉?雿單芋????], "摰?閮毀敺??臬 PT / ONNX??));
   }
 
   const activeGuards = guards[pageId] || [];
@@ -1075,7 +1087,7 @@ function updateActionAvailability(status) {
   }
 }
 
-// Toast 與 Modal 控制
+// Toast ??Modal ?批
 function showToast(message) {
   const toast = qs("#toast");
   if (!toast) return;

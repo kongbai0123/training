@@ -28,7 +28,7 @@ class AppPathsProjectScopeTests(unittest.TestCase):
             self.assertEqual(reloaded.PROJECTS_DIR, target.resolve())
             self.assertTrue(reloaded.PROJECTS_DIR.exists())
 
-    def test_frozen_projects_dir_prefers_managed_project_root(self):
+    def test_frozen_paths_prefer_managed_portable_root(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             exe_dir = root / "dist" / "VisionTrainingStudio"
@@ -36,14 +36,16 @@ class AppPathsProjectScopeTests(unittest.TestCase):
             (root / "version.json").write_text("{}", encoding="utf-8")
             managed_projects = root / "projects"
             managed_projects.mkdir()
+            managed_models = root / "models"
             fake_exe = exe_dir / "VisionTrainingStudio.exe"
             fake_exe.write_bytes(b"")
 
             with patch.dict("os.environ", {"VTS_USER_DATA_DIR": "", "VTS_PROJECTS_DIR": ""}, clear=False), patch.object(app_paths.sys, "frozen", True, create=True), patch.object(app_paths.sys, "executable", str(fake_exe)):
                 reloaded = importlib.reload(app_paths)
 
-            self.assertNotEqual(reloaded.USER_DATA_DIR, root)
+            self.assertEqual(reloaded.USER_DATA_DIR, root.resolve())
             self.assertEqual(reloaded.PROJECTS_DIR, managed_projects.resolve())
+            self.assertEqual(reloaded.MODELS_DIR, managed_models.resolve())
 
 
 if __name__ == "__main__":
