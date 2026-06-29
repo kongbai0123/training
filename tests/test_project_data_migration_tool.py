@@ -54,16 +54,27 @@ class ProjectDataMigrationToolTests(unittest.TestCase):
         self.assertFalse((self.source_root / "proj_legacy_001").exists())
         self.assertEqual(result["deleted"], ["proj_legacy_001"])
 
-    def test_existing_target_is_skipped(self):
+    def test_existing_target_is_skipped_without_delete_source(self):
         shutil.copytree(self.source_root / "proj_legacy_001", self.target_root / "proj_legacy_001")
 
         with self._patched_paths():
-            result = ProjectDataMigrationTool.migrate(project_ids=["proj_legacy_001"], delete_source=True)
+            result = ProjectDataMigrationTool.migrate(project_ids=["proj_legacy_001"], delete_source=False)
 
         self.assertEqual(result["migrated"], [])
         self.assertEqual(result["deleted"], [])
         self.assertEqual(result["skipped"][0]["reason"], "target_exists")
         self.assertTrue((self.source_root / "proj_legacy_001").exists())
+
+    def test_existing_verified_target_can_delete_source_when_requested(self):
+        with self._patched_paths():
+            ProjectDataMigrationTool.migrate(project_ids=["proj_legacy_001"], delete_source=False)
+            result = ProjectDataMigrationTool.migrate(project_ids=["proj_legacy_001"], delete_source=True)
+
+        self.assertEqual(result["migrated"], [])
+        self.assertEqual(result["skipped"], [])
+        self.assertEqual(result["deleted"], ["proj_legacy_001"])
+        self.assertFalse((self.source_root / "proj_legacy_001").exists())
+        self.assertTrue((self.target_root / "proj_legacy_001" / "project.json").exists())
 
     def _write_project(self, project_id: str, name: str):
         project_dir = self.source_root / project_id

@@ -69,7 +69,15 @@ class ProjectDataMigrationTool:
                 errors.append(f"Unsafe source path skipped: {source.as_posix()}")
                 continue
             if target.exists():
-                skipped.append({**item, "reason": "target_exists"})
+                if delete_source:
+                    try:
+                        cls._verify_copy(source, target)
+                        shutil.rmtree(source)
+                        deleted.append(item["project_id"])
+                    except Exception as exc:
+                        errors.append(f"{item['project_id']}: existing target verification failed before delete: {exc}")
+                else:
+                    skipped.append({**item, "reason": "target_exists"})
                 continue
 
             try:

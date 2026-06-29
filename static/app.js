@@ -1086,8 +1086,9 @@ function showToast(message) {
   }, 3200);
 }
 
-function openHistoryModal() {
+async function openHistoryModal() {
   const modal = qs("#project-history-modal");
+  await loadProjects({ autoOpenLatest: false });
   eventBus.emit("render-project-history-modal");
   if (modal) modal.hidden = false;
 }
