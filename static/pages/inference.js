@@ -234,6 +234,7 @@ async function runInference() {
       body: form
     });
     appState.inferenceLastResult = result;
+    appState.inferenceJobsProjectId = "";
     renderInferenceResult();
     
     if (result.summary?.device_fallback) {

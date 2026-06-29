@@ -39,6 +39,7 @@ from src.labelme_adapter import LabelMeAdapter
 from src.annotation_importer import AnnotationImporter
 from src.model_registry import ModelRegistry
 from src.inference_engine import InferenceEngine
+from src.inference_history import InferenceHistory
 from src.rnn_inference_engine import RNNSequenceInferenceEngine
 from src.project_migrator import ProjectMigrator
 from src.local_session import current_bootstrap, validate_token
@@ -666,6 +667,25 @@ def get_inference_job_file(project_id: str, job_id: str, filename: str, _token=D
         raise HTTPException(status_code=404, detail="Inference file not found")
 
     return FileResponse(str(file_path))
+
+@app.get("/api/projects/{project_id}/inference/jobs")
+def list_inference_jobs(project_id: str):
+    require_feature("inference")()
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return InferenceHistory.list_jobs(project)
+
+@app.get("/api/projects/{project_id}/inference/jobs/{job_id}")
+def get_inference_job(project_id: str, job_id: str):
+    require_feature("inference")()
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        return InferenceHistory.get_job(project, job_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Inference job not found")
 
 # 2. ???????? API
 @app.get("/api/projects/{project_id}/images/{filename}")

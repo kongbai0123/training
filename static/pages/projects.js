@@ -5,6 +5,7 @@ import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
 
 let historySearchQuery = "";
 let historyModeFilter = "all";
+let inferenceHistoryLoading = false;
 
 export function initProjects() {
   qs("#btn-reload-projects")?.addEventListener("click", () => {
@@ -57,6 +58,10 @@ export function initProjects() {
       renderHistoryModal();
     });
   });
+  qs("#btn-close-inference-job-detail")?.addEventListener("click", closeInferenceJobDetailModal);
+  qs("#inference-job-detail-modal")?.addEventListener("click", (event) => {
+    if (event.target.id === "inference-job-detail-modal") closeInferenceJobDetailModal();
+  });
 
   eventBus.on("render-recent-projects-list", (subset) => {
     setHTML("#recent-projects-list", renderProjectList(subset, { includeDelete: false, compact: true }));
@@ -69,14 +74,17 @@ export function initProjects() {
 }
 
 export function renderProjectsPage() {
+  ensureInferenceHistoryLoaded();
   const html = renderProjectList(appState.projects, { includeDelete: true, showFiles: true });
   setHTML("#project-history-list", html);
   const historyProjects = filterProjects(appState.projects || [], "", historyModeFilter);
-  setHTML("#history-list", renderProjectList(historyProjects, { includeDelete: true, showFiles: true }));
+  const historyJobs = filterInferenceJobs(currentInferenceJobs(), "", historyModeFilter);
+  setHTML("#history-list", renderHistoryContent(historyProjects, historyJobs, { includeDelete: true, showFiles: true }));
   syncHistoryFilterControls();
-  setText("#history-page-result-count", buildHistoryResultText(historyProjects.length, appState.projects || [], ""));
+  setText("#history-page-result-count", buildHistoryResultTextWithJobs(historyProjects.length, appState.projects || [], "", historyJobs.length));
   renderHistoryModal();
   bindProjectListButtons();
+  bindInferenceJobButtons();
 }
 
 export function renderProjectList(projects, options = {}) {
@@ -88,13 +96,16 @@ export function renderProjectList(projects, options = {}) {
 }
 
 function renderHistoryModal() {
+  ensureInferenceHistoryLoaded();
   const filtered = filterProjects(appState.projects || [], historySearchQuery, historyModeFilter);
-  const resultText = buildHistoryResultText(filtered.length, appState.projects || [], historySearchQuery);
+  const filteredJobs = filterInferenceJobs(currentInferenceJobs(), historySearchQuery, historyModeFilter);
+  const resultText = buildHistoryResultTextWithJobs(filtered.length, appState.projects || [], historySearchQuery, filteredJobs.length);
 
   syncHistoryFilterControls();
   setText("#project-history-result-count", resultText);
-  setHTML("#modal-project-list", renderProjectList(filtered, { includeDelete: true, showFiles: true }));
+  setHTML("#modal-project-list", renderHistoryContent(filtered, filteredJobs, { includeDelete: true, showFiles: true }));
   bindProjectListButtons();
+  bindInferenceJobButtons();
 }
 
 function filterProjects(projects, query, mode = "all") {
@@ -118,6 +129,31 @@ function filterProjects(projects, query, mode = "all") {
     ].filter(Boolean).join(" ").toLowerCase();
     return searchable.includes(needle);
   });
+}
+
+function filterInferenceJobs(jobs, query, mode = "all") {
+  const needle = String(query || "").trim().toLowerCase();
+  return jobs.filter((job) => {
+    if (mode !== "all" && job.mode !== mode) return false;
+    if (!needle) return true;
+    const searchable = [
+      job.job_id,
+      job.mode,
+      job.kind,
+      job.backend,
+      job.model_id,
+      job.run_id,
+      job.task_type,
+      ...(job.summary?.predicted_labels || []),
+      ...(job.summary?.detected_classes || []),
+    ].filter(Boolean).join(" ").toLowerCase();
+    return searchable.includes(needle);
+  });
+}
+
+function currentInferenceJobs() {
+  if (!appState.currentProjectId || appState.inferenceJobsProjectId !== appState.currentProjectId) return [];
+  return appState.inferenceJobs || [];
 }
 
 function matchesHistoryMode(project, mode) {
@@ -162,6 +198,11 @@ function buildHistoryResultText(filteredCount, projects, query = historySearchQu
   const hasSearch = String(query || "").trim();
   if (hasSearch || historyModeFilter !== "all") return `${filteredCount} / ${total} projects · ${modeLabel}`;
   return `${total} projects`;
+}
+
+function buildHistoryResultTextWithJobs(filteredCount, projects, query = historySearchQuery, jobCount = 0) {
+  const base = buildHistoryResultText(filteredCount, projects, query);
+  return jobCount ? `${base}, ${jobCount} jobs` : base;
 }
 
 function syncHistoryFilterControls() {
@@ -220,6 +261,69 @@ function renderProjectCard(project, options = {}) {
   `;
 }
 
+function renderHistoryContent(projects, jobs, options = {}) {
+  const projectHtml = renderProjectList(projects, options);
+  const jobsHtml = renderInferenceJobList(jobs);
+  if (!jobsHtml) return projectHtml;
+  return `
+    <div class="history-section-block">
+      <div class="history-section-title"><span>Inference Jobs</span><small>${escapeHtml(appState.currentProject?.project_name || appState.currentProjectId || "active project")}</small></div>
+      ${jobsHtml}
+    </div>
+    <div class="history-section-block">
+      <div class="history-section-title"><span>Projects</span><small>${escapeHtml(projects.length)} item(s)</small></div>
+      ${projectHtml}
+    </div>
+  `;
+}
+
+function renderInferenceJobList(jobs) {
+  if (inferenceHistoryLoading) {
+    return `<div class="empty-state">Loading inference jobs...</div>`;
+  }
+  if (!appState.currentProjectId) return "";
+  if (!jobs || jobs.length === 0) {
+    return `<div class="empty-state">No inference jobs for the active project.</div>`;
+  }
+  return jobs.map(renderInferenceJobCard).join("");
+}
+
+function renderInferenceJobCard(job) {
+  const isRnn = job.mode === "rnn";
+  const summary = job.summary || {};
+  const count = isRnn ? job.sequence_count : job.prediction_count;
+  const primary = isRnn ? `Sequences: ${count ?? "--"}` : `Predictions: ${count ?? "--"}`;
+  const labels = isRnn ? summary.predicted_labels : summary.detected_classes;
+  return `
+    <article class="project-history-card inference-history-card">
+      <div class="project-history-main">
+        <div>
+          <div class="project-history-title-row">
+            <h3>${escapeHtml(job.job_id)}</h3>
+            <span class="badge ${isRnn ? "badge-warning" : "badge-info"}">${escapeHtml(String(job.mode || "--").toUpperCase())}</span>
+            <span class="badge badge-muted">${escapeHtml(job.kind || "--")}</span>
+          </div>
+          <p>${escapeHtml(primary)} 繚 ${escapeHtml(formatDate(job.created_at) || "--")}</p>
+        </div>
+        <div class="button-row">
+          <button class="btn btn-secondary btn-sm" data-view-inference-job="${escapeHtml(job.job_id)}">View Result</button>
+        </div>
+      </div>
+      <div class="project-file-summary">
+        ${fileMetric("Backend", job.backend || "--")}
+        ${fileMetric("Latency", job.inference_time_ms !== undefined ? `${job.inference_time_ms} ms` : "--")}
+        ${fileMetric(isRnn ? "Sequences" : "Predictions", count ?? "--")}
+        ${fileMetric("Files", job.files?.length ?? 0)}
+      </div>
+      <div class="project-file-details">
+        <div><span>Model</span><code>${escapeHtml(job.model_id || "--")}</code></div>
+        <div><span>Run</span><code>${escapeHtml(job.run_id || "--")}</code></div>
+        <div><span>Labels</span><code>${escapeHtml(Array.isArray(labels) && labels.length ? labels.join(", ") : "--")}</code></div>
+      </div>
+    </article>
+  `;
+}
+
 function fileMetric(label, value, badgeType = null) {
   const valueHtml = badgeType
     ? `<span class="summary-badge badge-${badgeType}">${escapeHtml(value)}</span>`
@@ -241,6 +345,91 @@ export function bindProjectListButtons() {
       openDeleteProjectModal(btn.dataset.deleteProject);
     });
   });
+}
+
+function bindInferenceJobButtons() {
+  qsa("[data-view-inference-job]").forEach((btn) => {
+    btn.addEventListener("click", () => openInferenceJobDetail(btn.dataset.viewInferenceJob));
+  });
+}
+
+async function ensureInferenceHistoryLoaded(force = false) {
+  if (!appState.currentProjectId) {
+    appState.inferenceJobs = [];
+    appState.inferenceJobsProjectId = "";
+    return;
+  }
+  if (!force && appState.inferenceJobsProjectId === appState.currentProjectId) return;
+  if (inferenceHistoryLoading) return;
+
+  inferenceHistoryLoading = true;
+  appState.inferenceJobsLoading = true;
+  try {
+    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/inference/jobs`);
+    appState.inferenceJobs = Array.isArray(payload?.jobs) ? payload.jobs : [];
+    appState.inferenceJobsProjectId = appState.currentProjectId;
+  } catch (err) {
+    appState.inferenceJobs = [];
+    appState.inferenceJobsProjectId = appState.currentProjectId;
+    eventBus.emit("toast", `Failed to load inference history: ${err.message}`);
+  } finally {
+    inferenceHistoryLoading = false;
+    appState.inferenceJobsLoading = false;
+    if (appState.currentPage === "history") renderProjectsPage();
+  }
+}
+
+async function openInferenceJobDetail(jobId) {
+  if (!appState.currentProjectId || !jobId) return;
+  setHTML("#inference-job-detail-body", `<div class="empty-state">Loading inference result...</div>`);
+  const modal = qs("#inference-job-detail-modal");
+  if (modal) modal.hidden = false;
+  try {
+    const job = await apiFetch(`/api/projects/${appState.currentProjectId}/inference/jobs/${encodeURIComponent(jobId)}`);
+    renderInferenceJobDetail(job);
+  } catch (err) {
+    setHTML("#inference-job-detail-body", `<div class="empty-state">Failed to load inference result: ${escapeHtml(err.message)}</div>`);
+  }
+}
+
+function closeInferenceJobDetailModal() {
+  const modal = qs("#inference-job-detail-modal");
+  if (modal) modal.hidden = true;
+}
+
+function renderInferenceJobDetail(job) {
+  const summary = job.summary || {};
+  const predictions = Array.isArray(job.predictions) ? job.predictions : [];
+  const rows = predictions.slice(0, 20).map((item) => {
+    const confidence = item.confidence !== undefined ? Number(item.confidence).toFixed(4) : "--";
+    const label = item.prediction ?? item.class_name ?? "--";
+    return `<tr>
+      <td><code>${escapeHtml(item.sequence_id || item.class_id || "--")}</code></td>
+      <td>${escapeHtml(label)}</td>
+      <td>${escapeHtml(confidence)}</td>
+      <td>${escapeHtml(item.target ?? "--")}</td>
+    </tr>`;
+  }).join("");
+  const fileLinks = (job.files || []).map((file) =>
+    `<a class="btn btn-secondary btn-sm" target="_blank" href="${escapeHtml(file.url)}">${escapeHtml(file.name)}</a>`
+  ).join("");
+  setHTML("#inference-job-detail-body", `
+    <div class="path-list">
+      <div class="path-row"><span>Job ID</span><code>${escapeHtml(job.job_id || "--")}</code></div>
+      <div class="path-row"><span>Mode</span><code>${escapeHtml(String(job.mode || "--").toUpperCase())}</code></div>
+      <div class="path-row"><span>Backend</span><code>${escapeHtml(job.backend || "--")}</code></div>
+      <div class="path-row"><span>Model</span><code>${escapeHtml(job.model_id || "--")}</code></div>
+      <div class="path-row"><span>Created</span><code>${escapeHtml(formatDate(job.created_at) || "--")}</code></div>
+      <div class="path-row"><span>Latency</span><code>${escapeHtml(summary.inference_time_ms ?? "--")} ms</code></div>
+    </div>
+    <div class="inference-job-file-actions">${fileLinks || "<span class='muted-cell'>No files available.</span>"}</div>
+    <div class="data-table compact-table inference-job-prediction-table">
+      <table>
+        <thead><tr><th>Sequence / Class</th><th>Prediction</th><th>Confidence</th><th>Target</th></tr></thead>
+        <tbody>${rows || "<tr><td colspan='4' class='text-center muted-cell'>No prediction rows.</td></tr>"}</tbody>
+      </table>
+    </div>
+  `);
 }
 
 function openCreateProjectModal() {

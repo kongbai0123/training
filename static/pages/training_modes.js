@@ -331,6 +331,7 @@ async function runRnnSequenceInference(event) {
       body: form
     });
     trainingModeState.rnn.inferenceResult = result;
+    appState.inferenceJobsProjectId = "";
     renderRnnInferenceResult();
     eventBus.emit("toast", "RNN sequence inference completed.");
   } catch (err) {
