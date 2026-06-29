@@ -144,6 +144,7 @@ class ProjectLayout:
             self.project_dir / "augmentations" / "profiles",
             self.project_dir / "training" / "runs",
             self.project_dir / "training" / "registry",
+            self.project_dir / "sequences",
             self.project_dir / "auto_labeling" / "jobs",
             self.project_dir / "inference" / "jobs",
             self.project_dir / "inference" / "cache",
@@ -269,6 +270,12 @@ class ProjectLayout:
 
     def training_runs_dir(self) -> Path:
         return self.project_dir / "training" / "runs"
+
+    def sequences_dir(self) -> Path:
+        return self.project_dir / "sequences"
+
+    def sequence_manifest_path(self) -> Path:
+        return self.sequences_dir() / "sequence_manifest.json"
 
     def inference_job_dir(self, job_id: str) -> Path:
         return self.project_dir / "inference" / "jobs" / job_id

@@ -3293,6 +3293,9 @@ body[data-theme="light"] .toast {
   border: 1px solid rgba(245, 158, 11, 0.45);
   border-radius: var(--radius);
 }
+.rnn-disabled-banner > div {
+  flex: 1;
+}
 .rnn-disabled-banner strong {
   display: block;
   color: var(--warning);
@@ -3376,6 +3379,42 @@ body[data-theme="light"] .toast {
   background: var(--bg-panel-soft);
   border: 1px solid var(--border);
   border-radius: 6px;
+}
+.rnn-readiness-card {
+  margin-top: 12px;
+}
+.rnn-readiness-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.rnn-readiness-item {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel-soft);
+}
+.rnn-readiness-item strong {
+  font-size: 0.82rem;
+}
+.rnn-readiness-item span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+.rnn-readiness-item.success {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+.rnn-readiness-item.warning {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+.rnn-readiness-item.danger {
+  border-color: rgba(239, 68, 68, 0.35);
 }
 .training-readiness {
   margin-bottom: 16px;

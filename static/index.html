@@ -900,8 +900,9 @@
                 <div class="rnn-disabled-banner">
                   <div>
                     <strong>RNN Preview</strong>
-                    <span>Schema Only · Training Disabled · Readiness Coming Later</span>
+                    <span>Schema Only · Training Disabled · Readiness Validation Preview</span>
                   </div>
+                  <span class="summary-badge badge-warning" id="rnn-readiness-badge">Not Ready</span>
                   <span class="rnn-disabled-action-hitbox">
                     <button type="button" class="btn btn-disabled" id="rnn-start-disabled" disabled>
                       <i class="fa-solid fa-lock"></i> Start RNN Disabled
@@ -913,15 +914,15 @@
                   <div class="rnn-preview-grid">
                     <section class="rnn-preview-card">
                       <div class="section-title"><h2>序列資料集摘要</h2><span class="summary-badge badge-warning">Preview</span></div>
-                      <div class="summary-row"><span>Manifest</span><code>sequence_manifest.json not connected</code></div>
-                      <div class="summary-row"><span>Source</span><code>CSV / Feature Sequence planned</code></div>
-                      <div class="summary-row"><span>Split</span><code>-- / -- / --</code></div>
+                      <div class="summary-row"><span>Manifest</span><code id="rnn-manifest-status">sequence_manifest.json not connected</code></div>
+                      <div class="summary-row"><span>Source</span><code id="rnn-source-status">CSV / Feature Sequence planned</code></div>
+                      <div class="summary-row"><span>Split</span><code id="rnn-split-status">-- / -- / --</code></div>
                     </section>
                     <section class="rnn-preview-card">
                       <div class="section-title"><h2>特徵與標籤摘要</h2><span class="summary-badge badge-neutral">Schema only</span></div>
-                      <div class="summary-row"><span>Feature columns</span><code>not parsed</code></div>
-                      <div class="summary-row"><span>Target column</span><code>not selected</code></div>
-                      <div class="summary-row"><span>Feature dim</span><code>--</code></div>
+                      <div class="summary-row"><span>Feature columns</span><code id="rnn-feature-columns-status">not parsed</code></div>
+                      <div class="summary-row"><span>Target column</span><code id="rnn-target-status">label / target</code></div>
+                      <div class="summary-row"><span>Feature dim</span><code id="rnn-feature-dim-status">--</code></div>
                     </section>
                     <section class="rnn-preview-card">
                       <div class="section-title"><h2>序列切片設定摘要</h2><span class="summary-badge badge-warning">Not Ready</span></div>
@@ -933,16 +934,21 @@
                       <div class="section-title"><h2>模型設定摘要</h2><span class="summary-badge badge-neutral">pytorch_lstm</span></div>
                       <div class="summary-row"><span>Model</span><code>LSTM / GRU / BiLSTM</code></div>
                       <div class="summary-row"><span>Task head</span><code>classification / regression</code></div>
-                      <div class="summary-row"><span>Readiness</span><code>Not Ready / Preview</code></div>
+                      <div class="summary-row"><span>Readiness</span><code id="rnn-readiness-status">Not Ready / Preview</code></div>
                     </section>
                   </div>
+                  <section class="rnn-preview-card rnn-readiness-card">
+                    <div class="section-title"><h2>Readiness 檢查</h2><span class="summary-badge badge-neutral">No training</span></div>
+                    <p class="form-hint" id="rnn-readiness-message">RNN readiness checks only inspect sequence_manifest.json and CSV feature files.</p>
+                    <ul class="rnn-readiness-list" id="rnn-readiness-checks"></ul>
+                  </section>
                 </div>
 
                 <div id="rnn-sequence-dataset-panel" class="rnn-panel" data-rnn-panel="sequence-dataset">
                   <section class="rnn-preview-card">
                     <div class="section-title"><h2>序列資料集</h2><span class="summary-badge badge-warning">Phase 2B</span></div>
-                    <p class="form-hint">sequence_manifest.json 尚未接入。CSV / Feature Sequence 匯入與檢查會在 Phase 2B 實作。</p>
-                    <div class="rnn-placeholder-box">sequence_id, timestep, feature_1, feature_2, target</div>
+                    <p class="form-hint" id="rnn-sequence-dataset-message">sequence_manifest.json 與 CSV / Feature Sequence 目前只做 readiness 檢查，不啟動訓練。</p>
+                    <div class="rnn-placeholder-box" id="rnn-sequence-dataset-preview">sequence_id, timestep, feature_1, feature_2, target</div>
                   </section>
                 </div>
 

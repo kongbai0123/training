@@ -34,6 +34,7 @@ from src.splitter import DataSplitter
 from src.augmenter import ImageAugmenter
 from src.trainer import YOLOTrainer
 from src.training.dispatcher import TrainerDispatcher
+from src.training.rnn_readiness import build_rnn_readiness_report
 from src.labelme_adapter import LabelMeAdapter
 from src.annotation_importer import AnnotationImporter
 from src.model_registry import ModelRegistry
@@ -1953,6 +1954,27 @@ def recommend_config(project_id: str):
 
     from src.training.config_recommender import ConfigRecommender
     return ConfigRecommender.recommend(task_type, vram_mb, dataset_size)
+
+@app.get("/api/projects/{project_id}/rnn/readiness")
+def get_rnn_readiness(
+    project_id: str,
+    sequence_length: int = 16,
+    stride: int = 8,
+    horizon: int = 1,
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    sequence_length = max(1, int(sequence_length or 16))
+    stride = max(1, int(stride or 8))
+    horizon = max(1, int(horizon or 1))
+    return build_rnn_readiness_report(
+        project,
+        sequence_length=sequence_length,
+        stride=stride,
+        horizon=horizon,
+    )
 
 @app.get("/api/projects/{project_id}/train/runs")
 def list_runs(project_id: str):
