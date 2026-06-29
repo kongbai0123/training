@@ -34,6 +34,7 @@ export function initTrainingModeSidebar() {
       trainingModeState.activeMode = "rnn";
       trainingModeState.activeRnnPanel = button.dataset.rnnNav;
       eventBus.emit("navigate", "training");
+      ensureTrainingPageActive();
       renderTrainingModeSidebar();
       renderTrainingWorkspace();
       loadRnnReadiness();
@@ -58,7 +59,7 @@ export function initTrainingModeSidebar() {
       if (button.dataset.modeNav === "overview") {
         trainingModeState.activeCnnPanel = "overview";
         trainingModeState.activeRnnPanel = "overview";
-        eventBus.emit("navigate", "training");
+        eventBus.emit("navigate", trainingModeState.activeMode === "cnn" ? "dashboard" : "training");
         renderTrainingModeSidebar();
         renderTrainingWorkspace();
         if (trainingModeState.activeMode === "rnn") loadRnnReadiness();
@@ -76,10 +77,32 @@ export function setTrainingMode(mode) {
   trainingModeState.activeMode = mode;
   if (mode === "cnn") trainingModeState.activeCnnPanel = "overview";
   if (mode === "rnn") trainingModeState.activeRnnPanel = "overview";
-  eventBus.emit("navigate", "training");
+  eventBus.emit("navigate", mode === "cnn" ? "dashboard" : "training");
+  if (mode === "rnn") ensureTrainingPageActive();
   renderTrainingModeSidebar();
   renderTrainingWorkspace();
   if (mode === "rnn") loadRnnReadiness();
+}
+
+function ensureTrainingPageActive() {
+  appState.currentPage = "training";
+  qsa(".page").forEach((page) => {
+    page.classList.toggle("active", page.id === "page-training");
+  });
+}
+
+export function syncTrainingModeForProject(project, targetPage = "dashboard") {
+  const taskType = String(project?.task_type || "").toLowerCase();
+  const isRnnProject = taskType.includes("sequence") || taskType.includes("time_series") || taskType.includes("rnn");
+
+  if (isRnnProject) {
+    trainingModeState.activeMode = "rnn";
+    trainingModeState.activeRnnPanel = "overview";
+    return;
+  }
+
+  trainingModeState.activeMode = "cnn";
+  trainingModeState.activeCnnPanel = targetPage === "training" ? "training" : "overview";
 }
 
 export function renderTrainingModeSidebar() {
@@ -110,10 +133,10 @@ export function renderTrainingModeSidebar() {
     button.classList.toggle(
       "active",
       button.dataset.modeNav === "overview"
-        ? appState.currentPage === "training" && (
+        ? (
           trainingModeState.activeMode === "cnn"
-            ? trainingModeState.activeCnnPanel === "overview"
-            : trainingModeState.activeRnnPanel === "overview"
+            ? appState.currentPage === "dashboard"
+            : appState.currentPage === "training" && trainingModeState.activeRnnPanel === "overview"
         )
         : button.dataset.modeNav === appState.currentPage
     );
@@ -126,6 +149,7 @@ export function renderTrainingWorkspace() {
   qs("#cnn-workspace")?.classList.toggle("active", isCnn);
   qs("#rnn-workspace")?.classList.toggle("hidden", isCnn);
   qs("#rnn-workspace")?.classList.toggle("active", !isCnn);
+  qs("#rnn-header-actions")?.classList.toggle("hidden", isCnn);
 
   qsa("[data-rnn-panel]").forEach((panel) => {
     const isActive = panel.dataset.rnnPanel === trainingModeState.activeRnnPanel;
@@ -140,6 +164,13 @@ export function renderTrainingWorkspace() {
 }
 
 export function initRnnPreviewEvents() {
+  qs("#rnn-create-project")?.addEventListener("click", () => {
+    eventBus.emit("open-create-project-modal", {
+      taskType: "sequence_classification",
+      mode: "rnn"
+    });
+  });
+
   qsa(".rnn-disabled-action-hitbox").forEach((hitbox) => hitbox.addEventListener("click", (event) => {
     const button = event.target.closest("button");
     if (button && !button.disabled) return;

@@ -567,6 +567,16 @@
               <h1 data-i18n="training.title">Training Control Console</h1>
               <p data-i18n="training.subtitle">Check training readiness first, fix blockers, then configure and start a controlled training run.</p>
             </div>
+            <div class="page-actions training-rnn-header-actions hidden" id="rnn-header-actions">
+              <button type="button" class="btn btn-primary" id="rnn-create-project">
+                <i class="fa-solid fa-folder-plus"></i> New RNN Project
+              </button>
+              <span class="rnn-disabled-action-hitbox">
+                <button type="button" class="btn btn-disabled" id="rnn-start-disabled" disabled>
+                  <i class="fa-solid fa-lock"></i> Start RNN Disabled
+                </button>
+              </span>
+            </div>
           </div>
 
           <div class="training-mode-layout">
@@ -945,11 +955,6 @@
                     <span>CSV / Feature Sequence · pytorch_lstm · Readiness gated</span>
                   </div>
                   <span class="summary-badge badge-warning" id="rnn-readiness-badge">Not Ready</span>
-                  <span class="rnn-disabled-action-hitbox">
-                    <button type="button" class="btn btn-disabled" id="rnn-start-disabled" disabled>
-                      <i class="fa-solid fa-lock"></i> Start RNN Disabled
-                    </button>
-                  </span>
                 </div>
 
                 <div id="rnn-overview-panel" class="rnn-panel active" data-rnn-panel="overview">
@@ -1474,16 +1479,25 @@
           <span>Project name</span>
           <input type="text" id="new-project-name" required placeholder="my_vision_project">
         </label>
+        <div class="project-type-mode-field">
+          <span>Training mode</span>
+          <div class="project-type-mode-toggle" role="group" aria-label="Training mode">
+            <button type="button" class="active" id="new-project-mode-rnn" data-project-mode="rnn">RNN</button>
+            <button type="button" id="new-project-mode-cnn" data-project-mode="cnn">CNN</button>
+          </div>
+        </div>
         <label>
           <span>Task type</span>
           <select id="new-project-type">
             <option value="object_detection">Object Detection</option>
             <option value="image_classification">Image Classification</option>
             <option value="semantic_segmentation">Semantic Segmentation</option>
+            <option value="sequence_classification">RNN Sequence Classification</option>
+            <option value="sequence_regression">RNN Sequence Regression</option>
           </select>
         </label>
-        <label>
-          <span>Class list</span>
+        <label id="new-project-class-field">
+          <span id="new-project-class-label">Class list</span>
           <div class="class-entry-row">
             <input type="text" id="new-project-class-input" placeholder="Class name, e.g. class_a; comma separated is supported">
             <button type="button" class="btn btn-secondary" id="btn-add-project-class">
@@ -1491,6 +1505,7 @@
               Add
             </button>
           </div>
+          <small class="form-hint" id="new-project-class-hint">CNN projects use this list as detection / segmentation classes.</small>
         </label>
         <div class="class-list-box" id="new-project-class-list">
           <div class="empty-class-list">No classes added</div>
@@ -1572,7 +1587,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260629-mode-overview-split"></script>
+  <script type="module" src="/static/app.js?v=20260629-rnn-create-layout2"></script>
 </body>
 </html>
 

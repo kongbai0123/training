@@ -14,6 +14,10 @@ export function initProjects() {
   qs("#btn-open-create-project")?.addEventListener("click", openCreateProjectModal);
   qs("#btn-close-create-project")?.addEventListener("click", closeCreateProjectModal);
   qs("#btn-cancel-create-project")?.addEventListener("click", closeCreateProjectModal);
+  qs("#new-project-type")?.addEventListener("change", syncCreateProjectMode);
+  qsa("[data-project-mode]").forEach((button) => {
+    button.addEventListener("click", () => setCreateProjectMode(button.dataset.projectMode));
+  });
   qs("#project-create-modal")?.addEventListener("click", (event) => {
     if (event.target.id === "project-create-modal") closeCreateProjectModal();
   });
@@ -71,6 +75,7 @@ export function initProjects() {
   eventBus.on("open-create-project-modal", openCreateProjectModal);
 
   renderNewProjectClassList();
+  syncCreateProjectMode();
 }
 
 export function renderProjectsPage() {
@@ -432,9 +437,18 @@ function renderInferenceJobDetail(job) {
   `);
 }
 
-function openCreateProjectModal() {
+function openCreateProjectModal(options = {}) {
   const modal = qs("#project-create-modal");
   if (!modal) return;
+  const typeSelect = qs("#new-project-type");
+  setCreateProjectMode(options.mode === "rnn" || isSequenceProjectType(options.taskType) ? "rnn" : "cnn", { preserveType: Boolean(options.taskType) });
+  if (options.taskType && typeSelect) {
+    typeSelect.value = options.taskType;
+  }
+  if (options.mode === "rnn" && typeSelect && !isSequenceProjectType(typeSelect.value)) {
+    typeSelect.value = "sequence_classification";
+  }
+  syncCreateProjectMode();
   modal.hidden = false;
   qs("#new-project-name")?.focus();
 }
@@ -444,14 +458,67 @@ function closeCreateProjectModal() {
   if (modal) modal.hidden = true;
 }
 
+function isSequenceProjectType(taskType) {
+  const normalized = String(taskType || "").toLowerCase();
+  return normalized.includes("sequence") || normalized.includes("time_series") || normalized.includes("rnn");
+}
+
+function getProjectModeFromTaskType(taskType) {
+  return isSequenceProjectType(taskType) ? "rnn" : "cnn";
+}
+
+function setCreateProjectMode(mode, options = {}) {
+  const normalizedMode = mode === "rnn" ? "rnn" : "cnn";
+  qsa("[data-project-mode]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.projectMode === normalizedMode);
+  });
+
+  const typeSelect = qs("#new-project-type");
+  if (!typeSelect) return;
+
+  Array.from(typeSelect.options).forEach((option) => {
+    const optionMode = getProjectModeFromTaskType(option.value);
+    option.hidden = optionMode !== normalizedMode;
+    option.disabled = optionMode !== normalizedMode;
+  });
+
+  const selectedMode = getProjectModeFromTaskType(typeSelect.value);
+  if (!options.preserveType || selectedMode !== normalizedMode) {
+    typeSelect.value = normalizedMode === "rnn" ? "sequence_classification" : "semantic_segmentation";
+  }
+  syncCreateProjectMode();
+}
+
+function syncCreateProjectMode() {
+  const type = qs("#new-project-type")?.value || "";
+  const isSequence = isSequenceProjectType(type);
+  const mode = isSequence ? "rnn" : "cnn";
+  qsa("[data-project-mode]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.projectMode === mode);
+  });
+  setText("#new-project-class-label", isSequence ? "Target labels" : "Class list");
+  setText(
+    "#new-project-class-hint",
+    isSequence
+      ? "Optional for RNN projects. CSV feature files must provide label or target columns later."
+      : "CNN projects use this list as detection / segmentation classes."
+  );
+  const input = qs("#new-project-class-input");
+  if (input) {
+    input.placeholder = isSequence
+      ? "Optional labels, e.g. normal, abnormal"
+      : "Class name, e.g. class_a; comma separated is supported";
+  }
+}
+
 async function createProject(event) {
   event.preventDefault();
   const name = qs("#new-project-name")?.value.trim();
   const type = qs("#new-project-type")?.value;
   const classes = [...appState.newProjectClasses];
 
-  if (!name || classes.length === 0) {
-    eventBus.emit("toast", "請輸入專案名稱與至少一個類別");
+  if (!name || (!isSequenceProjectType(type) && classes.length === 0)) {
+    eventBus.emit("toast", isSequenceProjectType(type) ? "請輸入專案名稱" : "請輸入專案名稱與至少一個類別");
     return;
   }
 
@@ -467,7 +534,10 @@ async function createProject(event) {
     renderNewProjectClassList();
     closeCreateProjectModal();
 
-    eventBus.emit("reload-projects", { openProjectId: project.project_id });
+    eventBus.emit("reload-projects", {
+      openProjectId: project.project_id,
+      page: isSequenceProjectType(type) ? "training" : "dashboard"
+    });
     eventBus.emit("toast", "專案已建立");
   } catch (err) {
     eventBus.emit("toast", `建立專案失敗：${err.message}`);

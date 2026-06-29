@@ -25,7 +25,7 @@ import { initLabelMe, renderLabelMeManager } from "./pages/labelme.js";
 import { initSplit, renderSplitPage } from "./pages/split.js";
 import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js?v=20260625-augmentation-p0";
 import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js";
-import { renderTrainingModeSidebar, renderTrainingWorkspace } from "./pages/training_modes.js?v=20260629-mode-overview-split";
+import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260629-rnn-create-layout2";
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js";
 import { initInference, renderInferencePage } from "./pages/inference.js";
 import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260624-auto-label-readable";
@@ -278,7 +278,7 @@ function bindGlobalNavigation() {
   eventBus.on("reload-projects", async (options = {}) => {
     await loadProjects({ autoOpenLatest: false });
     if (options.openProjectId) {
-      await openProject(options.openProjectId, { page: "dashboard" });
+      await openProject(options.openProjectId, { page: options.page || "dashboard" });
     }
   });
 
@@ -369,6 +369,7 @@ async function openProject(projectId, options = {}) {
     appState.currentProject = await apiFetch(`/api/projects/${projectId}`);
     appState.currentProjectId = projectId;
     appState.currentProjectClasses = [...(appState.currentProject?.class_names || [])];
+    syncTrainingModeForProject(appState.currentProject, options.page || appState.currentPage);
     setText("#current-project-title", appState.currentProject.project_name || projectId);
     updateLabelMeState();
     // 檢查並重設訓練 WebSocket

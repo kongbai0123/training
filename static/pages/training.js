@@ -16,6 +16,7 @@ function setMetricsDashboardActive(active) {
 
 export function initTraining() {
   initTrainingModeSidebar();
+  loadTrainingModelStoreWeights();
 
   qs("#tab-config-simple")?.addEventListener("click", () => {
     qs("#tab-config-simple").className = "btn btn-sm btn-primary";
@@ -42,7 +43,8 @@ export function initTraining() {
     const modelName = qs("#train-model")?.value || "";
     const taskType = String(status.taskType || "").toLowerCase();
     const isSegTask = taskType.includes("segmentation") || taskType.includes("seg");
-    const isSegModel = modelName.includes("-seg");
+    const isModelStoreWeight = modelName.includes("/") || modelName.includes("\\");
+    const isSegModel = modelName.includes("-seg") || isModelStoreWeight;
 
     if (isSegTask && !isSegModel) {
       eventBus.emit("toast", t("training.toast.segModel"));
@@ -148,6 +150,34 @@ export function initTraining() {
   });
   eventBus.on("start-training-monitor", () => startMonitorWebSocket());
   eventBus.on("language-changed", () => renderTrainingMonitor());
+}
+
+async function loadTrainingModelStoreWeights() {
+  const select = qs("#train-model");
+  if (!select) return;
+  try {
+    const response = await apiFetch("/api/models/weights");
+    const weights = Array.isArray(response.weights) ? response.weights : [];
+    const existing = new Set(Array.from(select.options).map((option) => option.value));
+    let group = qs("#train-model-store-options");
+    if (!group) {
+      group = document.createElement("optgroup");
+      group.id = "train-model-store-options";
+      group.label = "Models directory";
+      select.appendChild(group);
+    }
+    group.innerHTML = "";
+    weights.forEach((weight) => {
+      if (!weight.path || existing.has(weight.path)) return;
+      const option = document.createElement("option");
+      option.value = weight.path;
+      option.textContent = `models/${weight.path}`;
+      group.appendChild(option);
+    });
+    if (!group.children.length) group.remove();
+  } catch (err) {
+    console.warn("Failed to load model store weights", err);
+  }
 }
 
 export function renderTrainingMonitor() {

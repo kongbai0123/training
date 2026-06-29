@@ -20,6 +20,11 @@ def _resolve_user_data_root() -> Path:
     explicit = os.environ.get("VTS_USER_DATA_DIR")
     if explicit:
         return Path(explicit).expanduser().resolve()
+    if getattr(sys, "frozen", False):
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if local_app_data:
+            return (Path(local_app_data).expanduser() / "VisionTrainingStudio").resolve()
+        return (Path.home() / "AppData" / "Local" / "VisionTrainingStudio").resolve()
     return APP_HOME
 
 
@@ -27,6 +32,14 @@ def _resolve_projects_dir(user_data_dir: Path) -> Path:
     explicit = os.environ.get("VTS_PROJECTS_DIR")
     if explicit:
         return Path(explicit).expanduser().resolve()
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).resolve().parent
+        for candidate_root in [exe_dir, *exe_dir.parents]:
+            if not ((candidate_root / "version.json").exists() or (candidate_root / "run.bat").exists()):
+                continue
+            candidate = candidate_root / "projects"
+            if candidate.exists():
+                return candidate.resolve()
     return user_data_dir / "projects"
 
 

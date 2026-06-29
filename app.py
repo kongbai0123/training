@@ -38,6 +38,7 @@ from src.training.rnn_readiness import build_rnn_readiness_report
 from src.labelme_adapter import LabelMeAdapter
 from src.annotation_importer import AnnotationImporter
 from src.model_registry import ModelRegistry
+from src.model_store import ModelStore
 from src.inference_engine import InferenceEngine
 from src.inference_history import InferenceHistory
 from src.rnn_inference_engine import RNNSequenceInferenceEngine
@@ -440,6 +441,27 @@ def list_project_models(project_id: str):
         raise HTTPException(status_code=404, detail="Project not found")
     return ModelRegistry.list_models(project)
 
+@app.get("/api/models/weights")
+def list_model_store_weights():
+    models_dir = ModelStore.models_dir()
+    weights = []
+    for path in sorted(models_dir.rglob("*.pt")):
+        if not path.is_file():
+            continue
+        try:
+            resolved = ModelStore.validate_model_store_path(path)
+            rel = resolved.relative_to(models_dir).as_posix()
+            stat = resolved.stat()
+            weights.append({
+                "name": resolved.name,
+                "path": rel,
+                "size_bytes": stat.st_size,
+                "updated_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            })
+        except ValueError:
+            continue
+    return {"models_dir": models_dir.as_posix(), "weights": weights}
+
 @app.post("/api/projects/{project_id}/inference/image")
 async def run_image_inference(
     project_id: str,
@@ -687,7 +709,6 @@ def get_inference_job_file(project_id: str, job_id: str, filename: str, _token=D
 
 @app.get("/api/projects/{project_id}/inference/jobs")
 def list_inference_jobs(project_id: str):
-    require_feature("inference")()
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -695,7 +716,6 @@ def list_inference_jobs(project_id: str):
 
 @app.get("/api/projects/{project_id}/inference/jobs/{job_id}")
 def get_inference_job(project_id: str, job_id: str):
-    require_feature("inference")()
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")

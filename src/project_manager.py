@@ -13,6 +13,42 @@ VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv"}
 
 class ProjectManager:
     @staticmethod
+    def _is_sequence_task(task_type: str) -> bool:
+        normalized = str(task_type or "").lower()
+        return any(token in normalized for token in ("sequence", "time_series", "timeseries", "rnn"))
+
+    @staticmethod
+    def _default_training_config(task_type: str) -> Dict[str, Any]:
+        if ProjectManager._is_sequence_task(task_type):
+            task_head = "regression" if "regression" in str(task_type or "").lower() else "classification"
+            return {
+                "backend": "pytorch_lstm",
+                "architecture": "rnn",
+                "model": "lstm",
+                "epochs": 10,
+                "batch_size": 16,
+                "device": "cpu",
+                "sequence_length": 16,
+                "stride": 8,
+                "horizon": 1,
+                "task_head": task_head,
+                "hidden_size": 128,
+                "num_layers": 2,
+                "dropout": 0.2,
+                "bidirectional": False,
+            }
+        return {
+            "backend": "ultralytics_yolo",
+            "architecture": "cnn",
+            "model": "yolov8n.pt" if "segmentation" not in str(task_type or "").lower() else "yolov8n-seg.pt",
+            "epochs": 50,
+            "batch_size": 8,
+            "imgsz": 640,
+            "lr0": 0.01,
+            "device": "gpu",
+        }
+
+    @staticmethod
     def get_all_projects() -> List[Dict[str, Any]]:
         """列出 projects 目錄下所有專案"""
         projects = []
@@ -170,14 +206,7 @@ class ProjectManager:
             "motion": {"motion_blur": 0.0},
             "camera": {"noise": 0.0}
           },
-          "training_config": {
-            "model": "yolov8n.pt" if "segmentation" not in task_type else "yolov8n-seg.pt",
-            "epochs": 50,
-            "batch_size": 8,
-            "imgsz": 640,
-            "lr0": 0.01,
-            "device": "gpu"
-          },
+          "training_config": ProjectManager._default_training_config(task_type),
           "training_runs": []
         }
         

@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Dict, Any, List
+from src.model_store import ModelStore
 
 def validate_training_readiness(project: Dict[str, Any], config_data: Dict[str, Any]) -> List[str]:
     """
@@ -43,7 +44,12 @@ def validate_training_readiness(project: Dict[str, Any], config_data: Dict[str, 
         errors.append(f"不支援的專案任務類型: {project_task}。")
 
     # 4. 模型任務類型與專案任務類型匹配檢查
-    model_name = (config_data.get("model") or "yolov8n.pt").lower()
+    try:
+        resolved_model = ModelStore.resolve_training_model(config_data.get("model") or "yolov8n.pt")
+    except ValueError as exc:
+        errors.append(str(exc))
+        resolved_model = config_data.get("model") or "yolov8n.pt"
+    model_name = Path(str(resolved_model)).name.lower()
     
     # 從模型檔名猜測其任務類型
     if "-seg" in model_name or "seg" in model_name:

@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from ultralytics import YOLO
+from src.model_store import ModelStore
 from src.project_layout import ProjectLayout
 from src.training.runners.thread_runner import DEFAULT_THREAD_TRAINING_RUNNER
 from src.training.state_store import TrainingStateStore
@@ -313,7 +314,7 @@ class YOLOTrainer:
             data_yaml_path = cls.prepare_yolo_dataset(project_data)
             
             # 2. ????YOLO 璅∪?
-            model_name = train_config.get("model", "yolov8n.pt")
+            model_name = ModelStore.resolve_training_model(train_config.get("model", "yolov8n.pt"))
             model = YOLO(model_name)
             
             # 3. 閮餃? Callbacks
