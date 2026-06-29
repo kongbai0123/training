@@ -5,6 +5,7 @@ import { qs, qsa, escapeHtml, setText } from "../utils.js";
 
 export const trainingModeState = {
   activeMode: "cnn",
+  activeCnnPanel: "overview",
   activeRnnPanel: "overview",
   cnn: {
     backend: "ultralytics_yolo",
@@ -43,6 +44,8 @@ export function initTrainingModeSidebar() {
   qsa("[data-cnn-nav]").forEach((button) => {
     button.addEventListener("click", () => {
       trainingModeState.activeMode = "cnn";
+      trainingModeState.activeCnnPanel = button.dataset.cnnNav === "training" ? "training" : "overview";
+      if (button.dataset.cnnNav === "training") eventBus.emit("navigate", "training");
       renderTrainingModeSidebar();
       renderTrainingWorkspace();
     });
@@ -53,10 +56,12 @@ export function initTrainingModeSidebar() {
       qsa("[data-mode-nav]").forEach((item) => item.classList.remove("active"));
       button.classList.add("active");
       if (button.dataset.modeNav === "overview") {
+        trainingModeState.activeCnnPanel = "overview";
         trainingModeState.activeRnnPanel = "overview";
-        eventBus.emit("navigate", "dashboard");
+        eventBus.emit("navigate", "training");
         renderTrainingModeSidebar();
         renderTrainingWorkspace();
+        if (trainingModeState.activeMode === "rnn") loadRnnReadiness();
       }
     });
   });
@@ -69,6 +74,8 @@ export function initTrainingModeSidebar() {
 export function setTrainingMode(mode) {
   if (!["cnn", "rnn"].includes(mode) || trainingModeState.activeMode === mode) return;
   trainingModeState.activeMode = mode;
+  if (mode === "cnn") trainingModeState.activeCnnPanel = "overview";
+  if (mode === "rnn") trainingModeState.activeRnnPanel = "overview";
   eventBus.emit("navigate", "training");
   renderTrainingModeSidebar();
   renderTrainingWorkspace();
@@ -88,9 +95,14 @@ export function renderTrainingModeSidebar() {
   });
 
   qsa("[data-cnn-nav]").forEach((button) => {
+    const nav = button.dataset.cnnNav;
     button.classList.toggle(
       "active",
-      trainingModeState.activeMode === "cnn" && button.dataset.cnnNav === appState.currentPage
+      trainingModeState.activeMode === "cnn" && (
+        nav === "training"
+          ? appState.currentPage === "training" && trainingModeState.activeCnnPanel === "training"
+          : appState.currentPage === nav
+      )
     );
   });
 
@@ -98,7 +110,11 @@ export function renderTrainingModeSidebar() {
     button.classList.toggle(
       "active",
       button.dataset.modeNav === "overview"
-        ? appState.currentPage === "dashboard"
+        ? appState.currentPage === "training" && (
+          trainingModeState.activeMode === "cnn"
+            ? trainingModeState.activeCnnPanel === "overview"
+            : trainingModeState.activeRnnPanel === "overview"
+        )
         : button.dataset.modeNav === appState.currentPage
     );
   });
@@ -113,6 +129,10 @@ export function renderTrainingWorkspace() {
 
   qsa("[data-rnn-panel]").forEach((panel) => {
     const isActive = panel.dataset.rnnPanel === trainingModeState.activeRnnPanel;
+    panel.classList.toggle("active", isActive);
+  });
+  qsa("[data-cnn-panel]").forEach((panel) => {
+    const isActive = panel.dataset.cnnPanel === trainingModeState.activeCnnPanel;
     panel.classList.toggle("active", isActive);
   });
 

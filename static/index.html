@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css?v=20260626-aug-job-history">
+  <link rel="stylesheet" href="/static/style.css?v=20260629-mode-overview-split">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -69,7 +69,7 @@
         </div>
         <nav class="sidebar-nav" aria-label="Main navigation">
           <div class="training-shared-nav">
-            <button class="sidebar-item active" data-page="dashboard" data-mode-nav="overview"><i class="fa-solid fa-grid-2"></i><span>總覽</span></button>
+            <button class="sidebar-item active" data-mode-nav="overview"><i class="fa-solid fa-grid-2"></i><span>總覽</span></button>
             <button class="sidebar-item" data-page="history" data-mode-nav="history"><i class="fa-solid fa-clock"></i><span>歷史紀錄</span></button>
             <button class="sidebar-item" data-page="settings" data-mode-nav="settings"><i class="fa-solid fa-gear"></i><span>設定</span></button>
           </div>
@@ -572,6 +572,47 @@
           <div class="training-mode-layout">
             <main class="training-mode-main">
               <section id="cnn-workspace" class="training-workspace active">
+                <div id="cnn-overview-panel" class="cnn-panel active" data-cnn-panel="overview">
+                  <section class="panel-section cnn-overview-hero">
+                    <div>
+                      <span class="summary-badge badge-neutral">CNN / YOLO</span>
+                      <h2>CNN 總覽</h2>
+                      <p>影像 / 物件偵測工作區。這裡只顯示資料、標註、切分、訓練與模型狀態摘要；正式訓練請進入「模型訓練」。</p>
+                    </div>
+                    <button type="button" class="btn btn-primary" data-cnn-nav="training" data-page="training">
+                      <i class="fa-solid fa-microchip"></i> 前往模型訓練
+                    </button>
+                  </section>
+
+                  <div class="rnn-preview-grid">
+                    <section class="rnn-preview-card">
+                      <div class="section-title"><h2>影像資料集摘要</h2><span class="summary-badge badge-neutral">Image dataset</span></div>
+                      <div class="summary-row"><span>資料型態</span><code>Images / LabelMe JSON</code></div>
+                      <div class="summary-row"><span>訓練格式</span><code>YOLO Detection / Segmentation</code></div>
+                      <div class="summary-row"><span>資料來源</span><code>D:/software/yolo/projects</code></div>
+                    </section>
+                    <section class="rnn-preview-card">
+                      <div class="section-title"><h2>標註與切分狀態</h2><span class="summary-badge badge-warning">Readiness gated</span></div>
+                      <div class="summary-row"><span>標註</span><code>LabelMe sync required</code></div>
+                      <div class="summary-row"><span>資料分散</span><code>Train / Val / Test</code></div>
+                      <div class="summary-row"><span>啟動條件</span><code>Dataset + Labels + Split</code></div>
+                    </section>
+                    <section class="rnn-preview-card">
+                      <div class="section-title"><h2>訓練與指標</h2><span class="summary-badge badge-neutral">Ultralytics YOLO</span></div>
+                      <div class="summary-row"><span>模型</span><code>YOLOv8 Detection / Segmentation</code></div>
+                      <div class="summary-row"><span>主要指標</span><code>mAP50 / mAP50-95 / Precision / Recall</code></div>
+                      <div class="summary-row"><span>輸出</span><code>best.pt / last.pt / results.csv</code></div>
+                    </section>
+                    <section class="rnn-preview-card">
+                      <div class="section-title"><h2>工作區隔離</h2><span class="summary-badge badge-success">Mode isolated</span></div>
+                      <div class="summary-row"><span>CNN</span><code>Image workflow</code></div>
+                      <div class="summary-row"><span>RNN</span><code>Sequence workflow</code></div>
+                      <div class="summary-row"><span>狀態</span><code>Separated UI events</code></div>
+                    </section>
+                  </div>
+                </div>
+
+                <div id="cnn-training-panel" class="cnn-panel" data-cnn-panel="training">
           <div id="training-readiness-guard" class="training-readiness"></div>
 
           <div class="training-overview-grid">
@@ -894,6 +935,7 @@
               </table>
             </div>
           </section>
+                </div>
               </section>
 
               <section id="rnn-workspace" class="training-workspace hidden">
@@ -1530,7 +1572,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260629-overview-route"></script>
+  <script type="module" src="/static/app.js?v=20260629-mode-overview-split"></script>
 </body>
 </html>
 

@@ -25,7 +25,7 @@ import { initLabelMe, renderLabelMeManager } from "./pages/labelme.js";
 import { initSplit, renderSplitPage } from "./pages/split.js";
 import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js?v=20260625-augmentation-p0";
 import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js";
-import { renderTrainingModeSidebar, renderTrainingWorkspace } from "./pages/training_modes.js?v=20260629-overview-route";
+import { renderTrainingModeSidebar, renderTrainingWorkspace } from "./pages/training_modes.js?v=20260629-mode-overview-split";
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js";
 import { initInference, renderInferencePage } from "./pages/inference.js";
 import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260624-auto-label-readable";

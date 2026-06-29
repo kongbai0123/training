@@ -3403,6 +3403,28 @@ body[data-theme="light"] .toast {
 .training-workspace.active {
   display: block;
 }
+.cnn-panel {
+  display: none;
+}
+.cnn-panel.active {
+  display: block;
+}
+.cnn-overview-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.cnn-overview-hero h2 {
+  margin: 8px 0 6px;
+  font-size: 1.65rem;
+}
+.cnn-overview-hero p {
+  margin: 0;
+  color: var(--text-muted);
+  max-width: 760px;
+}
 .rnn-disabled-banner {
   display: flex;
   align-items: center;
