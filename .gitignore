@@ -8,6 +8,12 @@ ENV/
 
 # Project Data (large images, videos, checkpoints, exports)
 projects/
+models/
+logs/
+config/
+licenses/
+cache/
+tmp/
 runs/
 *.pt
 *.onnx

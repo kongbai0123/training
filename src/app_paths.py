@@ -17,16 +17,23 @@ def _resolve_app_home() -> Path:
 
 
 def _resolve_user_data_root() -> Path:
-    local_app_data = os.environ.get("LOCALAPPDATA")
-    if local_app_data:
-        return Path(local_app_data).expanduser().resolve() / "VisionTrainingStudio"
-    return Path.home() / "AppData" / "Local" / "VisionTrainingStudio"
+    explicit = os.environ.get("VTS_USER_DATA_DIR")
+    if explicit:
+        return Path(explicit).expanduser().resolve()
+    return APP_HOME
+
+
+def _resolve_projects_dir(user_data_dir: Path) -> Path:
+    explicit = os.environ.get("VTS_PROJECTS_DIR")
+    if explicit:
+        return Path(explicit).expanduser().resolve()
+    return user_data_dir / "projects"
 
 
 APP_HOME = _resolve_app_home()
 USER_DATA_DIR = _resolve_user_data_root()
 
-PROJECTS_DIR = USER_DATA_DIR / "projects"
+PROJECTS_DIR = _resolve_projects_dir(USER_DATA_DIR)
 MODELS_DIR = USER_DATA_DIR / "models"
 LOGS_DIR = USER_DATA_DIR / "logs"
 CONFIG_DIR = USER_DATA_DIR / "config"
@@ -49,4 +56,5 @@ APP_DATA_CONFIG = {
     "mode": os.environ.get("VTS_ENV", os.environ.get("VTS_MODE", "development")),
     "app_home": str(APP_HOME),
     "user_data_dir": str(USER_DATA_DIR),
+    "projects_dir": str(PROJECTS_DIR),
 }
