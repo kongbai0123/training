@@ -54,10 +54,9 @@ export function initTrainingModeSidebar() {
       button.classList.add("active");
       if (button.dataset.modeNav === "overview") {
         trainingModeState.activeRnnPanel = "overview";
-        eventBus.emit("navigate", "training");
+        eventBus.emit("navigate", "dashboard");
         renderTrainingModeSidebar();
         renderTrainingWorkspace();
-        if (trainingModeState.activeMode === "rnn") loadRnnReadiness();
       }
     });
   });
@@ -99,7 +98,7 @@ export function renderTrainingModeSidebar() {
     button.classList.toggle(
       "active",
       button.dataset.modeNav === "overview"
-        ? appState.currentPage === "training"
+        ? appState.currentPage === "dashboard"
         : button.dataset.modeNav === appState.currentPage
     );
   });
