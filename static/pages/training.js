@@ -241,35 +241,20 @@ export function renderTrainingMonitor() {
   setText("#train-progress-text", showMonitor ? `Epoch ${trainState.epoch || 0} / ${trainState.total_epochs || "--"}` : "--");
 
   const lastMetrics = trainState.metrics && trainState.metrics.length ? trainState.metrics[trainState.metrics.length - 1] : {};
-  setText("#monitor-map50", lastMetrics.map50 !== undefined ? Number(lastMetrics.map50).toFixed(3) : "--");
-  setText("#monitor-map50-95", lastMetrics.map50_95 !== undefined ? Number(lastMetrics.map50_95).toFixed(3) : "--");
-  setText("#monitor-loss", lastMetrics.loss !== undefined ? Number(lastMetrics.loss).toFixed(4) : "--");
+  const isRnnStatus = trainState.architecture === "rnn" || trainState.backend === "pytorch_lstm";
+  updateMonitorMetricLabels(isRnnStatus, lastMetrics);
+  if (isRnnStatus) {
+    setText("#monitor-map50", metricValue(lastMetrics["val/accuracy"] ?? lastMetrics["val/mae"], 3));
+    setText("#monitor-map50-95", metricValue(lastMetrics["val/macro_f1"] ?? lastMetrics["val/rmse"], 3));
+    setText("#monitor-loss", metricValue(lastMetrics["val/loss"] ?? lastMetrics["train/loss"], 4));
+  } else {
+    setText("#monitor-map50", lastMetrics.map50 !== undefined ? Number(lastMetrics.map50).toFixed(3) : "--");
+    setText("#monitor-map50-95", lastMetrics.map50_95 !== undefined ? Number(lastMetrics.map50_95).toFixed(3) : "--");
+    setText("#monitor-loss", lastMetrics.loss !== undefined ? Number(lastMetrics.loss).toFixed(4) : "--");
+  }
 
   if (isRunning) {
-    const wsEpochs = (trainState.metrics || []).map((m) => m.epoch);
-    const wsLoss = (trainState.metrics || []).map((m) => m.loss);
-    const wsMap50 = (trainState.metrics || []).map((m) => m.map50);
-    const wsMap50_95 = (trainState.metrics || []).map((m) => m.map50_95);
-    const wsPrecision = (trainState.metrics || []).map((m) => m.precision);
-    const wsRecall = (trainState.metrics || []).map((m) => m.recall);
-
-    currentChartData = {
-      epochs: wsEpochs,
-      raw: {
-        "train/box_loss": wsLoss,
-        "metrics/mAP50(M)": wsMap50,
-        "metrics/mAP50-95(M)": wsMap50_95,
-        "metrics/precision(M)": wsPrecision,
-        "metrics/recall(M)": wsRecall
-      },
-      smooth: {
-        "train/box_loss": wsLoss,
-        "metrics/mAP50(M)": wsMap50,
-        "metrics/mAP50-95(M)": wsMap50_95,
-        "metrics/precision(M)": wsPrecision,
-        "metrics/recall(M)": wsRecall
-      }
-    };
+    currentChartData = normalizeLiveTrainingMetrics(trainState);
     updateChartVisualization();
     renderEpochHistoryTable(currentChartData);
   } else {
@@ -439,6 +424,108 @@ function updateTrainingModelRegistrySkeleton(status) {
   }
 }
 
+function normalizeLiveTrainingMetrics(trainState) {
+  const metrics = trainState.metrics || [];
+  const isRnn = trainState.architecture === "rnn" || trainState.backend === "pytorch_lstm";
+  if (isRnn) {
+    return normalizeMetricRows(metrics, {
+      architecture: "rnn",
+      backend: trainState.backend,
+      task_type: trainState.task_type || "sequence_classification"
+    });
+  }
+
+  const wsEpochs = metrics.map((m) => m.epoch);
+  const wsLoss = metrics.map((m) => m.loss);
+  const wsMap50 = metrics.map((m) => m.map50);
+  const wsMap50_95 = metrics.map((m) => m.map50_95);
+  const wsPrecision = metrics.map((m) => m.precision);
+  const wsRecall = metrics.map((m) => m.recall);
+
+  return {
+    architecture: "cnn",
+    epochs: wsEpochs,
+    raw: {
+      "train/box_loss": wsLoss,
+      "metrics/mAP50(M)": wsMap50,
+      "metrics/mAP50-95(M)": wsMap50_95,
+      "metrics/precision(M)": wsPrecision,
+      "metrics/recall(M)": wsRecall
+    },
+    smooth: {
+      "train/box_loss": wsLoss,
+      "metrics/mAP50(M)": wsMap50,
+      "metrics/mAP50-95(M)": wsMap50_95,
+      "metrics/precision(M)": wsPrecision,
+      "metrics/recall(M)": wsRecall
+    }
+  };
+}
+
+function normalizeStoredTrainingMetrics(data) {
+  if (!data) return null;
+  if (Array.isArray(data.history)) {
+    return normalizeMetricRows(data.history, {
+      architecture: data.architecture || "rnn",
+      backend: data.backend,
+      task_type: data.task_type,
+      primary_metric: data.primary_metric,
+      best_epoch: data.best_epoch,
+      best_metrics: data.best_metrics,
+      dataset_summary: data.dataset_summary
+    });
+  }
+  if (data.epochs && data.raw) {
+    return {
+      ...data,
+      architecture: data.architecture || "cnn"
+    };
+  }
+  return data;
+}
+
+function normalizeMetricRows(rows, meta = {}) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const keys = new Set();
+  safeRows.forEach((row) => {
+    Object.keys(row || {}).forEach((key) => {
+      if (key !== "epoch") keys.add(key);
+    });
+  });
+  const raw = {};
+  keys.forEach((key) => {
+    raw[key] = safeRows.map((row) => numericOrNull(row?.[key]));
+  });
+  return {
+    ...meta,
+    epochs: safeRows.map((row, index) => row?.epoch ?? index + 1),
+    raw,
+    smooth: raw,
+    history: safeRows
+  };
+}
+
+function numericOrNull(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function metricValue(value, digits = 3) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(digits) : "--";
+}
+
+function labeledMetric(label, value, digits = 3) {
+  return `<span class="metric-inline-label">${escapeHtml(label)}</span> ${metricValue(value, digits)}`;
+}
+
+function updateMonitorMetricLabels(isRnn, metrics = {}) {
+  const isRegression = isRnn && (metrics["val/mae"] !== undefined || metrics["val/rmse"] !== undefined);
+  setText("#monitor-primary-label", isRnn ? isRegression ? "MAE" : "Accuracy" : "mAP50(M)");
+  setText("#monitor-secondary-label", isRnn ? isRegression ? "RMSE" : "Macro-F1" : "mAP50-95(M)");
+  setText("#monitor-loss-label", isRnn ? "Val Loss" : "Loss");
+}
+
 
 // Training UI helper
 let lastLoadedRunId = null;
@@ -474,9 +561,9 @@ async function loadLatestRunMetricsOnce() {
 async function loadRunMetrics(runId) {
   try {
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${runId}/metrics`);
-    currentChartData = data;
+    currentChartData = normalizeStoredTrainingMetrics(data);
     lastLoadedRunId = runId;
-    setMetricsDashboardActive(Boolean(data?.epochs?.length));
+    setMetricsDashboardActive(Boolean(currentChartData?.epochs?.length));
     
     // Training UI helper
     updateChartVisualization();
@@ -513,13 +600,14 @@ async function updateTrendDiagnostic(runId) {
     const runs = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs`);
     const run = runs.find((item) => item.run_id === runId);
     if (!run || !run.health) {
-      setText("#trend-best-epoch", "--");
-      setText("#trend-platform-score", "--");
+      setText("#trend-best-epoch", run?.best_epoch || "--");
+      setText("#trend-platform-score", run?.platform_score !== undefined ? Number(run.platform_score).toFixed(4) : "--");
       setHTML("#trend-suggestions", escapeHtml(t("training.suggestions.empty")));
       const badge = qs("#trend-health-badge");
       if (badge) {
+        const label = run?.architecture === "rnn" || run?.backend === "pytorch_lstm" ? "RNN" : "Good";
         badge.className = "status-badge Good";
-        badge.textContent = "Good";
+        badge.textContent = label;
       }
       return;
     }
@@ -573,9 +661,14 @@ function updateChartVisualization() {
   const computeEma = (arr) => {
     if (!arr || arr.length === 0) return [];
     const ema = [];
-    let curr = arr[0];
+    let curr = Number.isFinite(Number(arr[0])) ? Number(arr[0]) : 0;
     for (const val of arr) {
-      curr = alpha * val + (1 - alpha) * curr;
+      const numeric = Number(val);
+      if (!Number.isFinite(numeric)) {
+        ema.push(null);
+        continue;
+      }
+      curr = alpha * numeric + (1 - alpha) * curr;
       ema.append ? ema.push(curr) : ema.push(curr); // Training UI helper
     }
     return ema;
@@ -631,6 +724,24 @@ function updateChartVisualization() {
     ].filter(k => k.key in raw);
   }
 
+  if (currentChartData.architecture === "rnn") {
+    if (activeChartTab === "primary") {
+      keysToRender = [
+        { key: "val/macro_f1", label: "Macro-F1", color: colors.primary1 },
+        { key: "val/accuracy", label: "Accuracy", color: colors.primary2 },
+        { key: "val/mae", label: "MAE", color: colors.loss2 },
+        { key: "val/rmse", label: "RMSE", color: colors.loss3 }
+      ].filter(k => k.key in raw);
+    } else if (activeChartTab === "loss") {
+      keysToRender = [
+        { key: "train/loss", label: "Train Loss", color: colors.loss1 },
+        { key: "val/loss", label: "Val Loss", color: colors.primary1 }
+      ].filter(k => k.key in raw);
+    } else if (["box", "mask", "hardware"].includes(activeChartTab)) {
+      keysToRender = [];
+    }
+  }
+
   keysToRender.forEach((item) => {
     const rawData = raw[item.key] || [];
     if (rawData.length === 0) return;
@@ -660,6 +771,16 @@ function updateChartVisualization() {
       });
     }
   });
+
+  if (datasets.length === 0) {
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#95a1b1";
+    ctx.font = "14px Inter";
+    ctx.textAlign = "center";
+    ctx.fillText("No metrics available for this tab.", canvas.width / 2, canvas.height / 2);
+    return;
+  }
 
   const isLight = document.body.dataset.theme === "light";
   const gridColor = isLight ? "#e2e8f0" : "#2b3441";
@@ -732,6 +853,26 @@ function renderEpochHistoryTable(data) {
 
   const epochs = data.epochs;
   const raw = data.raw || {};
+  if (data.architecture === "rnn") {
+    setText("#epoch-loss-header", "Val Loss");
+    setText("#epoch-primary-header", "Accuracy");
+    setText("#epoch-secondary-header", "Macro-F1");
+    setText("#epoch-tertiary-header", "MAE");
+    setText("#epoch-quaternary-header", "RMSE");
+    const rows = [];
+    for (let i = epochs.length - 1; i >= 0; i -= 1) {
+      const ep = epochs[i];
+      rows.push(`<tr><td><strong>${ep}</strong></td><td><code>${metricValue(raw["val/loss"]?.[i], 4)}</code></td><td>${metricValue(raw["val/accuracy"]?.[i], 3)}</td><td>${metricValue(raw["val/macro_f1"]?.[i], 3)}</td><td>${metricValue(raw["val/mae"]?.[i], 4)}</td><td>${metricValue(raw["val/rmse"]?.[i], 4)}</td><td><span class="badge badge-success">Completed</span></td></tr>`);
+    }
+    tbody.innerHTML = rows.join("");
+    return;
+  }
+
+  setText("#epoch-loss-header", "Loss");
+  setText("#epoch-primary-header", "mAP50(M)");
+  setText("#epoch-secondary-header", "mAP50-95(M)");
+  setText("#epoch-tertiary-header", "Precision(M)");
+  setText("#epoch-quaternary-header", "Recall(M)");
   const mAP50Key = "metrics/mAP50(M)" in raw ? "metrics/mAP50(M)" : "metrics/mAP50(B)";
   const mAP5095Key = "metrics/mAP50-95(M)" in raw ? "metrics/mAP50-95(M)" : "metrics/mAP50-95(B)";
   const precisionKey = "metrics/precision(M)" in raw ? "metrics/precision(M)" : "metrics/precision(B)";
@@ -766,7 +907,7 @@ function renderArtifactList(artifacts, runId) {
     const sizeKb = (art.size / 1024).toFixed(1);
     const downloadUrl = `/api/projects/${appState.currentProjectId}/train/runs/${runId}/artifacts/download/${filename}?path=${encodeURIComponent(art.rel_path)}`;
     let actions = `<a href="${downloadUrl}" class="btn btn-secondary btn-sm" target="_blank" download><i class="fa-solid fa-download"></i> Download</a>`;
-    if (filename === "best.pt") {
+    if (filename === "best.pt" && currentChartData?.architecture !== "rnn") {
       actions += `<button class="btn btn-primary btn-sm" onclick="exportArtifactOnnx('${runId}')" style="margin-left: 6px;"><i class="fa-solid fa-file-export"></i> Export ONNX</button>`;
     }
     return `<div class="artifact-row"><div class="art-info"><span>${escapeHtml(filename)}</span><small>Size: ${sizeKb} KB | Path: ${escapeHtml(art.rel_path)}</small></div><div style="display:flex; align-items:center;">${actions}</div></div>`;
@@ -811,15 +952,20 @@ async function renderRunHistoryTable() {
       const date = run.completed_at ? new Date(run.completed_at).toLocaleString() : "--";
       const config = run.best_metrics || {};
       const runTaskType = String(run.task_type || "").toLowerCase();
+      const isRnnRun = run.architecture === "rnn" || run.backend === "pytorch_lstm" || runTaskType.includes("sequence");
       const isSeg = runTaskType.includes("segmentation") || runTaskType.includes("seg");
       const suffix = isSeg ? "(M)" : "(B)";
-      const map50 = config[`metrics/mAP50${suffix}`] !== undefined ? Number(config[`metrics/mAP50${suffix}`]).toFixed(3) : "--";
-      const map5095 = config[`metrics/mAP50-95${suffix}`] !== undefined ? Number(config[`metrics/mAP50-95${suffix}`]).toFixed(3) : "--";
+      const metric1 = isRnnRun
+        ? labeledMetric("Acc", config["val/accuracy"])
+        : labeledMetric("mAP50", config[`metrics/mAP50${suffix}`]);
+      const metric2 = isRnnRun
+        ? labeledMetric(config["val/macro_f1"] !== undefined ? "Macro-F1" : "MAE", config["val/macro_f1"] ?? config["val/mae"])
+        : labeledMetric("mAP50-95", config[`metrics/mAP50-95${suffix}`]);
       let statusBadge = `<span class="badge badge-success">Completed</span>`;
       if (run.status === "failed") statusBadge = `<span class="badge badge-danger">Failed</span>`;
       else if (run.status === "stopped") statusBadge = `<span class="badge badge-warning">Stopped</span>`;
       else if (run.status === "training") statusBadge = `<span class="badge badge-success fa-spin"><i class="fa-solid fa-spinner"></i> Running</span>`;
-      return `<tr data-run-id="${escapeHtml(runId)}" class="${runId === lastLoadedRunId ? "row-success" : ""}" style="cursor:pointer;"><td><code>${escapeHtml(runId)}</code></td><td>${date}</td><td>${escapeHtml(run.model || "--")}</td><td>${run.epochs || "--"}</td><td>${run.imgsz || "--"}</td><td>${run.batch_size || "--"}</td><td>${map50}</td><td>${map5095}</td><td>${statusBadge}</td><td><button class="btn btn-secondary btn-sm btn-view-run" data-run-id="${escapeHtml(runId)}"><i class="fa-solid fa-chart-line"></i> View</button></td></tr>`;
+      return `<tr data-run-id="${escapeHtml(runId)}" class="${runId === lastLoadedRunId ? "row-success" : ""}" style="cursor:pointer;"><td><code>${escapeHtml(runId)}</code></td><td>${date}</td><td>${escapeHtml(run.model || run.backend || "--")}</td><td>${run.epochs || run.best_epoch || "--"}</td><td>${isRnnRun ? "sequence" : run.imgsz || "--"}</td><td>${run.batch_size || "--"}</td><td>${metric1}</td><td>${metric2}</td><td>${statusBadge}</td><td><button class="btn btn-secondary btn-sm btn-view-run" data-run-id="${escapeHtml(runId)}"><i class="fa-solid fa-chart-line"></i> View</button></td></tr>`;
     });
 
     tbody.innerHTML = rows.join("");

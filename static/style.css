@@ -3645,6 +3645,14 @@ body[data-theme="light"] .toast {
 .training-run-history-card {
   margin-top: 16px;
 }
+
+.metric-inline-label {
+  display: inline-block;
+  min-width: 56px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
 .training-chart-title {
   flex-wrap: wrap;
   gap: 12px;

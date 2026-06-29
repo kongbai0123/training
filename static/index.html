@@ -759,9 +759,9 @@
                 <div class="training-status-grid">
                   <div class="metric-card"><span data-i18n="training.monitor.status">Status</span><strong id="train-status-label">Idle</strong></div>
                   <div class="metric-card"><span data-i18n="training.monitor.progress">Progress</span><strong id="train-progress-text">--</strong></div>
-                  <div class="metric-card"><span>mAP50(M)</span><strong id="monitor-map50">--</strong></div>
-                  <div class="metric-card"><span>mAP50-95(M)</span><strong id="monitor-map50-95">--</strong></div>
-                  <div class="metric-card"><span data-i18n="training.monitor.loss">Loss</span><strong id="monitor-loss">--</strong></div>
+                  <div class="metric-card"><span id="monitor-primary-label">mAP50(M)</span><strong id="monitor-map50">--</strong></div>
+                  <div class="metric-card"><span id="monitor-secondary-label">mAP50-95(M)</span><strong id="monitor-map50-95">--</strong></div>
+                  <div class="metric-card"><span id="monitor-loss-label" data-i18n="training.monitor.loss">Loss</span><strong id="monitor-loss">--</strong></div>
                 </div>
               </div>
             </section>
@@ -843,11 +843,11 @@
                   <thead>
                     <tr>
                       <th>Epoch</th>
-                      <th>Loss</th>
-                      <th>mAP50(M)</th>
-                      <th>mAP50-95(M)</th>
-                      <th>Precision(M)</th>
-                      <th>Recall(M)</th>
+                      <th id="epoch-loss-header">Loss</th>
+                      <th id="epoch-primary-header">mAP50(M)</th>
+                      <th id="epoch-secondary-header">mAP50-95(M)</th>
+                      <th id="epoch-tertiary-header">Precision(M)</th>
+                      <th id="epoch-quaternary-header">Recall(M)</th>
                       <th>Note</th>
                     </tr>
                   </thead>
@@ -882,8 +882,8 @@
                     <th>Epochs</th>
                     <th>Img Size</th>
                     <th>Batch</th>
-                    <th>Best mAP50(M)</th>
-                    <th>Best mAP50-95(M)</th>
+                    <th>Metric 1</th>
+                    <th>Metric 2</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
