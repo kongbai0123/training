@@ -17,7 +17,7 @@ import mimetypes
 mimetypes.add_type("application/javascript", ".js", strict=True)
 mimetypes.add_type("text/css", ".css", strict=True)
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, WebSocket, WebSocketDisconnect, Header, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, WebSocket, WebSocketDisconnect, Header, Depends, Query
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,6 +41,7 @@ from src.labelme_adapter import LabelMeAdapter
 from src.annotation_importer import AnnotationImporter
 from src.model_registry import ModelRegistry
 from src.model_store import ModelStore
+from src.model_system import ModelCatalog
 from src.inference_engine import InferenceEngine
 from src.inference_history import InferenceHistory
 from src.rnn_inference_engine import RNNSequenceInferenceEngine
@@ -448,6 +449,176 @@ def list_project_models(project_id: str):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return ModelRegistry.list_models(project)
+
+
+@app.get("/api/projects/{project_id}/models/catalog")
+def list_project_model_catalog(
+    project_id: str,
+    architecture: Optional[str] = Query(None),
+    usage: str = Query("train"),
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    task_family = project.get("task_type")
+    if usage == "inference":
+        models = ModelCatalog.list_inference_supported(project=project, task_family=task_family, architecture=architecture)
+    elif usage == "all":
+        models = ModelCatalog.list_all(project=project, architecture=architecture)
+    else:
+        models = ModelCatalog.list_trainable(project=project, task_family=task_family, architecture=architecture)
+    return {
+        "project_id": project_id,
+        "architecture": architecture,
+        "usage": usage,
+        "task_family": task_family,
+        "models": models,
+    }
+
+
+@app.post("/api/projects/{project_id}/models/import/yolo-pt")
+def import_project_yolo_pt_model(
+    project_id: str,
+    display_name: str = Form(...),
+    task_family: str = Form(...),
+    file: UploadFile = File(...),
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not file.filename or not file.filename.lower().endswith(".pt"):
+        raise HTTPException(status_code=400, detail="Only YOLO .pt model files are supported in this phase")
+
+    from src.security_utils import safe_filename
+
+    layout = ProjectLayout.from_project(project)
+    import_id = f"model_import_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    temp_dir = layout.tmp_dir / "model_import_uploads" / import_id
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_path = temp_dir / safe_filename(file.filename)
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        result = ModelCatalog.import_yolo_pt(
+            project=project,
+            source_path=temp_path,
+            display_name=display_name.strip(),
+            task_family=task_family,
+        )
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("validation", {}).get("errors", ["Model import failed"]))
+        return result
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@app.post("/api/projects/{project_id}/models/import/yolo-yaml")
+def import_project_yolo_yaml_model(
+    project_id: str,
+    display_name: str = Form(...),
+    task_family: str = Form(...),
+    file: UploadFile = File(...),
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not file.filename or Path(file.filename).suffix.lower() not in {".yaml", ".yml"}:
+        raise HTTPException(status_code=400, detail="Only YOLO model architecture .yaml / .yml files are supported in this phase")
+
+    from src.security_utils import safe_filename
+
+    layout = ProjectLayout.from_project(project)
+    import_id = f"model_import_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    temp_dir = layout.tmp_dir / "model_import_uploads" / import_id
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_path = temp_dir / safe_filename(file.filename)
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        result = ModelCatalog.import_yolo_yaml(
+            project=project,
+            source_path=temp_path,
+            display_name=display_name.strip(),
+            task_family=task_family,
+        )
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("validation", {}).get("errors", ["Model YAML import failed"]))
+        return result
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@app.post("/api/projects/{project_id}/models/import/onnx")
+def import_project_onnx_model(
+    project_id: str,
+    display_name: str = Form(...),
+    task_family: str = Form(...),
+    file: UploadFile = File(...),
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not file.filename or Path(file.filename).suffix.lower() != ".onnx":
+        raise HTTPException(status_code=400, detail="Only .onnx model files are supported in this phase")
+
+    from src.security_utils import safe_filename
+
+    layout = ProjectLayout.from_project(project)
+    import_id = f"model_import_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    temp_dir = layout.tmp_dir / "model_import_uploads" / import_id
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_path = temp_dir / safe_filename(file.filename)
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        result = ModelCatalog.import_onnx(
+            project=project,
+            source_path=temp_path,
+            display_name=display_name.strip(),
+            task_family=task_family,
+        )
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("validation", {}).get("errors", ["ONNX import failed"]))
+        return result
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@app.post("/api/projects/{project_id}/models/import/rnn-package")
+def import_project_rnn_package_model(
+    project_id: str,
+    display_name: str = Form(...),
+    task_family: str = Form(...),
+    file: UploadFile = File(...),
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not file.filename or Path(file.filename).suffix.lower() != ".zip":
+        raise HTTPException(status_code=400, detail="Only .zip RNN model packages are supported in this phase")
+
+    from src.security_utils import safe_filename
+
+    layout = ProjectLayout.from_project(project)
+    import_id = f"model_import_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    temp_dir = layout.tmp_dir / "model_import_uploads" / import_id
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_path = temp_dir / safe_filename(file.filename)
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        result = ModelCatalog.import_rnn_package(
+            project=project,
+            source_path=temp_path,
+            display_name=display_name.strip(),
+            task_family=task_family,
+        )
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("validation", {}).get("errors", ["RNN package import failed"]))
+        return result
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
 
 @app.get("/api/models/weights")
 def list_model_store_weights():
@@ -1717,6 +1888,22 @@ def apply_annotation_import(project_id: str, import_id: str):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to apply annotation import: {e}")
+
+
+@app.delete("/api/projects/{project_id}/annotations/import/{import_id}/failed-source")
+def delete_failed_annotation_import_source(project_id: str, import_id: str, file: str = Query(...)):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        result = AnnotationImporter.delete_failed_source_file(project, import_id, file)
+        project["last_annotation_import"] = result["report"]
+        ProjectManager.save_project(project_id, project)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete failed annotation source: {e}")
 
 
 class UpdateClassesRequest(BaseModel):

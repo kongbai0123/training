@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css?v=20260630-ui-init-fix">
+  <link rel="stylesheet" href="/static/style.css?v=20260630-training-row-dropzone">
   <script async src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -242,7 +242,7 @@
               <p class="section-help" data-i18n="dataset.classesHelp">Add or remove project classes used by LabelMe, conversion, split, and training.</p>
               <div class="form-stack">
                 <div class="class-entry-row">
-                  <input type="text" id="input-dataset-new-class" placeholder="Example: defect" data-i18n-placeholder="dataset.classPlaceholder">
+                  <input type="text" id="input-dataset-new-class" placeholder="Example: defect, scratch; stain" data-i18n-placeholder="dataset.classPlaceholder">
                   <button class="btn btn-secondary" id="btn-dataset-add-class" style="min-width: 68px;"><i class="fa-solid fa-plus"></i> <span data-i18n="dataset.addClass">Add</span></button>
                 </div>
                 <div class="class-list-box" id="dataset-classes-list-box" style="margin-top: 8px;"></div>
@@ -672,7 +672,9 @@
                         <strong data-i18n="training.modelRegistry.title">Model Registry Preview</strong>
                         <span data-i18n="training.modelRegistry.subtitle">This is the future Model Registry selector skeleton. Training still uses the built-in model list in this phase.</span>
                       </div>
-                      <button type="button" class="btn btn-secondary btn-sm" id="btn-training-open-model-hub" disabled data-i18n="training.modelRegistry.openHub">Open Model Hub</button>
+                      <button type="button" class="btn btn-primary btn-sm" id="btn-training-open-model-hub" data-i18n="training.modelRegistry.openHub">
+                        <i class="fa-solid fa-file-import"></i> 匯入模型
+                      </button>
                     </div>
                     <label>
                       <span><span data-i18n="training.model">Model</span> <span class="info-icon" data-tooltip="Select a model compatible with the current project task. Segmentation projects should use a segmentation model." data-i18n-tooltip="training.modelTooltip">i</span></span>
@@ -696,7 +698,13 @@
                         <div><span data-i18n="training.modelRegistry.license">License status</span><code data-i18n="training.modelRegistry.licenseReview">Commercial license review required</code></div>
                       </div>
                       <div class="model-registry-note" id="training-model-compatibility">--</div>
-                      <div class="form-hint" data-i18n="training.modelRegistry.hubPending">Model Hub and custom model import will be connected in the next phase. This phase only adds the selector skeleton.</div>
+                      <div class="form-hint" data-i18n="training.modelRegistry.hubPending">模型匯入會存放在目前專案的 models/imports 底下，不會放進 exe 或全域資料夾。</div>
+                      <div class="model-import-supported-types">
+                        <span><strong>可訓練</strong> YOLO .pt</span>
+                        <span><strong>架構</strong> YOLO .yaml</span>
+                        <span><strong>推論</strong> ONNX .onnx</span>
+                        <span><strong>預覽</strong> RNN package .zip</span>
+                      </div>
                     </div>
                   </div>
                   <label>
@@ -1303,11 +1311,11 @@
               <div class="form-stack">
                 <label>
                   <span>Upload image</span>
-                  <input type="file" id="inference-image-file" accept=".jpg,.jpeg,.png,.bmp,.webp,image/*">
+                  <input type="file" id="inference-image-file" accept=".jpg,.jpeg,.png,.bmp,.webp,image/*" multiple>
                 </label>
                 <label>
                   <span>Local image path</span>
-                  <input type="text" id="inference-image-path" placeholder="D:\samples\test_image.jpg">
+                  <input type="text" id="inference-image-path" placeholder="D:\samples\image_1.jpg; D:\samples\image_2.jpg">
                 </label>
               </div>
 
@@ -1634,7 +1642,7 @@
         <label id="new-project-class-field">
           <span id="new-project-class-label">Class list</span>
           <div class="class-entry-row">
-            <input type="text" id="new-project-class-input" placeholder="Class name, e.g. class_a; comma separated is supported">
+            <input type="text" id="new-project-class-input" placeholder="Class names, e.g. class_a, class_b; class_c">
             <button type="button" class="btn btn-secondary" id="btn-add-project-class">
               <i class="fa-solid fa-plus"></i>
               Add
@@ -1719,10 +1727,73 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="model-import-modal" hidden>
+    <div class="modal-content confirm-modal model-import-modal-content">
+      <div class="modal-header">
+        <div>
+          <h2>Import Model</h2>
+          <p>匯入模型會寫入目前專案範圍；只有 YOLO .pt 會進入 CNN 訓練選單，ONNX 與 RNN package 只進入 catalog。</p>
+        </div>
+        <button class="icon-btn" id="btn-close-model-import-modal" aria-label="Close">&times;</button>
+      </div>
+      <form id="form-import-model" class="form-stack modal-form">
+        <label>
+          <span>Import type</span>
+          <select id="model-import-type">
+            <option value="yolo_pt">YOLO Weight (.pt)</option>
+            <option value="yolo_yaml">YOLO Model Architecture (.yaml / .yml)</option>
+            <option value="onnx">ONNX Model (.onnx, inference-only)</option>
+            <option value="rnn_package">RNN Model Package (.zip, preview)</option>
+          </select>
+        </label>
+        <label>
+          <span>Display name</span>
+          <input type="text" id="model-import-display-name" placeholder="Custom RoadSeg YOLO">
+        </label>
+        <label>
+          <span>Task family</span>
+          <select id="model-import-task-family">
+            <option value="segmentation">Segmentation</option>
+            <option value="detection">Detection</option>
+            <option value="classification">Classification</option>
+            <option value="sequence_classification">Sequence Classification</option>
+            <option value="sequence_regression">Sequence Regression</option>
+          </select>
+        </label>
+        <div class="model-import-drop-zone" id="model-import-drop-zone" role="button" tabindex="0" aria-label="Select or drop model file">
+          <input type="file" id="model-import-file" accept=".pt" hidden>
+          <div class="model-import-drop-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
+          <div>
+            <strong id="model-import-drop-title">拖入 YOLO .pt 模型檔</strong>
+            <p id="model-import-drop-help">點擊選擇或拖曳檔案到此。可接受：.pt</p>
+          </div>
+          <code id="model-import-selected-file">尚未選擇檔案</code>
+        </div>
+        <div class="model-import-supported-types model-import-modal-types">
+          <span><strong>YOLO .pt</strong> 可作為 CNN/YOLO 訓練起點</span>
+          <span><strong>YOLO .yaml</strong> 僅限模型架構 YAML，不接受 dataset YAML</span>
+          <span><strong>ONNX .onnx</strong> inference-only，不會啟動訓練</span>
+          <span><strong>RNN .zip</strong> 需包含 model.pt、feature_schema、normalization_stats、sequence_config</span>
+        </div>
+        <div class="status-guard warning">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>目前不支援 TensorFlow、任意 PyTorch .pth、TensorRT、OpenVINO、TFLite 或 custom train.py；也不執行未知 Python。</span>
+        </div>
+        <div id="model-import-result" class="form-hint"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-model-import">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-model-import">
+            <i class="fa-solid fa-file-import"></i> Import YOLO .pt
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast" id="toast" hidden></div>
 
   <script async src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260630-ui-init-fix"></script>
+  <script type="module" src="/static/app.js?v=20260630-training-row-dropzone"></script>
 </body>
 </html>
 

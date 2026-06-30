@@ -10,10 +10,9 @@ const ANNO_RE = /\.(json|txt)$/i;
 export function initDataset() {
   qs("#btn-dataset-add-class")?.addEventListener("click", addDatasetClass);
   qs("#input-dataset-new-class")?.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      addDatasetClass();
-    }
+    if (!["Enter", ",", ";"].includes(event.key)) return;
+    event.preventDefault();
+    addDatasetClass();
   });
 
   qs("#dataset-classes-list-box")?.addEventListener("click", (event) => {
@@ -52,16 +51,26 @@ export function initDataset() {
 
 function addDatasetClass() {
   const input = qs("#input-dataset-new-class");
-  const name = input?.value.trim();
-  if (!name) return;
+  const names = parseClassTokens(input?.value);
+  if (!names.length) return;
   appState.currentProjectClasses ||= [];
-  if (appState.currentProjectClasses.includes(name)) {
-    eventBus.emit("toast", t("dataset.toast.duplicateClass"));
-    return;
-  }
-  appState.currentProjectClasses.push(name);
+  let changed = false;
+  names.forEach((name) => {
+    const exists = appState.currentProjectClasses.some((item) => item.toLowerCase() === name.toLowerCase());
+    if (exists) return;
+    appState.currentProjectClasses.push(name);
+    changed = true;
+  });
+  if (!changed) eventBus.emit("toast", t("dataset.toast.duplicateClass"));
   if (input) input.value = "";
   renderDatasetClassesEditList();
+}
+
+function parseClassTokens(rawValue) {
+  return String(rawValue || "")
+    .split(/[,;]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 async function saveDatasetClasses() {
@@ -217,11 +226,6 @@ async function uploadDatasetFiles(files) {
     progressPanel?.remove();
     return eventBus.emit("toast", t("dataset.toast.noImageOrZip"));
   }
-  if (imageFiles.length > 500) {
-    progressPanel?.remove();
-    return eventBus.emit("toast", t("dataset.toast.tooManyImages"));
-  }
-
   let importedImages = 0;
   let duplicateSameHash = 0;
   let renamedCount = 0;
@@ -290,11 +294,26 @@ function ensureProgressPanel(id, anchor) {
 
 function updateProgress(panel, statusText, percent, detailsText) {
   if (!panel) return;
+  const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
   panel.innerHTML = `
-    <div class="ingest-progress-header"><span class="ingest-progress-status">${escapeHtml(statusText)}</span><span class="ingest-progress-percent">${percent}%</span></div>
-    <div class="ingest-progress-bar-bg"><div class="ingest-progress-bar-fill" style="width: ${percent}%"></div></div>
+    <div class="ingest-progress-header"><span class="ingest-progress-status">${escapeHtml(statusText)}</span><span class="ingest-progress-percent">${safePercent}%</span></div>
+    <div class="ingest-progress-bar-bg"><div class="ingest-progress-bar-fill" style="width: ${safePercent}%"></div></div>
     <div class="ingest-progress-details">${escapeHtml(detailsText)}</div>
   `;
+  const payload = {
+    jobId: panel.id || "dataset-import",
+    title: statusText,
+    message: detailsText,
+    percent: safePercent,
+    caption: "Import"
+  };
+  if (safePercent >= 100 && /error|failed|失敗/i.test(`${statusText} ${detailsText}`)) {
+    eventBus.emit("progress:failed", payload);
+  } else if (safePercent >= 100) {
+    eventBus.emit("progress:complete", payload);
+  } else {
+    eventBus.emit("progress:update", payload);
+  }
 }
 
 export function renderDatasetPage(status) {

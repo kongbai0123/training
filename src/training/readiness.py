@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Dict, Any, List
 from src.model_store import ModelStore
@@ -49,10 +50,21 @@ def validate_training_readiness(project: Dict[str, Any], config_data: Dict[str, 
     except ValueError as exc:
         errors.append(str(exc))
         resolved_model = config_data.get("model") or "yolov8n.pt"
-    model_name = Path(str(resolved_model)).name.lower()
+    model_path = Path(str(resolved_model))
+    manifest_task = None
+    manifest_path = model_path.parent / "model_manifest.json"
+    if model_path.is_absolute() and manifest_path.exists():
+        try:
+            manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest_task = str(manifest_data.get("task_family") or "").lower()
+        except Exception:
+            manifest_task = None
+    model_name = model_path.name.lower()
     
     # 從模型檔名猜測其任務類型
-    if "-seg" in model_name or "seg" in model_name:
+    if manifest_task in {"segmentation", "detection", "classification", "pose", "obb"}:
+        model_task = manifest_task
+    elif "-seg" in model_name or "seg" in model_name:
         model_task = "segmentation"
     elif "-cls" in model_name or "cls" in model_name:
         model_task = "classification"

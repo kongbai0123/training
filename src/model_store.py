@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.app_paths import MODELS_DIR
+from src.app_paths import MODELS_DIR, PROJECTS_DIR
 
 
 class ModelStore:
     """Central model-weight storage under the app-scoped ./models directory."""
 
     WEIGHT_SUFFIXES = {".pt"}
+    PROJECT_IMPORT_SUFFIXES = {".pt", ".yaml", ".yml"}
 
     @staticmethod
     def models_dir() -> Path:
@@ -31,8 +32,11 @@ class ModelStore:
 
         if model_path.is_absolute():
             resolved = model_path.resolve()
-            if not cls._is_inside_models(resolved):
-                raise ValueError("Custom weight files must be placed under the app models directory.")
+            suffix = resolved.suffix.lower()
+            if not cls._is_inside_models(resolved) and not cls._is_inside_project_imports(resolved):
+                raise ValueError("Custom weight files must be placed under the app models directory or the project models/imports directory.")
+            if cls._is_inside_project_imports(resolved) and suffix not in cls.PROJECT_IMPORT_SUFFIXES:
+                raise ValueError("Project imported training models must be .pt, .yaml, or .yml files.")
             if not resolved.exists() or not resolved.is_file():
                 raise ValueError(f"Custom weight file not found: {resolved}")
             return resolved.as_posix()
@@ -50,8 +54,10 @@ class ModelStore:
             return candidate.as_posix()
 
         local_candidate = Path(model_value).resolve()
-        if local_candidate.exists() and local_candidate.is_file() and local_candidate.suffix.lower() == ".pt":
-            raise ValueError("Local .pt weights outside ./models are not allowed. Move the file into ./models first.")
+        if local_candidate.exists() and local_candidate.is_file() and local_candidate.suffix.lower() in cls.PROJECT_IMPORT_SUFFIXES:
+            if cls._is_inside_project_imports(local_candidate):
+                return local_candidate.as_posix()
+            raise ValueError("Local training models outside ./models or project models/imports are not allowed. Import the model into the project first.")
 
         return model_value
 
@@ -70,3 +76,14 @@ class ModelStore:
     def _is_inside_models(cls, path: Path) -> bool:
         root = cls.models_dir()
         return path == root or root in path.parents
+
+    @classmethod
+    def _is_inside_project_imports(cls, path: Path) -> bool:
+        projects_root = PROJECTS_DIR.resolve()
+        resolved = path.resolve()
+        try:
+            relative = resolved.relative_to(projects_root)
+        except ValueError:
+            return False
+        parts = relative.parts
+        return len(parts) >= 5 and parts[1] == "models" and parts[2] == "imports"

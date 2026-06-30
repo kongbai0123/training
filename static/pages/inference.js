@@ -13,6 +13,7 @@ export function initInference() {
   qs("#inference-image-file")?.addEventListener("change", handleImageFileChange);
   qs("#inference-image-path")?.addEventListener("input", (e) => {
     if (e.target.value.trim()) {
+      appState.inferenceLastBatchResults = null;
       const fileInput = qs("#inference-image-file");
       if (fileInput) fileInput.value = "";
       if (selectedFileUrl) {
@@ -71,7 +72,7 @@ export function renderInferencePage(status) {
       pathInput.placeholder = "本機路徑推論已停用 (Trusted Local Mode 關閉)";
       pathInput.value = "";
     } else {
-      pathInput.placeholder = "輸入本機圖片絕對路徑 (e.g. C:\\path\\to\\image.jpg)";
+      pathInput.placeholder = "輸入本機圖片絕對路徑，可用分號分隔多張圖 (e.g. C:\\path\\to\\image_1.jpg; C:\\path\\to\\image_2.jpg)";
     }
   }
 
@@ -169,8 +170,10 @@ function renderModelList(status = null) {
 }
 
 function handleImageFileChange(event) {
-  const file = event.target.files?.[0];
-  if (file) {
+  const files = [...(event.target.files || [])];
+  const file = files[0];
+  appState.inferenceLastBatchResults = null;
+  if (files.length) {
     const pathInput = qs("#inference-image-path");
     if (pathInput) pathInput.value = "";
   }
@@ -205,14 +208,69 @@ async function runInference() {
     return;
   }
 
-  const file = qs("#inference-image-file")?.files?.[0];
-  const imagePath = qs("#inference-image-path")?.value?.trim();
-  if (!file && !imagePath) {
+  const files = [...(qs("#inference-image-file")?.files || [])];
+  const imagePaths = parseImagePathTargets(qs("#inference-image-path")?.value);
+  if (!files.length && !imagePaths.length) {
     updateRunButtonState();
-    setInferenceError("請上傳單張圖片，或輸入伺服器可讀取的本機圖片路徑。");
+    setInferenceError("請選擇一張或多張圖片，或輸入本機圖片路徑。");
     return;
   }
 
+  appState.inferenceRunning = true;
+  updateRunButtonState();
+  try {
+    const targets = files.length ? files : imagePaths;
+    const results = [];
+    const failures = [];
+
+    for (let index = 0; index < targets.length; index += 1) {
+      const target = targets[index];
+      const form = buildInferenceForm(model, target, files.length > 0);
+      try {
+        const result = await apiFetch(`/api/projects/${appState.currentProjectId}/inference/image`, {
+          method: "POST",
+          body: form
+        });
+        results.push(result);
+      } catch (err) {
+        failures.push({
+          name: target?.name || String(target || `image_${index + 1}`),
+          message: err.message
+        });
+      }
+    }
+
+    if (!results.length) {
+      throw new Error(failures.map((item) => `${item.name}: ${item.message}`).join("; ") || "Inference failed");
+    }
+
+    appState.inferenceLastResult = results[0];
+    appState.inferenceLastBatchResults = {
+      total: targets.length,
+      succeeded: results.length,
+      failed: failures.length,
+      results,
+      failures
+    };
+    appState.inferenceJobsProjectId = "";
+    renderInferenceResult();
+
+    if (results.some((result) => result.summary?.device_fallback)) {
+      eventBus.emit("toast", "偵測不到 GPU 資源，已自動降級為 CPU 推論。");
+    } else if (targets.length > 1) {
+      eventBus.emit("toast", `批次推論完成：${results.length}/${targets.length}`);
+    } else {
+      eventBus.emit("toast", `Inference completed: ${results[0].job_id}`);
+    }
+  } catch (err) {
+    setInferenceError(`推論失敗：${err.message}`);
+  } finally {
+    appState.inferenceRunning = false;
+    updateRunButtonState();
+  }
+}
+
+function buildInferenceForm(model, target, isFileTarget) {
   const form = new FormData();
   form.append("model_id", model.model_id);
   form.append("conf", qs("#inference-conf")?.value || "0.25");
@@ -223,31 +281,16 @@ async function runInference() {
   form.append("show_mask", String(qs("#inference-show-mask")?.checked ?? true));
   form.append("show_bbox", String(qs("#inference-show-bbox")?.checked ?? true));
   form.append("class_filter", qs("#inference-class-filter")?.value || "");
-  if (file) form.append("file", file);
-  if (!file && imagePath) form.append("image_path", imagePath);
+  if (isFileTarget) form.append("file", target, target.name);
+  else form.append("image_path", target);
+  return form;
+}
 
-  appState.inferenceRunning = true;
-  updateRunButtonState();
-  try {
-    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/inference/image`, {
-      method: "POST",
-      body: form
-    });
-    appState.inferenceLastResult = result;
-    appState.inferenceJobsProjectId = "";
-    renderInferenceResult();
-    
-    if (result.summary?.device_fallback) {
-      eventBus.emit("toast", "⚠️ 偵測不到 GPU 資源，已自動降級為 CPU 推論");
-    } else {
-      eventBus.emit("toast", `Inference completed: ${result.job_id}`);
-    }
-  } catch (err) {
-    setInferenceError(`推論失敗：${err.message}`);
-  } finally {
-    appState.inferenceRunning = false;
-    updateRunButtonState();
-  }
+function parseImagePathTargets(rawValue) {
+  return String(rawValue || "")
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function renderInferenceResult() {
@@ -277,9 +320,15 @@ function renderInferenceResult() {
       </div>
     `;
   }
+  const batch = appState.inferenceLastBatchResults;
+  const batchHtml = batch && batch.total > 1 ? `
+    <div class="path-row"><span>批次推論</span><code>${escapeHtml(`${batch.succeeded}/${batch.total} 成功`)}</code></div>
+    ${batch.failures?.length ? `<div class="path-row"><span>失敗項目</span><code>${escapeHtml(batch.failures.map((item) => `${item.name}: ${item.message}`).join("; "))}</code></div>` : ""}
+  ` : "";
 
   setHTML("#inference-summary", `
     <div class="path-row"><span>Job ID</span><code>${escapeHtml(result.job_id)}</code></div>
+    ${batchHtml}
     <div class="path-row"><span>Output path</span><code>${escapeHtml(result.paths?.job_dir || "--")}</code></div>
     <div class="path-row"><span>Annotated image</span><code>${escapeHtml(result.paths?.annotated_image || "--")}</code></div>
     <div class="path-row"><span>Prediction JSON</span><code>${escapeHtml(result.paths?.prediction_json || "--")}</code></div>
@@ -306,7 +355,7 @@ function updateRunButtonState() {
   if (!btn) return;
 
   const model = ensureSelectedModel();
-  const hasImage = Boolean(qs("#inference-image-file")?.files?.[0] || qs("#inference-image-path")?.value?.trim());
+  const hasImage = Boolean((qs("#inference-image-file")?.files?.length || 0) > 0 || qs("#inference-image-path")?.value?.trim());
   const compatible = model ? isModelCompatible(appState.currentProject?.task_type, model.task_type) : false;
   const reason = getRunDisabledReason({ model, hasImage, compatible });
 

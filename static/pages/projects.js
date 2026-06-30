@@ -24,7 +24,7 @@ export function initProjects() {
 
   qs("#btn-add-project-class")?.addEventListener("click", addProjectClassFromInput);
   qs("#new-project-class-input")?.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return;
+    if (!["Enter", ",", ";"].includes(event.key)) return;
     event.preventDefault();
     addProjectClassFromInput();
   });
@@ -550,7 +550,7 @@ function addProjectClassFromInput() {
   if (!rawValue) return;
 
   const values = rawValue
-    .split(",")
+    .split(/[,;]+/)
     .map((item) => item.trim())
     .filter(Boolean);
 

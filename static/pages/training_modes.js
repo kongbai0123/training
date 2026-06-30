@@ -51,9 +51,12 @@ export function initTrainingModeSidebar() {
 
   qsa("[data-cnn-nav]").forEach((button) => {
     button.addEventListener("click", () => {
+      const nav = button.dataset.cnnNav;
+      const page = button.dataset.page || nav || "dashboard";
       trainingModeState.activeMode = "cnn";
-      trainingModeState.activeCnnPanel = button.dataset.cnnNav === "training" ? "training" : "overview";
-      if (button.dataset.cnnNav === "training") eventBus.emit("navigate", "training");
+      trainingModeState.activeCnnPanel = nav === "training" ? "training" : "overview";
+      if (nav === "model-compare") eventBus.emit("set-compare-architecture", "cnn");
+      eventBus.emit("navigate", page);
       renderTrainingModeSidebar();
       renderTrainingWorkspace();
     });

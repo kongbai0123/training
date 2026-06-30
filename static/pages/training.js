@@ -8,6 +8,9 @@ import { initTrainingModeSidebar } from "./training_modes.js";
 let metricsChart = null;
 let currentChartData = null; // Training UI helper
 let activeChartTab = "primary"; // Training UI helper
+const activeGlobalTrainingJobs = new Set();
+let trainingModelCatalog = [];
+let loadedTrainingModelCatalogProjectId = null;
 
 function setMetricsDashboardActive(active) {
   qs("#training-metrics-empty")?.classList.toggle("hidden", active);
@@ -16,7 +19,7 @@ function setMetricsDashboardActive(active) {
 
 export function initTraining() {
   initTrainingModeSidebar();
-  loadTrainingModelStoreWeights();
+  loadTrainingModelCatalog(true);
 
   qs("#tab-config-simple")?.addEventListener("click", () => {
     qs("#tab-config-simple").className = "btn btn-sm btn-primary";
@@ -34,17 +37,27 @@ export function initTraining() {
     qs(selector)?.addEventListener("change", () => renderTrainingMonitor());
   });
   qs("#btn-training-open-model-hub")?.addEventListener("click", () => {
-    eventBus.emit("toast", t("training.modelRegistry.hubPending"));
+    openModelImportModal();
   });
+  qs("#btn-close-model-import-modal")?.addEventListener("click", closeModelImportModal);
+  qs("#btn-cancel-model-import")?.addEventListener("click", closeModelImportModal);
+  qs("#model-import-modal")?.addEventListener("click", (event) => {
+    if (event.target.id === "model-import-modal") closeModelImportModal();
+  });
+  qs("#form-import-model")?.addEventListener("submit", importYoloModelFromModal);
+  qs("#model-import-type")?.addEventListener("change", updateModelImportTypeUi);
+  initModelImportDropZone();
 
   qs("#btn-start-train")?.addEventListener("click", async () => {
     const status = getProjectStatus(appState.currentProject);
     const blockers = getTrainingBlockers(status);
-    const modelName = qs("#train-model")?.value || "";
+    const modelSelect = qs("#train-model");
+    const modelName = modelSelect?.value || "";
+    const selectedOption = modelSelect?.selectedOptions?.[0];
     const taskType = String(status.taskType || "").toLowerCase();
     const isSegTask = taskType.includes("segmentation") || taskType.includes("seg");
-    const isModelStoreWeight = modelName.includes("/") || modelName.includes("\\");
-    const isSegModel = modelName.includes("-seg") || isModelStoreWeight;
+    const selectedTaskFamily = selectedOption?.dataset?.taskFamily || "";
+    const isSegModel = selectedTaskFamily === "segmentation" || modelName.includes("-seg");
 
     if (isSegTask && !isSegModel) {
       eventBus.emit("toast", t("training.toast.segModel"));
@@ -150,34 +163,270 @@ export function initTraining() {
   });
   eventBus.on("start-training-monitor", () => startMonitorWebSocket());
   eventBus.on("language-changed", () => renderTrainingMonitor());
+  eventBus.on("state-changed", () => loadTrainingModelCatalog());
 }
 
-async function loadTrainingModelStoreWeights() {
+async function loadTrainingModelCatalog(force = false) {
   const select = qs("#train-model");
   if (!select) return;
-  try {
-    const response = await apiFetch("/api/models/weights");
-    const weights = Array.isArray(response.weights) ? response.weights : [];
-    const existing = new Set(Array.from(select.options).map((option) => option.value));
-    let group = qs("#train-model-store-options");
-    if (!group) {
-      group = document.createElement("optgroup");
-      group.id = "train-model-store-options";
-      group.label = "Models directory";
-      select.appendChild(group);
-    }
-    group.innerHTML = "";
-    weights.forEach((weight) => {
-      if (!weight.path || existing.has(weight.path)) return;
-      const option = document.createElement("option");
-      option.value = weight.path;
-      option.textContent = `models/${weight.path}`;
-      group.appendChild(option);
-    });
-    if (!group.children.length) group.remove();
-  } catch (err) {
-    console.warn("Failed to load model store weights", err);
+  if (!appState.currentProjectId) {
+    loadedTrainingModelCatalogProjectId = null;
+    renderFallbackTrainingModelOptions(select);
+    return;
   }
+  if (!force && loadedTrainingModelCatalogProjectId === appState.currentProjectId && trainingModelCatalog.length > 0) {
+    return;
+  }
+  try {
+    const response = await apiFetch(`/api/projects/${appState.currentProjectId}/models/catalog?architecture=cnn&usage=train`);
+    trainingModelCatalog = Array.isArray(response.models) ? response.models : [];
+    loadedTrainingModelCatalogProjectId = appState.currentProjectId;
+    renderTrainingModelOptions(select, trainingModelCatalog);
+  } catch (err) {
+    console.warn("Failed to load model catalog", err);
+    renderFallbackTrainingModelOptions(select);
+  }
+}
+
+function renderFallbackTrainingModelOptions(select) {
+  trainingModelCatalog = [];
+  select.innerHTML = `
+    <optgroup label="Built-in Models">
+      <option value="yolov8n-seg.pt" data-task-family="segmentation" data-source="builtin" data-backend="ultralytics_yolo">YOLOv8n Segmentation (Recommended)</option>
+      <option value="yolov8s-seg.pt" data-task-family="segmentation" data-source="builtin" data-backend="ultralytics_yolo">YOLOv8s Segmentation</option>
+      <option value="yolov8m-seg.pt" data-task-family="segmentation" data-source="builtin" data-backend="ultralytics_yolo">YOLOv8m Segmentation</option>
+      <option value="yolov8n.pt" data-task-family="detection" data-source="builtin" data-backend="ultralytics_yolo">YOLOv8n Detection only</option>
+      <option value="yolov8s.pt" data-task-family="detection" data-source="builtin" data-backend="ultralytics_yolo">YOLOv8s Detection only</option>
+    </optgroup>
+  `;
+}
+
+function renderTrainingModelOptions(select, models) {
+  const previous = select.value;
+  const groups = [
+    ["Built-in Models", models.filter((item) => item.source === "builtin")],
+    ["Imported Models", models.filter((item) => item.source === "user_import")],
+    ["Project Trained Models", models.filter((item) => item.source === "project_trained")]
+  ];
+  select.innerHTML = "";
+  groups.forEach(([label, items]) => {
+    const group = document.createElement("optgroup");
+    group.label = label;
+    if (!items.length) {
+      const empty = document.createElement("option");
+      empty.disabled = true;
+      empty.textContent = label === "Imported Models" ? "尚無導入模型" : "No models";
+      group.appendChild(empty);
+    } else {
+      items.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.training_value || item.weight || "";
+        option.textContent = item.display_name || item.model_id;
+        option.dataset.modelId = item.model_id || "";
+        option.dataset.taskFamily = item.task_family || "";
+        option.dataset.source = item.source || "";
+        option.dataset.backend = item.backend || "";
+        option.dataset.status = item.status || "";
+        option.title = `${item.source || "--"} · ${item.backend || "--"} · ${item.task_family || "--"} · ${item.status || "--"}`;
+        group.appendChild(option);
+      });
+    }
+    select.appendChild(group);
+  });
+  if (previous && Array.from(select.options).some((option) => option.value === previous && !option.disabled)) {
+    select.value = previous;
+  } else {
+    const firstValid = Array.from(select.options).find((option) => !option.disabled);
+    if (firstValid) select.value = firstValid.value;
+  }
+  updateTrainingModelRegistrySkeleton(getProjectStatus(appState.currentProject));
+}
+
+function openModelImportModal() {
+  if (!appState.currentProjectId) {
+    eventBus.emit("toast", "Please open a project before importing a model.");
+    return;
+  }
+  const modal = qs("#model-import-modal");
+  const status = getProjectStatus(appState.currentProject);
+  const taskFamily = String(status.taskType || "").toLowerCase().includes("detect") ? "detection" : "segmentation";
+  if (qs("#model-import-task-family")) qs("#model-import-task-family").value = taskFamily;
+  if (qs("#model-import-result")) qs("#model-import-result").textContent = "";
+  updateModelImportTypeUi();
+  if (modal) modal.hidden = false;
+}
+
+function closeModelImportModal() {
+  const modal = qs("#model-import-modal");
+  if (modal) modal.hidden = true;
+}
+
+function initModelImportDropZone() {
+  const dropZone = qs("#model-import-drop-zone");
+  const fileInput = qs("#model-import-file");
+  if (!dropZone || !fileInput) return;
+
+  const openPicker = () => fileInput.click();
+  dropZone.addEventListener("click", openPicker);
+  dropZone.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openPicker();
+    }
+  });
+  fileInput.addEventListener("change", updateModelImportSelectedFile);
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      dropZone.classList.add("drag-over");
+    });
+  });
+  ["dragleave", "drop"].forEach((eventName) => {
+    dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      dropZone.classList.remove("drag-over");
+    });
+  });
+  dropZone.addEventListener("drop", (event) => {
+    const file = event.dataTransfer?.files?.[0];
+    if (!file) return;
+    const importType = qs("#model-import-type")?.value || "yolo_pt";
+    if (!isValidModelImportFile(importType, file.name.toLowerCase())) {
+      eventBus.emit("toast", getModelImportFileMessage(importType));
+      return;
+    }
+    fileInput.files = event.dataTransfer.files;
+    updateModelImportSelectedFile();
+  });
+}
+
+function updateModelImportSelectedFile() {
+  const file = qs("#model-import-file")?.files?.[0];
+  setText("#model-import-selected-file", file ? file.name : "尚未選擇檔案");
+}
+
+async function importYoloModelFromModal(event) {
+  event.preventDefault();
+  if (!appState.currentProjectId) return;
+  const importType = qs("#model-import-type")?.value || "yolo_pt";
+  const file = qs("#model-import-file")?.files?.[0];
+  const displayName = qs("#model-import-display-name")?.value?.trim() || file?.name?.replace(/\.(pt|yaml|yml|onnx|zip)$/i, "") || "";
+  const taskFamily = qs("#model-import-task-family")?.value || "segmentation";
+  const resultEl = qs("#model-import-result");
+  const submitBtn = qs("#btn-submit-model-import");
+  if (!file) {
+    eventBus.emit("toast", getModelImportFileMessage(importType));
+    return;
+  }
+  const fileName = file.name.toLowerCase();
+  const validFile = isValidModelImportFile(importType, fileName);
+  if (!validFile) {
+    eventBus.emit("toast", getModelImportFileMessage(importType));
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("display_name", displayName);
+  formData.append("task_family", taskFamily);
+  formData.append("file", file, file.name);
+
+  if (submitBtn) submitBtn.disabled = true;
+  if (resultEl) resultEl.textContent = "Importing model...";
+  try {
+    const endpoint = getModelImportEndpoint(importType, appState.currentProjectId);
+    const result = await apiFetch(endpoint, {
+      method: "POST",
+      body: formData
+    });
+    const modelName = result?.model?.display_name || displayName;
+    eventBus.emit("toast", `Imported model: ${modelName}`);
+    renderModelImportValidationResult(result, resultEl);
+    await loadTrainingModelCatalog(true);
+    const select = qs("#train-model");
+    if (select && result?.model?.trainable && result?.model?.training_value) select.value = result.model.training_value;
+    renderTrainingMonitor();
+  } catch (err) {
+    if (resultEl) resultEl.textContent = `Import failed: ${err.message}`;
+    eventBus.emit("toast", `Model import failed: ${err.message}`);
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
+function getModelImportEndpoint(importType, projectId) {
+  if (importType === "yolo_yaml") return `/api/projects/${projectId}/models/import/yolo-yaml`;
+  if (importType === "onnx") return `/api/projects/${projectId}/models/import/onnx`;
+  if (importType === "rnn_package") return `/api/projects/${projectId}/models/import/rnn-package`;
+  return `/api/projects/${projectId}/models/import/yolo-pt`;
+}
+
+function isValidModelImportFile(importType, fileName) {
+  if (importType === "yolo_yaml") return fileName.endsWith(".yaml") || fileName.endsWith(".yml");
+  if (importType === "onnx") return fileName.endsWith(".onnx");
+  if (importType === "rnn_package") return fileName.endsWith(".zip");
+  return fileName.endsWith(".pt");
+}
+
+function getModelImportFileMessage(importType) {
+  if (importType === "yolo_yaml") return "Please select a YOLO model .yaml / .yml file.";
+  if (importType === "onnx") return "Please select an ONNX .onnx file.";
+  if (importType === "rnn_package") return "Please select an RNN model package .zip file.";
+  return "Please select a YOLO .pt file.";
+}
+
+function updateModelImportTypeUi() {
+  const importType = qs("#model-import-type")?.value || "yolo_pt";
+  const input = qs("#model-import-file");
+  const submit = qs("#btn-submit-model-import");
+  const taskSelect = qs("#model-import-task-family");
+  const dropTitle = qs("#model-import-drop-title");
+  const dropHelp = qs("#model-import-drop-help");
+  if (importType === "yolo_yaml") {
+    if (input) input.accept = ".yaml,.yml";
+    setText("#model-import-drop-title", "拖入 YOLO model architecture YAML");
+    setText("#model-import-drop-help", "點擊選擇或拖曳檔案到此。可接受：.yaml, .yml；不接受 data.yaml / dataset YAML。");
+    if (submit) submit.innerHTML = `<i class="fa-solid fa-file-import"></i> Import YOLO YAML`;
+  } else if (importType === "onnx") {
+    if (input) input.accept = ".onnx";
+    setText("#model-import-drop-title", "拖入 ONNX 推論模型");
+    setText("#model-import-drop-help", "點擊選擇或拖曳檔案到此。可接受：.onnx；僅進入 inference-only catalog。");
+    if (submit) submit.innerHTML = `<i class="fa-solid fa-file-import"></i> Import ONNX`;
+  } else if (importType === "rnn_package") {
+    if (input) input.accept = ".zip";
+    setText("#model-import-drop-title", "拖入 RNN model package");
+    setText("#model-import-drop-help", "點擊選擇或拖曳檔案到此。可接受：.zip；需包含 model.pt、feature_schema、normalization_stats、sequence_config。");
+    if (submit) submit.innerHTML = `<i class="fa-solid fa-file-import"></i> Import RNN Package`;
+    if (taskSelect && !taskSelect.value.startsWith("sequence_")) taskSelect.value = "sequence_classification";
+  } else {
+    if (input) input.accept = ".pt";
+    setText("#model-import-drop-title", "拖入 YOLO .pt 模型檔");
+    setText("#model-import-drop-help", "點擊選擇或拖曳檔案到此。可接受：.pt；可作為 CNN/YOLO 訓練起點。");
+    if (submit) submit.innerHTML = `<i class="fa-solid fa-file-import"></i> Import YOLO .pt`;
+  }
+  if (input) input.value = "";
+  updateModelImportSelectedFile();
+}
+
+function renderModelImportValidationResult(result, resultEl) {
+  if (!resultEl) return;
+  const model = result?.model || {};
+  const validation = result?.validation || {};
+  const checks = Array.isArray(validation.checks) ? validation.checks : [];
+  resultEl.innerHTML = `
+    <div class="model-import-validation-report">
+      <strong>Imported ${escapeHtml(model.display_name || "--")}</strong>
+      <span>Status: <code>${escapeHtml(model.status || validation.status || "--")}</code></span>
+      <div class="model-import-checks">
+        ${checks.map((check) => `
+          <div class="model-import-check ${check.passed === false ? "failed" : check.skipped ? "skipped" : "passed"}">
+            <span>${escapeHtml(check.name || "--")}</span>
+            <code>${escapeHtml(check.skipped ? "skipped" : check.passed === false ? "failed" : "passed")}</code>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
 }
 
 export function renderTrainingMonitor() {
@@ -266,6 +515,14 @@ export function renderTrainingMonitor() {
   monitorEmpty?.classList.toggle("hidden", showMonitor);
   monitorActive?.classList.toggle("hidden", !showMonitor);
 
+  const epoch = Number(trainState.epoch || 0);
+  const totalEpochs = Number(trainState.total_epochs || 0);
+  const progressPercent = trainState.status === "completed"
+    ? 100
+    : totalEpochs > 0
+      ? Math.min(100, Math.max(0, (epoch / totalEpochs) * 100))
+      : 0;
+  updateGlobalTrainingProgress(trainState, progressPercent, showMonitor);
 
   setText("#train-status-label", trainState.status || "Idle");
   setText("#train-progress-text", showMonitor ? `Epoch ${trainState.epoch || 0} / ${trainState.total_epochs || "--"}` : "--");
@@ -294,6 +551,35 @@ export function renderTrainingMonitor() {
   setMetricsDashboardActive(hasMetrics);
 
   renderRunHistoryTable();
+}
+
+function updateGlobalTrainingProgress(trainState, progressPercent, showMonitor) {
+  if (!showMonitor) return;
+  const status = trainState.status || "idle";
+  const runId = trainState.run_id || appState.currentProjectId || "training";
+  const jobId = `training-${runId}`;
+  if (status === "training" || status === "stopping") {
+    activeGlobalTrainingJobs.add(jobId);
+  }
+  if ((status === "completed" || status === "failed") && !activeGlobalTrainingJobs.has(jobId)) {
+    return;
+  }
+  const payload = {
+    jobId,
+    title: status === "completed" ? "Training complete" : status === "failed" ? "Training failed" : status === "stopping" ? "Stopping training" : "Training in progress",
+    message: `Epoch ${trainState.epoch || 0} / ${trainState.total_epochs || "--"}`,
+    percent: progressPercent,
+    caption: status === "completed" ? "Complete" : status === "failed" ? "Failed" : "Training"
+  };
+  if (status === "completed") {
+    eventBus.emit("progress:complete", { ...payload, percent: 100 });
+    activeGlobalTrainingJobs.delete(jobId);
+  } else if (status === "failed") {
+    eventBus.emit("progress:failed", payload);
+    activeGlobalTrainingJobs.delete(jobId);
+  } else {
+    eventBus.emit("progress:update", payload);
+  }
 }
 
 export async function loadRecommendedConfig() {
@@ -430,21 +716,26 @@ function updateTrainingModelRegistrySkeleton(status) {
   const select = qs("#train-model");
   if (!select) return;
   const modelName = select.value || "--";
+  const selectedOption = select.selectedOptions?.[0];
   const taskEl = qs("#training-model-task");
   const nameEl = qs("#training-model-selected-name");
   const noteEl = qs("#training-model-compatibility");
   const taskType = String(status.taskType || "").toLowerCase();
   const isSegTask = taskType.includes("segmentation") || taskType.includes("seg");
-  const isSegModel = modelName.includes("-seg");
-  const modelTask = isSegModel
+  const selectedTaskFamily = selectedOption?.dataset?.taskFamily || "";
+  const source = selectedOption?.dataset?.source || "--";
+  const backend = selectedOption?.dataset?.backend || "--";
+  const statusText = selectedOption?.dataset?.status || "--";
+  const isSegModel = selectedTaskFamily === "segmentation" || modelName.includes("-seg");
+  const modelTask = selectedTaskFamily === "segmentation" || isSegModel
     ? t("training.modelRegistry.yoloV8Seg")
     : t("training.modelRegistry.yoloV8Det");
   const compatible = !isSegTask || isSegModel;
 
-  setText("#training-model-selected-name", modelName);
+  setText("#training-model-selected-name", selectedOption?.textContent || modelName);
   setText("#training-model-task", modelTask);
-  if (nameEl) nameEl.title = modelName;
-  if (taskEl) taskEl.title = modelTask;
+  if (nameEl) nameEl.title = `${modelName} · ${source} · ${backend} · ${statusText}`;
+  if (taskEl) taskEl.title = `${modelTask} · ${source} · ${backend} · ${statusText}`;
   if (noteEl) {
     noteEl.textContent = compatible
       ? t("training.modelRegistry.compatible")

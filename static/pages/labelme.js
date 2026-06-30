@@ -274,6 +274,69 @@ function clearCsvMappingWizard(clearPending = true) {
   if (clearPending) pendingAnnotationFiles = [];
 }
 
+function canDeleteFailedTxtIssue(item) {
+  const file = String(item?.file || "");
+  const message = String(item?.message || "");
+  return file.toLowerCase().endsWith(".txt") && message.includes("Image file not found");
+}
+
+function failedTxtDeleteButton(item) {
+  if (!canDeleteFailedTxtIssue(item)) return "";
+  const file = String(item.file || "");
+  return `
+    <button
+      type="button"
+      class="btn btn-danger btn-xs btn-delete-failed-txt"
+      data-failed-txt="${escapeHtml(file)}"
+      title="Delete this staged TXT from the import draft"
+    >刪除此 TXT</button>
+  `;
+}
+
+function bindDeleteFailedTxtButtons(root = document) {
+  root.querySelectorAll?.(".btn-delete-failed-txt").forEach((btn) => {
+    if (btn.dataset.boundDeleteFailedTxt === "1") return;
+    btn.dataset.boundDeleteFailedTxt = "1";
+    btn.addEventListener("click", () => deleteFailedAnnotationTxt(btn.dataset.failedTxt || "", btn));
+  });
+}
+
+async function deleteFailedAnnotationTxt(fileName, button) {
+  const report = appState.latestAnnotationImport || appState.currentProject?.last_annotation_import;
+  if (!appState.currentProjectId || !report?.import_id || !fileName) {
+    eventBus.emit("toast", "No failed TXT import item is available to delete.");
+    return;
+  }
+
+  const confirmed = window.confirm([
+    "Delete this failed TXT from the import draft?",
+    "",
+    fileName,
+    "",
+    "This only deletes the staged copy inside the current import batch.",
+    "It will not delete your original external source file."
+  ].join("\n"));
+  if (!confirmed) return;
+
+  if (button) button.disabled = true;
+  try {
+    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/annotations/import/${report.import_id}/failed-source?file=${encodeURIComponent(fileName)}`, {
+      method: "DELETE"
+    });
+    if (result?.report) {
+      appState.latestAnnotationImport = result.report;
+      if (appState.currentProject) appState.currentProject.last_annotation_import = result.report;
+      renderAnnotationImportReport();
+      if (!qs("#annotation-import-report-modal")?.hidden) openImportReportModal();
+    }
+    eventBus.emit("toast", `Deleted failed TXT from import draft: ${fileName}`);
+  } catch (err) {
+    eventBus.emit("toast", `Delete failed TXT failed: ${err.message}`);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 async function applyLatestAnnotationImport() {
   const report = appState.latestAnnotationImport || appState.currentProject?.last_annotation_import;
   if (!appState.currentProjectId || !report?.import_id) {
@@ -600,6 +663,7 @@ function renderAnnotationImportReport() {
           <div class="summary-warning-item">
             <strong>${escapeHtml(item.file || "--")}</strong>
             <span>${escapeHtml(item.message || "")}</span>
+            ${failedTxtDeleteButton(item)}
           </div>
         `).join("")}
         ${issueRows.length > 12 ? `<p class="form-hint">Showing 12 of ${issueRows.length} issues. See import_report.json for the full list.</p>` : ""}
@@ -607,6 +671,7 @@ function renderAnnotationImportReport() {
     ` : `<p class="form-hint ready">${escapeHtml(t("labelme.importReportNoIssues"))}</p>`}
   `);
   qs("#btn-open-import-report-modal-inline")?.addEventListener("click", openImportReportModal);
+  bindDeleteFailedTxtButtons(container);
 }
 
 function draftImportMap() {
@@ -649,15 +714,20 @@ function openImportReportModal() {
       <h3>Errors / warnings</h3>
       <div class="table-wrap modal-report-table">
         <table class="data-table">
-          <thead><tr><th>File</th><th>Message</th></tr></thead>
+          <thead><tr><th>File</th><th>Message</th><th>Action</th></tr></thead>
           <tbody>${issues.length ? issues.map((item) => `
-            <tr><td><code>${escapeHtml(item.file || "--")}</code></td><td>${escapeHtml(item.message || "")}</td></tr>
-          `).join("") : `<tr><td colspan="2">${escapeHtml(t("labelme.importReportNoIssues"))}</td></tr>`}</tbody>
+            <tr>
+              <td><code>${escapeHtml(item.file || "--")}</code></td>
+              <td>${escapeHtml(item.message || "")}</td>
+              <td>${failedTxtDeleteButton(item)}</td>
+            </tr>
+          `).join("") : `<tr><td colspan="3">${escapeHtml(t("labelme.importReportNoIssues"))}</td></tr>`}</tbody>
         </table>
       </div>
     `);
   }
   modal.hidden = false;
+  bindDeleteFailedTxtButtons(body);
 }
 
 function closeImportReportModal() {

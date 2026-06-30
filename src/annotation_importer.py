@@ -171,6 +171,57 @@ class AnnotationImporter:
         }
 
     @staticmethod
+    def delete_failed_source_file(project: Dict[str, Any], import_id: str, filename: str) -> Dict[str, Any]:
+        layout = ProjectLayout.from_project(project)
+        root = AnnotationImporter.draft_root(layout, import_id)
+        report_path = root / "import_report.json"
+        source_dir = root / "source"
+        if not report_path.exists() or not source_dir.exists():
+            raise ValueError(f"Import draft not found: {import_id}")
+
+        cleaned_name = safe_filename(filename)
+        if not cleaned_name.lower().endswith(".txt"):
+            raise ValueError("Only failed YOLO TXT source files can be deleted from an import draft.")
+
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        errors = report.get("errors") or []
+        matching_error = next(
+            (
+                item for item in errors
+                if item.get("file") == cleaned_name
+                and "Image file not found" in str(item.get("message", ""))
+            ),
+            None,
+        )
+        if not matching_error:
+            raise ValueError(f"Failed TXT entry not found in import report: {cleaned_name}")
+
+        source_path = (source_dir / cleaned_name).resolve()
+        if source_path.parent != source_dir.resolve():
+            raise ValueError("Unsafe import source path.")
+        if not source_path.exists():
+            raise ValueError(f"Import source file not found: {cleaned_name}")
+
+        source_path.unlink()
+        report["errors"] = [item for item in errors if item.get("file") != cleaned_name]
+        report["failed"] = max(0, int(report.get("failed", 0) or 0) - 1)
+        report["total_files"] = max(0, int(report.get("total_files", 0) or 0) - 1)
+        report["yolo_txt"] = max(0, int(report.get("yolo_txt", 0) or 0) - 1)
+        report.setdefault("deleted_source_files", []).append({
+            "file": cleaned_name,
+            "reason": matching_error.get("message", ""),
+            "deleted_at": datetime.now().isoformat(),
+        })
+        report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+
+        return {
+            "deleted": True,
+            "import_id": import_id,
+            "file": cleaned_name,
+            "report": report,
+        }
+
+    @staticmethod
     def preview_apply_import(project: Dict[str, Any], import_id: str) -> Dict[str, Any]:
         layout = ProjectLayout.from_project(project)
         root = AnnotationImporter.draft_root(layout, import_id)

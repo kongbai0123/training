@@ -16,25 +16,27 @@ import {
   setHTML, 
   escapeHtml 
 } from "./utils.js";
+import { initGlobalProgressHud } from "./ui/progress_hud.js";
 
 // 頛??辣
 import { initDashboard, renderDashboard } from "./pages/dashboard.js";
-import { initProjects, renderProjectsPage } from "./pages/projects.js";
-import { initDataset, renderDatasetPage } from "./pages/dataset.js";
+import { initProjects, renderProjectsPage } from "./pages/projects.js?v=20260630-class-batch-infer";
+import { initDataset, renderDatasetPage } from "./pages/dataset.js?v=20260630-progress-hud";
 import { initLabelMe, renderLabelMeManager } from "./pages/labelme.js";
 import { initSplit, renderSplitPage } from "./pages/split.js";
 import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js?v=20260625-augmentation-p0";
-import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js";
-import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260630-ui-init-fix";
+import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js?v=20260630-training-row-dropzone";
+import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260630-nav-import-grid-fix";
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js";
 import { initModelCompare, renderModelComparePage } from "./pages/model_compare.js?v=20260630-ui-init-fix";
-import { initInference, renderInferencePage } from "./pages/inference.js";
+import { initInference, renderInferencePage } from "./pages/inference.js?v=20260630-class-batch-infer";
 import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260624-auto-label-readable";
 import { initExport, renderExportPage } from "./pages/export.js";
 import { initSettings, renderSettingsPage } from "./pages/settings.js";
 
 async function bootstrapApp() {
   initPreferences();
+  initGlobalProgressHud();
   bindGlobalNavigation();
   bindInfoTooltips();
 
