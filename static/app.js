@@ -25,9 +25,9 @@ import { initLabelMe, renderLabelMeManager } from "./pages/labelme.js";
 import { initSplit, renderSplitPage } from "./pages/split.js";
 import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js?v=20260625-augmentation-p0";
 import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js";
-import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260629-pdf-stabilization";
+import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260630-ui-init-fix";
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js";
-import { initModelCompare, renderModelComparePage } from "./pages/model_compare.js?v=20260629-pdf-stabilization";
+import { initModelCompare, renderModelComparePage } from "./pages/model_compare.js?v=20260630-ui-init-fix";
 import { initInference, renderInferencePage } from "./pages/inference.js";
 import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260624-auto-label-readable";
 import { initExport, renderExportPage } from "./pages/export.js";
@@ -788,33 +788,33 @@ function buildAugmentationRightPanel(status) {
 
   const actions = [];
   const warnings = [];
-  const notes = ["Val/Test 蝬剜??嚗??隡啗??援瞍?];
+  const notes = ["Val/Test images are not augmented; augmentation is applied to the train split only."];
   if (!status.hasProject) {
-    actions.push("撱箇?????獢?);
-    warnings.push("撠??撠???);
+    actions.push("Create or open a project first.");
+    warnings.push("No active project.");
   } else if (!status.hasDataset) {
-    actions.push("?? Dataset ?臬????);
-    actions.push("?郊璅酉??);
-    actions.push("撱箇? Train / Val / Test split??);
-    warnings.push("撠?臬??嚗瘜脰??游???);
+    actions.push("Import images in Dataset.");
+    actions.push("Sync annotations in LabelMe.");
+    actions.push("Create a Train / Val / Test split.");
+    warnings.push("Dataset is missing, so augmentation cannot run.");
   } else if (!status.splitComplete || trainCount === 0) {
-    actions.push("撱箇? Train / Val / Test split??);
-    warnings.push("憟 Train-only augmentation ????撱箇? split??);
+    actions.push("Create a Train / Val / Test split.");
+    warnings.push("Train-only augmentation requires a ready split.");
   } else if (!hasPreviewImage) {
-    actions.push("蝣箄? Train split 銝剜??舫?閬賢???);
-    warnings.push("?桀?瘝??舫?閬賢???);
+    actions.push("Select a train image for preview.");
+    warnings.push("No preview image is selected.");
   } else if (previewStale) {
-    actions.push("??Ｙ? Preview??);
-    actions.push("瑼Ｘ Risk Check??);
-    warnings.push("閮剖?撌脰??湛?Preview ?閬??啁??);
+    actions.push("Regenerate the preview.");
+    actions.push("Run the risk check.");
+    warnings.push("The preview may be stale after settings changed.");
   } else if (!previewReady) {
-    actions.push("?豢? preset ?閮??乓?);
-    actions.push("?Ｙ? Preview??);
-    actions.push("瑼Ｘ Risk Check??);
+    actions.push("Choose an augmentation preset.");
+    actions.push("Generate a preview.");
+    actions.push("Run the risk check.");
   } else {
-    actions.push("瑼Ｘ?汗蝯???);
-    actions.push("憟??Train Split??);
-    actions.push("?脰?璅∪?閮毀??);
+    actions.push("Review the preview result.");
+    actions.push("Confirm the train split target.");
+    actions.push("Start the augmentation job.");
   }
 
   return {
@@ -1011,25 +1011,25 @@ function renderPageGuards(pageId, status) {
   };
 
   if (!status.hasProject) {
-    const guard = statusGuard("warning", "撠頛撠?", ["甇日??舐汗嚗???撌脣??具?], "?? Projects 撱箇?????獢?);
+    const guard = statusGuard("warning", "No project opened", ["This page is available, but actions are disabled."], "Open Projects or Browse History to choose a project.");
     Object.keys(guards).forEach((key) => guards[key].push(guard));
   }
   if (status.hasProject && !status.hasDataset) {
-    guards.labelme.push(statusGuard("warning", "撠?臬鞈???, ["Images folder ?桀?瘝?????], "?? Dataset ?臬???蔣?撟??));
-    guards.split.push(statusGuard("warning", "撠?臬鞈???, ["銝撱箇? Train / Val / Test??], "????Dataset ?臬??));
-    guards.training.push(statusGuard("danger", "?桀??⊥???閮毀", ["撠?臬鞈???], "?? Dataset ?臬????));
+    guards.labelme.push(statusGuard("warning", "Dataset missing", ["Images folder is empty."], "Import images from Dataset first."));
+    guards.split.push(statusGuard("warning", "Dataset missing", ["Train / Val / Test cannot be created yet."], "Import images from Dataset first."));
+    guards.training.push(statusGuard("danger", "Training blocked", ["Dataset is missing."], "Import images from Dataset first."));
   }
   if (status.hasDataset && !status.labelme.synced) {
-    guards.training.push(statusGuard("danger", "?桀??⊥???閮毀", ["撠??? LabelMe 璅酉???], "?? LabelMe ???唳???閮餌??????閮毀?澆???));
-    guards.split.push(statusGuard("info", "LabelMe 撠??", ["甇日?畾萎??航身摰?split UI嚗?甇??閮毀??敺?LabelMe JSON 頧?摰???], "?? LabelMe ???唳???閮餌????瑁?頧???));
+    guards.training.push(statusGuard("danger", "Training blocked", ["LabelMe annotations are not synced."], "Open LabelMe and sync annotations before training."));
+    guards.split.push(statusGuard("info", "LabelMe pending", ["Split can be configured after LabelMe JSON is ready."], "Open LabelMe and sync annotations first."));
   }
   if (status.hasDataset && !status.splitComplete) {
-    guards.training.push(statusGuard("danger", "?桀??⊥???閮毀", ["撠撱箇? Train / Val / Test??], "?? Split 撱箇?鞈????));
-    guards.augmentation.push(statusGuard("warning", "撠摰? split", ["憟 augmentation ??閬??target split??], "?? Split 撱箇? Train / Val / Test??));
+    guards.training.push(statusGuard("danger", "Training blocked", ["Train / Val / Test split is missing."], "Create a split before training."));
+    guards.augmentation.push(statusGuard("warning", "Split required", ["Augmentation requires a target train split."], "Create a Train / Val / Test split first."));
   }
   if (!status.bestModelExists) {
-    guards.evaluation.push(statusGuard("warning", "?桀?瘝??航?隡唳芋??, ["撠摰?閮毀???芰??best model??], "摰?閮毀敺??亦? mAP / IoU??));
-    guards.export.push(statusGuard("warning", "?桀?瘝??臬?箸芋??, ["撠?曉?雿單芋????], "摰?閮毀敺??臬 PT / ONNX??));
+    guards.evaluation.push(statusGuard("warning", "No trained model", ["No best model is available yet."], "Finish training before reviewing mAP / IoU."));
+    guards.export.push(statusGuard("warning", "No exportable model", ["No trained model is available for export."], "Finish training before exporting PT / ONNX."));
   }
 
   const activeGuards = guards[pageId] || [];
