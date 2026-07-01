@@ -1,4 +1,4 @@
-import { eventBus } from "../event_bus.js";
+﻿import { eventBus } from "../event_bus.js";
 import { appState } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, escapeHtml, setText } from "../utils.js";
@@ -15,12 +15,28 @@ export const trainingModeState = {
     backend: "pytorch_lstm",
     trainingEnabled: false,
     readiness: null,
+    config: null,
+    configInspection: null,
+    configValidation: null,
+    windowSummary: null,
+    configMismatches: [],
+    configLoading: false,
+    datasetImporting: false,
     readinessLoading: false,
     trainingStarting: false,
+    modelCatalog: [],
+    modelCatalogLoading: false,
+    modelGuides: null,
+    modelGuidesLoading: false,
     inferenceModels: [],
     inferenceLoading: false,
     inferenceRunning: false,
-    inferenceResult: null
+    inferenceResult: null,
+    evaluationLoading: false,
+    evaluationRuns: [],
+    evaluationMetrics: null,
+    evaluationArtifacts: [],
+    evaluationRunId: ""
   }
 };
 
@@ -44,8 +60,9 @@ export function initTrainingModeSidebar() {
       ensureTrainingPageActive();
       renderTrainingModeSidebar();
       renderTrainingWorkspace();
-      loadRnnReadiness();
+      loadRnnConfig({ force: true });
       if (trainingModeState.activeRnnPanel === "sequence-test") loadRnnInferenceModels();
+      if (trainingModeState.activeRnnPanel === "evaluation") loadRnnEvaluation({ force: true });
     });
   });
 
@@ -72,12 +89,13 @@ export function initTrainingModeSidebar() {
         eventBus.emit("navigate", trainingModeState.activeMode === "cnn" ? "dashboard" : "training");
         renderTrainingModeSidebar();
         renderTrainingWorkspace();
-        if (trainingModeState.activeMode === "rnn") loadRnnReadiness();
+        if (trainingModeState.activeMode === "rnn") loadRnnConfig({ force: true });
       }
     });
   });
 
   initRnnPreviewEvents();
+  loadRnnModelGuides();
   renderTrainingModeSidebar();
   renderTrainingWorkspace();
 }
@@ -91,7 +109,7 @@ export function setTrainingMode(mode) {
   if (mode === "rnn") ensureTrainingPageActive();
   renderTrainingModeSidebar();
   renderTrainingWorkspace();
-  if (mode === "rnn") loadRnnReadiness();
+  if (mode === "rnn") loadRnnConfig({ force: true });
 }
 
 function ensureTrainingPageActive() {
@@ -171,9 +189,15 @@ export function renderTrainingWorkspace() {
   });
 
   renderRnnReadiness();
+  if (!isCnn && trainingModeState.activeRnnPanel === "evaluation") {
+    loadRnnEvaluation();
+  }
 }
 
 export function initRnnPreviewEvents() {
+  preferGpuDevice("#rnn-device");
+  preferGpuDevice("#rnn-inference-device");
+
   qs("#rnn-create-project")?.addEventListener("click", () => {
     eventBus.emit("open-create-project-modal", {
       taskType: "sequence_classification",
@@ -188,12 +212,55 @@ export function initRnnPreviewEvents() {
     eventBus.emit("toast", getRnnStartBlockerMessage());
   }));
   ["#rnn-sequence-length", "#rnn-stride", "#rnn-horizon"].forEach((selector) => {
-    qs(selector)?.addEventListener("change", () => loadRnnReadiness({ force: true }));
+    qs(selector)?.addEventListener("change", () => saveRnnFeatureConfig({ silent: true }));
+  });
+  qs("#rnn-refresh-config")?.addEventListener("click", () => loadRnnConfig({ force: true }));
+  qs("#rnn-dataset-file")?.addEventListener("change", updateRnnDatasetDropzone);
+  qs("#rnn-dataset-dropzone")?.addEventListener("click", () => qs("#rnn-dataset-file")?.click());
+  qs("#rnn-dataset-dropzone")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") qs("#rnn-dataset-file")?.click();
+  });
+  ["dragenter", "dragover"].forEach((eventName) => {
+    qs("#rnn-dataset-dropzone")?.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      qs("#rnn-dataset-dropzone")?.classList.add("drag-over");
+    });
+  });
+  ["dragleave", "drop"].forEach((eventName) => {
+    qs("#rnn-dataset-dropzone")?.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      qs("#rnn-dataset-dropzone")?.classList.remove("drag-over");
+    });
+  });
+  qs("#rnn-dataset-dropzone")?.addEventListener("drop", (event) => {
+    const file = event.dataTransfer?.files?.[0];
+    const input = qs("#rnn-dataset-file");
+    if (file && input) {
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      input.files = transfer.files;
+      updateRnnDatasetDropzone();
+    }
+  });
+  qs("#rnn-import-dataset")?.addEventListener("click", importRnnDataset);
+  qs("#rnn-feature-columns")?.addEventListener("input", renderRnnFeatureChips);
+  qs("#rnn-save-feature-config")?.addEventListener("click", () => saveRnnFeatureConfig());
+  qs("#rnn-model-family")?.addEventListener("change", () => {
+    syncRnnModelSelection();
+    renderRnnModelGuide();
+    updateRnnStartControls();
+  });
+  qs("#rnn-task-head")?.addEventListener("change", () => {
+    renderRnnModelSelector();
+    syncRnnModelSelection();
+    renderRnnModelGuide();
+    saveRnnFeatureConfig({ silent: true });
   });
   ["#rnn-start-disabled", "#rnn-training-disabled-action"].forEach((selector) => {
     qs(selector)?.addEventListener("click", startRnnTraining);
   });
   qs("#rnn-refresh-models")?.addEventListener("click", () => loadRnnInferenceModels({ force: true }));
+  qs("#rnn-refresh-evaluation")?.addEventListener("click", () => loadRnnEvaluation({ force: true }));
   qs("#rnn-inference-model")?.addEventListener("change", updateRnnInferenceControls);
   qs("#rnn-inference-csv-file")?.addEventListener("change", () => {
     if (qs("#rnn-inference-csv-file")?.files?.[0]) {
@@ -240,6 +307,228 @@ async function loadRnnReadiness(options = {}) {
     trainingModeState.rnn.readinessLoading = false;
     renderRnnReadiness();
   }
+}
+
+async function loadRnnConfig(options = {}) {
+  if (!appState.currentProjectId || (trainingModeState.rnn.configLoading && !options.force)) {
+    renderRnnConfig();
+    return;
+  }
+  trainingModeState.rnn.configLoading = true;
+  renderRnnConfig();
+  try {
+    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/rnn/config`);
+    trainingModeState.rnn.config = payload.config || null;
+    trainingModeState.rnn.configInspection = payload.inspection || null;
+    trainingModeState.rnn.configValidation = payload.validation || null;
+    trainingModeState.rnn.windowSummary = payload.window || payload.validation?.window || null;
+    trainingModeState.rnn.configMismatches = payload.mismatches || [];
+    applyRnnConfigToForm();
+    await loadRnnModelCatalog({ force: options.force });
+    await loadRnnReadiness({ force: true });
+  } catch (err) {
+    eventBus.emit("toast", `RNN config load failed: ${err.message}`);
+  } finally {
+    trainingModeState.rnn.configLoading = false;
+    renderRnnConfig();
+  }
+}
+
+function applyRnnConfigToForm() {
+  const config = trainingModeState.rnn.config || {};
+  const setValue = (selector, value) => {
+    const el = qs(selector);
+    if (el && value !== undefined && value !== null) el.value = value;
+  };
+  setValue("#rnn-feature-columns", (config.feature_columns || []).join(", "));
+  setValue("#rnn-target-column", config.target_column || "");
+  setValue("#rnn-sequence-column", config.sequence_column || "");
+  setValue("#rnn-time-column", config.time_column || "");
+  setValue("#rnn-sequence-length", config.sequence_length || 16);
+  setValue("#rnn-stride", config.stride || 8);
+  setValue("#rnn-horizon", config.horizon || 1);
+  setValue("#rnn-task-head", config.task_head || "classification");
+  renderRnnFeatureChips();
+  syncRnnModelSelection();
+  renderRnnModelGuide();
+}
+
+function parseRnnFeatureInput() {
+  const value = qs("#rnn-feature-columns")?.value || "";
+  const seen = new Set();
+  return value.split(/[,;\n\r]+/).map((item) => item.trim()).filter((item) => {
+    if (!item || seen.has(item)) return false;
+    seen.add(item);
+    return true;
+  });
+}
+
+async function saveRnnFeatureConfig(options = {}) {
+  if (!appState.currentProjectId) {
+    if (!options.silent) eventBus.emit("toast", "Open an RNN project before saving feature config.");
+    return;
+  }
+  const payload = {
+    feature_columns: parseRnnFeatureInput(),
+    target_column: qs("#rnn-target-column")?.value?.trim() || "",
+    sequence_column: qs("#rnn-sequence-column")?.value?.trim() || "",
+    time_column: qs("#rnn-time-column")?.value?.trim() || "",
+    sequence_length: Number(qs("#rnn-sequence-length")?.value || 16),
+    stride: Number(qs("#rnn-stride")?.value || 8),
+    horizon: Number(qs("#rnn-horizon")?.value || 1),
+    task_head: qs("#rnn-task-head")?.value || "classification"
+  };
+  try {
+    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/rnn/config`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    trainingModeState.rnn.config = result.config || payload;
+    trainingModeState.rnn.configInspection = result.inspection || trainingModeState.rnn.configInspection;
+    trainingModeState.rnn.configValidation = result.validation || null;
+    trainingModeState.rnn.windowSummary = result.window || result.validation?.window || null;
+    trainingModeState.rnn.configMismatches = result.mismatches || [];
+    renderRnnConfig(result.validation);
+    await loadRnnReadiness({ force: true });
+    if (!options.silent) eventBus.emit("toast", "RNN feature config saved.");
+  } catch (err) {
+    if (!options.silent) eventBus.emit("toast", `RNN feature config save failed: ${err.message}`);
+  }
+}
+
+function updateRnnDatasetDropzone() {
+  const file = qs("#rnn-dataset-file")?.files?.[0];
+  const zone = qs("#rnn-dataset-dropzone");
+  if (!zone) return;
+  zone.classList.toggle("has-file", Boolean(file));
+  const label = zone.querySelector("strong");
+  if (label) label.textContent = file ? file.name : "? CSV / ZIP嚗?暺??豢?瑼?";
+}
+
+async function importRnnDataset() {
+  if (!appState.currentProjectId) {
+    eventBus.emit("toast", "Open an RNN project before importing sequence data.");
+    return;
+  }
+  const file = qs("#rnn-dataset-file")?.files?.[0];
+  if (!file) {
+    eventBus.emit("toast", "Please select a CSV or ZIP file first.");
+    return;
+  }
+  const lowerName = file.name.toLowerCase();
+  if (!lowerName.endsWith(".csv") && !lowerName.endsWith(".zip")) {
+    eventBus.emit("toast", "RNN sequence import only accepts .csv or .zip.");
+    return;
+  }
+  trainingModeState.rnn.datasetImporting = true;
+  renderRnnConfig();
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/rnn/dataset/import`, {
+      method: "POST",
+      body: form
+    });
+    trainingModeState.rnn.config = result.config || null;
+    trainingModeState.rnn.configInspection = result.dataset?.inspection || result.inspection || null;
+    trainingModeState.rnn.configValidation = result.validation || null;
+    trainingModeState.rnn.windowSummary = result.window || result.validation?.window || null;
+    trainingModeState.rnn.configMismatches = result.mismatches || [];
+    applyRnnConfigToForm();
+    await loadRnnReadiness({ force: true });
+    eventBus.emit("toast", "RNN sequence dataset imported.");
+  } catch (err) {
+    eventBus.emit("toast", `RNN dataset import failed: ${err.message}`);
+  } finally {
+    trainingModeState.rnn.datasetImporting = false;
+    renderRnnConfig();
+  }
+}
+
+function renderRnnConfig(validation = null) {
+  const inspection = trainingModeState.rnn.configInspection || {};
+  const config = trainingModeState.rnn.config || {};
+  const headers = inspection.headers || [];
+  const files = inspection.files || [];
+  const badge = qs("#rnn-dataset-badge");
+  if (badge) {
+    badge.className = `summary-badge ${files.length ? "badge-success" : "badge-warning"}`;
+    badge.textContent = trainingModeState.rnn.datasetImporting ? "Importing" : files.length ? `${files.length} CSV` : "CSV required";
+  }
+  const featureDimInput = qs("#rnn-feature-dim");
+  if (featureDimInput) featureDimInput.value = String((config.feature_columns || []).length || inspection.feature_dim || 0);
+  const hash = config.feature_config_hash ? `hash ${String(config.feature_config_hash).slice(0, 8)}` : "No config";
+  setText("#rnn-config-hash-badge", hash);
+  const preview = qs("#rnn-sequence-dataset-preview");
+  if (preview) {
+    const rows = inspection.preview_rows || [];
+    if (rows.length) {
+      const cols = headers.slice(0, 8);
+      preview.innerHTML = `<div class="rnn-preview-table-wrap"><table class="rnn-preview-table"><thead><tr>${cols.map((col) => `<th>${escapeHtml(col)}</th>`).join("")}</tr></thead><tbody>${rows.slice(0, 6).map((row) => `<tr>${cols.map((col) => `<td>${escapeHtml(row[col] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    } else {
+      preview.textContent = "sequence_id, timestep, feature_1, feature_2, target";
+    }
+  }
+  renderRnnFeatureChips(validation);
+  renderRnnWindowSummary(validation);
+  renderRnnConfigMismatch();
+  renderRnnModelGuide();
+}
+
+function renderRnnWindowSummary(validation = null) {
+  const windowSummary = validation?.window || trainingModeState.rnn.windowSummary || trainingModeState.rnn.configValidation?.window || {};
+  const badge = qs("#rnn-window-status-badge");
+  const warning = qs("#rnn-window-warning");
+  const summary = qs("#rnn-window-summary");
+  const status = windowSummary.status || "warning";
+  if (badge) {
+    badge.className = `summary-badge ${status === "ok" ? "badge-success" : status === "error" ? "badge-danger" : "badge-warning"}`;
+    badge.textContent = status === "ok" ? "Ready" : status === "error" ? "Invalid" : "Needs CSV";
+  }
+  if (summary) {
+    const estimated = windowSummary.estimated_windows ?? "--";
+    const sequences = windowSummary.sequence_count ?? "--";
+    const minLength = windowSummary.min_sequence_length || "--";
+    const maxLength = windowSummary.max_sequence_length || "--";
+    summary.innerHTML = `
+      <div><span>Estimated windows</span><strong>${escapeHtml(estimated)}</strong></div>
+      <div><span>Sequence count</span><strong>${escapeHtml(sequences)}</strong></div>
+      <div><span>Min / Max length</span><strong>${escapeHtml(minLength)} / ${escapeHtml(maxLength)}</strong></div>
+    `;
+  }
+  if (warning) {
+    const messages = [...(windowSummary.errors || []), ...(windowSummary.warnings || [])];
+    warning.classList.toggle("hidden", !messages.length);
+    warning.innerHTML = messages.length
+      ? `<strong>Window config</strong><span>${messages.map((item) => escapeHtml(item)).join("<br>")}</span>`
+      : "";
+  }
+}
+
+function renderRnnFeatureChips(validation = null) {
+  const list = qs("#rnn-feature-chip-list");
+  if (!list) return;
+  const headers = new Set(trainingModeState.rnn.configInspection?.headers || []);
+  const validationStatus = new Map((validation?.feature_status || []).map((item) => [item.name, item]));
+  const features = parseRnnFeatureInput();
+  list.innerHTML = features.map((name) => {
+    const exists = validationStatus.get(name)?.exists ?? headers.has(name);
+    const cls = exists ? "valid" : "invalid";
+    return `<span class="rnn-chip ${cls}">${escapeHtml(name)}${exists ? "" : " 繚 missing"}</span>`;
+  }).join("");
+}
+
+function renderRnnConfigMismatch() {
+  const box = qs("#rnn-config-mismatch-warning");
+  if (!box) return;
+  const mismatches = trainingModeState.rnn.configMismatches || [];
+  box.classList.toggle("hidden", !mismatches.length);
+  if (!mismatches.length) {
+    box.textContent = "";
+    return;
+  }
+  box.innerHTML = `<strong>Feature config mismatch</strong><span>${escapeHtml(mismatches.length)} previous RNN run(s) use different feature config. Existing runs are kept, but direct comparison may be inconsistent.</span>`;
 }
 
 function renderRnnReadiness() {
@@ -296,6 +585,210 @@ function renderRnnReadiness() {
       </li>`;
     }).join("");
   }
+}
+
+async function loadRnnEvaluation(options = {}) {
+  if (!appState.currentProjectId) {
+    trainingModeState.rnn.evaluationRuns = [];
+    trainingModeState.rnn.evaluationMetrics = null;
+    trainingModeState.rnn.evaluationArtifacts = [];
+    trainingModeState.rnn.evaluationRunId = "";
+    renderRnnEvaluation();
+    return;
+  }
+  if (trainingModeState.rnn.evaluationLoading && !options.force) {
+    renderRnnEvaluation();
+    return;
+  }
+  if (!options.force && trainingModeState.rnn.evaluationRuns.length && trainingModeState.rnn.evaluationMetrics) {
+    renderRnnEvaluation();
+    return;
+  }
+
+  trainingModeState.rnn.evaluationLoading = true;
+  renderRnnEvaluation();
+  try {
+    const runsPayload = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs`);
+    const runs = (Array.isArray(runsPayload) ? runsPayload : []).filter(isSequenceEvaluationRun);
+    trainingModeState.rnn.evaluationRuns = runs;
+
+    const latestRun = runs[0] || null;
+    if (!latestRun?.run_id) {
+      trainingModeState.rnn.evaluationMetrics = null;
+      trainingModeState.rnn.evaluationArtifacts = [];
+      trainingModeState.rnn.evaluationRunId = "";
+      return;
+    }
+
+    const [metrics, artifacts] = await Promise.all([
+      apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${encodeURIComponent(latestRun.run_id)}/metrics`),
+      apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${encodeURIComponent(latestRun.run_id)}/artifacts`)
+    ]);
+    trainingModeState.rnn.evaluationMetrics = metrics || null;
+    trainingModeState.rnn.evaluationArtifacts = Array.isArray(artifacts) ? artifacts : [];
+    trainingModeState.rnn.evaluationRunId = latestRun.run_id;
+  } catch (err) {
+    eventBus.emit("toast", `RNN evaluation load failed: ${err.message}`);
+    trainingModeState.rnn.evaluationMetrics = null;
+    trainingModeState.rnn.evaluationArtifacts = [];
+  } finally {
+    trainingModeState.rnn.evaluationLoading = false;
+    renderRnnEvaluation();
+  }
+}
+
+function isSequenceEvaluationRun(run) {
+  const architecture = String(run?.architecture || "").toLowerCase();
+  const backend = String(run?.backend || "").toLowerCase();
+  const taskType = String(run?.task_type || run?.task || "").toLowerCase();
+  const model = String(run?.model || "").toLowerCase();
+  return (
+    architecture === "rnn" ||
+    backend === "pytorch_lstm" ||
+    backend === "sklearn_xgboost" ||
+    taskType.includes("sequence") ||
+    model.includes("xgboost")
+  );
+}
+
+function renderRnnEvaluation() {
+  const badge = qs("#rnn-eval-run-badge");
+  const message = qs("#rnn-eval-message");
+  if (!badge && !message) return;
+
+  const runs = trainingModeState.rnn.evaluationRuns || [];
+  const metrics = trainingModeState.rnn.evaluationMetrics || null;
+  const artifacts = trainingModeState.rnn.evaluationArtifacts || [];
+  const activeRun = runs.find((run) => run.run_id === trainingModeState.rnn.evaluationRunId) || runs[0] || null;
+  const summary = activeRun || {};
+  const bestMetrics = metrics?.best_metrics || summary.best_metrics || {};
+  const history = Array.isArray(metrics?.history) ? metrics.history : [];
+  const latestMetrics = history.length ? history[history.length - 1] : {};
+  const metricSource = { ...latestMetrics, ...bestMetrics };
+  const isRegression = String(metrics?.task_type || summary.task_type || "").toLowerCase().includes("regression") ||
+    metricSource["val/mae"] !== undefined || metricSource["val/rmse"] !== undefined;
+
+  if (badge) {
+    const backend = sequenceBackendLabel(summary);
+    badge.className = `summary-badge ${metrics ? "badge-success" : trainingModeState.rnn.evaluationLoading ? "badge-neutral" : "badge-warning"}`;
+    badge.textContent = trainingModeState.rnn.evaluationLoading ? "Loading" : activeRun ? backend : "No run";
+  }
+
+  const primary = isRegression
+    ? { label: "MAE", value: metricSource["val/mae"] ?? summary.primary_metric_value }
+    : { label: "Accuracy", value: metricSource["val/accuracy"] ?? summary.best_accuracy };
+  const secondary = isRegression
+    ? { label: "RMSE", value: metricSource["val/rmse"] }
+    : { label: "Macro-F1", value: metricSource["val/macro_f1"] ?? summary.primary_metric_value };
+
+  setText("#rnn-eval-primary-label", primary.label);
+  setText("#rnn-eval-primary-value", formatRnnMetric(primary.value));
+  setText("#rnn-eval-secondary-label", secondary.label);
+  setText("#rnn-eval-secondary-value", formatRnnMetric(secondary.value));
+  setText("#rnn-eval-train-loss", formatRnnMetric(metricSource["train/loss"]));
+  setText("#rnn-eval-val-loss", formatRnnMetric(metricSource["val/loss"]));
+
+  if (message) {
+    message.classList.toggle("hidden", Boolean(activeRun && !trainingModeState.rnn.evaluationLoading));
+    message.textContent = trainingModeState.rnn.evaluationLoading
+      ? "Loading sequence training metrics, artifacts, and run history..."
+      : activeRun
+        ? ""
+        : "No RNN or XGBoost training run found for this project.";
+  }
+
+  renderRnnEvaluationEpochRows(history);
+  renderRnnEvaluationArtifacts(artifacts, activeRun?.run_id || "");
+  renderRnnEvaluationRunHistory(runs);
+}
+
+function renderRnnEvaluationEpochRows(history) {
+  const tbody = qs("#rnn-eval-epoch-rows");
+  if (!tbody) return;
+  if (!Array.isArray(history) || !history.length) {
+    tbody.innerHTML = `<tr><td colspan="6">No metric rows.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = history.map((row, index) => {
+    const accuracyOrMae = row["val/accuracy"] ?? row["val/mae"];
+    const macroOrRmse = row["val/macro_f1"] ?? row["val/rmse"];
+    return `<tr>
+      <td><strong>${escapeHtml(row.epoch ?? index + 1)}</strong></td>
+      <td><code>${formatRnnMetric(row["train/loss"])}</code></td>
+      <td><code>${formatRnnMetric(row["val/loss"])}</code></td>
+      <td>${formatRnnMetric(accuracyOrMae)}</td>
+      <td>${formatRnnMetric(macroOrRmse)}</td>
+      <td><span class="badge badge-success">Completed</span></td>
+    </tr>`;
+  }).join("");
+}
+
+function renderRnnEvaluationArtifacts(artifacts, runId) {
+  const container = qs("#rnn-eval-artifact-list");
+  if (!container) return;
+  if (!Array.isArray(artifacts) || !artifacts.length || !runId) {
+    container.textContent = "No artifacts.";
+    return;
+  }
+  const priority = ["best.json", "last.json", "model_metadata.json", "metrics.json", "results.csv", "run_summary.json", "artifact_manifest.json"];
+  const sorted = [...artifacts].sort((a, b) => {
+    const ai = priority.indexOf(a.filename);
+    const bi = priority.indexOf(b.filename);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi) || String(a.filename).localeCompare(String(b.filename));
+  });
+  container.innerHTML = sorted.map((artifact) => {
+    const filename = artifact.filename || "artifact";
+    const relPath = artifact.rel_path || filename;
+    const sizeKb = artifact.size !== undefined ? `${(Number(artifact.size) / 1024).toFixed(1)} KB` : "--";
+    const url = `/api/projects/${appState.currentProjectId}/train/runs/${encodeURIComponent(runId)}/artifacts/download/${encodeURIComponent(filename)}?path=${encodeURIComponent(relPath)}`;
+    return `<div class="rnn-result-item">
+      <div>
+        <strong>${escapeHtml(filename)}</strong>
+        <span>${escapeHtml(relPath)} · ${escapeHtml(sizeKb)}</span>
+      </div>
+      <a class="btn btn-secondary btn-sm" href="${url}" target="_blank" download>Download</a>
+    </div>`;
+  }).join("");
+}
+
+function renderRnnEvaluationRunHistory(runs) {
+  const tbody = qs("#rnn-eval-run-history");
+  if (!tbody) return;
+  if (!Array.isArray(runs) || !runs.length) {
+    tbody.innerHTML = `<tr><td colspan="6">No sequence runs.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = runs.map((run) => {
+    const primaryLabel = run.primary_metric_name || (String(run.task_type || "").includes("regression") ? "MAE" : "Macro-F1");
+    const primaryValue = run.primary_metric_value ?? run.platform_score ?? run.best_macro_f1 ?? run.best_mae;
+    return `<tr>
+      <td><code>${escapeHtml(run.run_id || "--")}</code></td>
+      <td>${escapeHtml(run.model || "--")}</td>
+      <td>${escapeHtml(sequenceBackendLabel(run))}</td>
+      <td>${escapeHtml(primaryLabel)} ${formatRnnMetric(primaryValue)}</td>
+      <td><span class="badge ${run.status === "completed" ? "badge-success" : "badge-warning"}">${escapeHtml(run.status || "--")}</span></td>
+      <td>${escapeHtml(formatRnnDate(run.completed_at || run.created_at || run.started_at))}</td>
+    </tr>`;
+  }).join("");
+}
+
+function sequenceBackendLabel(run = {}) {
+  const backend = String(run.backend || "").toLowerCase();
+  if (backend === "sklearn_xgboost") return "XGBoost";
+  if (backend === "pytorch_lstm") return "LSTM / GRU";
+  return run.backend || "Sequence";
+}
+
+function formatRnnMetric(value, digits = 3) {
+  if (value === null || value === undefined || value === "" || Number.isNaN(Number(value))) return "--";
+  return Number(value).toFixed(digits);
+}
+
+function formatRnnDate(value) {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
 }
 
 async function loadRnnInferenceModels(options = {}) {
@@ -377,7 +870,7 @@ async function runRnnSequenceInference(event) {
 
   const form = new FormData();
   form.append("model_id", qs("#rnn-inference-model")?.value || "");
-  form.append("device", qs("#rnn-inference-device")?.value || "cpu");
+  form.append("device", qs("#rnn-inference-device")?.value || "gpu");
   const file = qs("#rnn-inference-csv-file")?.files?.[0];
   const csvPath = qs("#rnn-inference-csv-path")?.value?.trim();
   if (file) form.append("file", file);
@@ -428,6 +921,195 @@ function renderRnnInferenceResult() {
   `;
 }
 
+async function loadRnnModelCatalog(options = {}) {
+  if (!appState.currentProjectId) {
+    trainingModeState.rnn.modelCatalog = getFallbackRnnModelCatalog();
+    renderRnnModelSelector();
+    return;
+  }
+  if (trainingModeState.rnn.modelCatalogLoading && !options.force) {
+    renderRnnModelSelector();
+    return;
+  }
+  if (trainingModeState.rnn.modelCatalog.length && !options.force) {
+    renderRnnModelSelector();
+    return;
+  }
+
+  trainingModeState.rnn.modelCatalogLoading = true;
+  renderRnnModelSelector();
+  try {
+    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/models/catalog?architecture=rnn&usage=all`);
+    const models = Array.isArray(payload.models) ? payload.models : [];
+    trainingModeState.rnn.modelCatalog = models.length ? models : getFallbackRnnModelCatalog();
+  } catch (err) {
+    trainingModeState.rnn.modelCatalog = getFallbackRnnModelCatalog();
+    eventBus.emit("toast", `RNN model catalog load failed: ${err.message}`);
+  } finally {
+    trainingModeState.rnn.modelCatalogLoading = false;
+    renderRnnModelSelector();
+  }
+}
+
+function getFallbackRnnModelCatalog() {
+  return [
+    { model_id: "fallback.rnn.lstm-classifier", display_name: "LSTM Classifier", backend: "pytorch_lstm", task_family: "sequence_classification", selector_value: "lstm", guide_key: "lstm_classification", trainable: true, training_enabled: true, status: "available" },
+    { model_id: "fallback.rnn.lstm-regressor", display_name: "LSTM Regressor", backend: "pytorch_lstm", task_family: "sequence_regression", selector_value: "lstm", guide_key: "lstm_regression", trainable: true, training_enabled: true, status: "available" },
+    { model_id: "fallback.rnn.gru-classifier", display_name: "GRU Classifier", backend: "pytorch_lstm", task_family: "sequence_classification", selector_value: "gru", guide_key: "gru_classification", trainable: true, training_enabled: true, status: "available" },
+    { model_id: "fallback.rnn.gru-regressor", display_name: "GRU Regressor", backend: "pytorch_lstm", task_family: "sequence_regression", selector_value: "gru", guide_key: "gru_regression", trainable: true, training_enabled: true, status: "available" },
+    { model_id: "fallback.rnn.bilstm-classifier", display_name: "BiLSTM Classifier", backend: "pytorch_lstm", task_family: "sequence_classification", selector_value: "bilstm", guide_key: "bilstm_classification", trainable: true, training_enabled: true, status: "available" },
+    { model_id: "fallback.rnn.bilstm-regressor", display_name: "BiLSTM Regressor", backend: "pytorch_lstm", task_family: "sequence_regression", selector_value: "bilstm", guide_key: "bilstm_regression", trainable: true, training_enabled: true, status: "available" },
+    { model_id: "fallback.xgboost.classifier", display_name: "XGBoost Classifier", backend: "sklearn_xgboost", task_family: "sequence_classification", selector_value: "xgboost_classifier", guide_key: "xgboost_classification", trainable: true, training_enabled: true, status: "available" },
+    { model_id: "fallback.xgboost.regressor", display_name: "XGBoost Regressor", backend: "sklearn_xgboost", task_family: "sequence_regression", selector_value: "xgboost_regressor", guide_key: "xgboost_regression", trainable: true, training_enabled: true, status: "available" }
+  ];
+}
+
+function renderRnnModelSelector() {
+  const select = qs("#rnn-model-family");
+  if (!select) return;
+  if (trainingModeState.rnn.modelCatalogLoading) {
+    select.innerHTML = `<option value="">Loading model catalog...</option>`;
+    return;
+  }
+
+  const taskFamily = getSelectedRnnTaskHead() === "regression" ? "sequence_regression" : "sequence_classification";
+  const current = select.value;
+  const models = (trainingModeState.rnn.modelCatalog.length ? trainingModeState.rnn.modelCatalog : getFallbackRnnModelCatalog())
+    .filter((model) => model.task_family === taskFamily);
+
+  if (!models.length) {
+    select.innerHTML = `<option value="">No compatible RNN model found</option>`;
+    syncRnnModelSelection();
+    return;
+  }
+
+  const groups = [
+    ["pytorch_lstm", "RNN / Sequence"],
+    ["sklearn_xgboost", "Tabular Baseline"]
+  ];
+  select.innerHTML = groups.map(([backend, label]) => {
+    const items = models.filter((model) => model.backend === backend);
+    if (!items.length) return "";
+    return `<optgroup label="${escapeHtml(label)}">${items.map((model) => {
+      const suffix = model.training_enabled ? "" : " · planned";
+      return `<option value="${escapeHtml(model.model_id)}">${escapeHtml(model.display_name || model.model_id)}${suffix}</option>`;
+    }).join("")}</optgroup>`;
+  }).join("");
+
+  const values = models.map((model) => model.model_id);
+  if (values.includes(current)) {
+    select.value = current;
+  } else {
+    const firstTrainable = models.find((model) => model.training_enabled && model.trainable);
+    select.value = (firstTrainable || models[0]).model_id;
+  }
+  syncRnnModelSelection();
+  renderRnnModelGuide();
+  updateRnnStartControls();
+}
+
+async function loadRnnModelGuides() {
+  if (trainingModeState.rnn.modelGuides || trainingModeState.rnn.modelGuidesLoading) {
+    renderRnnModelGuide();
+    return;
+  }
+  trainingModeState.rnn.modelGuidesLoading = true;
+  renderRnnModelGuide();
+  try {
+    const response = await fetch("/static/data/model_guide_catalog.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    trainingModeState.rnn.modelGuides = await response.json();
+  } catch (err) {
+    trainingModeState.rnn.modelGuides = {};
+    eventBus.emit("toast", `Model guide load failed: ${err.message}`);
+  } finally {
+    trainingModeState.rnn.modelGuidesLoading = false;
+    renderRnnModelGuide();
+  }
+}
+
+function getSelectedRnnModel() {
+  const entry = getSelectedRnnModelEntry();
+  return entry?.selector_value || qs("#rnn-model-family")?.value || "lstm";
+}
+
+function getSelectedRnnModelEntry() {
+  const value = qs("#rnn-model-family")?.value || "";
+  const catalog = trainingModeState.rnn.modelCatalog.length ? trainingModeState.rnn.modelCatalog : getFallbackRnnModelCatalog();
+  return catalog.find((model) => model.model_id === value || model.selector_value === value) || null;
+}
+
+function getSelectedRnnBackend() {
+  return getSelectedRnnModelEntry()?.backend || "pytorch_lstm";
+}
+
+function getSelectedRnnTaskHead() {
+  return qs("#rnn-task-head")?.value || "classification";
+}
+
+function getRnnGuideKey() {
+  const entry = getSelectedRnnModelEntry();
+  if (entry?.guide_key) return entry.guide_key;
+  const model = getSelectedRnnModel();
+  const taskHead = getSelectedRnnTaskHead();
+  if (model === "xgboost_classifier") return "xgboost_classification";
+  if (model === "xgboost_regressor") return "xgboost_regression";
+  return `${model}_${taskHead}`;
+}
+
+function isSelectedRnnModelTrainable() {
+  const entry = getSelectedRnnModelEntry();
+  if (entry) return Boolean(entry.trainable && entry.training_enabled);
+  return ["lstm", "gru", "bilstm"].includes(getSelectedRnnModel());
+}
+
+function syncRnnModelSelection() {
+  const entry = getSelectedRnnModelEntry();
+  const model = getSelectedRnnModel();
+  const taskHead = qs("#rnn-task-head");
+  const backend = qs("#rnn-backend");
+  if (model === "xgboost_classifier" && taskHead) taskHead.value = "classification";
+  if (model === "xgboost_regressor" && taskHead) taskHead.value = "regression";
+  if (backend) {
+    const backendName = entry?.backend || (model.startsWith("xgboost") ? "sklearn_xgboost" : "pytorch_lstm");
+    backend.value = entry?.training_enabled === false ? `${backendName} (planned)` : backendName;
+  }
+}
+
+function renderRnnModelGuide() {
+  const container = qs("#rnn-model-guide");
+  if (!container) return;
+  if (trainingModeState.rnn.modelGuidesLoading) {
+    container.innerHTML = `<div class="section-title"><h3>Model Guide</h3><span class="summary-badge badge-neutral">Loading</span></div><p>Loading model guide...</p>`;
+    return;
+  }
+  const guide = trainingModeState.rnn.modelGuides?.[getRnnGuideKey()];
+  if (!guide) {
+    container.innerHTML = `<div class="section-title"><h3>Model Guide</h3><span class="summary-badge badge-warning">Missing</span></div><p>No guide found for this model/task combination.</p>`;
+    return;
+  }
+  const statusClass = guide.status === "trainable" ? "badge-success" : "badge-warning";
+  container.innerHTML = `
+    <div class="section-title">
+      <h3>${escapeHtml(guide.title)}</h3>
+      <span class="summary-badge ${statusClass}">${escapeHtml(guide.status === "trainable" ? "Trainable" : "Planned")}</span>
+    </div>
+    <p>${escapeHtml(guide.summary)}</p>
+    <div class="rnn-guide-grid">
+      <div>
+        <strong>適合</strong>
+        <ul>${(guide.best_for || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      </div>
+      <div>
+        <strong>不適合</strong>
+        <ul>${(guide.not_for || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      </div>
+    </div>
+    <div class="rnn-guide-note"><span>好結果通常長這樣</span><p>${escapeHtml(guide.good_result || "--")}</p></div>
+    <div class="rnn-guide-note warning"><span>風險</span><p>${escapeHtml(guide.risk || "--")}</p></div>
+  `;
+}
+
 function canStartRnnTraining() {
   const readiness = trainingModeState.rnn.readiness;
   const csv = readiness?.summary?.csv || {};
@@ -435,6 +1117,7 @@ function canStartRnnTraining() {
   const isRunning = trainState.status === "training" || trainState.status === "stopping";
   return Boolean(
     appState.currentProjectId &&
+    isSelectedRnnModelTrainable() &&
     readiness?.ready &&
     csv.valid &&
     Number(csv.file_count || 0) > 0 &&
@@ -468,8 +1151,15 @@ function updateRnnStartControls() {
   const stateBadge = qs("#rnn-training-state-badge");
   if (stateBadge) {
     stateBadge.className = `summary-badge ${canStart ? "badge-success" : "badge-warning"}`;
-    stateBadge.textContent = canStart ? "Training enabled" : "Readiness required";
+    stateBadge.textContent = canStart ? "Training enabled" : isSelectedRnnModelTrainable() ? "Readiness required" : "Backend planned";
   }
+}
+
+function preferGpuDevice(selector) {
+  const select = qs(selector);
+  if (!select) return;
+  const hasGpuOption = Array.from(select.options || []).some((option) => option.value === "gpu");
+  if (hasGpuOption && !select.value) select.value = "gpu";
 }
 
 function getRnnStartBlockerMessage() {
@@ -478,6 +1168,10 @@ function getRnnStartBlockerMessage() {
   if (trainingModeState.rnn.trainingStarting) return "RNN training is starting.";
   const trainState = appState.trainingStatus || {};
   if (trainState.status === "training" || trainState.status === "stopping") return "Another training job is already active.";
+  if (!isSelectedRnnModelTrainable()) {
+    const entry = getSelectedRnnModelEntry();
+    return `${entry?.display_name || "Selected model"} is available in the catalog, but its training backend is not enabled yet.`;
+  }
   const readiness = trainingModeState.rnn.readiness;
   if (!readiness) return "Run RNN readiness check before starting training.";
   const csv = readiness.summary?.csv || {};
@@ -497,16 +1191,17 @@ async function startRnnTraining(event) {
 
   trainingModeState.rnn.trainingStarting = true;
   updateRnnStartControls();
-  const model = qs("#rnn-model-family")?.value || "lstm";
-  const taskHead = qs("#rnn-task-head")?.value || "classification";
+  syncRnnModelSelection();
+  const model = getSelectedRnnModel();
+  const taskHead = getSelectedRnnTaskHead();
   const configData = {
-    backend: trainingModeState.rnn.backend,
+    backend: getSelectedRnnBackend(),
     model,
     epochs: Number(qs("#rnn-epochs")?.value || 10),
     batch_size: Number(qs("#rnn-batch-size")?.value || 16),
     imgsz: 320,
     lr0: 0.001,
-    device: qs("#rnn-device")?.value || "cpu",
+    device: qs("#rnn-device")?.value || "gpu",
     sequence_length: Number(qs("#rnn-sequence-length")?.value || 16),
     stride: Number(qs("#rnn-stride")?.value || 8),
     horizon: Number(qs("#rnn-horizon")?.value || 1),
@@ -533,3 +1228,4 @@ async function startRnnTraining(event) {
     updateRnnStartControls();
   }
 }
+

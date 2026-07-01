@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import hashlib
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -25,6 +26,7 @@ def build_rnn_readiness_report(
     sequences_dir = layout.sequences_dir()
     manifest_path = layout.sequence_manifest_path()
     csv_files = sorted(sequences_dir.glob("*.csv")) if sequences_dir.exists() else []
+    active_config = dict(project.get("rnn_config") or {})
 
     checks: List[Dict[str, Any]] = []
     manifest_summary = _empty_manifest_summary()
@@ -51,7 +53,7 @@ def build_rnn_readiness_report(
         )
 
     if csv_files:
-        csv_summary, csv_checks = _inspect_csv_files(csv_files, sequence_length)
+        csv_summary, csv_checks = _inspect_csv_files(csv_files, sequence_length, active_config)
         checks.extend(csv_checks)
     else:
         _add_check(
@@ -88,6 +90,8 @@ def build_rnn_readiness_report(
             "manifest": manifest_summary,
             "csv": csv_summary,
             "source": "manifest" if manifest_summary["valid"] else "csv" if csv_summary["valid"] else "none",
+            "active_config": active_config,
+            "feature_config_hash": active_config.get("feature_config_hash") or _feature_config_hash(active_config),
             "ready_requirements": {
                 "parseable_source": has_parseable_source,
                 "train_val_split": has_train_val,
@@ -164,7 +168,7 @@ def _inspect_manifest(path: Path, sequence_length: int) -> tuple[Dict[str, Any],
     return summary, checks
 
 
-def _inspect_csv_files(paths: Iterable[Path], sequence_length: int) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
+def _inspect_csv_files(paths: Iterable[Path], sequence_length: int, active_config: Optional[Dict[str, Any]] = None) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
     checks: List[Dict[str, Any]] = []
     summary = _empty_csv_summary()
     sequence_lengths: Dict[str, int] = defaultdict(int)
@@ -173,6 +177,10 @@ def _inspect_csv_files(paths: Iterable[Path], sequence_length: int) -> tuple[Dic
     feature_dims = set()
     row_count = 0
     files = list(paths)
+    active_config = active_config or {}
+    configured_features = [str(col).strip() for col in active_config.get("feature_columns") or [] if str(col).strip()]
+    configured_target = str(active_config.get("target_column") or "").strip()
+    configured_sequence = str(active_config.get("sequence_column") or "").strip()
 
     for path in files:
         try:
@@ -182,14 +190,21 @@ def _inspect_csv_files(paths: Iterable[Path], sequence_length: int) -> tuple[Dic
                 if not headers:
                     _add_check(checks, f"csv_parse_{path.name}", f"CSV parse: {path.name}", "fail", "CSV has no header row.")
                     continue
-                sequence_col = _first_present(headers, ID_COLUMNS) or "sequence_id"
-                target_col = _first_present(headers, TARGET_COLUMNS)
-                feature_cols = [col for col in headers if col not in META_COLUMNS]
+                sequence_col = configured_sequence or _first_present(headers, ID_COLUMNS) or "sequence_id"
+                target_col = configured_target or _first_present(headers, TARGET_COLUMNS)
+                feature_cols = configured_features or [col for col in headers if col not in META_COLUMNS]
                 if sequence_col not in headers:
-                    _add_check(checks, f"csv_sequence_id_{path.name}", f"CSV sequence id: {path.name}", "fail", "CSV must include sequence_id.")
+                    _add_check(checks, f"csv_sequence_id_{path.name}", f"CSV sequence id: {path.name}", "fail", f"CSV must include sequence id column: {sequence_col}.")
+                    continue
+                missing_features = [col for col in feature_cols if col not in headers]
+                if missing_features:
+                    _add_check(checks, f"csv_features_{path.name}", f"CSV features: {path.name}", "fail", f"CSV is missing feature columns: {', '.join(missing_features)}.")
                     continue
                 if not feature_cols:
                     _add_check(checks, f"csv_features_{path.name}", f"CSV features: {path.name}", "fail", "CSV must include at least one feature column.")
+                    continue
+                if not target_col or target_col not in headers:
+                    _add_check(checks, f"csv_target_{path.name}", f"CSV target: {path.name}", "fail", f"CSV must include target column: {target_col or 'label/target'}.")
                     continue
 
                 feature_dims.add(len(feature_cols))
@@ -317,7 +332,36 @@ def _first_present(headers: Iterable[str], candidates: Iterable[str]) -> Optiona
 
 
 def _add_check(checks: List[Dict[str, Any]], key: str, label: str, status: str, message: str) -> None:
-    checks.append({"key": key, "label": label, "status": status, "message": message})
+    checks.append({"key": key, "label": label, "status": status, "message": message, "action": _action_for_check(key, status)})
+
+
+def _action_for_check(key: str, status: str) -> str:
+    if status in {"pass", "warning"}:
+        return ""
+    if "csv_feature" in key or "csv_target" in key or "csv_sequence_id" in key:
+        return "請到 RNN > 特徵與標籤確認欄位名稱，或重新匯入含正確 header 的 CSV。"
+    if "csv_parse" in key:
+        return "請確認 CSV 第一列是欄位名稱，例如 sequence_id,timestep,feature_1,target。"
+    if "csv_split" in key:
+        return "請在 CSV 加入 split 欄位，至少包含 train 與 val。"
+    if "sequence_manifest" in key:
+        return "請在 RNN > 序列資料集匯入 CSV 或 sequence_manifest.json。"
+    return "請依照檢查訊息修正資料後重新檢查 readiness。"
+
+
+def _feature_config_hash(config: Dict[str, Any]) -> str:
+    payload = {
+        "feature_columns": config.get("feature_columns") or [],
+        "target_column": config.get("target_column") or "",
+        "sequence_column": config.get("sequence_column") or "",
+        "time_column": config.get("time_column") or "",
+        "sequence_length": config.get("sequence_length") or 16,
+        "stride": config.get("stride") or 8,
+        "horizon": config.get("horizon") or 1,
+        "task_head": config.get("task_head") or "classification",
+    }
+    encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()[:16]
 
 
 def _empty_manifest_summary() -> Dict[str, Any]:

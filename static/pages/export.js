@@ -20,6 +20,8 @@ export function initExport() {
 }
 
 export function renderExportPage() {
+  if (appState.currentPage !== "export") return;
+
   updateButtonStates();
 
   if (appState.currentProjectId && loadedProjectId !== appState.currentProjectId) {

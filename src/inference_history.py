@@ -49,7 +49,7 @@ class InferenceHistory:
         job_id = job_dir.name
         architecture = str(summary.get("architecture") or "").lower()
         backend = str(summary.get("backend") or "").lower()
-        is_rnn = architecture == "rnn" or backend == "pytorch_lstm" or job_id.startswith("seq_job_")
+        is_rnn = architecture == "rnn" or backend in {"pytorch_lstm", "sklearn_xgboost"} or job_id.startswith("seq_job_")
         created_at = summary.get("created_at") or cls._mtime_iso(job_dir)
         files = cls._list_files(project, job_dir)
 

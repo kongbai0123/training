@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Sequence, Tuple
 import numpy as np
 
 from src.project_layout import ProjectLayout
+from src.training.rnn_config import active_rnn_config, compute_feature_config_hash
 from src.training.rnn_readiness import ID_COLUMNS, META_COLUMNS, TARGET_COLUMNS, TIME_COLUMNS
 
 
@@ -29,7 +30,8 @@ def load_csv_feature_sequences(
     if not csv_files:
         raise RNNSequenceDatasetError("CSV feature sequence files are required under project/sequences.")
 
-    rows, feature_columns, target_column, sequence_column, time_column = _read_csv_rows(csv_files)
+    config = active_rnn_config(project)
+    rows, feature_columns, target_column, sequence_column, time_column = _read_csv_rows(csv_files, config)
     if not rows:
         raise RNNSequenceDatasetError("CSV feature sequence files contain no usable rows.")
 
@@ -117,7 +119,9 @@ def load_csv_feature_sequences(
             "sequence_length": sequence_length,
             "stride": stride,
             "feature_dim": len(feature_columns),
+            "feature_config_hash": compute_feature_config_hash(config),
         },
+        "feature_config_hash": compute_feature_config_hash(config),
     }
 
 
@@ -150,12 +154,17 @@ def write_preprocess_artifacts(run_dir: Path, dataset: Dict[str, Any]) -> None:
         )
 
 
-def _read_csv_rows(paths: Iterable[Path]) -> Tuple[List[Dict[str, Any]], List[str], str, str, str | None]:
+def _read_csv_rows(paths: Iterable[Path], config: Dict[str, Any] | None = None) -> Tuple[List[Dict[str, Any]], List[str], str, str, str | None]:
     all_rows: List[Dict[str, Any]] = []
     feature_columns: List[str] | None = None
     target_column: str | None = None
     sequence_column: str | None = None
     time_column: str | None = None
+    config = config or {}
+    configured_features = [str(col).strip() for col in config.get("feature_columns") or [] if str(col).strip()]
+    configured_target = str(config.get("target_column") or "").strip()
+    configured_sequence = str(config.get("sequence_column") or "").strip()
+    configured_time = str(config.get("time_column") or "").strip()
 
     for path in paths:
         with path.open("r", encoding="utf-8-sig", newline="") as handle:
@@ -163,16 +172,23 @@ def _read_csv_rows(paths: Iterable[Path]) -> Tuple[List[Dict[str, Any]], List[st
             headers = reader.fieldnames or []
             if not headers:
                 continue
-            current_sequence_col = _first_present(headers, ID_COLUMNS)
-            current_target_col = _first_present(headers, TARGET_COLUMNS)
-            current_time_col = _first_present(headers, TIME_COLUMNS)
-            current_features = [col for col in headers if col not in META_COLUMNS]
+            current_sequence_col = configured_sequence or _first_present(headers, ID_COLUMNS)
+            current_target_col = configured_target or _first_present(headers, TARGET_COLUMNS)
+            current_time_col = configured_time or _first_present(headers, TIME_COLUMNS)
+            current_features = configured_features or [col for col in headers if col not in META_COLUMNS]
             if not current_sequence_col:
                 raise RNNSequenceDatasetError(f"{path.name} must include sequence_id.")
+            if current_sequence_col not in headers:
+                raise RNNSequenceDatasetError(f"{path.name} is missing sequence column: {current_sequence_col}.")
             if not current_target_col:
                 raise RNNSequenceDatasetError(f"{path.name} must include label or target column.")
+            if current_target_col not in headers:
+                raise RNNSequenceDatasetError(f"{path.name} is missing target column: {current_target_col}.")
             if not current_features:
                 raise RNNSequenceDatasetError(f"{path.name} must include at least one feature column.")
+            missing_features = [col for col in current_features if col not in headers]
+            if missing_features:
+                raise RNNSequenceDatasetError(f"{path.name} is missing feature columns: {', '.join(missing_features)}.")
             if feature_columns is None:
                 feature_columns = current_features
                 target_column = current_target_col

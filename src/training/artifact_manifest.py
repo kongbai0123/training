@@ -37,6 +37,9 @@ def build_artifact_manifest(run_dir: Path, run_id: str) -> Dict[str, Any]:
     candidates = [
         ("weights/best.pt", "model_weight", "best_model"),
         ("weights/last.pt", "model_weight", "last_model"),
+        ("weights/best.json", "xgboost_model", "best_model"),
+        ("weights/last.json", "xgboost_model", "last_model"),
+        ("weights/model_metadata.json", "model_metadata", "model_metadata"),
         ("weights/best.onnx", "onnx_model", "export_model"),
         ("results.csv", "metrics_csv", "training_metrics"),
         ("metrics.json", "metrics_json", "metrics"),

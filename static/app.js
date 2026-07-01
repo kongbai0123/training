@@ -25,13 +25,13 @@ import { initDataset, renderDatasetPage } from "./pages/dataset.js?v=20260630-pr
 import { initLabelMe, renderLabelMeManager } from "./pages/labelme.js";
 import { initSplit, renderSplitPage } from "./pages/split.js";
 import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js?v=20260625-augmentation-p0";
-import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js?v=20260630-training-row-dropzone";
-import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260630-nav-import-grid-fix";
-import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js";
+import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js?v=20260701-rnn-layout-polish";
+import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260701-rnn-layout-polish";
+import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js?v=20260701-xgb-eval-final";
 import { initModelCompare, renderModelComparePage } from "./pages/model_compare.js?v=20260630-ui-init-fix";
 import { initInference, renderInferencePage } from "./pages/inference.js?v=20260630-class-batch-infer";
 import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260624-auto-label-readable";
-import { initExport, renderExportPage } from "./pages/export.js";
+import { initExport, renderExportPage } from "./pages/export.js?v=20260701-xgb-eval-final";
 import { initSettings, renderSettingsPage } from "./pages/settings.js";
 
 async function bootstrapApp() {

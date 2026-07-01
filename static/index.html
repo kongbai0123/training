@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/static/style.css?v=20260630-training-row-dropzone">
+  <link rel="stylesheet" href="/static/style.css?v=20260701-rnn-layout-polish">
   <script async src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -670,7 +670,7 @@
                     <div class="model-registry-header">
                       <div>
                         <strong data-i18n="training.modelRegistry.title">Model Registry Preview</strong>
-                        <span data-i18n="training.modelRegistry.subtitle">This is the future Model Registry selector skeleton. Training still uses the built-in model list in this phase.</span>
+                        <span data-i18n="training.modelRegistry.subtitle">Catalog-driven model selector. Imported YOLO .pt / .yaml models can be used for CNN/YOLO training.</span>
                       </div>
                       <button type="button" class="btn btn-primary btn-sm" id="btn-training-open-model-hub" data-i18n="training.modelRegistry.openHub">
                         <i class="fa-solid fa-file-import"></i> 匯入模型
@@ -704,6 +704,7 @@
                         <span><strong>架構</strong> YOLO .yaml</span>
                         <span><strong>推論</strong> ONNX .onnx</span>
                         <span><strong>預覽</strong> RNN package .zip</span>
+                        <span><strong>檢查</strong> Custom package .zip</span>
                       </div>
                     </div>
                   </div>
@@ -1003,31 +1004,61 @@
 
                 <div id="rnn-sequence-dataset-panel" class="rnn-panel" data-rnn-panel="sequence-dataset">
                   <section class="rnn-preview-card">
-                    <div class="section-title"><h2>序列資料集</h2><span class="summary-badge badge-warning">Phase 2B</span></div>
-                    <p class="form-hint" id="rnn-sequence-dataset-message">RNNBackend MVP 只支援 CSV / Feature Sequence。manifest-only、video、YOLO feature extraction 不會啟動訓練。</p>
+                    <div class="section-title"><h2>序列資料集</h2><span class="summary-badge badge-warning" id="rnn-dataset-badge">CSV required</span></div>
+                    <p class="form-hint" id="rnn-sequence-dataset-message">匯入 CSV 或包含 CSV 的 ZIP。第一列必須是欄位名稱，建議包含 sequence_id、timestep、split、feature columns、target。</p>
+                    <div class="rnn-import-dropzone" id="rnn-dataset-dropzone" tabindex="0">
+                      <input id="rnn-dataset-file" type="file" accept=".csv,.zip,text/csv,application/zip" class="hidden">
+                      <i class="fa-solid fa-file-csv"></i>
+                      <strong>拖入 CSV / ZIP，或點擊選擇檔案</strong>
+                      <span>只支援 CSV feature sequence；不接 video、YOLO feature extraction 或 CNN-LSTM。</span>
+                    </div>
+                    <div class="inline-actions">
+                      <button type="button" class="btn btn-primary" id="rnn-import-dataset"><i class="fa-solid fa-upload"></i> 匯入序列資料</button>
+                      <button type="button" class="btn btn-secondary" id="rnn-refresh-config"><i class="fa-solid fa-rotate"></i> 重新讀取</button>
+                    </div>
                     <div class="rnn-placeholder-box" id="rnn-sequence-dataset-preview">sequence_id, timestep, feature_1, feature_2, target</div>
                   </section>
                 </div>
 
                 <div id="rnn-features-labels-panel" class="rnn-panel" data-rnn-panel="features-labels">
                   <section class="rnn-preview-card">
-                    <div class="section-title"><h2>特徵與標籤</h2><span class="summary-badge badge-neutral">Parser pending</span></div>
+                    <div class="section-title">
+                      <h2>特徵與標籤 <span class="info-icon" data-tooltip="設定 CSV 中哪些欄位要作為 X，哪一個欄位作為 y。Feature columns 可用逗號或分號一次輸入多個欄位。">i</span></h2>
+                      <span class="summary-badge badge-neutral" id="rnn-config-hash-badge">No config</span>
+                    </div>
                     <div class="rnn-schema-grid">
-                      <label><span>Feature columns</span><input id="rnn-feature-columns" type="text" value="feature_1, feature_2, feature_3" disabled></label>
-                      <label><span>Target column</span><input id="rnn-target-column" type="text" value="target" disabled></label>
-                      <label><span>Feature dim</span><input id="rnn-feature-dim" type="number" value="3" disabled></label>
+                      <label><span>Feature columns <span class="info-icon" data-tooltip="輸入要作為模型輸入 X 的欄位，例如 speed,rpm,temp。系統會自動切成 chips 並比對 CSV header。">i</span></span><input id="rnn-feature-columns" type="text" placeholder="speed,rpm,temp 或 speed;rpm;temp"></label>
+                      <label><span>Target column <span class="info-icon" data-tooltip="輸入要預測的 y 欄位。分類任務通常是 label；回歸任務通常是 target 或數值欄位。">i</span></span><input id="rnn-target-column" type="text" placeholder="target / label / y"></label>
+                      <label><span>Sequence ID column <span class="info-icon" data-tooltip="用來區分不同序列的欄位，例如 sequence_id、machine_id 或 batch_id。相同 ID 會被視為同一段時間序列。">i</span></span><input id="rnn-sequence-column" type="text" placeholder="sequence_id"></label>
+                      <label><span>Time column <span class="info-icon" data-tooltip="用來排序序列內 time steps 的欄位，例如 timestep 或 timestamp。若缺少時間欄位，資料順序容易影響訓練結果。">i</span></span><input id="rnn-time-column" type="text" placeholder="timestep / timestamp"></label>
+                      <label><span>Feature dim <span class="info-icon" data-tooltip="目前有效 feature 欄位數。此欄位由 Feature columns 與 CSV header 自動計算，不需要手動編輯。">i</span></span><input id="rnn-feature-dim" type="number" value="0" disabled></label>
+                    </div>
+                    <div class="rnn-chip-list" id="rnn-feature-chip-list"></div>
+                    <div class="rnn-config-warning hidden" id="rnn-config-mismatch-warning"></div>
+                    <div class="inline-actions">
+                      <button type="button" class="btn btn-primary" id="rnn-save-feature-config"><i class="fa-solid fa-floppy-disk"></i> 儲存 Feature Config</button>
                     </div>
                   </section>
                 </div>
 
                 <div id="rnn-windowing-panel" class="rnn-panel" data-rnn-panel="windowing">
                   <section class="rnn-preview-card">
-                    <div class="section-title"><h2>序列切片</h2><span class="summary-badge badge-neutral">Schema only</span></div>
-                    <div class="rnn-schema-grid">
-                      <label><span>sequence_length</span><input id="rnn-sequence-length" type="number" min="1" value="16"></label>
-                      <label><span>stride</span><input id="rnn-stride" type="number" min="1" value="8"></label>
-                      <label><span>horizon</span><input id="rnn-horizon" type="number" min="1" value="1"></label>
+                    <div class="section-title">
+                      <h2>序列切片 <span class="info-icon" data-tooltip="把長時間序列切成模型可訓練的樣本。這些設定會影響樣本數、預測距離與資料重疊程度。">i</span></h2>
+                      <span class="summary-badge badge-neutral" id="rnn-window-status-badge">Schema only</span>
                     </div>
+                    <div class="rnn-schema-grid">
+                      <label><span>sequence_length <span class="info-icon" data-tooltip="每筆訓練樣本要包含幾個 time steps。數值越大，模型看到的歷史越長，但樣本數會變少。">i</span></span><input id="rnn-sequence-length" type="number" min="1" value="16"></label>
+                      <label><span>stride <span class="info-icon" data-tooltip="切片每次往前滑動幾步。數值越小，樣本越多且重疊越高；數值越大，樣本較少但重複性較低。">i</span></span><input id="rnn-stride" type="number" min="1" value="8"></label>
+                      <label><span>horizon <span class="info-icon" data-tooltip="預測距離。horizon=1 代表預測下一步；數值越大代表預測更遠的未來。">i</span></span><input id="rnn-horizon" type="number" min="1" value="1"></label>
+                    </div>
+                    <div class="rnn-window-summary" id="rnn-window-summary">
+                      <div><span>Estimated windows</span><strong>--</strong></div>
+                      <div><span>Sequence count</span><strong>--</strong></div>
+                      <div><span>Min / Max length</span><strong>-- / --</strong></div>
+                    </div>
+                    <div class="rnn-config-warning hidden" id="rnn-window-warning"></div>
+                    <p class="form-hint">sequence_length 決定每個訓練樣本要看幾個 time steps；stride 決定滑動間隔；horizon 決定預測目標距離。</p>
                   </section>
                 </div>
 
@@ -1035,12 +1066,12 @@
                   <section class="rnn-preview-card">
                     <div class="section-title"><h2>RNN 模型訓練</h2><span class="summary-badge badge-warning" id="rnn-training-state-badge">Readiness required</span></div>
                     <div class="rnn-schema-grid">
-                      <label><span>Model</span><select id="rnn-model-family"><option value="lstm">LSTM</option><option value="gru">GRU</option><option value="bilstm">BiLSTM</option></select></label>
+                      <label><span>Model</span><select id="rnn-model-family"><option value="lstm">Loading model catalog...</option></select></label>
                       <label><span>Task Head</span><select id="rnn-task-head"><option value="classification">Classification</option><option value="regression">Regression</option></select></label>
                       <label><span>Backend</span><input id="rnn-backend" type="text" value="pytorch_lstm" disabled></label>
                       <label><span>Epochs</span><input id="rnn-epochs" type="number" min="1" value="10"></label>
                       <label><span>Batch Size</span><input id="rnn-batch-size" type="number" min="1" value="16"></label>
-                      <label><span>Device</span><select id="rnn-device"><option value="cpu">CPU</option><option value="gpu">GPU</option></select></label>
+                      <label><span>Device</span><select id="rnn-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
                     </div>
                     <details class="advanced-collapse">
                       <summary>Advanced</summary>
@@ -1050,6 +1081,10 @@
                         <label><span>Dropout</span><input id="rnn-dropout" type="number" min="0" max="0.9" step="0.1" value="0.2"></label>
                       </div>
                     </details>
+                    <div class="rnn-model-guide" id="rnn-model-guide">
+                      <div class="section-title"><h3>Model Guide</h3><span class="summary-badge badge-neutral">Loading</span></div>
+                      <p>Loading model guide...</p>
+                    </div>
                     <span class="rnn-disabled-action-hitbox">
                       <button type="button" class="btn btn-disabled" id="rnn-training-disabled-action" disabled>RNN training requires ready CSV feature sequence</button>
                     </span>
@@ -1058,12 +1093,65 @@
 
                 <div id="rnn-evaluation-panel" class="rnn-panel" data-rnn-panel="evaluation">
                   <section class="rnn-preview-card">
-                    <div class="section-title"><h2>RNN 評估</h2><span class="summary-badge badge-neutral">Metrics placeholder</span></div>
+                    <div class="section-title">
+                      <h2>RNN / XGBoost 評估</h2>
+                      <span id="rnn-eval-run-badge" class="summary-badge badge-neutral">No run</span>
+                    </div>
                     <div class="metric-grid compact">
-                      <div class="metric-card"><span>MAE</span><strong>--</strong></div>
-                      <div class="metric-card"><span>RMSE</span><strong>--</strong></div>
-                      <div class="metric-card"><span>Accuracy</span><strong>--</strong></div>
-                      <div class="metric-card"><span>Macro-F1</span><strong>--</strong></div>
+                      <div class="metric-card"><span id="rnn-eval-primary-label">Primary</span><strong id="rnn-eval-primary-value">--</strong></div>
+                      <div class="metric-card"><span id="rnn-eval-secondary-label">Secondary</span><strong id="rnn-eval-secondary-value">--</strong></div>
+                      <div class="metric-card"><span>Train Loss</span><strong id="rnn-eval-train-loss">--</strong></div>
+                      <div class="metric-card"><span>Val Loss</span><strong id="rnn-eval-val-loss">--</strong></div>
+                    </div>
+                    <div class="inline-actions">
+                      <button type="button" class="btn btn-secondary" id="rnn-refresh-evaluation">Refresh Evaluation</button>
+                    </div>
+                    <div id="rnn-eval-message" class="rnn-placeholder-box">No RNN or XGBoost run has been loaded yet.</div>
+                    <div class="rnn-result-grid">
+                      <div class="rnn-result-panel">
+                        <div class="section-title"><h3>Epoch History</h3><span class="summary-badge badge-neutral">metrics.json</span></div>
+                        <div class="rnn-result-table-wrap">
+                          <table class="rnn-result-table">
+                            <thead>
+                              <tr>
+                                <th>Epoch</th>
+                                <th>Train Loss</th>
+                                <th>Val Loss</th>
+                                <th>Accuracy / MAE</th>
+                                <th>Macro-F1 / RMSE</th>
+                                <th>Status</th>
+                              </tr>
+                            </thead>
+                            <tbody id="rnn-eval-epoch-rows">
+                              <tr><td colspan="6">No metric rows.</td></tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      <div class="rnn-result-panel">
+                        <div class="section-title"><h3>Artifacts</h3><span class="summary-badge badge-neutral">manifest</span></div>
+                        <div id="rnn-eval-artifact-list" class="rnn-result-list">No artifacts.</div>
+                      </div>
+                    </div>
+                    <div class="rnn-result-panel">
+                      <div class="section-title"><h3>Run History</h3><span class="summary-badge badge-neutral">sequence</span></div>
+                      <div class="rnn-result-table-wrap">
+                        <table class="rnn-result-table">
+                          <thead>
+                            <tr>
+                              <th>Run</th>
+                              <th>Model</th>
+                              <th>Backend</th>
+                              <th>Primary Metric</th>
+                              <th>Status</th>
+                              <th>Completed</th>
+                            </tr>
+                          </thead>
+                          <tbody id="rnn-eval-run-history">
+                            <tr><td colspan="6">No sequence runs.</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </section>
                 </div>
@@ -1073,7 +1161,7 @@
                     <div class="section-title"><h2>序列測試</h2><span class="summary-badge badge-neutral">CSV only</span></div>
                     <div class="rnn-schema-grid">
                       <label><span>RNN model</span><select id="rnn-inference-model"><option value="">Select RNN model</option></select></label>
-                      <label><span>Device</span><select id="rnn-inference-device"><option value="cpu">CPU</option><option value="gpu">GPU</option></select></label>
+                      <label><span>Device</span><select id="rnn-inference-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
                     </div>
                     <div class="rnn-schema-grid">
                       <label><span>Upload CSV</span><input id="rnn-inference-csv-file" type="file" accept=".csv,text/csv"></label>
@@ -1732,7 +1820,7 @@
       <div class="modal-header">
         <div>
           <h2>Import Model</h2>
-          <p>匯入模型會寫入目前專案範圍；只有 YOLO .pt 會進入 CNN 訓練選單，ONNX 與 RNN package 只進入 catalog。</p>
+          <p>匯入模型會寫入目前專案範圍；只有 YOLO .pt 會進入 CNN 訓練選單。Custom package 只做 manifest validation，不執行程式。</p>
         </div>
         <button class="icon-btn" id="btn-close-model-import-modal" aria-label="Close">&times;</button>
       </div>
@@ -1744,6 +1832,7 @@
             <option value="yolo_yaml">YOLO Model Architecture (.yaml / .yml)</option>
             <option value="onnx">ONNX Model (.onnx, inference-only)</option>
             <option value="rnn_package">RNN Model Package (.zip, preview)</option>
+            <option value="custom_package">Custom Model Package (.zip, validation-only)</option>
           </select>
         </label>
         <label>
@@ -1774,10 +1863,11 @@
           <span><strong>YOLO .yaml</strong> 僅限模型架構 YAML，不接受 dataset YAML</span>
           <span><strong>ONNX .onnx</strong> inference-only，不會啟動訓練</span>
           <span><strong>RNN .zip</strong> 需包含 model.pt、feature_schema、normalization_stats、sequence_config</span>
+          <span><strong>Custom .zip</strong> 必須包含 model_manifest.json；本階段只檢查，不執行</span>
         </div>
         <div class="status-guard warning">
           <i class="fa-solid fa-shield-halved"></i>
-          <span>目前不支援 TensorFlow、任意 PyTorch .pth、TensorRT、OpenVINO、TFLite 或 custom train.py；也不執行未知 Python。</span>
+          <span>Custom package validation does not enable training or inference. Unknown code will not be executed.</span>
         </div>
         <div id="model-import-result" class="form-hint"></div>
         <div class="modal-actions">
@@ -1793,7 +1883,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script async src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
-  <script type="module" src="/static/app.js?v=20260630-training-row-dropzone"></script>
+  <script type="module" src="/static/app.js?v=20260701-rnn-layout-polish"></script>
 </body>
 </html>
 

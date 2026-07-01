@@ -12,9 +12,11 @@ from src.model_system.constants import (
     IMPORTED_MODELS_RELATIVE_DIR,
     MODEL_MANIFEST_NAME,
     MODEL_STATUS_MISSING_FILE,
+    MODEL_STATUS_REGISTERED_DISABLED,
     MODEL_STATUS_VALIDATED_BASIC,
 )
 from src.model_system.manifest import (
+    build_custom_package_manifest,
     build_onnx_manifest,
     build_rnn_package_manifest,
     build_yolo_pt_manifest,
@@ -26,12 +28,30 @@ from src.model_system.validators import (
     copy_onnx_to_import,
     copy_yolo_pt_to_import,
     copy_yolo_yaml_to_import,
+    extract_custom_package_to_staging,
     extract_rnn_package_to_import,
+    validate_custom_package_dir,
     validate_onnx_import,
     validate_rnn_package_dir,
     validate_yolo_pt_import,
     validate_yolo_yaml_import,
     write_validation_report,
+)
+from src.model_system.sandbox_gate import (
+    append_sandbox_audit,
+    build_dry_run_request,
+    read_sandbox_audit,
+    read_source_manifest,
+    record_approval_decision,
+)
+from src.model_system.sandbox_policy import (
+    build_p5_registry_enablement_policy,
+    build_p6_limited_integration_contract,
+)
+from src.model_system.sandbox_runner import (
+    DEFAULT_SANDBOX_DRY_RUN_RUNNER,
+    SANDBOX_DRY_RUN_PLAN_NAME,
+    build_sandbox_dry_run_plan,
 )
 from src.project_layout import ProjectLayout
 from src.security_utils import safe_filename
@@ -113,6 +133,154 @@ class ModelCatalog:
     @classmethod
     def refresh_project_models(cls, project_id: str) -> Dict[str, Any]:
         return {"project_id": project_id, "refreshed_at": datetime.now().isoformat()}
+
+    @classmethod
+    def request_custom_package_dry_run(cls, project: Dict[str, Any], model_id: str) -> Dict[str, Any]:
+        model = cls.get_model(project, model_id)
+        if not model:
+            return {"success": False, "error": "Model not found"}
+        if model.get("format") != "custom_package":
+            return {"success": False, "error": "Dry-run approval is only available for custom_package models"}
+
+        import_dir = Path(model.get("manifest_path", "")).parent
+        source_manifest = read_source_manifest(import_dir)
+        request = build_dry_run_request(import_dir, model, source_manifest)
+        return {
+            "success": request.get("runtime_supported", False),
+            "model": model,
+            "dry_run": request,
+            "dry_run_report_path": (import_dir / "dry_run_report.json").as_posix(),
+        }
+
+    @classmethod
+    def record_custom_package_dry_run_approval(
+        cls,
+        project: Dict[str, Any],
+        model_id: str,
+        decision: str,
+        approved_by: str = "local_user",
+        note: str = "",
+    ) -> Dict[str, Any]:
+        model = cls.get_model(project, model_id)
+        if not model:
+            return {"success": False, "error": "Model not found"}
+        if model.get("format") != "custom_package":
+            return {"success": False, "error": "Dry-run approval is only available for custom_package models"}
+
+        import_dir = Path(model.get("manifest_path", "")).parent
+        decision_payload = record_approval_decision(import_dir, model, decision, approved_by=approved_by, note=note)
+        return {
+            "success": True,
+            "model": model,
+            "approval": decision_payload,
+            "dry_run_report_path": (import_dir / "dry_run_report.json").as_posix(),
+        }
+
+    @classmethod
+    def run_custom_package_mock_dry_run(cls, project: Dict[str, Any], model_id: str) -> Dict[str, Any]:
+        model = cls.get_model(project, model_id)
+        if not model:
+            return {"success": False, "error": "Model not found"}
+        if model.get("format") != "custom_package":
+            return {"success": False, "error": "Mock dry-run is only available for custom_package models"}
+
+        import_dir = Path(model.get("manifest_path", "")).parent
+        report = DEFAULT_SANDBOX_DRY_RUN_RUNNER.run(import_dir, model)
+        return {
+            "success": report.get("status") == "MOCK_DRY_RUN_COMPLETED",
+            "model": model,
+            "dry_run": report,
+            "mock_dry_run_report_path": (import_dir / "mock_dry_run_report.json").as_posix(),
+            "dry_run_report_path": (import_dir / "dry_run_report.json").as_posix(),
+        }
+
+    @classmethod
+    def build_custom_package_sandbox_plan(cls, project: Dict[str, Any], model_id: str) -> Dict[str, Any]:
+        model = cls.get_model(project, model_id)
+        if not model:
+            return {"success": False, "error": "Model not found"}
+        if model.get("format") != "custom_package":
+            return {"success": False, "error": "Sandbox plan is only available for custom_package models"}
+
+        import_dir = Path(model.get("manifest_path", "")).parent
+        plan = build_sandbox_dry_run_plan(import_dir, model)
+        return {
+            "success": plan.get("status") == "SANDBOX_PLAN_READY",
+            "model": model,
+            "plan": plan,
+            "sandbox_plan_path": (import_dir / SANDBOX_DRY_RUN_PLAN_NAME).as_posix(),
+        }
+
+    @classmethod
+    def get_custom_package_sandbox_audit(cls, project: Dict[str, Any], model_id: str) -> Dict[str, Any]:
+        model = cls.get_model(project, model_id)
+        if not model:
+            return {"success": False, "error": "Model not found"}
+        if model.get("format") != "custom_package":
+            return {"success": False, "error": "Sandbox audit is only available for custom_package models"}
+
+        import_dir = Path(model.get("manifest_path", "")).parent
+        return {
+            "success": True,
+            "model": model,
+            "audit": read_sandbox_audit(import_dir),
+            "audit_log_path": (import_dir / "sandbox_audit_log.jsonl").as_posix(),
+        }
+
+    @classmethod
+    def evaluate_custom_package_enablement(cls, project: Dict[str, Any], model_id: str) -> Dict[str, Any]:
+        model = cls.get_model(project, model_id)
+        if not model:
+            return {"success": False, "error": "Model not found"}
+        if model.get("format") != "custom_package":
+            return {"success": False, "error": "Enablement policy is only available for custom_package models"}
+
+        import_dir = Path(model.get("manifest_path", "")).parent
+        source_manifest = read_source_manifest(import_dir)
+        policy_model = {**model}
+        if isinstance(source_manifest.get("capabilities"), dict):
+            policy_model["capabilities"] = source_manifest["capabilities"]
+        dry_run_report = _read_json(import_dir / "dry_run_report.json")
+        sandbox_plan = _read_json(import_dir / SANDBOX_DRY_RUN_PLAN_NAME)
+        policy = build_p5_registry_enablement_policy(policy_model, dry_run_report, sandbox_plan)
+        policy_path = import_dir / "registry_enablement_policy.json"
+        _write_json(policy_path, policy)
+        append_sandbox_audit(import_dir, "registry_enablement_policy_evaluated", policy)
+        return {
+            "success": True,
+            "model": model,
+            "enablement": policy,
+            "enablement_policy_path": policy_path.as_posix(),
+        }
+
+    @classmethod
+    def build_custom_package_integration_contract(cls, project: Dict[str, Any], model_id: str) -> Dict[str, Any]:
+        model = cls.get_model(project, model_id)
+        if not model:
+            return {"success": False, "error": "Model not found"}
+        if model.get("format") != "custom_package":
+            return {"success": False, "error": "Integration contract is only available for custom_package models"}
+
+        import_dir = Path(model.get("manifest_path", "")).parent
+        source_manifest = read_source_manifest(import_dir)
+        policy_model = {**model}
+        if isinstance(source_manifest.get("capabilities"), dict):
+            policy_model["capabilities"] = source_manifest["capabilities"]
+        enablement = _read_json(import_dir / "registry_enablement_policy.json")
+        if not enablement:
+            dry_run_report = _read_json(import_dir / "dry_run_report.json")
+            sandbox_plan = _read_json(import_dir / SANDBOX_DRY_RUN_PLAN_NAME)
+            enablement = build_p5_registry_enablement_policy(policy_model, dry_run_report, sandbox_plan)
+        contract = build_p6_limited_integration_contract(policy_model, enablement)
+        contract_path = import_dir / "limited_integration_contract.json"
+        _write_json(contract_path, contract)
+        append_sandbox_audit(import_dir, "limited_integration_contract_evaluated", contract)
+        return {
+            "success": True,
+            "model": model,
+            "integration": contract,
+            "integration_contract_path": contract_path.as_posix(),
+        }
 
     @classmethod
     def import_yolo_pt(
@@ -318,6 +486,64 @@ class ModelCatalog:
             "validation": validation,
         }
 
+    @classmethod
+    def import_custom_package(
+        cls,
+        *,
+        project: Dict[str, Any],
+        source_path: Path,
+        display_name: str,
+        task_family: str,
+    ) -> Dict[str, Any]:
+        layout = ProjectLayout.from_project(project)
+        slug = safe_model_slug(display_name or source_path.stem)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        import_id = f"imp_{timestamp}_{slug}"
+        model_id = f"custom.package.{slug}.{timestamp}"
+        staging_dir = layout.project_dir / IMPORTED_MODELS_RELATIVE_DIR / "staging" / import_id
+
+        extract_check = extract_custom_package_to_staging(source_path, staging_dir)
+        validation = validate_custom_package_dir(staging_dir, import_id, source_path.name)
+        validation["checks"].insert(0, {
+            **extract_check,
+            "status": "passed" if extract_check.get("passed") else "failed",
+            "message": "Package extracted inside staging directory." if extract_check.get("passed") else "Package extraction failed.",
+        })
+        if not extract_check.get("passed"):
+            validation["status"] = "REJECTED"
+            validation["manifest_valid"] = False
+            validation.setdefault("errors", []).extend(extract_check.get("errors", ["Failed to extract custom model package."]))
+
+        original_manifest = staging_dir / MODEL_MANIFEST_NAME
+        package_files = {"package": source_path.name}
+        if original_manifest.exists():
+            preserved_manifest = staging_dir / "source_model_manifest.json"
+            original_manifest.replace(preserved_manifest)
+            package_files["source_manifest"] = preserved_manifest.name
+
+        task = normalize_task_family(task_family) or normalize_task_family(validation.get("manifest", {}).get("task")) or "custom"
+        display = display_name or validation.get("manifest", {}).get("model_name") or source_path.stem
+        manifest = build_custom_package_manifest(
+            model_id=model_id,
+            display_name=display,
+            task_family=task,
+            package_file=package_files.get("source_manifest") or "",
+            original_filename=source_path.name,
+            package_files=package_files,
+            status=validation["status"] if validation.get("manifest_valid") else "REJECTED",
+        )
+        manifest_path = write_manifest(staging_dir, manifest)
+        report_path = write_validation_report(staging_dir, validation)
+        entry = cls._entry_from_import_manifest(layout.project_dir, manifest_path)
+
+        return {
+            "success": bool(validation.get("manifest_valid")),
+            "model": entry if validation.get("manifest_valid") else None,
+            "manifest_path": manifest_path.as_posix(),
+            "validation_report_path": report_path.as_posix(),
+            "validation": validation,
+        }
+
     @staticmethod
     def _load_builtin_models() -> List[Dict[str, Any]]:
         if not BUILTIN_MODEL_CATALOG_PATH.exists():
@@ -341,6 +567,11 @@ class ModelCatalog:
                 entries.append(ModelCatalog._entry_from_import_manifest(layout.project_dir, manifest_path))
             except Exception:
                 continue
+        for manifest_path in sorted((imports_dir / "staging").glob(f"*/{MODEL_MANIFEST_NAME}")):
+            try:
+                entries.append(ModelCatalog._entry_from_import_manifest(layout.project_dir, manifest_path))
+            except Exception:
+                continue
         return entries
 
     @staticmethod
@@ -348,12 +579,12 @@ class ModelCatalog:
         manifest = read_manifest(manifest_path)
         entry = ModelCatalog._normalize_entry(manifest)
         weight_file = manifest.get("weight_file") or manifest.get("weight")
-        weight_path = manifest_path.parent / str(weight_file or "")
+        weight_path = manifest_path.parent / str(weight_file or manifest_path.name)
         entry["weight"] = weight_path.as_posix()
         entry["weight_path"] = weight_path.as_posix()
         entry["manifest_path"] = manifest_path.as_posix()
         entry["relative_path"] = weight_path.relative_to(project_dir).as_posix() if project_dir in weight_path.parents else weight_path.name
-        if not weight_path.exists():
+        if not weight_path.exists() and entry.get("status") != MODEL_STATUS_REGISTERED_DISABLED:
             entry["status"] = MODEL_STATUS_MISSING_FILE
             entry["trainable"] = False
             entry["inference_supported"] = False
@@ -405,3 +636,18 @@ class ModelCatalog:
         normalized.setdefault("status", "available")
         normalized["training_value"] = normalized.get("weight_path") or normalized.get("weight") or normalized.get("weight_file") or ""
         return normalized
+
+
+def _read_json(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else {}
+    except Exception:
+        return {}
+
+
+def _write_json(path: Path, payload: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")

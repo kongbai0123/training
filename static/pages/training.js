@@ -12,6 +12,22 @@ const activeGlobalTrainingJobs = new Set();
 let trainingModelCatalog = [];
 let loadedTrainingModelCatalogProjectId = null;
 
+function isSequenceTrainingRecord(record = {}) {
+  const architecture = String(record.architecture || "").toLowerCase();
+  const backend = String(record.backend || "").toLowerCase();
+  const taskType = String(record.task_type || record.taskType || "").toLowerCase();
+  return architecture === "rnn" ||
+    ["pytorch_lstm", "sklearn_xgboost"].includes(backend) ||
+    taskType.includes("sequence");
+}
+
+function sequenceBackendLabel(record = {}) {
+  const backend = String(record.backend || "").toLowerCase();
+  if (backend === "sklearn_xgboost") return "XGBoost";
+  if (backend === "pytorch_lstm") return "RNN";
+  return "Sequence";
+}
+
 function setMetricsDashboardActive(active) {
   qs("#training-metrics-empty")?.classList.toggle("hidden", active);
   qs("#training-metrics-active")?.classList.toggle("hidden", !active);
@@ -46,6 +62,7 @@ export function initTraining() {
   });
   qs("#form-import-model")?.addEventListener("submit", importYoloModelFromModal);
   qs("#model-import-type")?.addEventListener("change", updateModelImportTypeUi);
+  qs("#model-import-result")?.addEventListener("click", handleModelImportApprovalClick);
   initModelImportDropZone();
 
   qs("#btn-start-train")?.addEventListener("click", async () => {
@@ -215,7 +232,7 @@ function renderTrainingModelOptions(select, models) {
     if (!items.length) {
       const empty = document.createElement("option");
       empty.disabled = true;
-      empty.textContent = label === "Imported Models" ? "尚無導入模型" : "No models";
+      empty.textContent = label === "Imported Models" ? "尚無可訓練的匯入模型" : "No models";
       group.appendChild(empty);
     } else {
       items.forEach((item) => {
@@ -227,7 +244,7 @@ function renderTrainingModelOptions(select, models) {
         option.dataset.source = item.source || "";
         option.dataset.backend = item.backend || "";
         option.dataset.status = item.status || "";
-        option.title = `${item.source || "--"} · ${item.backend || "--"} · ${item.task_family || "--"} · ${item.status || "--"}`;
+        option.title = `${item.source || "--"} 繚 ${item.backend || "--"} 繚 ${item.task_family || "--"} 繚 ${item.status || "--"}`;
         group.appendChild(option);
       });
     }
@@ -342,6 +359,16 @@ async function importYoloModelFromModal(event) {
     const modelName = result?.model?.display_name || displayName;
     eventBus.emit("toast", `Imported model: ${modelName}`);
     renderModelImportValidationResult(result, resultEl);
+    if (importType === "custom_package" && result?.model?.model_id) {
+      try {
+        const dryRun = await requestCustomPackageDryRun(result.model.model_id);
+        renderModelImportValidationResult(result, resultEl, dryRun);
+      } catch (approvalErr) {
+        if (resultEl) {
+          resultEl.insertAdjacentHTML("beforeend", `<div class="form-error">${escapeHtml(approvalErr.message)}</div>`);
+        }
+      }
+    }
     await loadTrainingModelCatalog(true);
     const select = qs("#train-model");
     if (select && result?.model?.trainable && result?.model?.training_value) select.value = result.model.training_value;
@@ -358,6 +385,7 @@ function getModelImportEndpoint(importType, projectId) {
   if (importType === "yolo_yaml") return `/api/projects/${projectId}/models/import/yolo-yaml`;
   if (importType === "onnx") return `/api/projects/${projectId}/models/import/onnx`;
   if (importType === "rnn_package") return `/api/projects/${projectId}/models/import/rnn-package`;
+  if (importType === "custom_package") return `/api/projects/${projectId}/models/import/custom-package`;
   return `/api/projects/${projectId}/models/import/yolo-pt`;
 }
 
@@ -365,6 +393,7 @@ function isValidModelImportFile(importType, fileName) {
   if (importType === "yolo_yaml") return fileName.endsWith(".yaml") || fileName.endsWith(".yml");
   if (importType === "onnx") return fileName.endsWith(".onnx");
   if (importType === "rnn_package") return fileName.endsWith(".zip");
+  if (importType === "custom_package") return fileName.endsWith(".zip");
   return fileName.endsWith(".pt");
 }
 
@@ -372,6 +401,7 @@ function getModelImportFileMessage(importType) {
   if (importType === "yolo_yaml") return "Please select a YOLO model .yaml / .yml file.";
   if (importType === "onnx") return "Please select an ONNX .onnx file.";
   if (importType === "rnn_package") return "Please select an RNN model package .zip file.";
+  if (importType === "custom_package") return "Please select a Custom Model Package .zip file.";
   return "Please select a YOLO .pt file.";
 }
 
@@ -380,35 +410,37 @@ function updateModelImportTypeUi() {
   const input = qs("#model-import-file");
   const submit = qs("#btn-submit-model-import");
   const taskSelect = qs("#model-import-task-family");
-  const dropTitle = qs("#model-import-drop-title");
-  const dropHelp = qs("#model-import-drop-help");
   if (importType === "yolo_yaml") {
     if (input) input.accept = ".yaml,.yml";
-    setText("#model-import-drop-title", "拖入 YOLO model architecture YAML");
-    setText("#model-import-drop-help", "點擊選擇或拖曳檔案到此。可接受：.yaml, .yml；不接受 data.yaml / dataset YAML。");
+    setText("#model-import-drop-title", "匯入 YOLO model architecture YAML");
+    setText("#model-import-drop-help", "可接受 .yaml / .yml。這必須是 YOLO 模型架構 YAML，不是 data.yaml / dataset YAML。匯入後可作為 YOLO 訓練架構。");
     if (submit) submit.innerHTML = `<i class="fa-solid fa-file-import"></i> Import YOLO YAML`;
   } else if (importType === "onnx") {
     if (input) input.accept = ".onnx";
-    setText("#model-import-drop-title", "拖入 ONNX 推論模型");
-    setText("#model-import-drop-help", "點擊選擇或拖曳檔案到此。可接受：.onnx；僅進入 inference-only catalog。");
+    setText("#model-import-drop-title", "匯入 ONNX 推論模型");
+    setText("#model-import-drop-help", "可接受 .onnx。ONNX 是 inference-only，不能放入 YOLO 訓練 selector。");
     if (submit) submit.innerHTML = `<i class="fa-solid fa-file-import"></i> Import ONNX`;
   } else if (importType === "rnn_package") {
     if (input) input.accept = ".zip";
-    setText("#model-import-drop-title", "拖入 RNN model package");
-    setText("#model-import-drop-help", "點擊選擇或拖曳檔案到此。可接受：.zip；需包含 model.pt、feature_schema、normalization_stats、sequence_config。");
+    setText("#model-import-drop-title", "匯入 RNN model package");
+    setText("#model-import-drop-help", "可接受 .zip。需包含 model.pt、feature_schema、normalization_stats、sequence_config。此類目前不是 YOLO 訓練模型。");
     if (submit) submit.innerHTML = `<i class="fa-solid fa-file-import"></i> Import RNN Package`;
     if (taskSelect && !taskSelect.value.startsWith("sequence_")) taskSelect.value = "sequence_classification";
+  } else if (importType === "custom_package") {
+    if (input) input.accept = ".zip";
+    setText("#model-import-drop-title", "匯入 Custom Model Package");
+    setText("#model-import-drop-help", "可接受 .zip，必須包含 model_manifest.json；可包含 adapter.py / train.py / preprocess.py / postprocess.py / src/*.c / src/*.cpp / weights/ / bin/。目前只做 sandbox validation，不會進入訓練。");
+    if (submit) submit.innerHTML = `<i class="fa-solid fa-file-import"></i> Validate Custom Package`;
   } else {
     if (input) input.accept = ".pt";
-    setText("#model-import-drop-title", "拖入 YOLO .pt 模型檔");
-    setText("#model-import-drop-help", "點擊選擇或拖曳檔案到此。可接受：.pt；可作為 CNN/YOLO 訓練起點。");
+    setText("#model-import-drop-title", "匯入 YOLO .pt 權重檔");
+    setText("#model-import-drop-help", "可接受 .pt。匯入後會存到目前專案 models/imports，並可直接出現在 CNN/YOLO 訓練模型選單作為訓練起點。");
     if (submit) submit.innerHTML = `<i class="fa-solid fa-file-import"></i> Import YOLO .pt`;
   }
   if (input) input.value = "";
   updateModelImportSelectedFile();
 }
-
-function renderModelImportValidationResult(result, resultEl) {
+function renderModelImportValidationResult(result, resultEl, dryRun = null) {
   if (!resultEl) return;
   const model = result?.model || {};
   const validation = result?.validation || {};
@@ -417,16 +449,166 @@ function renderModelImportValidationResult(result, resultEl) {
     <div class="model-import-validation-report">
       <strong>Imported ${escapeHtml(model.display_name || "--")}</strong>
       <span>Status: <code>${escapeHtml(model.status || validation.status || "--")}</code></span>
+      ${validation.execution_enabled === false ? `<span>Execution: <code>disabled</code></span>` : ""}
       <div class="model-import-checks">
-        ${checks.map((check) => `
-          <div class="model-import-check ${check.passed === false ? "failed" : check.skipped ? "skipped" : "passed"}">
+        ${checks.map((check) => {
+          const state = check.status || (check.skipped ? "skipped" : check.passed === false ? "failed" : "passed");
+          return `
+          <div class="model-import-check ${state === "failed" ? "failed" : state === "blocked" ? "skipped" : state === "skipped" ? "skipped" : "passed"}">
             <span>${escapeHtml(check.name || "--")}</span>
-            <code>${escapeHtml(check.skipped ? "skipped" : check.passed === false ? "failed" : "passed")}</code>
+            <code>${escapeHtml(state)}</code>
           </div>
-        `).join("")}
+        `; }).join("")}
       </div>
+      ${(validation.errors || []).map((err) => `<div class="form-error">${escapeHtml(err)}</div>`).join("")}
+      ${(validation.warnings || []).map((warning) => `<div class="form-hint">${escapeHtml(warning)}</div>`).join("")}
+      ${(validation.blocked_reasons || []).map((reason) => `<div class="form-hint">${escapeHtml(reason)}</div>`).join("")}
+      ${renderCustomPackageApprovalPanel(model, dryRun)}
     </div>
   `;
+}
+
+function renderCustomPackageApprovalPanel(model, dryRun) {
+  if (model?.format !== "custom_package") return "";
+  const payload = dryRun?.dry_run || dryRun?.approval || null;
+  if (!payload) {
+    return `
+      <div class="model-approval-panel">
+        <div>
+          <strong>Sandbox Permission Gate</strong>
+          <span>Permission request is being prepared. Adapter code remains disabled.</span>
+        </div>
+      </div>
+    `;
+  }
+  const gate = payload.permission_gate || {};
+  const requested = Array.isArray(gate.requested_permissions) ? gate.requested_permissions : [];
+  const blocked = Array.isArray(payload.blocked_reasons) ? payload.blocked_reasons : [];
+  const modelId = escapeHtml(model.model_id || "");
+  return `
+    <div class="model-approval-panel">
+      <div class="model-approval-header">
+        <div>
+          <strong>Sandbox Permission Gate</strong>
+          <span>Status: <code>${escapeHtml(payload.status || "--")}</code></span>
+        </div>
+        <span class="model-approval-badge">Execution Disabled</span>
+      </div>
+      <div class="model-approval-summary">
+        <div><span>Runtime</span><code>${escapeHtml(gate.runtime_kind || "--")}</code></div>
+        <div><span>Entrypoint</span><code>${escapeHtml(gate.entrypoint || "--")}</code></div>
+        <div><span>Approval</span><code>${escapeHtml(payload.approval_status || payload.decision || "pending")}</code></div>
+      </div>
+      <div class="model-permission-list">
+        ${requested.length ? requested.map((permission) => `
+          <div class="model-permission-item ${permission.risk === "high" ? "high-risk" : ""}">
+            <span>${escapeHtml(permission.name || "--")}</span>
+            <code>${escapeHtml(permission.risk || "unknown")}</code>
+          </div>
+        `).join("") : `<div class="form-hint">No optional permissions requested. Python adapter execution still requires approval.</div>`}
+      </div>
+      ${blocked.map((reason) => `<div class="form-hint">${escapeHtml(reason)}</div>`).join("")}
+      <div class="model-approval-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-model-approval-action="approve" data-model-id="${modelId}">
+          <i class="fa-solid fa-check"></i> Approve dry-run gate
+        </button>
+        <button type="button" class="btn btn-sm btn-secondary" data-model-approval-action="reject" data-model-id="${modelId}">
+          <i class="fa-solid fa-ban"></i> Reject
+        </button>
+        <button type="button" class="btn btn-sm btn-secondary" data-model-dry-run-action="plan" data-model-id="${modelId}">
+          <i class="fa-solid fa-list-check"></i> Build sandbox plan
+        </button>
+        <button type="button" class="btn btn-sm btn-secondary" data-model-dry-run-action="mock" data-model-id="${modelId}">
+          <i class="fa-solid fa-vial"></i> Mock dry-run
+        </button>
+        <button type="button" class="btn btn-sm btn-secondary" data-model-dry-run-action="enablement" data-model-id="${modelId}">
+          <i class="fa-solid fa-shield-halved"></i> Evaluate enablement
+        </button>
+        <button type="button" class="btn btn-sm btn-secondary" data-model-dry-run-action="integration" data-model-id="${modelId}">
+          <i class="fa-solid fa-diagram-project"></i> Integration contract
+        </button>
+      </div>
+      <div class="form-hint">Approval only records permission intent. Adapter import and execution remain disabled in this phase.</div>
+    </div>
+  `;
+}
+
+async function requestCustomPackageDryRun(modelId) {
+  return apiFetch(`/api/projects/${appState.currentProjectId}/models/import/custom-package/${encodeURIComponent(modelId)}/dry-run/request`, {
+    method: "POST"
+  });
+}
+
+async function handleModelImportApprovalClick(event) {
+  const dryRunButton = event.target.closest("[data-model-dry-run-action]");
+  if (dryRunButton) {
+    await handleModelImportDryRunAction(dryRunButton);
+    return;
+  }
+  const button = event.target.closest("[data-model-approval-action]");
+  if (!button || !appState.currentProjectId) return;
+  const modelId = button.dataset.modelId || "";
+  const decision = button.dataset.modelApprovalAction || "";
+  if (!modelId || !decision) return;
+  button.disabled = true;
+  try {
+    const formData = new FormData();
+    formData.append("decision", decision);
+    formData.append("approved_by", "local_user");
+    formData.append("note", "Recorded from Model Import approval panel.");
+    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/models/import/custom-package/${encodeURIComponent(modelId)}/dry-run/approval`, {
+      method: "POST",
+      body: formData
+    });
+    eventBus.emit("toast", `Sandbox approval ${decision}: execution remains disabled.`);
+    const panel = button.closest(".model-approval-panel");
+    if (panel) {
+      panel.insertAdjacentHTML("beforeend", `
+        <div class="model-approval-decision">
+          <strong>${escapeHtml(result?.approval?.status || "--")}</strong>
+          <span>${escapeHtml((result?.approval?.blocked_reasons || []).join(" "))}</span>
+        </div>
+      `);
+    }
+  } catch (err) {
+    eventBus.emit("toast", `Sandbox approval failed: ${err.message}`);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function handleModelImportDryRunAction(button) {
+  if (!appState.currentProjectId) return;
+  const modelId = button.dataset.modelId || "";
+  const action = button.dataset.modelDryRunAction || "";
+  if (!modelId || !action) return;
+  button.disabled = true;
+  try {
+    const endpoint = action === "mock"
+      ? `/api/projects/${appState.currentProjectId}/models/import/custom-package/${encodeURIComponent(modelId)}/dry-run/mock`
+      : action === "enablement"
+        ? `/api/projects/${appState.currentProjectId}/models/import/custom-package/${encodeURIComponent(modelId)}/enablement`
+        : action === "integration"
+          ? `/api/projects/${appState.currentProjectId}/models/import/custom-package/${encodeURIComponent(modelId)}/integration`
+          : `/api/projects/${appState.currentProjectId}/models/import/custom-package/${encodeURIComponent(modelId)}/dry-run/plan`;
+    const result = await apiFetch(endpoint, { method: "POST" });
+    const payload = result?.dry_run || result?.plan || result?.enablement || result?.integration || {};
+    const label = action === "mock" ? "Mock dry-run" : action === "enablement" ? "Enablement policy" : action === "integration" ? "Integration contract" : "Sandbox plan";
+    eventBus.emit("toast", `${label}: ${payload.status || "completed"}`);
+    const panel = button.closest(".model-approval-panel");
+    if (panel) {
+      panel.insertAdjacentHTML("beforeend", `
+        <div class="model-approval-decision">
+          <strong>${escapeHtml(payload.status || "--")}</strong>
+          <span>Execution disabled. Adapter was not imported or executed.</span>
+        </div>
+      `);
+    }
+  } catch (err) {
+    eventBus.emit("toast", `Sandbox ${action} failed: ${err.message}`);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 export function renderTrainingMonitor() {
@@ -436,6 +618,11 @@ export function renderTrainingMonitor() {
   const isReady = blockers.length === 0;
   const isRunning = trainState.status === "training";
   const isStopping = trainState.status === "stopping";
+  const isSequenceProject = isSequenceTrainingRecord({
+    architecture: appState.currentProject?.architecture,
+    backend: appState.currentProject?.backend,
+    task_type: appState.currentProject?.task_type
+  });
   const hasMetrics = isRunning || Boolean(currentChartData?.epochs?.length);
 
   setText("#card-ds-total", status.hasProject ? t("training.card.imageCount", { count: status.imageCount }) : "--");
@@ -528,7 +715,7 @@ export function renderTrainingMonitor() {
   setText("#train-progress-text", showMonitor ? `Epoch ${trainState.epoch || 0} / ${trainState.total_epochs || "--"}` : "--");
 
   const lastMetrics = trainState.metrics && trainState.metrics.length ? trainState.metrics[trainState.metrics.length - 1] : {};
-  const isRnnStatus = trainState.architecture === "rnn" || trainState.backend === "pytorch_lstm";
+  const isRnnStatus = isSequenceTrainingRecord(trainState);
   updateMonitorMetricLabels(isRnnStatus, lastMetrics);
   if (isRnnStatus) {
     setText("#monitor-map50", metricValue(lastMetrics["val/accuracy"] ?? lastMetrics["val/mae"], 3));
@@ -544,13 +731,15 @@ export function renderTrainingMonitor() {
     currentChartData = normalizeLiveTrainingMetrics(trainState);
     updateChartVisualization();
     renderEpochHistoryTable(currentChartData);
-  } else {
+  } else if (!isSequenceProject) {
     loadLatestRunMetricsOnce();
   }
 
   setMetricsDashboardActive(hasMetrics);
 
-  renderRunHistoryTable();
+  if (!isSequenceProject) {
+    renderRunHistoryTable();
+  }
 }
 
 function updateGlobalTrainingProgress(trainState, progressPercent, showMonitor) {
@@ -734,8 +923,8 @@ function updateTrainingModelRegistrySkeleton(status) {
 
   setText("#training-model-selected-name", selectedOption?.textContent || modelName);
   setText("#training-model-task", modelTask);
-  if (nameEl) nameEl.title = `${modelName} · ${source} · ${backend} · ${statusText}`;
-  if (taskEl) taskEl.title = `${modelTask} · ${source} · ${backend} · ${statusText}`;
+  if (nameEl) nameEl.title = `${modelName} 繚 ${source} 繚 ${backend} 繚 ${statusText}`;
+  if (taskEl) taskEl.title = `${modelTask} 繚 ${source} 繚 ${backend} 繚 ${statusText}`;
   if (noteEl) {
     noteEl.textContent = compatible
       ? t("training.modelRegistry.compatible")
@@ -747,7 +936,7 @@ function updateTrainingModelRegistrySkeleton(status) {
 
 function normalizeLiveTrainingMetrics(trainState) {
   const metrics = trainState.metrics || [];
-  const isRnn = trainState.architecture === "rnn" || trainState.backend === "pytorch_lstm";
+  const isRnn = isSequenceTrainingRecord(trainState);
   if (isRnn) {
     return normalizeMetricRows(metrics, {
       architecture: "rnn",
@@ -926,7 +1115,7 @@ async function updateTrendDiagnostic(runId) {
       setHTML("#trend-suggestions", escapeHtml(t("training.suggestions.empty")));
       const badge = qs("#trend-health-badge");
       if (badge) {
-        const label = run?.architecture === "rnn" || run?.backend === "pytorch_lstm" ? "RNN" : "Good";
+        const label = isSequenceTrainingRecord(run) ? sequenceBackendLabel(run) : "Good";
         badge.className = "status-badge Good";
         badge.textContent = label;
       }
@@ -1273,14 +1462,23 @@ async function renderRunHistoryTable() {
       const date = run.completed_at ? new Date(run.completed_at).toLocaleString() : "--";
       const config = run.best_metrics || {};
       const runTaskType = String(run.task_type || "").toLowerCase();
-      const isRnnRun = run.architecture === "rnn" || run.backend === "pytorch_lstm" || runTaskType.includes("sequence");
+      const isRnnRun = isSequenceTrainingRecord(run);
+      const isSequenceRegression = isRnnRun && (
+        runTaskType.includes("regression") ||
+        config["val/mae"] !== undefined ||
+        config["val/rmse"] !== undefined
+      );
       const isSeg = runTaskType.includes("segmentation") || runTaskType.includes("seg");
       const suffix = isSeg ? "(M)" : "(B)";
       const metric1 = isRnnRun
-        ? labeledMetric("Acc", config["val/accuracy"])
+        ? isSequenceRegression
+          ? labeledMetric("MAE", config["val/mae"], 4)
+          : labeledMetric("Acc", config["val/accuracy"])
         : labeledMetric("mAP50", config[`metrics/mAP50${suffix}`]);
       const metric2 = isRnnRun
-        ? labeledMetric(config["val/macro_f1"] !== undefined ? "Macro-F1" : "MAE", config["val/macro_f1"] ?? config["val/mae"])
+        ? isSequenceRegression
+          ? labeledMetric("RMSE", config["val/rmse"], 4)
+          : labeledMetric("Macro-F1", config["val/macro_f1"])
         : labeledMetric("mAP50-95", config[`metrics/mAP50-95${suffix}`]);
       let statusBadge = `<span class="badge badge-success">Completed</span>`;
       if (run.status === "failed") statusBadge = `<span class="badge badge-danger">Failed</span>`;

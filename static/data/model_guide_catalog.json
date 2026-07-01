@@ -1,0 +1,138 @@
+{
+  "lstm_classification": {
+    "title": "LSTM Classification",
+    "badge": "RNN",
+    "status": "trainable",
+    "summary": "適合有時間順序、訊號延遲或狀態轉換的分類問題。",
+    "best_for": [
+      "序列中前後時間點會互相影響",
+      "需要辨識 normal / abnormal、狀態或類別",
+      "資料量中等，欄位順序穩定"
+    ],
+    "not_for": [
+      "每一列資料彼此獨立，沒有時間關係",
+      "CSV 欄位經常變動或缺失嚴重"
+    ],
+    "good_result": "validation loss 下降且 Macro-F1 / Accuracy 穩定提升。",
+    "risk": "sequence_length 過短會看不到長期關係，過長則容易訓練變慢或過擬合。"
+  },
+  "lstm_regression": {
+    "title": "LSTM Regression",
+    "badge": "RNN",
+    "status": "trainable",
+    "summary": "適合用過去一段序列預測連續數值，例如溫度、速度、震動或感測值。",
+    "best_for": [
+      "目標值是連續數字",
+      "需要捕捉趨勢、滯後或週期性",
+      "特徵欄位有明確時間順序"
+    ],
+    "not_for": [
+      "目標欄位其實是類別",
+      "資料沒有固定取樣頻率且未做對齊"
+    ],
+    "good_result": "MAE / RMSE 下降，預測曲線不只貼近平均值，也能跟上趨勢。",
+    "risk": "若 target leakage 存在，驗證數字會很好但實際推論會失準。"
+  },
+  "gru_classification": {
+    "title": "GRU Classification",
+    "badge": "RNN",
+    "status": "trainable",
+    "summary": "比 LSTM 輕量，適合先做快速分類 baseline。",
+    "best_for": [
+      "資料量不大，需要較快訓練",
+      "序列關係存在但不需要很長期記憶",
+      "想先建立 RNN baseline"
+    ],
+    "not_for": [
+      "需要非常長期的時間依賴",
+      "分類標籤品質不穩定"
+    ],
+    "good_result": "訓練速度比 LSTM 快，Macro-F1 與 LSTM 接近。",
+    "risk": "若序列依賴很長，GRU 可能比 LSTM 更早遇到效果上限。"
+  },
+  "gru_regression": {
+    "title": "GRU Regression",
+    "badge": "RNN",
+    "status": "trainable",
+    "summary": "適合快速建立序列回歸 baseline，計算成本通常低於 LSTM。",
+    "best_for": [
+      "連續數值預測",
+      "資料量中小型",
+      "需要較快迭代 sequence_length / stride"
+    ],
+    "not_for": [
+      "需要非常長期記憶的預測任務",
+      "特徵欄位缺值或尺度差距未處理"
+    ],
+    "good_result": "RMSE / MAE 穩定下降，且與 LSTM 結果接近。",
+    "risk": "可能低估長期依賴，建議與 LSTM 結果比較。"
+  },
+  "bilstm_classification": {
+    "title": "BiLSTM Classification",
+    "badge": "RNN",
+    "status": "trainable",
+    "summary": "適合離線分類，模型可同時看序列前後文。",
+    "best_for": [
+      "離線分析，不要求即時未來不可見",
+      "整段序列已完整取得",
+      "狀態轉換前後文都重要"
+    ],
+    "not_for": [
+      "即時串流預測",
+      "部署時只能看到過去資料"
+    ],
+    "good_result": "分類邊界比單向 LSTM 穩定，轉換段落錯誤較少。",
+    "risk": "BiLSTM 可能使用未來資訊，不適合嚴格即時預測場景。"
+  },
+  "bilstm_regression": {
+    "title": "BiLSTM Regression",
+    "badge": "RNN",
+    "status": "trainable",
+    "summary": "適合離線序列回歸，用完整前後文估計連續目標。",
+    "best_for": [
+      "後處理或離線分析",
+      "目標值受前後時間點共同影響",
+      "資料可完整批次取得"
+    ],
+    "not_for": [
+      "線上即時預測",
+      "只允許使用歷史資料的部署情境"
+    ],
+    "good_result": "預測曲線平滑且能捕捉局部變化。",
+    "risk": "若部署時沒有未來資料，離線結果會高估實際表現。"
+  },
+  "xgboost_classification": {
+    "title": "XGBoost Classification",
+    "badge": "Baseline",
+    "status": "trainable",
+    "summary": "適合 tabular / sensor log 的強 baseline。會把 CSV sequence window 攤平成表格特徵後訓練 XGBoost。",
+    "best_for": [
+      "每筆資料可轉成固定特徵列",
+      "需要快速 baseline",
+      "序列關係不強或已做統計特徵"
+    ],
+    "not_for": [
+      "需要直接學習長時間序列依賴",
+      "需要端到端 sequence tensor 訓練"
+    ],
+    "good_result": "Accuracy / Macro-F1 很快收斂，且可作為 LSTM 的比較基準。",
+    "risk": "XGBoost 不會自動理解時間順序，需先把序列轉成合適的 tabular features。"
+  },
+  "xgboost_regression": {
+    "title": "XGBoost Regression",
+    "badge": "Baseline",
+    "status": "trainable",
+    "summary": "適合 sensor table 的快速回歸 baseline。會把 CSV sequence window 攤平成表格特徵後訓練 XGBoost。",
+    "best_for": [
+      "固定欄位的表格資料",
+      "快速比較 MAE / RMSE baseline",
+      "特徵工程已經完成"
+    ],
+    "not_for": [
+      "必須直接利用 raw sequence 的時序模型",
+      "欄位順序或尺度尚未整理"
+    ],
+    "good_result": "用很短時間取得穩定 MAE / RMSE baseline。",
+    "risk": "若 temporal leakage 沒處理，表現可能過度樂觀。"
+  }
+}

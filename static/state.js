@@ -476,9 +476,9 @@ export const i18n = {
     "training.card.split": "資料分散",
     "training.card.startStatus": "啟動狀態",
     "training.card.imageCount": "{count} 張圖片",
-    "training.card.images": "圖片：{count}",
-    "training.card.annotated": "已標註：{annotated} / 缺少：{missing}",
-    "training.card.trainValTest": "Train / Val / Test：{train} / {val} / {test}",
+    // "training.card.images": "圖片：{count}",
+    // "training.card.annotated": "已標註：{annotated} / 缺少：{missing}",
+    // "training.card.trainValTest": "Train / Val / Test：{train} / {val} / {test}",
     "training.card.readinessPass": "就緒檢查：通過",
     "training.card.readinessBlocked": "就緒檢查：{count} 個阻擋項目",
     "training.status.ready": "可訓練",
@@ -507,7 +507,7 @@ export const i18n = {
     "training.modelRegistry.compatible": "與目前任務相容",
     "training.modelRegistry.incompatible": "可能不相容",
     "training.modelRegistry.openHub": "匯入模型",
-    "training.modelRegistry.hubPending": "本階段只支援 YOLO .pt 匯入；ONNX、TensorFlow、任意 PyTorch 與 custom Python 尚未開放。",
+    "training.modelRegistry.hubPending": "可訓練匯入：YOLO .pt / YOLO model .yaml。ONNX 為 inference-only；Custom package 需通過 sandbox 流程後才可能啟用。",
     "training.modelRegistry.yoloV8Seg": "Instance Segmentation",
     "training.modelRegistry.yoloV8Det": "Detection",
     "training.profile": "訓練設定檔",
@@ -1062,7 +1062,7 @@ export const i18n = {
     "training.modelRegistry.compatible": "Compatible with current task",
     "training.modelRegistry.incompatible": "May be incompatible",
     "training.modelRegistry.openHub": "Import Model",
-    "training.modelRegistry.hubPending": "This phase only supports YOLO .pt import. ONNX, TensorFlow, arbitrary PyTorch, and custom Python are not enabled.",
+    "training.modelRegistry.hubPending": "Trainable imports: YOLO .pt / YOLO model .yaml. ONNX is inference-only; Custom packages require the sandbox flow before enablement.",
     "training.modelRegistry.yoloV8Seg": "Instance Segmentation",
     "training.modelRegistry.yoloV8Det": "Detection",
     "training.profile": "Training Profile",
@@ -1348,14 +1348,14 @@ export function updateLabelMeState() {
   if (!project) return;
   const rawImages = (project.images || []).filter((img) => !img.is_augmented);
   const total = rawImages.length;
-  
+
   const annotated = rawImages.filter((img) => img.status === "annotated").length;
   const flagged = rawImages.filter((img) => img.status === "flagged").length;
   const skipped = rawImages.filter((img) => img.status === "skipped").length;
-  
+
   const missing = total - annotated - flagged - skipped;
   const hasAnnotated = annotated > 0;
-  
+
   appState.labelme = {
     uiReady: true,
     backendReady: true,

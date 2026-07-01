@@ -8,6 +8,8 @@ export function initEvaluation() {
 }
 
 export async function renderEvaluationPage() {
+  if (appState.currentPage !== "evaluation") return;
+
   if (!appState.currentProjectId) {
     setText("#eval-map50", "--");
     setText("#eval-iou", "--");

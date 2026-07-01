@@ -7,7 +7,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-from src.model_system.constants import MODEL_STATUS_FAILED, MODEL_STATUS_VALIDATED_BASIC, VALIDATION_REPORT_NAME
+from src.model_system.constants import (
+    MODEL_STATUS_FAILED,
+    MODEL_STATUS_REGISTERED_DISABLED,
+    MODEL_STATUS_REJECTED,
+    MODEL_STATUS_VALIDATED_BASIC,
+    VALIDATION_REPORT_NAME,
+)
 
 
 ALLOWED_YOLO_TASK_FAMILIES = {"detection", "segmentation"}
@@ -19,6 +25,29 @@ RNN_PACKAGE_REQUIRED_FILES = {
     "feature_schema.json",
     "normalization_stats.json",
     "sequence_config.json",
+}
+CUSTOM_PACKAGE_REQUIRED_FIELDS = {
+    "schema_version",
+    "model_id",
+    "model_name",
+    "model_type",
+    "task",
+    "runtime",
+    "artifacts",
+    "input_spec",
+    "output_spec",
+    "capabilities",
+    "security",
+    "dependency_policy",
+}
+CUSTOM_PACKAGE_REQUIRED_OBJECTS = {
+    "runtime",
+    "artifacts",
+    "input_spec",
+    "output_spec",
+    "capabilities",
+    "security",
+    "dependency_policy",
 }
 
 
@@ -215,10 +244,10 @@ def validate_rnn_package_dir(import_dir: Path, task_family: str) -> Dict[str, An
     }
 
 
-def extract_rnn_package_to_import(source_path: Path, import_dir: Path) -> Dict[str, Any]:
+def _safe_extract_zip(source_path: Path, import_dir: Path, package_label: str) -> Dict[str, Any]:
     import_dir.mkdir(parents=True, exist_ok=True)
     if source_path.suffix.lower() != ".zip":
-        return {"name": "extract_zip", "passed": False, "errors": ["Only .zip RNN model packages are supported."]}
+        return {"name": "extract_zip", "passed": False, "status": "failed", "errors": [f"Only .zip {package_label} packages are supported."]}
 
     try:
         with zipfile.ZipFile(source_path) as archive:
@@ -235,14 +264,140 @@ def extract_rnn_package_to_import(source_path: Path, import_dir: Path) -> Dict[s
                 with archive.open(member) as source, open(target, "wb") as destination:
                     shutil.copyfileobj(source, destination)
     except zipfile.BadZipFile:
-        return {"name": "extract_zip", "passed": False, "errors": ["RNN model package is not a valid zip file."]}
+        return {"name": "extract_zip", "passed": False, "status": "failed", "errors": [f"{package_label} package is not a valid zip file."]}
 
     extracted = sorted(path.relative_to(import_dir).as_posix() for path in import_dir.rglob("*") if path.is_file())
     return {
         "name": "extract_zip",
         "passed": True,
+        "status": "passed",
         "file_count": len(extracted),
         "files": extracted,
+    }
+
+
+def extract_rnn_package_to_import(source_path: Path, import_dir: Path) -> Dict[str, Any]:
+    return _safe_extract_zip(source_path, import_dir, "RNN model")
+
+
+def extract_custom_package_to_staging(source_path: Path, staging_dir: Path) -> Dict[str, Any]:
+    return _safe_extract_zip(source_path, staging_dir, "custom model")
+
+
+def validate_custom_package_dir(staging_dir: Path, import_id: str, package_name: str) -> Dict[str, Any]:
+    checks = []
+    errors = []
+    warnings = [
+        "Custom model package import is manifest-only in Phase P1-A. Package code is not imported, compiled, executed, or enabled."
+    ]
+    manifest_valid = False
+    manifest_payload: Dict[str, Any] = {}
+
+    manifest_path = staging_dir / "model_manifest.json"
+    manifest_exists = manifest_path.exists() and manifest_path.is_file()
+    checks.append({
+        "name": "manifest_exists",
+        "passed": manifest_exists,
+        "status": "passed" if manifest_exists else "failed",
+        "message": "model_manifest.json found." if manifest_exists else "model_manifest.json is missing.",
+    })
+    if not manifest_exists:
+        errors.append("Custom model package must contain model_manifest.json.")
+    else:
+        try:
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                manifest_payload = payload
+            else:
+                errors.append("model_manifest.json must contain a JSON object.")
+        except Exception as exc:
+            errors.append(f"model_manifest.json is not valid JSON: {exc}")
+
+    missing_fields = sorted(field for field in CUSTOM_PACKAGE_REQUIRED_FIELDS if field not in manifest_payload)
+    checks.append({
+        "name": "manifest_schema",
+        "passed": not missing_fields and bool(manifest_payload),
+        "status": "passed" if not missing_fields and bool(manifest_payload) else "failed",
+        "missing_fields": missing_fields,
+        "message": "Required fields are present." if not missing_fields and bool(manifest_payload) else "Required manifest fields are missing.",
+    })
+    if missing_fields:
+        errors.append(f"model_manifest.json is missing required fields: {', '.join(missing_fields)}")
+
+    for field in sorted(CUSTOM_PACKAGE_REQUIRED_OBJECTS):
+        value = manifest_payload.get(field)
+        passed = isinstance(value, dict)
+        checks.append({
+            "name": f"{field}_contract",
+            "passed": passed,
+            "status": "passed" if passed else "failed",
+            "message": f"{field} is declared." if passed else f"{field} must be an object.",
+        })
+        if not passed and field in manifest_payload:
+            errors.append(f"{field} must be an object.")
+
+    runtime = manifest_payload.get("runtime") if isinstance(manifest_payload.get("runtime"), dict) else {}
+    entrypoint = runtime.get("entrypoint")
+    checks.append({
+        "name": "entrypoint_declared",
+        "passed": bool(runtime.get("kind")) and bool(entrypoint),
+        "status": "passed" if bool(runtime.get("kind")) and bool(entrypoint) else "failed",
+        "message": f"{entrypoint} declared but not executed." if entrypoint else "runtime.kind and runtime.entrypoint are required.",
+    })
+    if runtime and (not runtime.get("kind") or not entrypoint):
+        errors.append("runtime must include kind and entrypoint.")
+
+    dependency_policy = manifest_payload.get("dependency_policy") if isinstance(manifest_payload.get("dependency_policy"), dict) else {}
+    install_allowed = bool(dependency_policy.get("install_allowed"))
+    checks.append({
+        "name": "dependency_policy",
+        "passed": not install_allowed,
+        "status": "passed" if not install_allowed else "blocked",
+        "message": "Dependency installation disabled." if not install_allowed else "Dependency installation is not allowed in Phase P1-A.",
+    })
+    if install_allowed:
+        warnings.append("dependency_policy.install_allowed was requested but is blocked in Phase P1-A.")
+
+    security = manifest_payload.get("security") if isinstance(manifest_payload.get("security"), dict) else {}
+    blocked_permissions = [
+        key for key in ("requires_network", "writes_files", "requires_shell")
+        if bool(security.get(key))
+    ]
+    checks.append({
+        "name": "sandbox_permission",
+        "passed": not blocked_permissions,
+        "status": "passed" if not blocked_permissions else "blocked",
+        "blocked_permissions": blocked_permissions,
+        "message": "No network, shell, or file-write permission requested." if not blocked_permissions else "Requested permissions are blocked in Phase P1-A.",
+    })
+    if blocked_permissions:
+        warnings.append(f"Requested permissions are blocked in Phase P1-A: {', '.join(blocked_permissions)}")
+
+    checks.append({
+        "name": "execution_policy",
+        "passed": False,
+        "status": "blocked",
+        "message": "P1-A is validation-only. Execution is disabled.",
+    })
+
+    manifest_valid = not errors
+    status = MODEL_STATUS_REGISTERED_DISABLED if manifest_valid else MODEL_STATUS_REJECTED
+    return {
+        "import_id": import_id,
+        "package_name": package_name,
+        "status": status,
+        "created_at": datetime.now().isoformat(),
+        "manifest_valid": manifest_valid,
+        "execution_enabled": False,
+        "checks": checks,
+        "warnings": warnings,
+        "errors": errors,
+        "blocked_reasons": [
+            "Execution is disabled in Phase P1-A.",
+            "Package is not added to training or inference selectors.",
+        ],
+        "next_allowed_action": "manual_review" if manifest_valid else "fix_manifest",
+        "manifest": manifest_payload if manifest_valid else {},
     }
 
 

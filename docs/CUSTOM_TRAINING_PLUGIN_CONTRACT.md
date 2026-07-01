@@ -777,6 +777,483 @@ UPLOADED
   -> REGISTERED_DISABLED
 ```
 
+## 13.2 Phase P1-B Permission Gate And Approval Flow
+
+Formal phase name:
+
+```text
+Phase P1-B: Python Adapter Sandbox Dry-Run Gate
+```
+
+P1-B does not enable adapter execution by itself. It defines and records the approval flow required before any future sandbox runner may execute a Python adapter dry-run.
+
+Core rule:
+
+```text
+approval recorded != adapter executed
+approval recorded != training enabled
+approval recorded != inference enabled
+```
+
+P1-B allowed behavior:
+
+```text
+1. Read the staged package source manifest.
+2. Build a sandbox permission gate.
+3. Detect requested permissions.
+4. Create sandbox_permission_request.json.
+5. Create dry_run_report.json with execution disabled.
+6. Record approve / reject decision.
+7. Keep adapter_imported=false and dry_run_executed=false.
+```
+
+P1-B hard non-goals:
+
+```text
+Do not import adapter.py
+Do not call adapter.py
+Do not compile source
+Do not run infer.exe
+Do not install dependencies
+Do not call /train/start
+Do not mark package ENABLED
+Do not mark package TRAINABLE
+Do not mark package INFERENCE_READY
+```
+
+Permission gate fields:
+
+```json
+{
+  "runtime_kind": "python_adapter",
+  "entrypoint": "adapter.py",
+  "approval_required": true,
+  "execution_enabled": false,
+  "permissions": [
+    {
+      "name": "python_adapter_execution",
+      "requested": true,
+      "risk": "high",
+      "requires_approval": true,
+      "allowed_by_default": false
+    }
+  ],
+  "policy": {
+    "network_default": false,
+    "shell_default": false,
+    "dependency_install_default": false,
+    "external_filesystem_default": false,
+    "missing_permissions_are_denied": true
+  }
+}
+```
+
+Approval request output:
+
+```json
+{
+  "status": "APPROVAL_REQUIRED",
+  "approval_status": "pending",
+  "execution_enabled": false,
+  "adapter_imported": false,
+  "dry_run_executed": false,
+  "next_allowed_action": "approve_or_reject_permissions"
+}
+```
+
+Approval decision output:
+
+```json
+{
+  "status": "APPROVED_EXECUTION_DISABLED",
+  "decision": "approve",
+  "execution_enabled": false,
+  "adapter_imported": false,
+  "dry_run_executed": false,
+  "next_allowed_action": "sandbox_runner_required"
+}
+```
+
+API boundary:
+
+```text
+POST /api/projects/{project_id}/models/import/custom-package/{model_id}/dry-run/request
+POST /api/projects/{project_id}/models/import/custom-package/{model_id}/dry-run/approval
+```
+
+These APIs are approval-flow APIs. They must not execute package code.
+
+## 13.3 Phase P1-D Sandbox Dry-Run Runner Skeleton
+
+Formal phase name:
+
+```text
+Phase P1-D: Sandbox Dry-Run Runner Skeleton
+```
+
+P1-D introduces the runner interface and mock execution contract only. It does not import, execute, compile, spawn, or install anything from the package.
+
+Allowed behavior:
+
+```text
+1. Read sandbox_approval_decision.json.
+2. Require approved status before mock runner proceeds.
+3. Read source_model_manifest.json.
+4. Check that runtime.entrypoint is declared.
+5. Check that the entrypoint file exists under staging.
+6. Check input_spec and output_spec presence.
+7. Emit mock_dry_run_report.json.
+8. Keep execution_enabled=false.
+9. Keep adapter_imported=false.
+10. Keep user_code_executed=false.
+```
+
+Hard non-goals:
+
+```text
+Do not import adapter.py
+Do not call adapter methods
+Do not run Python subprocesses
+Do not compile C/C++
+Do not run external executables
+Do not install dependencies
+Do not allocate GPU
+Do not write outside staging
+Do not mark the package ENABLED
+```
+
+Runner interface:
+
+```python
+class SandboxDryRunRunner(Protocol):
+    def run(self, import_dir: Path, model: dict) -> dict:
+        ...
+```
+
+Mock dry-run report:
+
+```json
+{
+  "status": "MOCK_DRY_RUN_COMPLETED",
+  "execution_mode": "mock",
+  "execution_enabled": false,
+  "adapter_imported": false,
+  "dry_run_executed": false,
+  "user_code_executed": false,
+  "checks": [
+    {"name": "approval_recorded", "status": "passed"},
+    {"name": "execution_mode_mock", "status": "passed"},
+    {"name": "adapter_not_imported", "status": "passed"},
+    {"name": "user_code_not_executed", "status": "passed"},
+    {"name": "entrypoint_file_exists", "status": "passed"}
+  ],
+  "next_allowed_action": "implement_real_sandbox_runner"
+}
+```
+
+API boundary:
+
+```text
+POST /api/projects/{project_id}/models/import/custom-package/{model_id}/dry-run/mock
+```
+
+This API only runs the mock contract. It must not execute package code.
+
+## 13.0.4 Phase P1-E Sandbox Dry-Run Plan Contract
+
+P1-E creates a non-executable plan for a future sandbox runner.
+
+Allowed:
+
+```text
+1. Read sandbox_approval_decision.json.
+2. Read source_model_manifest.json.
+3. Record runtime.kind and runtime.entrypoint.
+4. Record input/output contract presence.
+5. Record sandbox policy defaults.
+6. Write sandbox_dry_run_plan.json.
+7. Keep execution disabled.
+```
+
+Hard non-goals:
+
+```text
+Do not import adapter.py
+Do not build a runnable command line
+Do not spawn Python
+Do not compile source code
+Do not install dependencies
+Do not grant network, shell, GPU, or external filesystem permissions
+```
+
+Plan output:
+
+```json
+{
+  "status": "SANDBOX_PLAN_READY",
+  "phase": "P1-E",
+  "execution_enabled": false,
+  "adapter_imported": false,
+  "dry_run_executed": false,
+  "user_code_executed": false,
+  "runtime": {
+    "kind": "python_adapter",
+    "entrypoint": "adapter.py",
+    "entrypoint_exists": true
+  },
+  "sandbox_policy": {
+    "network_allowed": false,
+    "shell_allowed": false,
+    "dependency_install_allowed": false,
+    "external_filesystem_allowed": false,
+    "gpu_allowed": false,
+    "write_scope": "staging_only",
+    "timeout_seconds": 30
+  }
+}
+```
+
+API boundary:
+
+```text
+POST /api/projects/{project_id}/models/import/custom-package/{model_id}/dry-run/plan
+```
+
+## 13.0.5 Phase P1-F Sandbox Audit Trail
+
+P1-F records sandbox-related events for review and troubleshooting.
+
+Audit file:
+
+```text
+sandbox_audit_log.jsonl
+```
+
+Events:
+
+```text
+dry_run_permission_requested
+dry_run_permission_approve
+dry_run_permission_reject
+sandbox_plan_created
+sandbox_plan_blocked
+mock_dry_run_contract_checked
+```
+
+Every event must preserve these safety flags:
+
+```json
+{
+  "execution_enabled": false,
+  "adapter_imported": false,
+  "dry_run_executed": false,
+  "user_code_executed": false
+}
+```
+
+API boundary:
+
+```text
+GET /api/projects/{project_id}/models/import/custom-package/{model_id}/dry-run/audit
+```
+
+## 13.0.6 Phase P1-G UI Contract Actions
+
+P1-G exposes contract-only actions in the Model Import approval panel:
+
+```text
+Build sandbox plan
+Mock dry-run
+```
+
+Both actions are intentionally non-executable:
+
+```text
+Build sandbox plan -> writes sandbox_dry_run_plan.json
+Mock dry-run -> writes mock_dry_run_report.json
+```
+
+The UI must continue to show:
+
+```text
+Execution Disabled
+Adapter was not imported or executed.
+```
+
+## 13.0.7 Phase P2 Real Isolated Dry-Run Runner Design
+
+P2 defines the real isolated dry-run runner policy, but still does not execute
+custom package code.
+
+Reference:
+
+```text
+docs/SANDBOX_DRY_RUN_POLICY.md
+```
+
+P2 adds a policy payload to sandbox_dry_run_plan.json:
+
+```text
+p2_isolated_runner_policy
+```
+
+This policy must keep:
+
+```json
+{
+  "execution_enabled": false,
+  "adapter_imported": false,
+  "dry_run_executed": false,
+  "user_code_executed": false
+}
+```
+
+P2 is complete when the platform can describe the future process isolation
+requirements without importing, spawning, or executing user adapter code.
+
+## 13.0.8 Phase P3 Dependency Lock / Offline Environment Check
+
+P3 inspects dependency metadata only.
+
+Output:
+
+```text
+p3_dependency_environment_check
+```
+
+Rules:
+
+```text
+Do not install dependencies
+Do not access network
+Do not import adapter.py
+Do not spawn Python
+Require offline mode before real dry-run
+Require lock file before future executable dry-run
+```
+
+## 13.0.9 Phase P4 Sandboxed Process Runner Enforcement
+
+P4 defines the process runner enforcement contract, but still does not spawn a
+process.
+
+Output:
+
+```text
+p4_process_runner_enforcement
+```
+
+Required controls:
+
+```text
+separate_process
+timeout_enforced
+cwd_is_staging
+package_read_only
+output_dir_write_only
+stdout_json_required
+stderr_captured
+network_disabled
+shell_disabled
+dependency_install_disabled
+external_filesystem_disabled
+```
+
+P4 must keep:
+
+```json
+{
+  "execution_enabled": false,
+  "process_spawned": false,
+  "adapter_imported": false,
+  "dry_run_executed": false,
+  "user_code_executed": false
+}
+```
+
+## 13.0.10 Phase P5 Registry Enablement Policy
+
+P5 evaluates whether a custom package can move toward manual registry
+enablement review.
+
+P5 is still not an execution phase.
+
+Rules:
+
+```text
+Mock dry-run is not sufficient for enablement.
+REAL_DRY_RUN_PASSED is required for future enablement.
+P3 dependency check must pass.
+P4 process enforcement must be ready.
+```
+
+Output:
+
+```text
+registry_enablement_policy.json
+```
+
+Before a real dry-run exists, P5 must return:
+
+```text
+P5_ENABLEMENT_BLOCKED
+```
+
+## 13.0.11 Phase P6 Limited Integration Contract
+
+P6 describes selector integration rules after P5.
+
+P6 must not directly register a custom package into training or inference.
+
+Output:
+
+```text
+limited_integration_contract.json
+```
+
+Before P5 passes, selector visibility must remain:
+
+```json
+{
+  "training_selector": false,
+  "inference_selector": false,
+  "evaluation_selector": false
+}
+```
+
+## 13.0.12 Phase P7 Sandbox Worker Threat Model
+
+P7 defines the threat model for a future real sandbox worker prototype.
+
+Reference:
+
+```text
+docs/SANDBOX_THREAT_MODEL_P7.md
+```
+
+P7 scope:
+
+```text
+assets to protect
+trust boundaries
+threat categories
+mitigation requirements
+approval gates
+failure policy
+future implementation acceptance gates
+```
+
+P7 hard non-goals:
+
+```text
+Do not implement the real worker
+Do not execute adapter.py
+Do not run subprocesses
+Do not install dependencies
+Do not enable training
+Do not enable inference
+```
+
 Invalid package flow:
 
 ```text

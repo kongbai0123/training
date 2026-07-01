@@ -37,6 +37,15 @@ from src.training.compare_service import CompareService, CompareServiceError
 from src.training.dispatcher import TrainerDispatcher
 from src.training.output_compare_service import CNNOutputCompareService, OutputCompareServiceError
 from src.training.rnn_readiness import build_rnn_readiness_report
+from src.training.rnn_config import (
+    active_rnn_config,
+    build_window_summary,
+    find_config_mismatches,
+    import_sequence_dataset,
+    inspect_sequence_csv_files,
+    update_project_rnn_config,
+    validate_rnn_config,
+)
 from src.labelme_adapter import LabelMeAdapter
 from src.annotation_importer import AnnotationImporter
 from src.model_registry import ModelRegistry
@@ -364,6 +373,17 @@ class TrainConfigRequest(BaseModel):
     bidirectional: Optional[bool] = None
 
 
+class RNNConfigRequest(BaseModel):
+    feature_columns: List[str] = []
+    target_column: str = ""
+    sequence_column: str = ""
+    time_column: Optional[str] = ""
+    sequence_length: int = 16
+    stride: int = 8
+    horizon: int = 1
+    task_head: Optional[str] = "classification"
+
+
 class CompareRequest(BaseModel):
     architecture: str
     run_ids: List[str]
@@ -618,6 +638,152 @@ def import_project_rnn_package_model(
         return result
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@app.post("/api/projects/{project_id}/models/import/custom-package")
+def import_project_custom_package_model(
+    project_id: str,
+    display_name: str = Form(...),
+    task_family: str = Form(...),
+    file: UploadFile = File(...),
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not file.filename or Path(file.filename).suffix.lower() != ".zip":
+        raise HTTPException(status_code=400, detail="Only .zip custom model packages are supported in Phase P1-A")
+
+    from src.security_utils import safe_filename
+
+    layout = ProjectLayout.from_project(project)
+    import_id = f"model_import_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    temp_dir = layout.tmp_dir / "model_import_uploads" / import_id
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_path = temp_dir / safe_filename(file.filename)
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        result = ModelCatalog.import_custom_package(
+            project=project,
+            source_path=temp_path,
+            display_name=display_name.strip(),
+            task_family=task_family,
+        )
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("validation", {}).get("errors", ["Custom package validation failed"]))
+        return result
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@app.post("/api/projects/{project_id}/models/import/custom-package/{model_id}/dry-run/request")
+def request_custom_package_dry_run(
+    project_id: str,
+    model_id: str,
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    result = ModelCatalog.request_custom_package_dry_run(project, model_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Custom package dry-run request failed"))
+    return result
+
+
+@app.post("/api/projects/{project_id}/models/import/custom-package/{model_id}/dry-run/approval")
+def approve_custom_package_dry_run(
+    project_id: str,
+    model_id: str,
+    decision: str = Form(...),
+    approved_by: str = Form("local_user"),
+    note: str = Form(""),
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        result = ModelCatalog.record_custom_package_dry_run_approval(
+            project,
+            model_id,
+            decision=decision,
+            approved_by=approved_by,
+            note=note,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Custom package dry-run approval failed"))
+    return result
+
+
+@app.post("/api/projects/{project_id}/models/import/custom-package/{model_id}/dry-run/mock")
+def run_custom_package_mock_dry_run(
+    project_id: str,
+    model_id: str,
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    result = ModelCatalog.run_custom_package_mock_dry_run(project, model_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("dry_run", result.get("error", "Custom package mock dry-run failed")))
+    return result
+
+
+@app.post("/api/projects/{project_id}/models/import/custom-package/{model_id}/dry-run/plan")
+def build_custom_package_sandbox_plan(
+    project_id: str,
+    model_id: str,
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    result = ModelCatalog.build_custom_package_sandbox_plan(project, model_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("plan", result.get("error", "Custom package sandbox plan failed")))
+    return result
+
+
+@app.get("/api/projects/{project_id}/models/import/custom-package/{model_id}/dry-run/audit")
+def get_custom_package_sandbox_audit(
+    project_id: str,
+    model_id: str,
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    result = ModelCatalog.get_custom_package_sandbox_audit(project, model_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Custom package sandbox audit failed"))
+    return result
+
+
+@app.post("/api/projects/{project_id}/models/import/custom-package/{model_id}/enablement")
+def evaluate_custom_package_enablement(
+    project_id: str,
+    model_id: str,
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    result = ModelCatalog.evaluate_custom_package_enablement(project, model_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Custom package enablement policy failed"))
+    return result
+
+
+@app.post("/api/projects/{project_id}/models/import/custom-package/{model_id}/integration")
+def build_custom_package_integration_contract(
+    project_id: str,
+    model_id: str,
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    result = ModelCatalog.build_custom_package_integration_contract(project, model_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Custom package integration contract failed"))
+    return result
 
 
 @app.get("/api/models/weights")
@@ -2298,6 +2464,69 @@ def get_rnn_readiness(
         stride=stride,
         horizon=horizon,
     )
+
+
+@app.get("/api/projects/{project_id}/rnn/config")
+def get_rnn_config(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    layout = ProjectLayout.from_project(project)
+    csv_files = sorted(layout.sequences_dir().glob("*.csv")) if layout.sequences_dir().exists() else []
+    inspection = inspect_sequence_csv_files(csv_files) if csv_files else {
+        "files": [],
+        "headers": [],
+        "headers_match": True,
+        "row_count": 0,
+        "sequence_count": 0,
+        "split_counts": {},
+        "feature_columns": [],
+        "feature_dim": 0,
+        "preview_rows": [],
+    }
+    config = active_rnn_config(project)
+    validation = validate_rnn_config(config, inspection)
+    return {
+        "config": config,
+        "inspection": inspection,
+        "validation": validation,
+        "window": build_window_summary(config, inspection),
+        "mismatches": find_config_mismatches(project),
+    }
+
+
+@app.post("/api/projects/{project_id}/rnn/config")
+def save_rnn_config(project_id: str, request: RNNConfigRequest):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        return update_project_rnn_config(project_id, project, request.dict())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/api/projects/{project_id}/rnn/dataset/import")
+def import_rnn_sequence_dataset(project_id: str, file: UploadFile = File(...)):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        result = import_sequence_dataset(project, file)
+        config_result = update_project_rnn_config(project_id, project, result["suggested_config"])
+        return {
+            "success": True,
+            "dataset": result,
+            "config": config_result.get("config"),
+            "validation": config_result.get("validation"),
+            "window": config_result.get("window"),
+            "mismatches": config_result.get("mismatches", []),
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @app.get("/api/projects/{project_id}/compare/runs")

@@ -37,6 +37,7 @@ for package_name in [
     "clr_loader",
     "proxy_tools",
     "bottle",
+    "xgboost",
 ]:
     try:
         package_datas, package_binaries, package_hiddenimports = collect_all(package_name)
