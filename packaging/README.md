@@ -1,46 +1,20 @@
 # Vision Training Studio Packaging
 
-Build the Windows local onedir bundle from the repository root:
-
-```powershell
-python -m pip install -r requirements.txt
-python -m pip install -r requirements-build.txt
-python -m PyInstaller --noconfirm --clean --distpath dist --workpath build packaging\vision_training_studio.spec
-```
-
-Output:
+Packaging 指令與 release checklist 已整合到：
 
 ```text
-dist\VisionTrainingStudio\VisionTrainingStudio.exe
+docs\DEPLOYMENT.md
 ```
 
-Smoke test:
+常用入口：
 
-```powershell
-dist\VisionTrainingStudio\VisionTrainingStudio.exe --port 18105 --env production --shell none
+```bat
+scripts\package.bat
+scripts\smoke_dist.bat
 ```
 
-Then check:
+底層 PyInstaller spec 仍位於：
 
 ```text
-http://127.0.0.1:18105/api/health
-http://127.0.0.1:18105/
-```
-
-Desktop shell:
-
-```powershell
-dist\VisionTrainingStudio\VisionTrainingStudio.exe
-```
-
-Installer build, when Inno Setup is installed:
-
-```powershell
-ISCC installer\VisionTrainingStudio.iss
-```
-
-Installer output:
-
-```text
-installer\output\VisionTrainingStudio_Setup_0.1.0.exe
+packaging\vision_training_studio.spec
 ```

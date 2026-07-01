@@ -14,6 +14,9 @@ config/
 licenses/
 cache/
 tmp/
+tmp_xgb_*.csv
+tmp_xgb_*.json
+release_artifacts/
 runs/
 *.pt
 *.onnx

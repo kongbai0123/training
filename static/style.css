@@ -5910,3 +5910,98 @@ body[data-theme="light"] .aug-preview-box h4 {
   }
 }
 
+/* Product state primitives: shared empty/loading/disabled/warning/error cards. */
+.product-state-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: var(--text);
+}
+
+.product-state-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--bg-panel-soft);
+  color: var(--primary);
+}
+
+.product-state-card__content {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.product-state-card__title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.product-state-card__body {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.product-state-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.product-state-card.is-empty {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--bg-panel) 82%, var(--bg) 18%);
+}
+
+.product-state-card.is-loading .product-state-card__icon {
+  color: var(--primary);
+}
+
+.product-state-card.is-disabled {
+  opacity: 0.82;
+}
+
+.product-state-card.is-disabled .product-state-card__icon {
+  color: var(--text-muted);
+}
+
+.product-state-card.is-warning {
+  border-color: color-mix(in srgb, var(--warning) 70%, var(--border) 30%);
+  background: color-mix(in srgb, var(--warning) 12%, var(--bg-panel) 88%);
+}
+
+.product-state-card.is-warning .product-state-card__icon {
+  color: var(--warning);
+}
+
+.product-state-card.is-error {
+  border-color: color-mix(in srgb, var(--danger) 70%, var(--border) 30%);
+  background: color-mix(in srgb, var(--danger) 12%, var(--bg-panel) 88%);
+}
+
+.product-state-card.is-error .product-state-card__icon {
+  color: var(--danger);
+}
+
+.product-state-card.is-success {
+  border-color: color-mix(in srgb, var(--success) 70%, var(--border) 30%);
+  background: color-mix(in srgb, var(--success) 10%, var(--bg-panel) 90%);
+}
+
+.product-state-card.is-success .product-state-card__icon {
+  color: var(--success);
+}
+
