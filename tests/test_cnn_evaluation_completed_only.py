@@ -2,8 +2,11 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from app import _latest_completed_training_run_dir
+from fastapi.testclient import TestClient
+
+from app import app, _latest_completed_training_run_dir
 from src.project_layout import ProjectLayout
 
 
@@ -64,6 +67,29 @@ class CnnEvaluationCompletedOnlyTests(unittest.TestCase):
             )
 
             self.assertEqual(_latest_completed_training_run_dir({"training_runs": []}, layout), run_dir)
+
+    def test_evaluation_plot_response_includes_download_filename(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "proj_eval"
+            layout = self._layout(root)
+            run_dir = layout.training_run_dir("run_done")
+            run_dir.mkdir(parents=True, exist_ok=True)
+            (run_dir / "metrics.json").write_text("{}", encoding="utf-8")
+            (run_dir / "results.png").write_bytes(b"png")
+            project = {
+                "project_id": "proj_eval",
+                "dataset_path": str(root / "dataset"),
+                "layout": {"mode": "v3"},
+                "training_runs": [
+                    {"run_id": "run_done", "status": "completed", "completed_at": "2026-07-02T10:00:00"}
+                ],
+            }
+
+            with patch("app.ProjectManager.get_project", return_value=project):
+                response = TestClient(app).get("/api/projects/proj_eval/evaluation/plot/results.png?run_id=run_done")
+
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('filename="results.png"', response.headers.get("content-disposition", ""))
 
 
 if __name__ == "__main__":

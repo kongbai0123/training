@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from src.project_layout import ProjectLayout
+from src.run_filters import is_test_run
 from src.training.metric_schema import build_rnn_metric_schema, build_yolo_metric_schema
 
 
@@ -34,6 +35,8 @@ class CompareService:
                 if not run_dir.is_dir() or not cls._looks_like_training_run(run_dir):
                     continue
                 if restrict_to_project_runs and run_dir.name not in allowed_run_ids:
+                    continue
+                if is_test_run(run_dir.name, cls._project_run_record(project, run_dir.name)):
                     continue
                 bundle = cls.load_run_bundle(project, run_dir.name)
                 run_architecture = cls.infer_architecture(bundle, project)
@@ -65,9 +68,16 @@ class CompareService:
             if str(run.get("status") or "").lower() != "completed":
                 continue
             run_id = str(run.get("run_id") or "").strip()
-            if run_id:
+            if run_id and not is_test_run(run_id, run):
                 run_ids.add(run_id)
         return run_ids
+
+    @staticmethod
+    def _project_run_record(project: Dict[str, Any], run_id: str) -> Dict[str, Any]:
+        for run in project.get("training_runs") or []:
+            if isinstance(run, dict) and str(run.get("run_id") or "").strip() == run_id:
+                return run
+        return {}
 
     @classmethod
     def compare_runs(

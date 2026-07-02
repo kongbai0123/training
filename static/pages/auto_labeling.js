@@ -11,6 +11,10 @@ let weightManagerFilter = "all";
 let weightManagerSort = "newest";
 let selectedWeightIds = new Set();
 let pendingDeleteWeightIds = [];
+let weightManagerModels = [];
+let cleanupRunCandidates = [];
+let selectedCleanupRunIds = new Set();
+let pendingCleanupRunIds = [];
 
 export function initAutoLabeling() {
   qs("#btn-refresh-auto-label-models")?.addEventListener("click", () => loadAutoLabelModels(true));
@@ -70,7 +74,7 @@ function initWeightManager() {
 
   qs("#btn-weight-manager-refresh")?.addEventListener("click", async () => {
     hideWeightDeleteConfirmation();
-    await loadAutoLabelModels(true);
+    await loadWeightManagerModels();
     renderWeightManager();
   });
 
@@ -100,6 +104,10 @@ function initWeightManager() {
   qs("#btn-delete-selected-weights")?.addEventListener("click", requestDeleteSelectedWeights);
   qs("#btn-cancel-delete-weights")?.addEventListener("click", hideWeightDeleteConfirmation);
   qs("#btn-confirm-delete-weights")?.addEventListener("click", confirmDeleteSelectedWeights);
+  qs("#btn-run-cleanup-refresh")?.addEventListener("click", loadRunCleanupCandidates);
+  qs("#btn-cleanup-selected-runs")?.addEventListener("click", requestCleanupSelectedRuns);
+  qs("#btn-cancel-cleanup-runs")?.addEventListener("click", hideRunCleanupConfirmation);
+  qs("#btn-confirm-cleanup-runs")?.addEventListener("click", confirmCleanupSelectedRuns);
 }
 
 async function openWeightManager() {
@@ -109,11 +117,16 @@ async function openWeightManager() {
   }
   selectedWeightIds = new Set();
   pendingDeleteWeightIds = [];
+  selectedCleanupRunIds = new Set();
+  pendingCleanupRunIds = [];
   hideWeightDeleteConfirmation();
+  hideRunCleanupConfirmation();
   qs("#weight-manager-modal")?.removeAttribute("hidden");
   if (loadedProjectId !== appState.currentProjectId) {
     await loadAutoLabelModels(false);
   }
+  await loadWeightManagerModels();
+  await loadRunCleanupCandidates();
   renderWeightManager();
 }
 
@@ -121,11 +134,14 @@ function closeWeightManager() {
   qs("#weight-manager-modal")?.setAttribute("hidden", "hidden");
   selectedWeightIds = new Set();
   pendingDeleteWeightIds = [];
+  selectedCleanupRunIds = new Set();
+  pendingCleanupRunIds = [];
   hideWeightDeleteConfirmation();
+  hideRunCleanupConfirmation();
 }
 
 function getVisibleWeightModels() {
-  const models = (appState.models || []).filter((model) => {
+  const models = (weightManagerModels || []).filter((model) => {
     const weightType = String(model.weight_type || "").toLowerCase();
     if (!["best", "last"].includes(weightType)) return false;
     return weightManagerFilter === "all" || weightType === weightManagerFilter;
@@ -145,23 +161,22 @@ function renderWeightManager() {
   if (!list || !summary || !deleteButton) return;
 
   const models = getVisibleWeightModels();
-  const total = (appState.models || []).filter((model) => ["best", "last"].includes(String(model.weight_type || "").toLowerCase())).length;
+  const total = (weightManagerModels || []).filter((model) => ["best", "last"].includes(String(model.weight_type || "").toLowerCase())).length;
   const selectedCount = selectedWeightIds.size;
-  summary.textContent = `目前顯示 ${models.length} / ${total} 個 checkpoint；已選取 ${selectedCount} 個。`;
+  summary.textContent = `目前顯示 ${models.length} / ${total} 個 checkpoint，已選取 ${selectedCount} 個。`;
   deleteButton.disabled = selectedCount === 0;
   list.classList.toggle("model-registry-scroll", models.length > 5);
 
   if (!models.length) {
     setHTML("#weight-manager-list", `
       <div class="empty-state">
-        <strong>沒有符合條件的權重檔</strong>
-        <p>請調整 best.pt / last.pt 篩選條件，或先完成訓練產生 checkpoint。</p>
+        <strong>沒有符合條件的模型權重</strong>
+        <p>請調整 best.pt / last.pt 篩選，或完成一次訓練後再管理 checkpoint。</p>
       </div>
     `);
-    return;
+  } else {
+    setHTML("#weight-manager-list", models.map((model) => renderWeightManagerRow(model)).join(""));
   }
-
-  setHTML("#weight-manager-list", models.map((model) => renderWeightManagerRow(model)).join(""));
 
   qsa("[data-weight-id]").forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
@@ -176,12 +191,14 @@ function renderWeightManager() {
       renderWeightManager();
     });
   });
+
+  renderRunCleanupCandidates();
 }
 
 function renderWeightManagerRow(model) {
   const weightType = String(model.weight_type || "").toLowerCase();
   const checked = selectedWeightIds.has(model.model_id) ? "checked" : "";
-  const badge = weightType === "best" ? "建議模型" : "Checkpoint";
+  const badge = weightType === "best" ? "Best" : "Checkpoint";
   return `
     <label class="weight-manager-row">
       <input type="checkbox" data-weight-id="${escapeHtml(model.model_id)}" ${checked}>
@@ -202,13 +219,13 @@ function renderWeightManagerRow(model) {
 function requestDeleteSelectedWeights() {
   pendingDeleteWeightIds = Array.from(selectedWeightIds);
   if (!pendingDeleteWeightIds.length) {
-    showToast("請先勾選要刪除的權重檔。");
+    showToast("請先選擇要刪除的權重檔。");
     return;
   }
   const panel = qs("#weight-delete-confirmation");
   const text = qs("#weight-delete-confirm-text");
   if (text) {
-    text.textContent = `即將刪除 ${pendingDeleteWeightIds.length} 個 checkpoint 檔案。此操作不會刪除 run history、metrics 或 artifacts，但權重檔本身無法從此面板復原。`;
+    text.textContent = `即將刪除 ${pendingDeleteWeightIds.length} 個 checkpoint 檔案。這不會刪除 run history、metrics 或 artifacts。`;
   }
   panel?.removeAttribute("hidden");
 }
@@ -233,10 +250,11 @@ async function confirmDeleteSelectedWeights() {
     });
     const deletedCount = Array.isArray(result.deleted) ? result.deleted.length : 0;
     const skippedCount = Array.isArray(result.skipped) ? result.skipped.length : 0;
-    showToast(`已刪除 ${deletedCount} 個權重檔${skippedCount ? `，略過 ${skippedCount} 個` : ""}。`);
+    showToast(`已刪除 ${deletedCount} 個權重${skippedCount ? `，略過 ${skippedCount} 個` : ""}。`);
     selectedWeightIds = new Set();
     hideWeightDeleteConfirmation();
     await loadAutoLabelModels(true);
+    await loadWeightManagerModels();
     renderWeightManager();
   } catch (err) {
     showToast(err.message || "刪除權重失敗。");
@@ -245,6 +263,141 @@ async function confirmDeleteSelectedWeights() {
   }
 }
 
+async function loadRunCleanupCandidates() {
+  const summary = qs("#run-cleanup-summary");
+  const list = qs("#run-cleanup-list");
+  if (!appState.currentProjectId || !summary || !list) return;
+  summary.textContent = "正在掃描測試 Run...";
+  setHTML("#run-cleanup-list", `<div class="empty-state">正在讀取可清理的測試 Run。</div>`);
+  try {
+    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/runs/cleanup-candidates`, { suppressToast: true });
+    cleanupRunCandidates = Array.isArray(payload.candidates) ? payload.candidates : [];
+    selectedCleanupRunIds = new Set(Array.from(selectedCleanupRunIds).filter((runId) => cleanupRunCandidates.some((item) => item.run_id === runId)));
+  } catch (err) {
+    cleanupRunCandidates = [];
+    summary.textContent = err.message || "掃描測試 Run 失敗。";
+  }
+  renderRunCleanupCandidates();
+}
+
+function renderRunCleanupCandidates() {
+  const list = qs("#run-cleanup-list");
+  const summary = qs("#run-cleanup-summary");
+  const cleanupButton = qs("#btn-cleanup-selected-runs");
+  if (!list || !summary || !cleanupButton) return;
+
+  const selectedCount = selectedCleanupRunIds.size;
+  summary.textContent = `找到 ${cleanupRunCandidates.length} 個可清理測試 Run，已選取 ${selectedCount} 個。`;
+  cleanupButton.disabled = selectedCount === 0;
+  list.classList.toggle("model-registry-scroll", cleanupRunCandidates.length > 5);
+
+  if (!cleanupRunCandidates.length) {
+    setHTML("#run-cleanup-list", `
+      <div class="empty-state">
+        <strong>沒有可清理的測試 Run</strong>
+        <p>目前沒有 run_id 含 smoke / probe / test / workers0 / tmp / debug 的訓練紀錄。</p>
+      </div>
+    `);
+    return;
+  }
+
+  setHTML("#run-cleanup-list", cleanupRunCandidates.map((run) => renderRunCleanupRow(run)).join(""));
+  qsa("[data-cleanup-run-id]").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      const runId = checkbox.dataset.cleanupRunId || "";
+      if (!runId) return;
+      if (checkbox.checked) {
+        selectedCleanupRunIds.add(runId);
+      } else {
+        selectedCleanupRunIds.delete(runId);
+      }
+      hideRunCleanupConfirmation();
+      renderRunCleanupCandidates();
+    });
+  });
+}
+
+function renderRunCleanupRow(run) {
+  const checked = selectedCleanupRunIds.has(run.run_id) ? "checked" : "";
+  const best = run.best?.exists ? "best.pt" : "no best.pt";
+  const last = run.last?.exists ? "last.pt" : "no last.pt";
+  return `
+    <label class="weight-manager-row run-cleanup-row">
+      <input type="checkbox" data-cleanup-run-id="${escapeHtml(run.run_id)}" ${checked}>
+      <div class="weight-manager-row-main">
+        <strong>${escapeHtml(run.run_id || "--")}</strong>
+        <span>${escapeHtml(run.model || "--")} · ${escapeHtml(formatDate(run.completed_at || run.created_at))}</span>
+      </div>
+      <div class="weight-manager-row-meta">
+        <span>${escapeHtml(best)}</span>
+        <span>${escapeHtml(last)}</span>
+        <span>${Number(run.artifact_count || 0)} files</span>
+        <span class="status-badge warning">Test candidate</span>
+      </div>
+    </label>
+  `;
+}
+
+function requestCleanupSelectedRuns() {
+  pendingCleanupRunIds = Array.from(selectedCleanupRunIds);
+  if (!pendingCleanupRunIds.length) {
+    showToast("請先選擇要清理的測試 Run。");
+    return;
+  }
+  const text = qs("#run-cleanup-confirm-text");
+  if (text) {
+    text.textContent = `即將清理 ${pendingCleanupRunIds.length} 個測試 Run。這會同步移除 project.json.training_runs、training/runs 內的 weights、metrics 與 artifacts。`;
+  }
+  qs("#run-cleanup-confirmation")?.removeAttribute("hidden");
+}
+
+function hideRunCleanupConfirmation() {
+  qs("#run-cleanup-confirmation")?.setAttribute("hidden", "hidden");
+  pendingCleanupRunIds = [];
+}
+
+async function confirmCleanupSelectedRuns() {
+  if (!appState.currentProjectId || !pendingCleanupRunIds.length) return;
+  const confirmButton = qs("#btn-confirm-cleanup-runs");
+  confirmButton?.setAttribute("disabled", "disabled");
+  try {
+    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/runs/cleanup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        run_ids: pendingCleanupRunIds,
+        confirm: true,
+      }),
+    });
+    const deletedCount = Array.isArray(result.deleted) ? result.deleted.length : 0;
+    const skippedCount = Array.isArray(result.skipped) ? result.skipped.length : 0;
+    showToast(`已清理 ${deletedCount} 個測試 Run${skippedCount ? `，略過 ${skippedCount} 個` : ""}。`);
+    selectedCleanupRunIds = new Set();
+    hideRunCleanupConfirmation();
+    await loadAutoLabelModels(true);
+    await loadWeightManagerModels();
+    await loadRunCleanupCandidates();
+    renderWeightManager();
+  } catch (err) {
+    showToast(err.message || "清理測試 Run 失敗。");
+  } finally {
+    confirmButton?.removeAttribute("disabled");
+  }
+}
+
+async function loadWeightManagerModels() {
+  if (!appState.currentProjectId) {
+    weightManagerModels = [];
+    return;
+  }
+  try {
+    const models = await apiFetch(`/api/projects/${appState.currentProjectId}/models?scope=all`);
+    weightManagerModels = Array.isArray(models) ? models : [];
+  } catch (err) {
+    weightManagerModels = [];
+    showToast(err.message || "Failed to load model weights.");
+  }
+}
 function initModelImportDropZone() {
   const dropZone = qs("#auto-model-drop-zone");
   const fileInput = qs("#auto-model-file-input");

@@ -145,6 +145,28 @@ export function initTraining() {
     }
   });
 
+  qs("#btn-abort-train")?.addEventListener("click", async () => {
+    try {
+      const previous = appState.trainingStatus || {};
+      const runId = previous.run_id || appState.currentProjectId || "training";
+      await apiFetch(`/api/projects/${appState.currentProjectId}/train/abort`, { method: "POST" });
+      appState.trainingStatus = {
+        ...previous,
+        status: "stopped",
+        completed_at: new Date().toISOString(),
+        error: previous.error || "User aborted training."
+      };
+      activeGlobalTrainingJobs.delete(`training-${runId}`);
+      trainingHudStartTimes.delete(`training-${runId}`);
+      eventBus.emit("progress:hide", { jobId: `training-${runId}` });
+      stopTrainingHudTickerIfIdle();
+      renderTrainingMonitor();
+      eventBus.emit("toast", t("training.toast.abortSent"));
+    } catch (err) {
+      eventBus.emit("toast", t("training.toast.abortFailed", { message: err.message }));
+    }
+  });
+
   qs("#chart-show-raw")?.addEventListener("change", updateChartVisualization);
   qs("#chart-show-smooth")?.addEventListener("change", updateChartVisualization);
   qs("#chart-ema-alpha")?.addEventListener("input", (e) => {
@@ -661,6 +683,7 @@ export function renderTrainingMonitor() {
 
   const startBtn = qs("#btn-start-train");
   const stopBtn = qs("#btn-stop-train");
+  const abortBtn = qs("#btn-abort-train");
   const lockMsg = qs("#config-lock-msg");
   const configForm = qs("#form-training-config");
   const startBlocker = qs("#training-start-blocker");
@@ -680,6 +703,12 @@ export function renderTrainingMonitor() {
     if (stopBtn) stopBtn.disabled = true;
   } else {
     stopBtn?.classList.add("hidden");
+  }
+  if (isRunning || isStopping) {
+    abortBtn?.classList.remove("hidden");
+    if (abortBtn) abortBtn.disabled = false;
+  } else {
+    abortBtn?.classList.add("hidden");
   }
 
   if (lockMsg) {

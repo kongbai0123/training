@@ -154,6 +154,22 @@ class CompareServicePhase3ATest(unittest.TestCase):
 
         self.assertEqual([run["run_id"] for run in payload["runs"]], ["run_registered"])
 
+    def test_list_completed_cnn_runs_excludes_smoke_probe_test_runs(self):
+        write_yolo_run(self.project, "run_real")
+        write_yolo_run(self.project, "run_smoke_001")
+        write_yolo_run(self.project, "run_probe_001")
+        write_yolo_run(self.project, "run_workers0_test")
+        self.project["training_runs"] = [
+            {"run_id": "run_real", "status": "completed"},
+            {"run_id": "run_smoke_001", "status": "completed"},
+            {"run_id": "run_probe_001", "status": "completed"},
+            {"run_id": "run_workers0_test", "status": "completed"},
+        ]
+
+        payload = CompareService.list_comparable_runs(self.project, "cnn")
+
+        self.assertEqual([run["run_id"] for run in payload["runs"]], ["run_real"])
+
     def test_compare_rejects_orphan_run_when_project_has_run_records(self):
         write_yolo_run(self.project, "run_registered")
         write_yolo_run(self.project, "run_orphan")

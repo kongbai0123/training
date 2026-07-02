@@ -65,6 +65,84 @@ class ModelStoreScopeTests(unittest.TestCase):
 
             self.assertEqual([model["run_id"] for model in models], ["run_registered"])
 
+    def test_model_registry_excludes_smoke_probe_test_runs_from_selector(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            projects_root = root / "projects"
+            project_dir = projects_root / "project_a"
+            for run_id in ("run_real_001", "run_smoke_001", "run_probe_001", "run_workers0_test"):
+                run_weights = project_dir / "training" / "runs" / run_id / "weights"
+                run_weights.mkdir(parents=True)
+                run_weights.joinpath("best.pt").write_bytes(b"run-best")
+
+            project = {
+                "project_id": "project_a",
+                "dataset_path": str(project_dir / "dataset"),
+                "task_type": "semantic_segmentation",
+                "training_runs": [
+                    {"run_id": "run_real_001", "status": "completed", "model": "yolov8s-seg.pt"},
+                    {"run_id": "run_smoke_001", "status": "completed", "model": "yolov8s-seg.pt"},
+                    {"run_id": "run_probe_001", "status": "completed", "model": "yolov8s-seg.pt"},
+                    {"run_id": "run_workers0_test", "status": "completed", "model": "yolov8s-seg.pt"},
+                ],
+            }
+            with patch("src.model_registry.PROJECTS_DIR", projects_root):
+                models = ModelRegistry.list_models(project)
+
+            self.assertEqual([model["run_id"] for model in models], ["run_real_001"])
+
+    def test_model_registry_deployable_models_returns_current_best_only(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            projects_root = root / "projects"
+            project_dir = projects_root / "project_a"
+            for run_id in ("run_old", "run_current"):
+                run_weights = project_dir / "training" / "runs" / run_id / "weights"
+                run_weights.mkdir(parents=True)
+                run_weights.joinpath("best.pt").write_bytes(b"run-best")
+                run_weights.joinpath("last.pt").write_bytes(b"run-last")
+
+            project = {
+                "project_id": "project_a",
+                "dataset_path": str(project_dir / "dataset"),
+                "task_type": "semantic_segmentation",
+                "current": {"best_model_id": "project_a::run_current::best"},
+                "training_runs": [
+                    {"run_id": "run_old", "status": "completed", "model": "yolov8s-seg.pt", "completed_at": "2026-07-01T10:00:00"},
+                    {"run_id": "run_current", "status": "completed", "model": "yolov8s-seg.pt", "completed_at": "2026-07-02T10:00:00"},
+                ],
+            }
+            with patch("src.model_registry.PROJECTS_DIR", projects_root):
+                models = ModelRegistry.list_deployable_models(project)
+
+            self.assertEqual(len(models), 1)
+            self.assertEqual(models[0]["run_id"], "run_current")
+            self.assertEqual(models[0]["weight_type"], "best")
+
+    def test_model_registry_deployable_models_falls_back_to_newest_best(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            projects_root = root / "projects"
+            project_dir = projects_root / "project_a"
+            for run_id in ("run_old", "run_new"):
+                run_weights = project_dir / "training" / "runs" / run_id / "weights"
+                run_weights.mkdir(parents=True)
+                run_weights.joinpath("best.pt").write_bytes(b"run-best")
+
+            project = {
+                "project_id": "project_a",
+                "dataset_path": str(project_dir / "dataset"),
+                "task_type": "semantic_segmentation",
+                "training_runs": [
+                    {"run_id": "run_old", "status": "completed", "model": "yolov8s-seg.pt", "completed_at": "2026-07-01T10:00:00"},
+                    {"run_id": "run_new", "status": "completed", "model": "yolov8s-seg.pt", "completed_at": "2026-07-02T10:00:00"},
+                ],
+            }
+            with patch("src.model_registry.PROJECTS_DIR", projects_root):
+                models = ModelRegistry.list_deployable_models(project)
+
+            self.assertEqual([model["run_id"] for model in models], ["run_new"])
+
     def test_custom_training_weight_must_be_under_models_dir(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

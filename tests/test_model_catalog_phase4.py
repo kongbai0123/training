@@ -161,7 +161,7 @@ class ModelCatalogPhase4Tests(unittest.TestCase):
             self.assertFalse(result["success"])
             self.assertTrue(any("dataset YAML" in error for error in result["validation"]["errors"]))
 
-    def test_project_trained_catalog_references_best_and_last(self):
+    def test_project_trained_catalog_references_deployable_best_only(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             projects_root = root / "projects"
@@ -178,7 +178,7 @@ class ModelCatalogPhase4Tests(unittest.TestCase):
 
             trained_ids = {item["model_id"] for item in models if item.get("source") == "project_trained"}
             self.assertIn("trained.run_1.best", trained_ids)
-            self.assertIn("trained.run_1.last", trained_ids)
+            self.assertNotIn("trained.run_1.last", trained_ids)
 
     def test_import_onnx_registers_inference_only_model(self):
         with tempfile.TemporaryDirectory() as tmp:

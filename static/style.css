@@ -2498,6 +2498,36 @@ select:focus {
   max-height: calc((86px * 5) + (10px * 4));
 }
 
+.run-cleanup-panel {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.run-cleanup-header {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.run-cleanup-header h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.run-cleanup-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.run-cleanup-row {
+  border-color: color-mix(in srgb, var(--warning) 36%, var(--border) 64%);
+}
+
 .weight-manager-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) minmax(260px, auto);
@@ -2551,8 +2581,10 @@ select:focus {
 
 @media (max-width: 860px) {
   .weight-manager-toolbar,
-  .weight-manager-row {
+  .weight-manager-row,
+  .run-cleanup-header {
     grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
   .weight-manager-toolbar-actions,
@@ -5554,6 +5586,8 @@ body[data-theme="light"] .toast {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  font: inherit;
   text-decoration: none;
   transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
 }

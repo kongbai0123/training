@@ -596,9 +596,9 @@ class ModelCatalog:
     @staticmethod
     def _load_project_trained_models(project: Dict[str, Any]) -> List[Dict[str, Any]]:
         entries = []
-        for model in ModelRegistry.list_models(project):
+        for model in ModelRegistry.list_deployable_models(project):
             weight_type = model.get("weight_type")
-            if weight_type not in {"best", "last"}:
+            if weight_type != "best":
                 continue
             task_family = normalize_task_family(model.get("task_type") or project.get("task_type"))
             path = model.get("internal_weight_path")

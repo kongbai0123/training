@@ -35,6 +35,7 @@ from src.augmenter import ImageAugmenter
 from src.trainer import YOLOTrainer
 from src.training.compare_service import CompareService, CompareServiceError
 from src.training.dispatcher import TrainerDispatcher
+from src.training.state_store import TrainingStateStore
 from src.training.output_compare_service import CNNOutputCompareService, OutputCompareServiceError
 from src.training.rnn_readiness import build_rnn_readiness_report
 from src.training.rnn_config import (
@@ -60,6 +61,7 @@ from src.local_session import current_bootstrap, validate_token
 from src.feature_gate import require_feature
 from src.license_manager import build_license_report
 from src.diagnostics import generate_diagnostics_zip
+from src.run_filters import TEST_RUN_MARKERS, is_test_run
 from ultralytics import YOLO
 
 APP_IS_PRODUCTION = APP_ENV in {"production", "prod"}
@@ -393,7 +395,50 @@ class CompareRequest(BaseModel):
 class DeleteModelWeightsRequest(BaseModel):
     model_ids: List[str]
     confirm: bool = False
+
+
+class CleanupTrainingRunsRequest(BaseModel):
+    run_ids: List[str]
+    confirm: bool = False
 # --- API Endpoints ---
+
+def _is_cleanup_candidate_run(run_id: str, run: Optional[Dict[str, Any]] = None) -> bool:
+    return is_test_run(run_id, run)
+
+
+def _training_run_cleanup_card(project: Dict[str, Any], run: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    run_id = str(run.get("run_id") or "").strip()
+    if not run_id:
+        return None
+    layout = ProjectLayout.from_project(project)
+    run_dir = (layout.training_runs_dir() / run_id).resolve()
+    project_dir = layout.project_dir.resolve()
+    if project_dir not in run_dir.parents:
+        return None
+
+    def _file_info(path: Path) -> Dict[str, Any]:
+        return {
+            "exists": path.exists(),
+            "size": path.stat().st_size if path.exists() and path.is_file() else 0,
+            "path": path.relative_to(project_dir).as_posix() if project_dir in path.resolve().parents else path.name,
+        }
+
+    best = run_dir / "weights" / "best.pt"
+    last = run_dir / "weights" / "last.pt"
+    return {
+        "run_id": run_id,
+        "status": run.get("status"),
+        "model": run.get("model") or run.get("model_name"),
+        "task_type": run.get("task_type") or project.get("task_type"),
+        "created_at": run.get("created_at") or run.get("timestamp"),
+        "completed_at": run.get("completed_at"),
+        "candidate_reason": "name_matches_test_marker",
+        "run_dir_exists": run_dir.exists() and run_dir.is_dir(),
+        "run_dir": run_dir.relative_to(project_dir).as_posix() if run_dir.exists() else f"training/runs/{run_id}",
+        "best": _file_info(best),
+        "last": _file_info(last),
+        "artifact_count": sum(1 for item in run_dir.rglob("*") if item.is_file()) if run_dir.exists() else 0,
+    }
 
 # 1. ????? API
 @app.get("/api/projects/data-migration/scan")
@@ -469,10 +514,15 @@ def delete_project(project_id: str):
         raise HTTPException(status_code=404, detail="Project not found or unable to delete")
     return {"message": "Project deleted successfully"}
 @app.get("/api/projects/{project_id}/models")
-def list_project_models(project_id: str):
+def list_project_models(project_id: str, scope: str = Query("deployable")):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    normalized_scope = (scope or "deployable").strip().lower()
+    if normalized_scope in {"all", "history", "manage", "manager"}:
+        return ModelRegistry.list_models(project)
+    if normalized_scope in {"best", "deployable", "runtime", "selector"}:
+        return ModelRegistry.list_deployable_models(project)
     return ModelRegistry.list_models(project)
 
 
@@ -533,6 +583,117 @@ def delete_project_model_weights(project_id: str, request: DeleteModelWeightsReq
         "deleted": deleted,
         "skipped": skipped,
         "remaining_count": len(ModelRegistry.list_models(project)),
+    }
+
+
+@app.get("/api/projects/{project_id}/runs/cleanup-candidates")
+def list_training_run_cleanup_candidates(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    candidates: List[Dict[str, Any]] = []
+    for run in project.get("training_runs") or []:
+        if not isinstance(run, dict):
+            continue
+        run_id = str(run.get("run_id") or "").strip()
+        if not run_id or not _is_cleanup_candidate_run(run_id, run):
+            continue
+        card = _training_run_cleanup_card(project, run)
+        if card:
+            candidates.append(card)
+
+    candidates.sort(key=lambda item: item.get("completed_at") or item.get("created_at") or item.get("run_id") or "", reverse=True)
+    return {
+        "project_id": project_id,
+        "candidates": candidates,
+        "count": len(candidates),
+        "markers": list(TEST_RUN_MARKERS),
+    }
+
+
+@app.post("/api/projects/{project_id}/runs/cleanup")
+def cleanup_training_runs(project_id: str, request: CleanupTrainingRunsRequest):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not request.confirm:
+        raise HTTPException(status_code=400, detail="Run cleanup requires explicit confirmation")
+
+    requested_run_ids = [str(run_id).strip() for run_id in request.run_ids if str(run_id).strip()]
+    if not requested_run_ids:
+        raise HTTPException(status_code=400, detail="No run_ids selected")
+    if len(requested_run_ids) > 50:
+        raise HTTPException(status_code=400, detail="Too many run_ids selected")
+
+    requested_run_ids = list(dict.fromkeys(requested_run_ids))
+    layout = ProjectLayout.from_project(project)
+    project_dir = layout.project_dir.resolve()
+    runs_dir = layout.training_runs_dir().resolve()
+
+    existing_runs = [run for run in project.get("training_runs") or [] if isinstance(run, dict)]
+    run_by_id = {str(run.get("run_id") or "").strip(): run for run in existing_runs if str(run.get("run_id") or "").strip()}
+    deleted: List[Dict[str, Any]] = []
+    skipped: List[Dict[str, Any]] = []
+    removed_ids: set[str] = set()
+
+    for run_id in requested_run_ids:
+        run = run_by_id.get(run_id)
+        if not run:
+            skipped.append({"run_id": run_id, "reason": "not_registered"})
+            continue
+        if not _is_cleanup_candidate_run(run_id, run):
+            skipped.append({"run_id": run_id, "reason": "not_test_candidate"})
+            continue
+
+        run_dir = (runs_dir / run_id).resolve()
+        if project_dir not in run_dir.parents or runs_dir not in run_dir.parents:
+            skipped.append({"run_id": run_id, "reason": "outside_project_runs"})
+            continue
+
+        file_count = 0
+        bytes_removed = 0
+        if run_dir.exists():
+            try:
+                for item in run_dir.rglob("*"):
+                    if item.is_file():
+                        file_count += 1
+                        bytes_removed += item.stat().st_size
+                shutil.rmtree(run_dir)
+            except Exception as exc:
+                skipped.append({"run_id": run_id, "reason": f"delete_failed: {exc}"})
+                continue
+
+        removed_ids.add(run_id)
+        deleted.append({
+            "run_id": run_id,
+            "run_dir": run_dir.relative_to(project_dir).as_posix(),
+            "files_removed": file_count,
+            "bytes_removed": bytes_removed,
+            "project_record_removed": True,
+        })
+
+    if removed_ids:
+        project["training_runs"] = [
+            run for run in existing_runs
+            if str(run.get("run_id") or "").strip() not in removed_ids
+        ]
+        current = project.get("current") if isinstance(project.get("current"), dict) else {}
+        for key in ("training_run_id", "best_model_id"):
+            value = str(current.get(key) or "")
+            if any(run_id in value for run_id in removed_ids):
+                current[key] = None
+        project["current"] = current
+        if not ProjectManager.save_project(project_id, project):
+            raise HTTPException(status_code=500, detail="Failed to save project after cleanup")
+
+    refreshed_project = ProjectManager.get_project(project_id) or project
+    return {
+        "success": True,
+        "deleted": deleted,
+        "skipped": skipped,
+        "remaining_training_runs": len(refreshed_project.get("training_runs") or []),
+        "remaining_model_weights": len(ModelRegistry.list_models(refreshed_project)),
     }
 
 
@@ -1959,7 +2120,7 @@ def get_evaluation_plot(project_id: str, filename: str, run_id: Optional[str] = 
     if not plot_path.exists():
         raise HTTPException(status_code=404, detail=f"Plot file {filename} not found")
 
-    return FileResponse(str(plot_path))
+    return FileResponse(str(plot_path), filename=filename)
 
 
 def _empty_evaluation_payload() -> Dict[str, Any]:
@@ -3103,7 +3264,20 @@ def export_run_onnx(project_id: str, run_id: str):
 def stop_training(project_id: str):
     project = ProjectManager.get_project(project_id)
     TrainerDispatcher.stop_training(project_id, project)
-    return {"status": "stopped", "message": "?格???餈恍???????格??.."}
+    return {"status": "stopping", "message": "Stop request sent."}
+
+
+@app.post("/api/projects/{project_id}/train/abort")
+def abort_training(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        TrainerDispatcher.stop_training(project_id, project)
+    except Exception:
+        pass
+    state = TrainingStateStore.mark_stopped(project_id, error="User aborted training.")
+    return {"status": "stopped", "message": "Training abort requested.", "state": state}
 
 @app.get("/api/projects/{project_id}/train/status")
 def get_train_status(project_id: str):

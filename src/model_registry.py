@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from src.config import PROJECTS_DIR
 from src.project_layout import ProjectLayout
+from src.run_filters import is_test_run
 
 
 class ModelRegistry:
@@ -37,6 +38,8 @@ class ModelRegistry:
             if restrict_to_project_runs and run_id not in completed_runs:
                 continue
             run_record = completed_runs.get(run_id, {})
+            if is_test_run(run_id, run_record):
+                continue
             metrics = ModelRegistry._read_run_metrics(run_dir)
             training_config = ModelRegistry._read_training_config(project, run_dir)
             backend_contract = ModelRegistry._read_backend_contract(run_dir)
@@ -74,6 +77,37 @@ class ModelRegistry:
 
         models.sort(key=lambda item: item.get("created_at") or "", reverse=True)
         return models
+
+    @staticmethod
+    def list_deployable_models(project: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Return the small model set intended for user-facing selectors.
+
+        Historical checkpoints are still available through ``list_models`` for
+        cleanup and audit workflows. Runtime selectors should default to the
+        current best model, or the newest best checkpoint when current metadata
+        is missing.
+        """
+        models = ModelRegistry.list_models(project)
+        best_models = [
+            model for model in models
+            if str(model.get("weight_type") or "").lower() == "best"
+        ]
+        if not best_models:
+            return []
+
+        current = project.get("current") if isinstance(project.get("current"), dict) else {}
+        current_best_id = str(current.get("best_model_id") or "").strip()
+        if current_best_id:
+            matched = [
+                model for model in best_models
+                if model.get("model_id") == current_best_id
+                or f"::{model.get('run_id')}::best" in current_best_id
+                or current_best_id.endswith(f"::{model.get('run_id')}::best")
+            ]
+            if matched:
+                return matched[:1]
+
+        return best_models[:1]
 
     @staticmethod
     def _completed_project_runs(project: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:

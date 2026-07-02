@@ -67,9 +67,9 @@ function renderEvaluationPlots(plots = [], runId = null) {
       <div class="evaluation-plot-card">
         <h3>${escapeHtml(title)}</h3>
         <div class="evaluation-plot-preview" data-evaluation-plot-preview="${escapeHtml(src)}" data-evaluation-plot-title="${escapeHtml(title)}" role="button" tabindex="0" aria-label="Preview ${escapeHtml(title)}">
-          <a href="${src}" class="evaluation-plot-download" target="_blank" download="${escapeHtml(plot)}" aria-label="Download ${escapeHtml(title)}">
+          <button type="button" class="evaluation-plot-download" data-evaluation-plot-download="${escapeHtml(src)}" data-evaluation-plot-filename="${escapeHtml(plot)}" aria-label="Download ${escapeHtml(title)}">
             <i class="fa-solid fa-download"></i>
-          </a>
+          </button>
           <img src="${src}" alt="${escapeHtml(plot)}">
         </div>
       </div>
@@ -86,6 +86,34 @@ function renderEvaluationPlots(plots = [], runId = null) {
       openEvaluationPlotPreview(preview.dataset.evaluationPlotPreview, preview.dataset.evaluationPlotTitle);
     });
   });
+  plotsGrid.querySelectorAll("[data-evaluation-plot-download]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      await downloadEvaluationPlot(button.dataset.evaluationPlotDownload, button.dataset.evaluationPlotFilename);
+    });
+  });
+}
+
+async function downloadEvaluationPlot(url, filename) {
+  if (!url) return;
+  try {
+    const headers = {};
+    if (appState.bootstrap?.token) headers["X-VTS-Token"] = appState.bootstrap.token;
+    const response = await fetch(url, { headers });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = filename || "evaluation_plot.png";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch (err) {
+    eventBus.emit("toast", `下載評估圖失敗：${err.message}`);
+  }
 }
 
 function openEvaluationPlotPreview(src, title) {
