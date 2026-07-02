@@ -16,33 +16,31 @@ from src.security_utils import safe_filename
 
 
 class ModelCatalog:
-    """Project-scoped model catalog and import service.
+    """Project-scoped model catalog and validation-only custom package gates."""
 
-    Import means "copy into project + register metadata". Custom packages are
-    validation-only and never enter the training selector in this phase.
-    """
+    @staticmethod
+    def _builtin(model_id: str, name: str, value: str, task: str, backend: str = "ultralytics_yolo", arch: str = "cnn", status: str = "ready") -> Dict[str, Any]:
+        return {"model_id": f"builtin::{model_id}", "display_name": name, "training_value": value, "source": "builtin", "backend": backend, "architecture": arch, "task_family": task, "format": "adapter" if arch == "rnn" else "pt", "status": status, "trainable": True, "inference_supported": False}
 
     BUILTINS: List[Dict[str, Any]] = [
-        {"model_id": "builtin::yolov8n-seg", "display_name": "YOLOv8n Segmentation (Recommended)", "training_value": "yolov8n-seg.pt", "source": "builtin", "backend": "ultralytics_yolo", "architecture": "cnn", "task_family": "segmentation", "format": "pt", "status": "ready", "trainable": True, "inference_supported": False},
-        {"model_id": "builtin::yolov8s-seg", "display_name": "YOLOv8s Segmentation", "training_value": "yolov8s-seg.pt", "source": "builtin", "backend": "ultralytics_yolo", "architecture": "cnn", "task_family": "segmentation", "format": "pt", "status": "ready", "trainable": True, "inference_supported": False},
-        {"model_id": "builtin::yolov8m-seg", "display_name": "YOLOv8m Segmentation", "training_value": "yolov8m-seg.pt", "source": "builtin", "backend": "ultralytics_yolo", "architecture": "cnn", "task_family": "segmentation", "format": "pt", "status": "ready", "trainable": True, "inference_supported": False},
-        {"model_id": "builtin::yolov8n", "display_name": "YOLOv8n Detection", "training_value": "yolov8n.pt", "source": "builtin", "backend": "ultralytics_yolo", "architecture": "cnn", "task_family": "detection", "format": "pt", "status": "ready", "trainable": True, "inference_supported": False},
-        {"model_id": "builtin::yolov8s", "display_name": "YOLOv8s Detection", "training_value": "yolov8s.pt", "source": "builtin", "backend": "ultralytics_yolo", "architecture": "cnn", "task_family": "detection", "format": "pt", "status": "ready", "trainable": True, "inference_supported": False},
-        {"model_id": "builtin::yolov8n-cls", "display_name": "YOLOv8n Classification", "training_value": "yolov8n-cls.pt", "source": "builtin", "backend": "ultralytics_yolo", "architecture": "cnn", "task_family": "classification", "format": "pt", "status": "ready", "trainable": True, "inference_supported": False},
-        {"model_id": "builtin::lstm", "display_name": "LSTM Sequence Model", "training_value": "lstm", "source": "builtin", "backend": "pytorch_lstm", "architecture": "rnn", "task_family": "sequence_classification", "format": "adapter", "status": "preview", "trainable": True, "inference_supported": False},
-        {"model_id": "builtin::xgboost-sequence", "display_name": "XGBoost Sequence Baseline", "training_value": "xgboost", "source": "builtin", "backend": "sklearn_xgboost", "architecture": "rnn", "task_family": "sequence_classification", "format": "adapter", "status": "ready", "trainable": True, "inference_supported": False},
+        _builtin.__func__("yolov8n-seg", "YOLOv8n Segmentation (Recommended)", "yolov8n-seg.pt", "segmentation"),
+        _builtin.__func__("yolov8s-seg", "YOLOv8s Segmentation", "yolov8s-seg.pt", "segmentation"),
+        _builtin.__func__("yolov8m-seg", "YOLOv8m Segmentation", "yolov8m-seg.pt", "segmentation"),
+        _builtin.__func__("yolov8n", "YOLOv8n Detection", "yolov8n.pt", "detection"),
+        _builtin.__func__("yolov8s", "YOLOv8s Detection", "yolov8s.pt", "detection"),
+        _builtin.__func__("yolov8n-cls", "YOLOv8n Classification", "yolov8n-cls.pt", "classification"),
+        _builtin.__func__("lstm", "LSTM Sequence Model", "lstm", "sequence_classification", "pytorch_lstm", "rnn", "preview"),
+        _builtin.__func__("xgboost-sequence", "XGBoost Sequence Baseline", "xgboost", "sequence_classification", "sklearn_xgboost", "rnn", "ready"),
     ]
 
     @classmethod
     def list_all(cls, project: Dict[str, Any], architecture: Optional[str] = None) -> List[Dict[str, Any]]:
-        models: List[Dict[str, Any]] = []
-        models.extend(dict(item) for item in cls.BUILTINS)
+        models = [dict(item) for item in cls.BUILTINS]
         models.extend(cls._load_catalog(project))
-        for trained in ModelRegistry.list_models(project):
-            models.append(cls._project_trained_record(trained))
+        models.extend(cls._project_trained_record(item) for item in ModelRegistry.list_models(project))
         if architecture:
-            normalized = str(architecture).lower()
-            models = [item for item in models if str(item.get("architecture") or "").lower() == normalized]
+            arch = str(architecture).lower()
+            models = [item for item in models if str(item.get("architecture") or "").lower() == arch]
         return models
 
     @classmethod
@@ -62,7 +60,7 @@ class ModelCatalog:
         record = cls._base_record(project, model_id, display_name or source_path.stem, task_family, model_dir, dest)
         record.update({"format": "pt", "backend": "ultralytics_yolo", "architecture": "cnn", "status": "ready", "trainable": True, "inference_supported": False, "training_value": dest.resolve().as_posix()})
         cls._upsert_record(project, record)
-        return {"success": True, "model": record, "validation": {"status": "passed", "checks": [{"name": "pt_file", "status": "passed", "passed": True}], "errors": [], "warnings": []}}
+        return {"success": True, "model": record, "validation": cls._simple_validation("passed", "pt_file")}
 
     @classmethod
     def import_yolo_yaml(cls, project: Dict[str, Any], source_path: Path, display_name: str, task_family: str) -> Dict[str, Any]:
@@ -76,7 +74,7 @@ class ModelCatalog:
         record = cls._base_record(project, model_id, display_name or source_path.stem, task_family, model_dir, dest)
         record.update({"format": "yaml", "backend": "ultralytics_yolo", "architecture": "cnn", "status": "ready", "trainable": True, "inference_supported": False, "training_value": dest.resolve().as_posix()})
         cls._upsert_record(project, record)
-        return {"success": True, "model": record, "validation": {"status": "passed", "checks": [{"name": "model_yaml", "status": "passed", "passed": True}], "errors": [], "warnings": []}}
+        return {"success": True, "model": record, "validation": cls._simple_validation("passed", "model_yaml")}
 
     @classmethod
     def import_onnx(cls, project: Dict[str, Any], source_path: Path, display_name: str, task_family: str) -> Dict[str, Any]:
@@ -87,7 +85,9 @@ class ModelCatalog:
         record = cls._base_record(project, model_id, display_name or source_path.stem, task_family, model_dir, dest)
         record.update({"format": "onnx", "backend": "onnx", "architecture": cls._architecture_for_task(task_family), "status": "registered_inference_only", "trainable": False, "inference_supported": False, "training_value": ""})
         cls._upsert_record(project, record)
-        return {"success": True, "model": record, "validation": {"status": "inference_only", "checks": [{"name": "onnx_file", "status": "passed", "passed": True}], "errors": [], "warnings": ["ONNX imports are not trainable."]}}
+        validation = cls._simple_validation("inference_only", "onnx_file")
+        validation["warnings"].append("ONNX imports are not trainable.")
+        return {"success": True, "model": record, "validation": validation}
 
     @classmethod
     def import_rnn_package(cls, project: Dict[str, Any], source_path: Path, display_name: str, task_family: str) -> Dict[str, Any]:
@@ -101,8 +101,10 @@ class ModelCatalog:
         except zipfile.BadZipFile:
             return cls._failed("Invalid ZIP file.")
         missing = sorted(required - names)
-        validation = {"status": "preview" if not missing else "invalid_package", "checks": [{"name": "rnn_required_files", "status": "passed" if not missing else "failed", "passed": not missing, "detail": ", ".join(missing)}], "errors": ["Missing required files: " + ", ".join(missing)] if missing else [], "warnings": ["RNN package import is preview/inference metadata only in this phase."]}
+        validation = cls._simple_validation("preview" if not missing else "invalid_package", "rnn_required_files", not missing, ", ".join(missing))
+        validation["warnings"].append("RNN package import is preview/inference metadata only in this phase.")
         if missing:
+            validation["errors"].append("Missing required files: " + ", ".join(missing))
             return {"success": False, "validation": validation}
         model_id, model_dir, dest = cls._copy_import(project, "rnn_package", source_path)
         record = cls._base_record(project, model_id, display_name or source_path.stem, task_family, model_dir, dest)
@@ -119,18 +121,7 @@ class ModelCatalog:
         model_id, model_dir, dest = cls._copy_import(project, "custom_package", source_path)
         manifest_model = (validation.get("normalized_manifest") or {}).get("model") or {}
         record = cls._base_record(project, model_id, display_name or manifest_model.get("name") or source_path.stem, task_family or manifest_model.get("task_type") or "custom", model_dir, dest)
-        record.update({
-            "format": "custom_package",
-            "backend": str(manifest_model.get("framework") or "custom"),
-            "architecture": str(manifest_model.get("architecture") or cls._architecture_for_task(task_family)),
-            "status": validation.get("status"),
-            "trainable": False,
-            "inference_supported": False,
-            "training_value": "",
-            "execution_enabled": False,
-            "validation_status": validation.get("status"),
-            "manifest_path": validation.get("manifest_path"),
-        })
+        record.update({"format": "custom_package", "backend": str(manifest_model.get("framework") or "custom"), "architecture": str(manifest_model.get("architecture") or cls._architecture_for_task(task_family)), "status": validation.get("status"), "trainable": False, "inference_supported": False, "training_value": "", "execution_enabled": False, "validation_status": validation.get("status"), "manifest_path": validation.get("manifest_path")})
         cls._write_json(model_dir / "validation.json", validation)
         cls._write_json(model_dir / "manifest.normalized.json", validation.get("normalized_manifest") or {})
         gate = cls._permission_gate(record, validation)
@@ -165,22 +156,7 @@ class ModelCatalog:
         record = cls._require_custom_record(project, model_id)
         validation = cls._load_validation(project, record)
         manifest = validation.get("normalized_manifest") or {}
-        plan = {
-            "status": "planned_execution_disabled",
-            "model_id": model_id,
-            "steps": [
-                {"name": "prepare_isolated_workspace", "enabled": False},
-                {"name": "install_allowlisted_dependencies", "enabled": False},
-                {"name": "load_adapter_entrypoint", "enabled": False},
-                {"name": "run_contract_probe", "enabled": False},
-                {"name": "collect_metrics_and_artifacts", "enabled": False},
-            ],
-            "input_contract": manifest.get("input") or {},
-            "output_contract": manifest.get("output") or {},
-            "metrics_contract": manifest.get("metrics") or {},
-            "blocked_reasons": cls._phase_gate_reasons(validation),
-            "execution_enabled": False,
-        }
+        plan = {"status": "planned_execution_disabled", "model_id": model_id, "steps": [{"name": "prepare_isolated_workspace", "enabled": False}, {"name": "install_allowlisted_dependencies", "enabled": False}, {"name": "load_adapter_entrypoint", "enabled": False}, {"name": "run_contract_probe", "enabled": False}, {"name": "collect_metrics_and_artifacts", "enabled": False}], "input_contract": manifest.get("input") or {}, "output_contract": manifest.get("output") or {}, "metrics_contract": manifest.get("metrics") or {}, "blocked_reasons": cls._phase_gate_reasons(validation), "execution_enabled": False}
         cls._write_json(cls._record_dir(project, record) / "sandbox_plan.json", plan)
         cls._append_audit(cls._record_dir(project, record), "sandbox_plan_built", plan)
         return {"success": True, "model": record, "plan": plan}
@@ -231,20 +207,9 @@ class ModelCatalog:
     @staticmethod
     def _project_trained_record(model: Dict[str, Any]) -> Dict[str, Any]:
         task = str(model.get("task_type") or "").lower()
-        return {
-            "model_id": model.get("model_id"),
-            "display_name": f"{model.get('run_id', '--')} / {model.get('weight_type', '--')}",
-            "training_value": model.get("internal_weight_path"),
-            "source": "project_trained",
-            "backend": model.get("backend") or "ultralytics_yolo",
-            "architecture": model.get("architecture") or "cnn",
-            "task_family": "segmentation" if "seg" in task else "classification" if "class" in task else "detection",
-            "format": "pt",
-            "status": model.get("status") or "ready",
-            "trainable": True,
-            "inference_supported": True,
-            **model,
-        }
+        record = dict(model)
+        record.update({"display_name": f"{model.get('run_id', '--')} / {model.get('weight_type', '--')}", "training_value": model.get("internal_weight_path"), "source": "project_trained", "backend": model.get("backend") or "ultralytics_yolo", "architecture": model.get("architecture") or "cnn", "task_family": "segmentation" if "seg" in task else "classification" if "class" in task else "detection", "format": "pt", "status": model.get("status") or "ready", "trainable": True, "inference_supported": True})
+        return record
 
     @classmethod
     def _base_record(cls, project: Dict[str, Any], model_id: str, display_name: str, task_family: str, model_dir: Path, artifact_path: Path) -> Dict[str, Any]:
@@ -342,11 +307,7 @@ class ModelCatalog:
 
     @staticmethod
     def _phase_gate_reasons(validation: Dict[str, Any]) -> List[str]:
-        return [
-            "Phase P1-A only validates package contracts; adapter import and execution are disabled.",
-            "A valid manifest does not make the package trainable until sandbox dry-run and metrics/artifact bridges exist.",
-            *[str(item) for item in (validation.get("blocked_reasons") or [])],
-        ]
+        return ["Phase P1-A only validates package contracts; adapter import and execution are disabled.", "A valid manifest does not make the package trainable until sandbox dry-run and metrics/artifact bridges exist.", *[str(item) for item in (validation.get("blocked_reasons") or [])]]
 
     @staticmethod
     def _task_compatible(model: Dict[str, Any], task_family: Optional[str]) -> bool:
@@ -369,6 +330,10 @@ class ModelCatalog:
     @staticmethod
     def _architecture_for_task(task_family: str) -> str:
         return "rnn" if "sequence" in str(task_family or "").lower() else "cnn"
+
+    @staticmethod
+    def _simple_validation(status: str, name: str, passed: bool = True, detail: str = "") -> Dict[str, Any]:
+        return {"status": status, "checks": [{"name": name, "status": "passed" if passed else "failed", "passed": passed, "detail": detail}], "errors": [], "warnings": []}
 
     @staticmethod
     def _failed(message: str) -> Dict[str, Any]:
