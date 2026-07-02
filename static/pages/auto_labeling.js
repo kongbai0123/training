@@ -327,8 +327,12 @@ function renderAutoLabelStats(status = null) {
   const imageCount = Number(status?.imageCount ?? appState.currentProject?.image_count ?? 0);
   const annotated = Number(status?.annotatedCount ?? appState.currentProject?.annotation_progress?.annotated ?? 0);
   const unlabeled = Math.max(0, imageCount - annotated);
+  const visibleModelCount = (appState.models || []).filter((model) => {
+    const weightType = String(model.weight_type || "").toLowerCase();
+    return weightType !== "last";
+  }).length;
   setText("#auto-stat-unlabeled", appState.currentProjectId ? String(unlabeled) : "--");
-  setText("#auto-stat-models", appState.currentProjectId ? String((appState.models || []).length) : "--");
+  setText("#auto-stat-models", appState.currentProjectId ? String(visibleModelCount) : "--");
   setText("#auto-stat-drafts", "0");
   setText("#auto-stat-review", "0");
 }
@@ -381,7 +385,6 @@ function renderAutoLabelModelList(status = null) {
   const projectTask = status?.taskType || appState.currentProject?.task_type || "";
   const groups = [
     ["best", t("autoLabel.model.best"), t("autoLabel.model.bestHelp")],
-    ["last", t("autoLabel.model.last"), t("autoLabel.model.lastHelp")],
     ["other", t("autoLabel.model.other"), t("autoLabel.model.otherHelp")],
   ];
 

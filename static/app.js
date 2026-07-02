@@ -30,7 +30,7 @@ import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeFor
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js?v=20260701-xgb-eval-final";
 import { initModelCompare, renderModelComparePage } from "./pages/model_compare.js?v=20260630-ui-init-fix";
 import { initInference, renderInferencePage } from "./pages/inference.js?v=20260702-model-scroll-bounds";
-import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260702-model-scroll-bounds";
+import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260702-auto-best-only";
 import { initExport, renderExportPage } from "./pages/export.js?v=20260701-xgb-eval-final";
 import { initSettings, renderSettingsPage } from "./pages/settings.js";
 
