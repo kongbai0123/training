@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from src.app_paths import MODELS_DIR, PROJECTS_DIR
@@ -29,6 +30,9 @@ class ModelStore:
 
         model_path = Path(model_value).expanduser()
         root = cls.models_dir()
+
+        if cls._is_builtin_ultralytics_model_name(model_value):
+            return model_value
 
         if model_path.is_absolute():
             resolved = model_path.resolve()
@@ -60,6 +64,15 @@ class ModelStore:
             raise ValueError("Local training models outside ./models or project models/imports are not allowed. Import the model into the project first.")
 
         return model_value
+
+    @staticmethod
+    def _is_builtin_ultralytics_model_name(model_value: str) -> bool:
+        path = Path(model_value)
+        if path.parent != Path("."):
+            return False
+        if path.suffix.lower() != ".pt":
+            return False
+        return re.match(r"^yolo(?:v\d+|\d+)[A-Za-z0-9_.-]*$", path.stem) is not None
 
     @classmethod
     def validate_model_store_path(cls, weight_path: Path) -> Path:

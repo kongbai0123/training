@@ -69,6 +69,15 @@ class ModelStoreScopeTests(unittest.TestCase):
 
             self.assertEqual(Path(resolved), models_dir / "custom.pt")
 
+    def test_builtin_yolo_name_is_not_treated_as_unsafe_local_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            models_dir = Path(temp_dir) / "models"
+
+            with patch("src.model_store.MODELS_DIR", models_dir):
+                resolved = ModelStore.resolve_training_model("yolov8s-seg.pt")
+
+            self.assertEqual(resolved, "yolov8s-seg.pt")
+
 
 if __name__ == "__main__":
     unittest.main()

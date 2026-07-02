@@ -1991,7 +1991,7 @@ def _latest_completed_training_run_dir(project: Dict[str, Any], layout: ProjectL
         run_id = run.get("run_id")
         if not run_id:
             continue
-        if run.get("status") in {None, "completed", "unknown"}:
+        if run.get("status") == "completed":
             candidate_ids.append(run_id)
 
     for run_id in candidate_ids:
@@ -2004,12 +2004,26 @@ def _latest_completed_training_run_dir(project: Dict[str, Any], layout: ProjectL
         return None
     candidates = [
         path for path in runs_dir.iterdir()
-        if path.is_dir() and path.name.startswith("run_") and ((path / "results.csv").exists() or (path / "metrics.json").exists())
+        if path.is_dir()
+        and path.name.startswith("run_")
+        and _read_run_summary(path).get("status") == "completed"
+        and ((path / "results.csv").exists() or (path / "metrics.json").exists())
     ]
     if not candidates:
         return None
     candidates.sort(key=lambda path: path.stat().st_mtime, reverse=True)
     return candidates[0]
+
+
+def _read_run_summary(run_dir: Path) -> Dict[str, Any]:
+    summary_path = run_dir / "run_summary.json"
+    if not summary_path.exists():
+        return {}
+    try:
+        payload = json.loads(summary_path.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else {}
+    except Exception:
+        return {}
 
 
 def _read_evaluation_metrics(run_dir: Path) -> Optional[Dict[str, Any]]:

@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.model_system.constants import (
+    CUSTOM_PACKAGE_SOURCE_MANIFEST_NAMES,
     MODEL_STATUS_FAILED,
     MODEL_STATUS_REGISTERED_DISABLED,
     MODEL_STATUS_REJECTED,
     MODEL_STATUS_VALIDATED_BASIC,
+    SOURCE_MODEL_MANIFEST_NAME,
     VALIDATION_REPORT_NAME,
 )
 
@@ -293,25 +296,24 @@ def validate_custom_package_dir(staging_dir: Path, import_id: str, package_name:
     manifest_valid = False
     manifest_payload: Dict[str, Any] = {}
 
-    manifest_path = staging_dir / "model_manifest.json"
-    manifest_exists = manifest_path.exists() and manifest_path.is_file()
+    manifest_path, package_root, manifest_errors = _find_custom_package_manifest(staging_dir)
+    manifest_exists = bool(manifest_path and manifest_path.exists() and manifest_path.is_file())
     checks.append({
         "name": "manifest_exists",
         "passed": manifest_exists,
         "status": "passed" if manifest_exists else "failed",
-        "message": "model_manifest.json found." if manifest_exists else "model_manifest.json is missing.",
+        "message": f"{manifest_path.name} found." if manifest_path else "Package manifest is missing.",
     })
-    if not manifest_exists:
-        errors.append("Custom model package must contain model_manifest.json.")
-    else:
+    errors.extend(manifest_errors)
+    if manifest_exists:
         try:
-            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            payload = _read_structured_manifest(manifest_path)
             if isinstance(payload, dict):
-                manifest_payload = payload
+                manifest_payload = _normalize_custom_package_manifest(payload, manifest_path, package_root, staging_dir)
             else:
-                errors.append("model_manifest.json must contain a JSON object.")
+                errors.append(f"{manifest_path.name} must contain an object.")
         except Exception as exc:
-            errors.append(f"model_manifest.json is not valid JSON: {exc}")
+            errors.append(f"{manifest_path.name} is not valid JSON/YAML: {exc}")
 
     missing_fields = sorted(field for field in CUSTOM_PACKAGE_REQUIRED_FIELDS if field not in manifest_payload)
     checks.append({
@@ -338,6 +340,7 @@ def validate_custom_package_dir(staging_dir: Path, import_id: str, package_name:
 
     runtime = manifest_payload.get("runtime") if isinstance(manifest_payload.get("runtime"), dict) else {}
     entrypoint = runtime.get("entrypoint")
+    entrypoint_file = runtime.get("entrypoint_file") or _entrypoint_to_relative_file(package_root, staging_dir, str(entrypoint or ""))
     checks.append({
         "name": "entrypoint_declared",
         "passed": bool(runtime.get("kind")) and bool(entrypoint),
@@ -346,6 +349,14 @@ def validate_custom_package_dir(staging_dir: Path, import_id: str, package_name:
     })
     if runtime and (not runtime.get("kind") or not entrypoint):
         errors.append("runtime must include kind and entrypoint.")
+    checks.append({
+        "name": "entrypoint_file_resolved",
+        "passed": bool(entrypoint_file),
+        "status": "passed" if entrypoint_file else "failed",
+        "message": f"entrypoint file resolved as {entrypoint_file}." if entrypoint_file else "runtime.entrypoint_file could not be resolved.",
+    })
+    if entrypoint_file:
+        manifest_payload.setdefault("runtime", {})["entrypoint_file"] = entrypoint_file
 
     dependency_policy = manifest_payload.get("dependency_policy") if isinstance(manifest_payload.get("dependency_policy"), dict) else {}
     install_allowed = bool(dependency_policy.get("install_allowed"))
@@ -398,6 +409,8 @@ def validate_custom_package_dir(staging_dir: Path, import_id: str, package_name:
         ],
         "next_allowed_action": "manual_review" if manifest_valid else "fix_manifest",
         "manifest": manifest_payload if manifest_valid else {},
+        "source_manifest_path": manifest_path.relative_to(staging_dir).as_posix() if manifest_path else "",
+        "package_root": package_root.relative_to(staging_dir).as_posix() if package_root and package_root != staging_dir else "",
     }
 
 
@@ -406,3 +419,159 @@ def write_validation_report(import_dir: Path, report: Dict[str, Any]) -> Path:
     path = import_dir / VALIDATION_REPORT_NAME
     path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     return path
+
+
+def write_source_manifest(import_dir: Path, manifest: Dict[str, Any]) -> Path:
+    import_dir.mkdir(parents=True, exist_ok=True)
+    path = import_dir / SOURCE_MODEL_MANIFEST_NAME
+    path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    return path
+
+
+def _find_custom_package_manifest(staging_dir: Path) -> Tuple[Optional[Path], Path, List[str]]:
+    errors: List[str] = []
+    candidates: List[Tuple[Path, Path]] = []
+
+    for name in CUSTOM_PACKAGE_SOURCE_MANIFEST_NAMES:
+        path = staging_dir / name
+        if path.exists() and path.is_file():
+            candidates.append((path, staging_dir))
+
+    top_level_dirs = [path for path in staging_dir.iterdir() if path.is_dir()] if staging_dir.exists() else []
+    for child in top_level_dirs:
+        for name in CUSTOM_PACKAGE_SOURCE_MANIFEST_NAMES:
+            path = child / name
+            if path.exists() and path.is_file():
+                candidates.append((path, child))
+
+    if not candidates:
+        return None, staging_dir, ["Custom model package must contain manifest.yaml, manifest.yml, model_manifest.yaml, model_manifest.yml, or model_manifest.json."]
+    if len(candidates) > 1:
+        relative = ", ".join(path.relative_to(staging_dir).as_posix() for path, _ in candidates)
+        return None, staging_dir, [f"Custom model package contains multiple manifests; keep exactly one manifest file. Found: {relative}"]
+    manifest_path, package_root = candidates[0]
+    return manifest_path, package_root, errors
+
+
+def _read_structured_manifest(path: Path) -> Dict[str, Any]:
+    suffix = path.suffix.lower()
+    text = path.read_text(encoding="utf-8")
+    if suffix == ".json":
+        payload = json.loads(text)
+    else:
+        import yaml
+
+        payload = yaml.safe_load(text)
+    return payload if isinstance(payload, dict) else {}
+
+
+def _normalize_custom_package_manifest(payload: Dict[str, Any], manifest_path: Path, package_root: Path, staging_dir: Path) -> Dict[str, Any]:
+    if _looks_like_internal_custom_manifest(payload):
+        normalized = dict(payload)
+    else:
+        model = payload.get("model") if isinstance(payload.get("model"), dict) else {}
+        entrypoints = payload.get("entrypoints") if isinstance(payload.get("entrypoints"), dict) else {}
+        framework = str(model.get("framework") or payload.get("framework") or "").strip().lower()
+        runtime_kind = "python_adapter" if framework in {"", "python", "pytorch", "torch", "sklearn", "xgboost"} else f"{framework}_adapter"
+        entrypoint = (
+            entrypoints.get("dry_run")
+            or entrypoints.get("trainer")
+            or entrypoints.get("predictor")
+            or entrypoints.get("adapter")
+            or payload.get("entrypoint")
+            or ""
+        )
+        input_spec = payload.get("input_spec") if isinstance(payload.get("input_spec"), dict) else payload.get("input")
+        output_spec = payload.get("output_spec") if isinstance(payload.get("output_spec"), dict) else payload.get("output")
+        artifacts = payload.get("artifacts") if isinstance(payload.get("artifacts"), dict) else {}
+        metrics = payload.get("metrics_contract") if isinstance(payload.get("metrics_contract"), dict) else payload.get("metrics")
+        security = _normalize_security(payload.get("security"))
+        dependency_policy = _normalize_dependency_policy(payload.get("dependency_policy"), package_root)
+        capabilities = payload.get("capabilities") if isinstance(payload.get("capabilities"), dict) else {}
+
+        normalized = {
+            "schema_version": str(payload.get("schema_version") or "1.0"),
+            "model_id": str(model.get("id") or payload.get("model_id") or _slug(model.get("name") or "custom_model")),
+            "model_name": str(model.get("name") or payload.get("model_name") or "Custom Model Package"),
+            "model_type": str(model.get("architecture") or payload.get("model_type") or payload.get("architecture") or "custom").lower(),
+            "task": str(model.get("task_type") or payload.get("task") or payload.get("task_type") or "custom").lower(),
+            "runtime": {
+                "kind": runtime_kind,
+                "framework": framework or "python",
+                "entrypoint": str(entrypoint or ""),
+                "entrypoint_file": _entrypoint_to_relative_file(package_root, staging_dir, str(entrypoint or "")),
+                "entrypoints": entrypoints,
+            },
+            "artifacts": artifacts if isinstance(artifacts, dict) else {},
+            "input_spec": input_spec if isinstance(input_spec, dict) else {},
+            "output_spec": output_spec if isinstance(output_spec, dict) else {},
+            "capabilities": {
+                "train": bool(capabilities.get("train", False)),
+                "infer": bool(capabilities.get("infer", bool(entrypoints.get("predictor")))),
+                "evaluate": bool(capabilities.get("evaluate", False)),
+            },
+            "security": security,
+            "dependency_policy": dependency_policy,
+        }
+        if isinstance(metrics, dict):
+            normalized["metrics_contract"] = metrics
+
+    runtime = normalized.get("runtime") if isinstance(normalized.get("runtime"), dict) else {}
+    entrypoint = str(runtime.get("entrypoint") or "")
+    entrypoint_file = runtime.get("entrypoint_file") or _entrypoint_to_relative_file(package_root, staging_dir, entrypoint)
+    normalized.setdefault("runtime", {})["entrypoint_file"] = entrypoint_file
+    normalized["source_manifest"] = manifest_path.relative_to(staging_dir).as_posix()
+    package_root_rel = package_root.relative_to(staging_dir).as_posix() if package_root != staging_dir else ""
+    normalized["package_root"] = package_root_rel
+    return normalized
+
+
+def _looks_like_internal_custom_manifest(payload: Dict[str, Any]) -> bool:
+    return any(field in payload for field in ("model_name", "model_type", "input_spec", "output_spec", "dependency_policy"))
+
+
+def _entrypoint_to_relative_file(package_root: Path, staging_dir: Path, entrypoint: str) -> str:
+    value = str(entrypoint or "").strip()
+    if not value:
+        return ""
+    if value.endswith(".py") or "/" in value or "\\" in value:
+        relative = value.replace("\\", "/")
+    else:
+        relative = f"{value.split('.', 1)[0]}.py"
+    if package_root != staging_dir:
+        root_rel = package_root.relative_to(staging_dir).as_posix()
+        return f"{root_rel}/{relative}"
+    return relative
+
+
+def _normalize_security(value: Any) -> Dict[str, Any]:
+    source = value if isinstance(value, dict) else {}
+    allow_write = source.get("allow_write")
+    writes_files = bool(source.get("writes_files"))
+    if allow_write not in (None, False, "false", "none", "staging_only"):
+        writes_files = True
+    return {
+        "requires_network": bool(source.get("requires_network") or source.get("allow_network")),
+        "writes_files": writes_files,
+        "requires_shell": bool(source.get("requires_shell") or source.get("allow_shell")),
+        "requires_gpu": bool(source.get("requires_gpu") or source.get("allow_gpu")),
+    }
+
+
+def _normalize_dependency_policy(value: Any, package_root: Path) -> Dict[str, Any]:
+    source = value if isinstance(value, dict) else {}
+    requirements = source.get("requirements_file")
+    if requirements is None and (package_root / "requirements.txt").exists():
+        requirements = "requirements.txt"
+    return {
+        "install_allowed": bool(source.get("install_allowed", False)),
+        "requirements_file": requirements,
+        "lock_file": source.get("lock_file"),
+        "offline_required": bool(source.get("offline_required", True)),
+    }
+
+
+def _slug(value: Any) -> str:
+    text = str(value or "custom_model").strip().lower()
+    slug = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
+    return slug or "custom_model"

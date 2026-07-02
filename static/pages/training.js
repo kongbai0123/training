@@ -247,7 +247,7 @@ function renderTrainingModelOptions(select, models) {
     if (!items.length) {
       const empty = document.createElement("option");
       empty.disabled = true;
-      empty.textContent = label === "Imported Models" ? "尚無可訓練的匯入模型" : "No models";
+      empty.textContent = label === "Imported Models" ? "No imported models" : "No models";
       group.appendChild(empty);
     } else {
       items.forEach((item) => {
@@ -259,7 +259,7 @@ function renderTrainingModelOptions(select, models) {
         option.dataset.source = item.source || "";
         option.dataset.backend = item.backend || "";
         option.dataset.status = item.status || "";
-        option.title = `${item.source || "--"} 繚 ${item.backend || "--"} 繚 ${item.task_family || "--"} 繚 ${item.status || "--"}`;
+        option.title = `${item.source || "--"} / ${item.backend || "--"} / ${item.task_family || "--"} / ${item.status || "--"}`;
         group.appendChild(option);
       });
     }
@@ -451,7 +451,7 @@ function updateModelImportTypeUi() {
   } else if (importType === "custom_package") {
     if (input) input.accept = ".zip";
     setText("#model-import-drop-title", "匯入 Custom Model Package");
-    setText("#model-import-drop-help", "可接受 .zip，必須包含 model_manifest.json；可包含 adapter.py / train.py / preprocess.py / postprocess.py / src/*.c / src/*.cpp / weights/ / bin/。目前只做 sandbox validation，不會進入訓練。");
+    setText("#model-import-drop-help", "可接受 .zip，必須包含 manifest.yaml、manifest.yml 或 model_manifest.json；可包含 adapter.py / train.py / preprocess.py / postprocess.py / src/*.c / src/*.cpp / weights/ / bin/。目前只做 sandbox validation，不會進入訓練。");
     if (submit) submit.innerHTML = `<i class="fa-solid fa-file-import"></i> Validate Custom Package`;
   } else {
     if (input) input.accept = ".pt";
@@ -1329,8 +1329,10 @@ function updateChartVisualization() {
     
     keysToRender = [
       { key: map50_95_key, label: "mAP50-95", color: colors.primary1 },
-      { key: map50_key, label: "mAP50", color: colors.primary2 }
-    ];
+      { key: map50_key, label: "mAP50", color: colors.primary2 },
+      { key: "metrics/precision(M)" in raw ? "metrics/precision(M)" : "metrics/precision(B)", label: "Precision", color: colors.loss2 },
+      { key: "metrics/recall(M)" in raw ? "metrics/recall(M)" : "metrics/recall(B)", label: "Recall", color: colors.loss3 }
+    ].filter(k => k.key in raw);
   } else if (activeChartTab === "loss") {
     // Training UI helper
     const losses = [

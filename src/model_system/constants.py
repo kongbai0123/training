@@ -7,6 +7,14 @@ from src.config import BASE_DIR
 
 BUILTIN_MODEL_CATALOG_PATH = BASE_DIR / "data" / "builtin_model_catalog.json"
 MODEL_MANIFEST_NAME = "model_manifest.json"
+SOURCE_MODEL_MANIFEST_NAME = "source_model_manifest.json"
+CUSTOM_PACKAGE_SOURCE_MANIFEST_NAMES = (
+    "manifest.yaml",
+    "manifest.yml",
+    "model_manifest.yaml",
+    "model_manifest.yml",
+    "model_manifest.json",
+)
 VALIDATION_REPORT_NAME = "validation_report.json"
 IMPORTED_MODELS_RELATIVE_DIR = Path("models") / "imports"
 

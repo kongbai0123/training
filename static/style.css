@@ -5498,8 +5498,27 @@ body[data-theme="light"] .toast {
 
 .evaluation-plots-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.evaluation-metric-grid {
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.evaluation-metric-grid .metric-card {
+  min-height: 56px;
+  padding: 8px 10px;
+  gap: 6px;
+}
+
+.evaluation-metric-grid .metric-card span {
+  font-size: 0.7rem;
+}
+
+.evaluation-metric-grid .metric-card strong {
+  font-size: 0.98rem;
 }
 
 .evaluation-plot-card {
@@ -5507,17 +5526,18 @@ body[data-theme="light"] .toast {
   background: var(--bg-panel-soft);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .evaluation-plot-card h3 {
   margin: 0;
   color: var(--text-soft);
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   text-transform: none;
+  line-height: 1.2;
 }
 
 .evaluation-plot-download {
@@ -5551,7 +5571,7 @@ body[data-theme="light"] .toast {
 
 .evaluation-plot-preview {
   position: relative;
-  min-height: 200px;
+  min-height: 168px;
   border: 1px solid var(--border);
   background: var(--bg-preview);
   border-radius: var(--radius);
@@ -5559,11 +5579,75 @@ body[data-theme="light"] .toast {
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: zoom-in;
 }
 
 .evaluation-plot-preview img {
   max-width: 100%;
-  max-height: 400px;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.evaluation-plot-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.evaluation-plot-modal.hidden {
+  display: none;
+}
+
+.evaluation-plot-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.72);
+}
+
+.evaluation-plot-modal-content {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, calc(100vw - 56px));
+  max-height: calc(100vh - 56px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+  overflow: hidden;
+}
+
+.evaluation-plot-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.evaluation-plot-modal-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.evaluation-plot-modal-body {
+  min-height: 0;
+  padding: 14px;
+  overflow: auto;
+  background: var(--bg-preview);
+}
+
+.evaluation-plot-modal-body img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 150px);
+  margin: 0 auto;
   object-fit: contain;
   border-radius: 4px;
 }
@@ -5573,7 +5657,23 @@ body[data-theme="light"] .toast {
 }
 
 @media (max-width: 1280px) {
+  .evaluation-plots-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .evaluation-guidance-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .evaluation-plots-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .evaluation-plots-grid {
     grid-template-columns: 1fr;
   }
 }

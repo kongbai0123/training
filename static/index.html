@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260702-model-scroll-bounds">
+  <link rel="stylesheet" href="/static/style.css?v=20260702-cnn-eval-polish2">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -918,30 +918,6 @@
 
           </div>
 
-          <section class="panel-section training-run-history-card">
-            <div class="section-title"><h2 data-i18n="training.runHistory.title">Run History</h2></div>
-            <div class="table-wrap">
-              <table class="data-table run-history-table">
-                <thead>
-                  <tr>
-                    <th>Run ID</th>
-                    <th>Date</th>
-                    <th>Model</th>
-                    <th>Epochs</th>
-                    <th>Img Size</th>
-                    <th>Batch</th>
-                    <th>Metric 1</th>
-                    <th>Metric 2</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="run-history-rows">
-                  <tr><td colspan="10" class="text-center muted-cell" data-i18n="training.runHistory.empty">No training runs yet.</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
                 </div>
               </section>
 
@@ -1188,7 +1164,7 @@
               <p data-i18n="evaluation.subtitle">Review model evaluation results including mAP, IoU, Precision, Recall, and plots.</p>
             </div>
           </div>
-          <div class="metric-grid">
+          <div class="metric-grid evaluation-metric-grid">
             <div class="metric-card"><span>mAP <span class="info-icon" data-tooltip="mAP measures how well model predictions match annotated ground truth overall." data-i18n-tooltip="evaluation.mapTooltip">i</span></span><strong id="eval-map50">--</strong></div>
             <div class="metric-card"><span>IoU <span class="info-icon" data-tooltip="IoU is the overlap ratio between prediction and annotation areas." data-i18n-tooltip="evaluation.iouTooltip">i</span></span><strong id="eval-iou">--</strong></div>
             <div class="metric-card"><span>Precision</span><strong id="eval-precision">--</strong></div>
@@ -1845,7 +1821,7 @@
       <div class="modal-header">
         <div>
           <h2>Import Model</h2>
-          <p>匯入模型會寫入目前專案範圍；只有 YOLO .pt 會進入 CNN 訓練選單。Custom package 只做 manifest validation，不執行程式。</p>
+          <p>匯入模型會寫入目前專案範圍；只有 YOLO .pt 會進入 CNN 訓練選單。Custom package 支援 manifest.yaml / model_manifest.json，只做 manifest validation，不執行程式。</p>
         </div>
         <button class="icon-btn" id="btn-close-model-import-modal" aria-label="Close">&times;</button>
       </div>
@@ -1888,7 +1864,7 @@
           <span><strong>YOLO .yaml</strong> 僅限模型架構 YAML，不接受 dataset YAML</span>
           <span><strong>ONNX .onnx</strong> inference-only，不會啟動訓練</span>
           <span><strong>RNN .zip</strong> 需包含 model.pt、feature_schema、normalization_stats、sequence_config</span>
-          <span><strong>Custom .zip</strong> 必須包含 model_manifest.json；本階段只檢查，不執行</span>
+          <span><strong>Custom .zip</strong> 必須包含 manifest.yaml、manifest.yml 或 model_manifest.json；本階段只檢查，不執行</span>
         </div>
         <div class="status-guard warning">
           <i class="fa-solid fa-shield-halved"></i>
@@ -1966,7 +1942,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260702-auto-best-only"></script>
+  <script type="module" src="/static/app.js?v=20260702-cnn-eval-polish2"></script>
 </body>
 </html>
 

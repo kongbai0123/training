@@ -5,6 +5,9 @@ import { apiFetch } from "../api.js";
 
 export function initEvaluation() {
   eventBus.on("language-changed", () => renderEvaluationPage());
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeEvaluationPlotPreview();
+  });
 }
 
 export async function renderEvaluationPage() {
@@ -63,7 +66,7 @@ function renderEvaluationPlots(plots = [], runId = null) {
     return `
       <div class="evaluation-plot-card">
         <h3>${escapeHtml(title)}</h3>
-        <div class="evaluation-plot-preview">
+        <div class="evaluation-plot-preview" data-evaluation-plot-preview="${escapeHtml(src)}" data-evaluation-plot-title="${escapeHtml(title)}" role="button" tabindex="0" aria-label="Preview ${escapeHtml(title)}">
           <a href="${src}" class="evaluation-plot-download" target="_blank" download="${escapeHtml(plot)}" aria-label="Download ${escapeHtml(title)}">
             <i class="fa-solid fa-download"></i>
           </a>
@@ -72,4 +75,52 @@ function renderEvaluationPlots(plots = [], runId = null) {
       </div>
     `;
   }).join("");
+  plotsGrid.querySelectorAll("[data-evaluation-plot-preview]").forEach((preview) => {
+    preview.addEventListener("click", (event) => {
+      if (event.target.closest(".evaluation-plot-download")) return;
+      openEvaluationPlotPreview(preview.dataset.evaluationPlotPreview, preview.dataset.evaluationPlotTitle);
+    });
+    preview.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openEvaluationPlotPreview(preview.dataset.evaluationPlotPreview, preview.dataset.evaluationPlotTitle);
+    });
+  });
+}
+
+function openEvaluationPlotPreview(src, title) {
+  if (!src) return;
+  let modal = qs("#evaluation-plot-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "evaluation-plot-modal";
+    modal.className = "evaluation-plot-modal hidden";
+    modal.innerHTML = `
+      <div class="evaluation-plot-modal-backdrop" data-evaluation-plot-close></div>
+      <div class="evaluation-plot-modal-content" role="dialog" aria-modal="true" aria-labelledby="evaluation-plot-modal-title">
+        <div class="evaluation-plot-modal-header">
+          <h2 id="evaluation-plot-modal-title"></h2>
+          <button type="button" class="icon-btn evaluation-plot-modal-close" data-evaluation-plot-close aria-label="Close preview">&times;</button>
+        </div>
+        <div class="evaluation-plot-modal-body">
+          <img id="evaluation-plot-modal-img" alt="">
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelectorAll("[data-evaluation-plot-close]").forEach((button) => {
+      button.addEventListener("click", closeEvaluationPlotPreview);
+    });
+  }
+  setText("#evaluation-plot-modal-title", title || "Evaluation Plot");
+  const image = qs("#evaluation-plot-modal-img");
+  if (image) {
+    image.src = src;
+    image.alt = title || "Evaluation Plot";
+  }
+  modal.classList.remove("hidden");
+}
+
+function closeEvaluationPlotPreview() {
+  qs("#evaluation-plot-modal")?.classList.add("hidden");
 }

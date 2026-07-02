@@ -25,9 +25,9 @@ import { initDataset, renderDatasetPage } from "./pages/dataset.js?v=20260630-pr
 import { initLabelMe, renderLabelMeManager } from "./pages/labelme.js";
 import { initSplit, renderSplitPage } from "./pages/split.js";
 import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js?v=20260625-augmentation-p0";
-import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js?v=20260701-rnn-layout-polish";
+import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js?v=20260702-cnn-eval-polish2";
 import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260702-rnn-ui-mode-cleanup";
-import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js?v=20260701-xgb-eval-final";
+import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js?v=20260702-cnn-eval-polish2";
 import { initModelCompare, renderModelComparePage } from "./pages/model_compare.js?v=20260630-ui-init-fix";
 import { initInference, renderInferencePage } from "./pages/inference.js?v=20260702-model-scroll-bounds";
 import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260702-auto-best-only";
@@ -301,7 +301,7 @@ function bindGlobalNavigation() {
     if (appState.currentProjectId) {
       await openProject(appState.currentProjectId, { stayOnPage: true });
     }
-    showToast("??歇??渡?");
+    showToast("Project refreshed.");
   });
 
   eventBus.on("project-deleted", async (projectId) => {
@@ -372,7 +372,7 @@ async function loadProjects(options = {}) {
     renderAll();
   } catch (err) {
     qs("#api-status-dot")?.classList.add("offline");
-    showToast(`?⊥?霈??獢??殷?${err.message}`);
+    showToast(`Failed to load projects: ${err.message}`);
     renderAll();
   }
 }
@@ -400,7 +400,7 @@ async function openProject(projectId, options = {}) {
     renderAll();
     if (!options.stayOnPage) navigate(options.page || "dashboard");
   } catch (err) {
-    showToast(`?⊥?頛撠?嚗?{err.message}`);
+    showToast(`Failed to open project: ${err.message}`);
   }
 }
 

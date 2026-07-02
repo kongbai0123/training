@@ -35,6 +35,7 @@ from src.model_system.validators import (
     validate_rnn_package_dir,
     validate_yolo_pt_import,
     validate_yolo_yaml_import,
+    write_source_manifest,
     write_validation_report,
 )
 from src.model_system.sandbox_gate import (
@@ -514,12 +515,14 @@ class ModelCatalog:
             validation["manifest_valid"] = False
             validation.setdefault("errors", []).extend(extract_check.get("errors", ["Failed to extract custom model package."]))
 
-        original_manifest = staging_dir / MODEL_MANIFEST_NAME
         package_files = {"package": source_path.name}
-        if original_manifest.exists():
-            preserved_manifest = staging_dir / "source_model_manifest.json"
-            original_manifest.replace(preserved_manifest)
-            package_files["source_manifest"] = preserved_manifest.name
+        if validation.get("manifest"):
+            source_manifest_path = write_source_manifest(staging_dir, validation["manifest"])
+            package_files["source_manifest"] = source_manifest_path.name
+        if validation.get("source_manifest_path"):
+            package_files["original_manifest"] = validation["source_manifest_path"]
+        if validation.get("package_root"):
+            package_files["package_root"] = validation["package_root"]
 
         task = normalize_task_family(task_family) or normalize_task_family(validation.get("manifest", {}).get("task")) or "custom"
         display = display_name or validation.get("manifest", {}).get("model_name") or source_path.stem

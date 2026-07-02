@@ -53,7 +53,8 @@ class MockSandboxDryRunRunner:
         source_manifest = read_source_manifest(import_dir)
         runtime = source_manifest.get("runtime") if isinstance(source_manifest.get("runtime"), dict) else {}
         entrypoint = runtime.get("entrypoint") or ""
-        entrypoint_path = (import_dir / entrypoint).resolve() if entrypoint else None
+        entrypoint_file = runtime.get("entrypoint_file") or _entrypoint_to_relative_file(entrypoint)
+        entrypoint_path = (import_dir / entrypoint_file).resolve() if entrypoint_file else None
         entrypoint_exists = bool(entrypoint_path and import_dir.resolve() in entrypoint_path.parents and entrypoint_path.exists() and entrypoint_path.is_file())
 
         checks = [
@@ -62,7 +63,7 @@ class MockSandboxDryRunRunner:
             _check("adapter_not_imported", True, "adapter.py was not imported."),
             _check("user_code_not_executed", True, "No user package code was executed."),
             _check("entrypoint_declared", bool(entrypoint), "runtime.entrypoint is declared." if entrypoint else "runtime.entrypoint is missing."),
-            _check("entrypoint_file_exists", entrypoint_exists, f"{entrypoint} exists." if entrypoint_exists else f"{entrypoint or 'entrypoint'} file is missing."),
+            _check("entrypoint_file_exists", entrypoint_exists, f"{entrypoint_file} exists." if entrypoint_exists else f"{entrypoint_file or entrypoint or 'entrypoint'} file is missing."),
             _check("input_contract_declared", isinstance(source_manifest.get("input_spec"), dict), "input_spec is declared."),
             _check("output_contract_declared", isinstance(source_manifest.get("output_spec"), dict), "output_spec is declared."),
             _check("metrics_contract_optional", True, "metrics contract is optional in mock dry-run."),
@@ -137,6 +138,7 @@ def build_sandbox_dry_run_plan(import_dir: Path, model: Dict[str, Any]) -> Dict[
     dependency_policy = source_manifest.get("dependency_policy") if isinstance(source_manifest.get("dependency_policy"), dict) else {}
     security = source_manifest.get("security") if isinstance(source_manifest.get("security"), dict) else {}
     entrypoint = runtime.get("entrypoint") or ""
+    entrypoint_file = runtime.get("entrypoint_file") or _entrypoint_to_relative_file(entrypoint)
     p3_dependency_check = build_p3_dependency_environment_check(import_dir, source_manifest)
 
     plan = {
@@ -152,8 +154,9 @@ def build_sandbox_dry_run_plan(import_dir: Path, model: Dict[str, Any]) -> Dict[
         "runtime": {
             "kind": runtime.get("kind"),
             "entrypoint": entrypoint,
-            "entrypoint_path": entrypoint,
-            "entrypoint_exists": bool(entrypoint and (import_dir / entrypoint).resolve().is_file()),
+            "entrypoint_file": entrypoint_file,
+            "entrypoint_path": entrypoint_file,
+            "entrypoint_exists": bool(entrypoint_file and (import_dir / entrypoint_file).resolve().is_file()),
         },
         "sandbox_policy": {
             "network_allowed": False,
@@ -214,6 +217,15 @@ def _blocked_plan(model: Dict[str, Any], status: str, reason: str) -> Dict[str, 
         "blocked_reasons": [reason],
         "next_allowed_action": "approve_permissions",
     }
+
+
+def _entrypoint_to_relative_file(entrypoint: str) -> str:
+    value = str(entrypoint or "").strip()
+    if not value:
+        return ""
+    if value.endswith(".py") or "/" in value or "\\" in value:
+        return value.replace("\\", "/")
+    return f"{value.split('.', 1)[0]}.py"
 
 
 def _read_json(path: Path) -> Dict[str, Any]:
