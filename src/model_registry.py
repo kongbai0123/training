@@ -21,6 +21,8 @@ class ModelRegistry:
         if not runs_dir.exists():
             return []
 
+        completed_runs = ModelRegistry._completed_project_runs(project)
+        restrict_to_project_runs = bool(project.get("training_runs"))
         models: List[Dict[str, Any]] = []
         for weight_path in sorted(runs_dir.glob("*/weights/*.pt")):
             if weight_path.stem not in ModelRegistry.WEIGHT_TYPES:
@@ -32,6 +34,9 @@ class ModelRegistry:
 
             run_dir = weight_path.parent.parent
             run_id = run_dir.name
+            if restrict_to_project_runs and run_id not in completed_runs:
+                continue
+            run_record = completed_runs.get(run_id, {})
             metrics = ModelRegistry._read_run_metrics(run_dir)
             training_config = ModelRegistry._read_training_config(project, run_dir)
             backend_contract = ModelRegistry._read_backend_contract(run_dir)
@@ -47,9 +52,9 @@ class ModelRegistry:
                 "weight_type": weight_type,
                 "weight_path_display": ModelRegistry._display_path(weight_path),
                 "internal_weight_path": internal_path.as_posix(),
-                "model_name": training_config.get("model") or metrics.get("model") or "--",
+                "model_name": run_record.get("model") or training_config.get("model") or metrics.get("model") or "--",
                 "task_type": task_type,
-                "created_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "created_at": run_record.get("completed_at") or run_record.get("created_at") or datetime.fromtimestamp(stat.st_mtime).isoformat(),
                 "file_size": stat.st_size,
                 "best_map50_m": metrics.get("best_map50_m"),
                 "best_map50_95_m": metrics.get("best_map50_95_m"),
@@ -69,6 +74,20 @@ class ModelRegistry:
 
         models.sort(key=lambda item: item.get("created_at") or "", reverse=True)
         return models
+
+    @staticmethod
+    def _completed_project_runs(project: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        completed: Dict[str, Dict[str, Any]] = {}
+        for run in project.get("training_runs") or []:
+            if not isinstance(run, dict):
+                continue
+            run_id = str(run.get("run_id") or "").strip()
+            if not run_id:
+                continue
+            if str(run.get("status") or "").lower() != "completed":
+                continue
+            completed[run_id] = run
+        return completed
 
     @staticmethod
     def resolve_model(project: Dict[str, Any], model_id: str) -> Dict[str, Any]:

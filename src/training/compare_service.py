@@ -25,11 +25,15 @@ class CompareService:
         layout = ProjectLayout.from_project(project)
         runs: List[Dict[str, Any]] = []
         warnings: List[str] = []
+        allowed_run_ids = cls._completed_project_run_ids(project)
+        restrict_to_project_runs = bool(project.get("training_runs"))
 
         runs_dir = layout.training_runs_dir()
         if runs_dir.exists():
             for run_dir in sorted(runs_dir.iterdir(), key=lambda p: p.name):
                 if not run_dir.is_dir() or not cls._looks_like_training_run(run_dir):
+                    continue
+                if restrict_to_project_runs and run_dir.name not in allowed_run_ids:
                     continue
                 bundle = cls.load_run_bundle(project, run_dir.name)
                 run_architecture = cls.infer_architecture(bundle, project)
@@ -52,6 +56,19 @@ class CompareService:
             payload["message"] = message
         return payload
 
+    @staticmethod
+    def _completed_project_run_ids(project: Dict[str, Any]) -> set[str]:
+        run_ids: set[str] = set()
+        for run in project.get("training_runs") or []:
+            if not isinstance(run, dict):
+                continue
+            if str(run.get("status") or "").lower() != "completed":
+                continue
+            run_id = str(run.get("run_id") or "").strip()
+            if run_id:
+                run_ids.add(run_id)
+        return run_ids
+
     @classmethod
     def compare_runs(
         cls,
@@ -68,6 +85,12 @@ class CompareService:
             raise CompareServiceError("Compare supports at most 4 run_ids.")
         if len(set(run_ids)) != len(run_ids):
             raise CompareServiceError("Duplicate run_ids are not allowed.")
+
+        allowed_run_ids = cls._completed_project_run_ids(project)
+        if project.get("training_runs"):
+            unknown = [run_id for run_id in run_ids if run_id not in allowed_run_ids]
+            if unknown:
+                raise CompareServiceError(f"Run is not registered as completed in this project: {', '.join(unknown)}")
 
         baseline_run_id = baseline_run_id or run_ids[0]
         if baseline_run_id not in run_ids:

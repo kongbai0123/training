@@ -20,6 +20,21 @@ class InferenceEngine:
     _model_cache: "OrderedDict[str, YOLO]" = OrderedDict()
     _cache_limit = 2
 
+    @staticmethod
+    def _normalize_task_family(task: Any) -> str:
+        normalized = str(task or "").strip().lower()
+        if not normalized:
+            return "detection"
+        if normalized == "segment" or "seg" in normalized:
+            return "segmentation"
+        if normalized in {"detect", "detection", "object_detection", "bbox"} or "detect" in normalized:
+            return "detection"
+        if normalized == "classify" or "class" in normalized:
+            return "classification"
+        if normalized in {"pose", "obb"}:
+            return normalized
+        return normalized
+
     @classmethod
     def run_image_inference(
         cls,
@@ -61,7 +76,7 @@ class InferenceEngine:
 
         model_obj = cls._get_model(model["internal_weight_path"])
         
-        # Lazy validation: 驗證載入的 YOLO 模型任務與專案設定的 task_type 是否相符
+        # Validate the loaded YOLO task against the project task family.
         real_task = getattr(model_obj, "task", "detect")
         expected_task = project.get("task_type", "detection")
         normalized_real_task = "detection"
@@ -72,9 +87,11 @@ class InferenceEngine:
         elif real_task in {"pose", "obb"}:
             normalized_real_task = real_task
             
-        if normalized_real_task != expected_task:
+        normalized_expected_task = cls._normalize_task_family(expected_task)
+        if normalized_real_task != normalized_expected_task:
             raise ValueError(
-                f"權重實際任務類型為 '{normalized_real_task}'，與當前專案設定之任務類型 '{expected_task}' 不符，拒絕執行預測。"
+                f"Model task type '{normalized_real_task}' is not compatible with project task type "
+                f"'{normalized_expected_task}'. Prediction was rejected."
             )
 
         started = time.perf_counter()

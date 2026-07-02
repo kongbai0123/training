@@ -145,6 +145,23 @@ class CompareServicePhase3ATest(unittest.TestCase):
         self.assertEqual([run["run_id"] for run in payload["runs"]], ["run_a"])
         self.assertEqual(payload["runs"][0]["primary_metric"]["key"], "metrics/mAP50-95(M)")
 
+    def test_list_completed_cnn_runs_ignores_orphan_dirs_when_project_has_run_records(self):
+        write_yolo_run(self.project, "run_registered")
+        write_yolo_run(self.project, "run_orphan")
+        self.project["training_runs"] = [{"run_id": "run_registered", "status": "completed"}]
+
+        payload = CompareService.list_comparable_runs(self.project, "cnn")
+
+        self.assertEqual([run["run_id"] for run in payload["runs"]], ["run_registered"])
+
+    def test_compare_rejects_orphan_run_when_project_has_run_records(self):
+        write_yolo_run(self.project, "run_registered")
+        write_yolo_run(self.project, "run_orphan")
+        self.project["training_runs"] = [{"run_id": "run_registered", "status": "completed"}]
+
+        with self.assertRaises(CompareServiceError):
+            CompareService.compare_runs(self.project, "cnn", ["run_registered", "run_orphan"])
+
     def test_compare_two_completed_segmentation_runs(self):
         write_yolo_run(self.project, "run_a")
         write_yolo_run(self.project, "run_b")

@@ -44,6 +44,27 @@ class ModelStoreScopeTests(unittest.TestCase):
             self.assertEqual(models[0]["source"], "project_training_runs")
             self.assertIn("/projects/project_a/training/runs/run_1/weights/best.pt", models[0]["internal_weight_path"].replace("\\", "/"))
 
+    def test_model_registry_ignores_orphan_run_dirs_when_project_has_run_records(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            projects_root = root / "projects"
+            project_dir = projects_root / "project_a"
+            for run_id in ("run_registered", "run_orphan"):
+                run_weights = project_dir / "training" / "runs" / run_id / "weights"
+                run_weights.mkdir(parents=True)
+                run_weights.joinpath("best.pt").write_bytes(b"run-best")
+
+            project = {
+                "project_id": "project_a",
+                "dataset_path": str(project_dir / "dataset"),
+                "task_type": "semantic_segmentation",
+                "training_runs": [{"run_id": "run_registered", "status": "completed", "model": "yolov8s-seg.pt"}],
+            }
+            with patch("src.model_registry.PROJECTS_DIR", projects_root):
+                models = ModelRegistry.list_models(project)
+
+            self.assertEqual([model["run_id"] for model in models], ["run_registered"])
+
     def test_custom_training_weight_must_be_under_models_dir(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
