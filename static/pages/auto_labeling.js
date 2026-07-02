@@ -7,9 +7,14 @@ let selectedAutoLabelModelId = "";
 let selectedModelSource = "project";
 let loadedProjectId = null;
 let loadingModels = false;
+let weightManagerFilter = "all";
+let weightManagerSort = "newest";
+let selectedWeightIds = new Set();
+let pendingDeleteWeightIds = [];
 
 export function initAutoLabeling() {
   qs("#btn-refresh-auto-label-models")?.addEventListener("click", () => loadAutoLabelModels(true));
+  initWeightManager();
   initModelImportDropZone();
   initSourceOptions();
   initModelSourceTabs();
@@ -56,6 +61,188 @@ function renderModelSourceVisibility() {
   if (!importPanel || !modelList) return;
   importPanel.open = selectedModelSource === "external";
   modelList.classList.toggle("dimmed", selectedModelSource !== "project");
+}
+
+function initWeightManager() {
+  qs("#btn-open-weight-manager")?.addEventListener("click", openWeightManager);
+  qs("#btn-close-weight-manager")?.addEventListener("click", closeWeightManager);
+  qs("#btn-cancel-weight-manager")?.addEventListener("click", closeWeightManager);
+
+  qs("#btn-weight-manager-refresh")?.addEventListener("click", async () => {
+    hideWeightDeleteConfirmation();
+    await loadAutoLabelModels(true);
+    renderWeightManager();
+  });
+
+  qs("#weight-manager-filter")?.addEventListener("change", (event) => {
+    weightManagerFilter = event.target.value || "all";
+    hideWeightDeleteConfirmation();
+    renderWeightManager();
+  });
+
+  qs("#weight-manager-sort")?.addEventListener("change", (event) => {
+    weightManagerSort = event.target.value || "newest";
+    hideWeightDeleteConfirmation();
+    renderWeightManager();
+  });
+
+  qs("#btn-weight-manager-select-old-checkpoints")?.addEventListener("click", () => {
+    const visible = getVisibleWeightModels();
+    selectedWeightIds = new Set(
+      visible
+        .filter((model) => String(model.weight_type || "").toLowerCase() === "last")
+        .map((model) => model.model_id)
+    );
+    hideWeightDeleteConfirmation();
+    renderWeightManager();
+  });
+
+  qs("#btn-delete-selected-weights")?.addEventListener("click", requestDeleteSelectedWeights);
+  qs("#btn-cancel-delete-weights")?.addEventListener("click", hideWeightDeleteConfirmation);
+  qs("#btn-confirm-delete-weights")?.addEventListener("click", confirmDeleteSelectedWeights);
+}
+
+async function openWeightManager() {
+  if (!appState.currentProjectId) {
+    showToast(t("autoLabel.startReason.noProject"));
+    return;
+  }
+  selectedWeightIds = new Set();
+  pendingDeleteWeightIds = [];
+  hideWeightDeleteConfirmation();
+  qs("#weight-manager-modal")?.removeAttribute("hidden");
+  if (loadedProjectId !== appState.currentProjectId) {
+    await loadAutoLabelModels(false);
+  }
+  renderWeightManager();
+}
+
+function closeWeightManager() {
+  qs("#weight-manager-modal")?.setAttribute("hidden", "hidden");
+  selectedWeightIds = new Set();
+  pendingDeleteWeightIds = [];
+  hideWeightDeleteConfirmation();
+}
+
+function getVisibleWeightModels() {
+  const models = (appState.models || []).filter((model) => {
+    const weightType = String(model.weight_type || "").toLowerCase();
+    if (!["best", "last"].includes(weightType)) return false;
+    return weightManagerFilter === "all" || weightType === weightManagerFilter;
+  });
+  models.sort((a, b) => {
+    const left = String(a.created_at || "");
+    const right = String(b.created_at || "");
+    return weightManagerSort === "oldest" ? left.localeCompare(right) : right.localeCompare(left);
+  });
+  return models;
+}
+
+function renderWeightManager() {
+  const list = qs("#weight-manager-list");
+  const summary = qs("#weight-manager-summary");
+  const deleteButton = qs("#btn-delete-selected-weights");
+  if (!list || !summary || !deleteButton) return;
+
+  const models = getVisibleWeightModels();
+  const total = (appState.models || []).filter((model) => ["best", "last"].includes(String(model.weight_type || "").toLowerCase())).length;
+  const selectedCount = selectedWeightIds.size;
+  summary.textContent = `目前顯示 ${models.length} / ${total} 個 checkpoint；已選取 ${selectedCount} 個。`;
+  deleteButton.disabled = selectedCount === 0;
+  list.classList.toggle("model-registry-scroll", models.length > 5);
+
+  if (!models.length) {
+    setHTML("#weight-manager-list", `
+      <div class="empty-state">
+        <strong>沒有符合條件的權重檔</strong>
+        <p>請調整 best.pt / last.pt 篩選條件，或先完成訓練產生 checkpoint。</p>
+      </div>
+    `);
+    return;
+  }
+
+  setHTML("#weight-manager-list", models.map((model) => renderWeightManagerRow(model)).join(""));
+
+  qsa("[data-weight-id]").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      const modelId = checkbox.dataset.weightId || "";
+      if (!modelId) return;
+      if (checkbox.checked) {
+        selectedWeightIds.add(modelId);
+      } else {
+        selectedWeightIds.delete(modelId);
+      }
+      hideWeightDeleteConfirmation();
+      renderWeightManager();
+    });
+  });
+}
+
+function renderWeightManagerRow(model) {
+  const weightType = String(model.weight_type || "").toLowerCase();
+  const checked = selectedWeightIds.has(model.model_id) ? "checked" : "";
+  const badge = weightType === "best" ? "建議模型" : "Checkpoint";
+  return `
+    <label class="weight-manager-row">
+      <input type="checkbox" data-weight-id="${escapeHtml(model.model_id)}" ${checked}>
+      <div class="weight-manager-row-main">
+        <strong>${escapeHtml(model.run_id || "--")} / ${escapeHtml(weightType || "--")}.pt</strong>
+        <span>${escapeHtml(model.task_type || "--")} · ${escapeHtml(formatDate(model.created_at))}</span>
+      </div>
+      <div class="weight-manager-row-meta">
+        <span>mAP50(M): ${formatMetric(model.best_map50_m)}</span>
+        <span>mAP50-95(M): ${formatMetric(model.best_map50_95_m)}</span>
+        <span>${formatBytes(model.file_size)}</span>
+        <span class="status-badge ${weightType === "best" ? "success" : "warning"}">${badge}</span>
+      </div>
+    </label>
+  `;
+}
+
+function requestDeleteSelectedWeights() {
+  pendingDeleteWeightIds = Array.from(selectedWeightIds);
+  if (!pendingDeleteWeightIds.length) {
+    showToast("請先勾選要刪除的權重檔。");
+    return;
+  }
+  const panel = qs("#weight-delete-confirmation");
+  const text = qs("#weight-delete-confirm-text");
+  if (text) {
+    text.textContent = `即將刪除 ${pendingDeleteWeightIds.length} 個 checkpoint 檔案。此操作不會刪除 run history、metrics 或 artifacts，但權重檔本身無法從此面板復原。`;
+  }
+  panel?.removeAttribute("hidden");
+}
+
+function hideWeightDeleteConfirmation() {
+  qs("#weight-delete-confirmation")?.setAttribute("hidden", "hidden");
+  pendingDeleteWeightIds = [];
+}
+
+async function confirmDeleteSelectedWeights() {
+  if (!appState.currentProjectId || !pendingDeleteWeightIds.length) return;
+  const confirmButton = qs("#btn-confirm-delete-weights");
+  confirmButton?.setAttribute("disabled", "disabled");
+  try {
+    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/models/weights/delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model_ids: pendingDeleteWeightIds,
+        confirm: true,
+      }),
+    });
+    const deletedCount = Array.isArray(result.deleted) ? result.deleted.length : 0;
+    const skippedCount = Array.isArray(result.skipped) ? result.skipped.length : 0;
+    showToast(`已刪除 ${deletedCount} 個權重檔${skippedCount ? `，略過 ${skippedCount} 個` : ""}。`);
+    selectedWeightIds = new Set();
+    hideWeightDeleteConfirmation();
+    await loadAutoLabelModels(true);
+    renderWeightManager();
+  } catch (err) {
+    showToast(err.message || "刪除權重失敗。");
+  } finally {
+    confirmButton?.removeAttribute("disabled");
+  }
 }
 
 function initModelImportDropZone() {
@@ -204,8 +391,9 @@ function renderAutoLabelModelList(status = null) {
       return type === "other" ? !["best", "last"].includes(weightType) : weightType === type;
     });
     if (!groupModels.length) return "";
+    const scrollClass = groupModels.length > 5 ? " model-registry-scroll" : "";
     return `
-      <div class="model-registry-group">
+      <div class="model-registry-group${scrollClass}">
         <div class="model-registry-group-title">
           <strong>${escapeHtml(title)}</strong>
           <span>${description}</span>

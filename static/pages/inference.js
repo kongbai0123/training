@@ -118,19 +118,23 @@ function renderModelList(status = null) {
   if (!container) return;
 
   if (!appState.currentProjectId) {
+    container.classList.remove("model-registry-scroll");
     setHTML("#inference-model-list", `<div class="empty-state">請先載入專案。</div>`);
     return;
   }
 
   if (modelsLoading) {
+    container.classList.remove("model-registry-scroll");
     setHTML("#inference-model-list", `<div class="empty-state">正在掃描可用模型權重...</div>`);
     return;
   }
 
   const models = appState.models || [];
   ensureSelectedModel();
+  container.classList.toggle("model-registry-scroll", models.length > 5);
 
   if (!models.length) {
+    container.classList.remove("model-registry-scroll");
     setHTML("#inference-model-list", `
       <div class="empty-state">
         <strong>No trained weights found.</strong>

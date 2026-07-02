@@ -29,8 +29,8 @@ import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pa
 import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260702-rnn-ui-mode-cleanup";
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js?v=20260701-xgb-eval-final";
 import { initModelCompare, renderModelComparePage } from "./pages/model_compare.js?v=20260630-ui-init-fix";
-import { initInference, renderInferencePage } from "./pages/inference.js?v=20260630-class-batch-infer";
-import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260624-auto-label-readable";
+import { initInference, renderInferencePage } from "./pages/inference.js?v=20260702-model-scroll-bounds";
+import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260702-model-scroll-bounds";
 import { initExport, renderExportPage } from "./pages/export.js?v=20260701-xgb-eval-final";
 import { initSettings, renderSettingsPage } from "./pages/settings.js";
 

@@ -388,6 +388,11 @@ class CompareRequest(BaseModel):
     architecture: str
     run_ids: List[str]
     baseline_run_id: Optional[str] = None
+
+
+class DeleteModelWeightsRequest(BaseModel):
+    model_ids: List[str]
+    confirm: bool = False
 # --- API Endpoints ---
 
 # 1. ????? API
@@ -469,6 +474,66 @@ def list_project_models(project_id: str):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return ModelRegistry.list_models(project)
+
+
+@app.post("/api/projects/{project_id}/models/weights/delete")
+def delete_project_model_weights(project_id: str, request: DeleteModelWeightsRequest):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not request.confirm:
+        raise HTTPException(status_code=400, detail="Deletion requires explicit confirmation")
+
+    model_ids = [str(model_id).strip() for model_id in request.model_ids if str(model_id).strip()]
+    if not model_ids:
+        raise HTTPException(status_code=400, detail="No model weights selected")
+    if len(model_ids) > 50:
+        raise HTTPException(status_code=400, detail="Too many model weights selected")
+
+    layout = ProjectLayout.from_project(project)
+    runs_dir = (layout.project_dir / "training" / "runs").resolve()
+    deleted: List[Dict[str, Any]] = []
+    skipped: List[Dict[str, Any]] = []
+
+    for model_id in dict.fromkeys(model_ids):
+        try:
+            model = ModelRegistry.resolve_model(project, model_id)
+            weight_type = str(model.get("weight_type") or "").lower()
+            if weight_type not in {"best", "last"}:
+                skipped.append({"model_id": model_id, "reason": "unsupported_weight_type"})
+                continue
+
+            weight_path = Path(model.get("internal_weight_path") or "").resolve()
+            if runs_dir not in weight_path.parents:
+                skipped.append({"model_id": model_id, "reason": "outside_training_runs"})
+                continue
+            if weight_path.name not in {"best.pt", "last.pt"}:
+                skipped.append({"model_id": model_id, "reason": "unsupported_filename"})
+                continue
+            if not weight_path.exists() or not weight_path.is_file():
+                skipped.append({"model_id": model_id, "reason": "missing_file"})
+                continue
+
+            file_size = weight_path.stat().st_size
+            weight_path.unlink()
+            deleted.append({
+                "model_id": model_id,
+                "run_id": model.get("run_id"),
+                "weight_type": weight_type,
+                "path": model.get("weight_path_display"),
+                "file_size": file_size,
+            })
+        except ValueError:
+            skipped.append({"model_id": model_id, "reason": "not_found"})
+        except Exception as exc:
+            skipped.append({"model_id": model_id, "reason": f"delete_failed: {exc}"})
+
+    return {
+        "success": True,
+        "deleted": deleted,
+        "skipped": skipped,
+        "remaining_count": len(ModelRegistry.list_models(project)),
+    }
 
 
 @app.get("/api/projects/{project_id}/models/catalog")

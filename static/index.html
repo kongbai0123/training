@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260701-rnn-layout-polish">
+  <link rel="stylesheet" href="/static/style.css?v=20260702-model-scroll-bounds">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -1468,6 +1468,9 @@
               <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-auto-label-models">
                 <i class="fa-solid fa-rotate"></i> <span data-i18n="autoLabel.refreshModels">Refresh Models</span>
               </button>
+              <button class="btn btn-secondary guarded" data-requires="project" id="btn-open-weight-manager">
+                <i class="fa-solid fa-hard-drive"></i> <span>管理權重</span>
+              </button>
             </div>
           </div>
 
@@ -1902,10 +1905,68 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="weight-manager-modal" hidden>
+    <div class="modal-content confirm-modal weight-manager-modal-content">
+      <div class="modal-header">
+        <div>
+          <h2>模型權重管理</h2>
+          <p>管理目前專案訓練產生的 best.pt / last.pt。刪除只會移除 checkpoint 檔案，不會刪除 run history、metrics 或訓練紀錄。</p>
+        </div>
+        <button class="icon-btn" id="btn-close-weight-manager" aria-label="Close">&times;</button>
+      </div>
+      <div class="weight-manager-toolbar">
+        <label>
+          <span>權重類型</span>
+          <select id="weight-manager-filter">
+            <option value="all">全部</option>
+            <option value="best">best.pt</option>
+            <option value="last">last.pt</option>
+          </select>
+        </label>
+        <label>
+          <span>排序</span>
+          <select id="weight-manager-sort">
+            <option value="newest">依 run 日期：新到舊</option>
+            <option value="oldest">依 run 日期：舊到新</option>
+          </select>
+        </label>
+        <div class="weight-manager-toolbar-actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-weight-manager-select-old-checkpoints">
+            選取舊 last.pt
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-weight-manager-refresh">
+            <i class="fa-solid fa-rotate"></i> 重新整理
+          </button>
+        </div>
+      </div>
+      <div id="weight-manager-summary" class="weight-manager-summary">尚未載入權重清單。</div>
+      <div id="weight-manager-list" class="weight-manager-list"></div>
+      <div id="weight-delete-confirmation" class="status-guard danger weight-manager-confirmation" hidden>
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>
+          <strong id="weight-delete-confirm-title">確認刪除權重</strong>
+          <p id="weight-delete-confirm-text">刪除後需要重新訓練或從備份還原才可取回。</p>
+          <div class="weight-manager-confirm-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-delete-weights">取消</button>
+            <button type="button" class="btn btn-danger btn-sm" id="btn-confirm-delete-weights">
+              <i class="fa-solid fa-trash"></i> 確認刪除
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-weight-manager">關閉</button>
+        <button type="button" class="btn btn-danger" id="btn-delete-selected-weights" disabled>
+          <i class="fa-solid fa-trash"></i> 刪除選取權重
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260702-rnn-ui-mode-cleanup"></script>
+  <script type="module" src="/static/app.js?v=20260702-model-scroll-bounds"></script>
 </body>
 </html>
 
