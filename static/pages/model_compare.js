@@ -1,4 +1,4 @@
-﻿import { appState } from "../state.js";
+import { appState, t } from "../state.js";
 import { eventBus } from "../event_bus.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, escapeHtml, setText } from "../utils.js";
@@ -110,7 +110,7 @@ async function loadComparableRuns({ force = false } = {}) {
   } catch (err) {
     compareState.runs = [];
     compareState.result = null;
-    eventBus.emit("toast", `Failed to load comparable runs: ${err.message}`);
+    eventBus.emit("toast", t("compare.toast.loadRunsFailed", { message: err.message }));
   } finally {
     compareState.loadingRuns = false;
     renderModelComparePage();
@@ -130,7 +130,7 @@ async function loadCompareReports({ force = false } = {}) {
     compareState.reportHistory = Array.isArray(payload.reports) ? payload.reports : [];
   } catch (err) {
     compareState.reportHistory = [];
-    eventBus.emit("toast", `Failed to load compare reports: ${err.message}`);
+    eventBus.emit("toast", t("compare.toast.loadReportsFailed", { message: err.message }));
   } finally {
     compareState.reportLoading = false;
     renderModelComparePage();
@@ -157,7 +157,7 @@ async function runComparison() {
     compareState.reportResult = null;
   } catch (err) {
     compareState.result = null;
-    eventBus.emit("toast", `Compare failed: ${err.message}`);
+    eventBus.emit("toast", t("compare.toast.compareFailed", { message: err.message }));
   } finally {
     compareState.comparing = false;
     renderModelComparePage();
@@ -172,9 +172,9 @@ async function deleteCompareReport(reportId) {
     });
     if (compareState.reportResult?.report_id === reportId) compareState.reportResult = null;
     await loadCompareReports({ force: true });
-    eventBus.emit("toast", "Compare report deleted.");
+    eventBus.emit("toast", t("compare.toast.reportDeleted"));
   } catch (err) {
-    eventBus.emit("toast", `Delete report failed: ${err.message}`);
+    eventBus.emit("toast", t("compare.toast.deleteReportFailed", { message: err.message }));
   }
 }
 
@@ -193,11 +193,11 @@ async function exportCompareReport() {
         baseline_run_id: compareState.baselineRunId || compareState.selectedRuns[0],
       }),
     });
-    eventBus.emit("toast", "Compare report exported.");
+    eventBus.emit("toast", t("compare.toast.reportExported"));
     await loadCompareReports({ force: true });
   } catch (err) {
     compareState.reportResult = null;
-    eventBus.emit("toast", `Export report failed: ${err.message}`);
+    eventBus.emit("toast", t("compare.toast.exportFailed", { message: err.message }));
   } finally {
     compareState.reportExporting = false;
     renderModelComparePage();
@@ -260,7 +260,7 @@ function toggleRun(runId) {
     if (compareState.baselineRunId === runId) compareState.baselineRunId = compareState.selectedRuns[0] || null;
   } else {
     if (compareState.selectedRuns.length >= 4) {
-      eventBus.emit("toast", "Compare supports at most 4 runs.");
+      eventBus.emit("toast", t("compare.toast.maxRuns"));
       return;
     }
     compareState.selectedRuns.push(runId);
@@ -300,7 +300,7 @@ function renderCompareAlert() {
   if (!alert) return;
   const warnings = compareState.result?.summary?.warnings || compareState.result?.recommendation?.warnings || [];
   const messages = [];
-  if (!appState.currentProjectId) messages.push("Open a project before comparing training runs.");
+  if (!appState.currentProjectId) messages.push(t("compare.openProject"));
   if (compareState.architecture === "rnn") messages.push("RNN metric comparison is enabled for completed RNN runs. Sequence output comparison is still disabled.");
   if (warnings.length) messages.push(...warnings.slice(0, 3));
   alert.classList.toggle("hidden", messages.length === 0);
@@ -310,18 +310,18 @@ function renderCompareAlert() {
 function renderRunList() {
   const host = qs("#compare-run-list");
   if (!host) return;
-  setText("#compare-run-count", compareState.loadingRuns ? "Loading" : `${compareState.runs.length} runs`);
+  setText("#compare-run-count", compareState.loadingRuns ? t("compare.loading") : t("compare.runCount", { count: compareState.runs.length }));
 
   if (!appState.currentProjectId) {
-    host.innerHTML = `<div class="empty-state">Open a project to compare training runs.</div>`;
+    host.innerHTML = `<div class="empty-state">${escapeHtml(t("compare.openProject"))}</div>`;
     return;
   }
   if (compareState.loadingRuns) {
-    host.innerHTML = `<div class="empty-state">Loading comparable runs...</div>`;
+    host.innerHTML = `<div class="empty-state">${escapeHtml(t("compare.loadingRuns"))}</div>`;
     return;
   }
   if (!compareState.runs.length) {
-    host.innerHTML = `<div class="empty-state">No completed ${escapeHtml(compareState.architecture.toUpperCase())} runs are available for comparison.</div>`;
+    host.innerHTML = `<div class="empty-state">${escapeHtml(t("compare.noCompletedRuns", { architecture: compareState.architecture.toUpperCase() }))}</div>`;
     return;
   }
 
@@ -340,7 +340,7 @@ function renderRunList() {
           <b>${escapeHtml(value)}</b>
         </div>
         <button type="button" class="btn btn-sm ${selected ? "btn-secondary" : "btn-primary"}" data-compare-toggle-run="${escapeHtml(run.run_id)}">
-          ${selected ? "Remove" : "Add"}
+          ${escapeHtml(selected ? t("common.remove") : t("common.add"))}
         </button>
       </article>
     `;
@@ -355,7 +355,7 @@ function renderSelectedTray() {
   const host = qs("#compare-selected-tray");
   if (!host) return;
   if (!compareState.selectedRuns.length) {
-    host.innerHTML = `<div class="empty-state">Select completed runs from the list. The first selected run becomes baseline.</div>`;
+    host.innerHTML = `<div class="empty-state">${escapeHtml(t("compare.selectRuns"))}</div>`;
     return;
   }
 
@@ -367,12 +367,12 @@ function renderSelectedTray() {
       <article class="compare-selected-card ${isBaseline ? "baseline" : ""}">
         <div class="compare-selected-card-head">
           <strong>${escapeHtml(runId)}</strong>
-          <button type="button" class="icon-btn" data-compare-remove-run="${escapeHtml(runId)}" aria-label="Remove">&times;</button>
+          <button type="button" class="icon-btn" data-compare-remove-run="${escapeHtml(runId)}" aria-label="${escapeHtml(t("common.remove"))}">&times;</button>
         </div>
         <span>${escapeHtml(run.model || "--")}</span>
         <b>${escapeHtml(primary.display_name || "Primary")}: ${primary.value == null ? "--" : Number(primary.value).toFixed(3)}</b>
         <button type="button" class="btn btn-sm ${isBaseline ? "btn-primary" : "btn-secondary"}" data-compare-baseline="${escapeHtml(runId)}">
-          ${isBaseline ? "Baseline" : "Set Baseline"}
+          ${escapeHtml(isBaseline ? t("compare.baseline") : t("compare.setBaseline"))}
         </button>
       </article>
     `;
@@ -392,7 +392,7 @@ function renderDecisionSummary() {
   const recommendation = compareState.result?.recommendation;
   const summary = compareState.result?.summary;
   if (!recommendation || !summary) {
-    setText("#compare-recommendation-badge", "No comparison");
+    setText("#compare-recommendation-badge", t("compare.noComparison"));
     host.innerHTML = compareState.architecture === "rnn"
       ? `
         <div class="rnn-compare-skeleton-grid">
@@ -402,11 +402,11 @@ function renderDecisionSummary() {
           ${renderRnnMetricPlaceholder("Sequence", "Prediction curve, horizon error")}
         </div>
       `
-      : `<div class="empty-state">Run comparison to see best model by metric, tradeoffs, and warnings.</div>`;
+      : `<div class="empty-state">${escapeHtml(t("compare.runComparisonHelp"))}</div>`;
     return;
   }
 
-  setText("#compare-recommendation-badge", recommendation.confidence ? `Confidence: ${recommendation.confidence}` : "Recommendation");
+  setText("#compare-recommendation-badge", recommendation.confidence ? t("compare.confidence", { confidence: recommendation.confidence }) : t("compare.recommendation"));
   const bestRows = Object.entries(summary.best_by_metric || {}).map(([key, item]) => `
     <tr>
       <td>${escapeHtml(metricDisplayName(key))}</td>
@@ -417,14 +417,14 @@ function renderDecisionSummary() {
 
   host.innerHTML = `
     <div class="compare-recommendation">
-      <span>Best overall</span>
+      <span>${escapeHtml(t("compare.bestOverall"))}</span>
       <strong>${escapeHtml(recommendation.best_overall || "--")}</strong>
-      <p>${escapeHtml(recommendation.reason || "No recommendation available.")}</p>
+      <p>${escapeHtml(recommendation.reason || t("compare.noRecommendation"))}</p>
     </div>
     <div class="compare-table-wrap">
       <table class="compare-table">
-        <thead><tr><th>Metric</th><th>Best Run</th><th>Value</th></tr></thead>
-        <tbody>${bestRows || `<tr><td colspan="3">No metric summary available.</td></tr>`}</tbody>
+        <thead><tr><th>${escapeHtml(t("compare.metric"))}</th><th>${escapeHtml(t("compare.bestRun"))}</th><th>${escapeHtml(t("compare.value"))}</th></tr></thead>
+        <tbody>${bestRows || `<tr><td colspan="3">${escapeHtml(t("compare.noMetricSummary"))}</td></tr>`}</tbody>
       </table>
     </div>
   `;
@@ -580,12 +580,12 @@ function renderConfigDiff() {
   const diff = compareState.result?.summary?.config_diff || {};
   const selected = compareState.result?.selected_runs || [];
   if (!compareState.result) {
-    host.innerHTML = `<div class="empty-state">Config differences appear after comparison.</div>`;
+    host.innerHTML = `<div class="empty-state">${escapeHtml(t("compare.configDiffEmpty"))}</div>`;
     return;
   }
   const keys = Object.keys(diff);
   if (!keys.length) {
-    host.innerHTML = `<div class="empty-state">Selected runs have no visible config differences in tracked fields.</div>`;
+    host.innerHTML = `<div class="empty-state">${escapeHtml(t("compare.noConfigDiff"))}</div>`;
     return;
   }
   host.innerHTML = `
@@ -613,31 +613,31 @@ function renderCompareReport() {
   const badge = qs("#compare-report-badge");
   if (badge) {
     badge.textContent = compareState.reportExporting
-      ? "Exporting"
+      ? t("common.exporting")
       : compareState.reportResult?.report_id
         ? compareState.reportResult.report_id
-        : "Not exported";
+        : t("compare.notExported");
   }
   if (compareState.reportExporting) {
-    host.innerHTML = `<div class="empty-state">Exporting compare report...</div>`;
+    host.innerHTML = `<div class="empty-state">${escapeHtml(t("compare.exportingReport"))}</div>`;
     return;
   }
   const latestFiles = compareState.reportResult?.files || [];
   const latestHtml = latestFiles.length
     ? `
       <div class="compare-report-group">
-        <h3>Latest Export</h3>
+        <h3>${escapeHtml(t("compare.latestExport"))}</h3>
         ${latestFiles.map(renderReportFileRow).join("")}
       </div>
     `
-    : `<div class="empty-state">Export a report after comparison to download JSON, Markdown, CSV, and PDF files.</div>`;
+    : `<div class="empty-state">${escapeHtml(t("compare.exportAfterComparison"))}</div>`;
   const reports = compareState.reportHistory || [];
   const historyHtml = compareState.reportLoading
-    ? `<div class="empty-state">Loading report history...</div>`
+    ? `<div class="empty-state">${escapeHtml(t("compare.loadingReports"))}</div>`
     : reports.length
       ? `
         <div class="compare-report-group">
-          <h3>Report History</h3>
+          <h3>${escapeHtml(t("compare.reportHistory"))}</h3>
           ${reports.map((report) => `
             <article class="compare-report-history-card">
               <div>
@@ -648,14 +648,14 @@ function renderCompareReport() {
               <div class="inline-actions">
                 ${(report.files || []).map(renderReportFileButton).join("")}
                 <button type="button" class="btn btn-secondary btn-sm" data-compare-report-delete="${escapeHtml(report.report_id || "")}">
-                  <i class="fa-solid fa-trash"></i> Delete
+                  <i class="fa-solid fa-trash"></i> ${escapeHtml(t("compare.deleteReport"))}
                 </button>
               </div>
             </article>
           `).join("")}
         </div>
       `
-      : `<div class="empty-state">No compare reports have been exported for this project.</div>`;
+      : `<div class="empty-state">${escapeHtml(t("compare.noReports"))}</div>`;
   host.innerHTML = `${latestHtml}${historyHtml}`;
   qsa("[data-compare-report-download]").forEach((button) => {
     button.addEventListener("click", () => downloadCompareReportFile(button.dataset.compareReportDownload, button.dataset.compareReportFilename));
@@ -677,8 +677,8 @@ function updateCompareActions() {
   if (button) {
     button.disabled = !enabled;
     button.innerHTML = compareState.comparing
-      ? `<i class="fa-solid fa-spinner fa-spin"></i> Comparing`
-      : `<i class="fa-solid fa-chart-line"></i> Compare Selected`;
+      ? `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t("common.loading"))}`
+      : `<i class="fa-solid fa-chart-line"></i> ${escapeHtml(t("compare.compareSelected"))}`;
   }
 
   if (outputButton) {
@@ -686,15 +686,15 @@ function updateCompareActions() {
     const outputEnabled = enabled && !isRnn && hasFile && !compareState.outputComparing;
     outputButton.disabled = !outputEnabled;
     outputButton.innerHTML = compareState.outputComparing
-      ? `<i class="fa-solid fa-spinner fa-spin"></i> Comparing Outputs`
-      : `<i class="fa-solid fa-images"></i> Compare Outputs`;
+      ? `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t("common.loading"))}`
+      : `<i class="fa-solid fa-images"></i> ${escapeHtml(t("compare.compareOutputs"))}`;
   }
   if (reportButton) {
     const reportEnabled = Boolean(appState.currentProjectId && compareState.result && !compareState.reportExporting);
     reportButton.disabled = !reportEnabled;
     reportButton.innerHTML = compareState.reportExporting
-      ? `<i class="fa-solid fa-spinner fa-spin"></i> Exporting`
-      : `<i class="fa-solid fa-file-arrow-down"></i> Export Report`;
+      ? `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t("common.exporting"))}`
+      : `<i class="fa-solid fa-file-arrow-down"></i> ${escapeHtml(t("compare.exportReport"))}`;
   }
   qsa("#compare-output-image-file, #compare-output-conf, #compare-output-iou, #compare-output-imgsz, #compare-output-device").forEach((control) => {
     control.disabled = isRnn;
@@ -720,7 +720,7 @@ async function downloadCompareReportFile(url, filename) {
     link.remove();
     URL.revokeObjectURL(downloadUrl);
   } catch (err) {
-    eventBus.emit("toast", `Download report failed: ${err.message}`);
+    eventBus.emit("toast", t("compare.toast.downloadFailed", { message: err.message }));
   }
 }
 

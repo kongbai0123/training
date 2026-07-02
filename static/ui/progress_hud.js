@@ -42,6 +42,7 @@ function normalizeProgress(payload = {}) {
     message: payload.message || "",
     caption: payload.caption || "Progress",
     status: payload.status || "running",
+    indeterminate: Boolean(payload.indeterminate),
     percent: Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0
   };
 }
@@ -59,14 +60,17 @@ function showProgress(payload) {
   el.classList.remove("hidden", "is-complete", "is-failed");
   el.classList.toggle("is-complete", data.status === "completed");
   el.classList.toggle("is-failed", data.status === "failed");
+  el.classList.toggle("is-pending", data.indeterminate);
 
   qs("#global-progress-title").textContent = data.title;
-  qs("#global-progress-percent").textContent = `${Math.round(data.percent)}%`;
+  qs("#global-progress-percent").textContent = data.indeterminate ? "..." : `${Math.round(data.percent)}%`;
   qs("#global-progress-message").textContent = data.message;
   qs("#global-progress-bar-fill").style.width = `${data.percent}%`;
   ring ||= createCircularProgress(qs(".global-progress-ring"), data.percent, { caption: data.caption });
   ring.setCaption(data.caption);
   ring.set(data.percent);
+  const ringText = qs(".global-progress-ring .progress-ring__value-text");
+  if (ringText && data.indeterminate) ringText.textContent = "...";
 }
 
 function completeProgress(payload = {}) {

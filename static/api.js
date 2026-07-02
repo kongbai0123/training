@@ -3,8 +3,10 @@ import { appState } from "./state.js";
 
 export async function apiFetch(url, options = {}) {
   const method = (options.method || "GET").toUpperCase();
+  const suppressToast = Boolean(options.suppressToast);
   const token = appState.bootstrap?.token;
   const extraHeaders = { ...(options.headers || {}) };
+  const { suppressToast: _suppressToast, ...fetchOptions } = options;
 
   if (token) {
     extraHeaders["X-VTS-Token"] = token;
@@ -12,7 +14,7 @@ export async function apiFetch(url, options = {}) {
 
   try {
     const res = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       method,
       headers: extraHeaders,
     });
@@ -24,12 +26,17 @@ export async function apiFetch(url, options = {}) {
       } catch {
         detail = await res.text();
       }
-      throw new Error(detail || `HTTP ${res.status}`);
+      const error = new Error(detail || `HTTP ${res.status}`);
+      error.status = res.status;
+      error.detail = detail;
+      throw error;
     }
     const contentType = res.headers.get("content-type") || "";
     return contentType.includes("application/json") ? res.json() : res.text();
   } catch (err) {
-    eventBus.emit("toast", err.message);
+    if (!suppressToast) {
+      eventBus.emit("toast", err.message);
+    }
     throw err;
   }
 }

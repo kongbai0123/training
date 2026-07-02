@@ -94,7 +94,7 @@ export function renderProjectsPage() {
 
 export function renderProjectList(projects, options = {}) {
   if (!projects || projects.length === 0) {
-    return `<div class="empty-state">目前沒有專案。請使用 New Project 建立新專案。</div>`;
+    return `<div class="empty-state">${escapeHtml(t("history.noProjects"))}</div>`;
   }
 
   return projects.map((project) => renderProjectCard(project, options)).join("");
@@ -199,15 +199,15 @@ function getProjectHistoryModeLabel(project) {
 
 function buildHistoryResultText(filteredCount, projects, query = historySearchQuery) {
   const total = projects.length;
-  const modeLabel = historyModeFilter === "all" ? "全部" : historyModeFilter.toUpperCase();
+  const modeLabel = historyModeFilter === "all" ? t("common.all") : historyModeFilter.toUpperCase();
   const hasSearch = String(query || "").trim();
-  if (hasSearch || historyModeFilter !== "all") return `${filteredCount} / ${total} projects · ${modeLabel}`;
-  return `${total} projects`;
+  if (hasSearch || historyModeFilter !== "all") return t("history.resultFiltered", { filtered: filteredCount, total, mode: modeLabel });
+  return t("history.resultProjects", { count: total });
 }
 
 function buildHistoryResultTextWithJobs(filteredCount, projects, query = historySearchQuery, jobCount = 0) {
   const base = buildHistoryResultText(filteredCount, projects, query);
-  return jobCount ? `${base}, ${jobCount} jobs` : base;
+  return jobCount ? t("history.resultJobs", { base, count: jobCount }) : base;
 }
 
 function syncHistoryFilterControls() {
@@ -221,8 +221,8 @@ function renderProjectCard(project, options = {}) {
   const files = project.file_summary || {};
   const updatedAt = formatDate(project.updated_at);
   const progressText = progress.total
-    ? `${progress.annotated || 0}/${progress.total || 0} annotated`
-    : "No images imported";
+    ? t("history.imagesAnnotated", { annotated: progress.annotated || 0, total: progress.total || 0 })
+    : t("history.noImagesImported");
   const classNames = Array.isArray(project.class_names) ? project.class_names : [];
 
   return `
@@ -234,7 +234,7 @@ function renderProjectCard(project, options = {}) {
             <span class="badge badge-info">${escapeHtml(getProjectHistoryModeLabel(project))}</span>
             <span class="badge badge-muted">${escapeHtml(project.task_type || "--")}</span>
           </div>
-          <p>${escapeHtml(progressText)} · Updated ${escapeHtml(updatedAt || "--")}</p>
+          <p>${escapeHtml(progressText)} · ${escapeHtml(t("history.updated"))} ${escapeHtml(updatedAt || "--")}</p>
         </div>
         <div class="button-row">
           <button class="btn btn-secondary btn-sm" data-open-project="${escapeHtml(project.project_id)}">${escapeHtml(t("historyOpen"))}</button>
@@ -243,23 +243,23 @@ function renderProjectCard(project, options = {}) {
       </div>
       ${options.showFiles ? `
         <div class="project-file-summary">
-          ${fileMetric("Images", files.images ?? progress.total ?? 0)}
+          ${fileMetric(t("dataset.images"), files.images ?? progress.total ?? 0)}
           ${fileMetric("LabelMe JSON", files.labelme_json ?? 0)}
           ${fileMetric("YOLO labels", files.yolo_labels ?? 0)}
-          ${fileMetric("Videos", files.videos ?? 0)}
-          ${fileMetric("Split", files.split_ready ? "Ready" : "None", files.split_ready ? "success" : "muted")}
+          ${fileMetric(t("dataset.videos"), files.videos ?? 0)}
+          ${fileMetric("Split", files.split_ready ? t("common.ready") : t("common.none"), files.split_ready ? "success" : "muted")}
           ${fileMetric("best.pt", files.best_weights ?? 0)}
           ${fileMetric("last.pt", files.last_weights ?? 0)}
-          ${fileMetric("Inference jobs", files.inference_jobs ?? 0)}
-          ${fileMetric("Exports", files.exports ?? 0)}
-          ${fileMetric("Sequence manifest", files.sequence_manifest ? "Ready" : "None", files.sequence_manifest ? "success" : "muted")}
+          ${fileMetric(t("history.inferenceJobs"), files.inference_jobs ?? 0)}
+          ${fileMetric(t("export.model"), files.exports ?? 0)}
+          ${fileMetric("Sequence manifest", files.sequence_manifest ? t("common.ready") : t("common.none"), files.sequence_manifest ? "success" : "muted")}
           ${fileMetric("Sequence CSV", files.sequence_csv_files ?? 0)}
         </div>
         <div class="project-file-details">
-          <div><span>Project ID</span><code>${escapeHtml(project.project_id || "--")}</code></div>
-          <div><span>Layout</span><code>${escapeHtml(files.layout_mode || "--")}</code></div>
-          <div><span>Classes</span><code>${escapeHtml(classNames.length ? classNames.join(", ") : "--")}</code></div>
-          <div><span>Project root</span><code>${escapeHtml(files.project_root || project.path || "--")}</code></div>
+          <div><span>${escapeHtml(t("history.projectId"))}</span><code>${escapeHtml(project.project_id || "--")}</code></div>
+          <div><span>${escapeHtml(t("history.layout"))}</span><code>${escapeHtml(files.layout_mode || "--")}</code></div>
+          <div><span>${escapeHtml(t("labelme.classes"))}</span><code>${escapeHtml(classNames.length ? classNames.join(", ") : "--")}</code></div>
+          <div><span>${escapeHtml(t("history.projectRoot"))}</span><code>${escapeHtml(files.project_root || project.path || "--")}</code></div>
         </div>
       ` : ""}
     </article>
@@ -272,11 +272,11 @@ function renderHistoryContent(projects, jobs, options = {}) {
   if (!jobsHtml) return projectHtml;
   return `
     <div class="history-section-block">
-      <div class="history-section-title"><span>Inference Jobs</span><small>${escapeHtml(appState.currentProject?.project_name || appState.currentProjectId || "active project")}</small></div>
+      <div class="history-section-title"><span>${escapeHtml(t("history.inferenceJobs"))}</span><small>${escapeHtml(appState.currentProject?.project_name || appState.currentProjectId || t("history.activeProject"))}</small></div>
       ${jobsHtml}
     </div>
     <div class="history-section-block">
-      <div class="history-section-title"><span>Projects</span><small>${escapeHtml(projects.length)} item(s)</small></div>
+      <div class="history-section-title"><span>${escapeHtml(t("history.projects"))}</span><small>${escapeHtml(t("history.itemCount", { count: projects.length }))}</small></div>
       ${projectHtml}
     </div>
   `;
@@ -284,11 +284,11 @@ function renderHistoryContent(projects, jobs, options = {}) {
 
 function renderInferenceJobList(jobs) {
   if (inferenceHistoryLoading) {
-    return `<div class="empty-state">Loading inference jobs...</div>`;
+    return `<div class="empty-state">${escapeHtml(t("history.loadingInferenceJobs"))}</div>`;
   }
   if (!appState.currentProjectId) return "";
   if (!jobs || jobs.length === 0) {
-    return `<div class="empty-state">No inference jobs for the active project.</div>`;
+    return `<div class="empty-state">${escapeHtml(t("history.noInferenceJobs"))}</div>`;
   }
   return jobs.map(renderInferenceJobCard).join("");
 }
@@ -297,7 +297,9 @@ function renderInferenceJobCard(job) {
   const isRnn = job.mode === "rnn";
   const summary = job.summary || {};
   const count = isRnn ? job.sequence_count : job.prediction_count;
-  const primary = isRnn ? `Sequences: ${count ?? "--"}` : `Predictions: ${count ?? "--"}`;
+  const primary = isRnn
+    ? t("history.jobPrimary.sequences", { count: count ?? "--" })
+    : t("history.jobPrimary.predictions", { count: count ?? "--" });
   const labels = isRnn ? summary.predicted_labels : summary.detected_classes;
   return `
     <article class="project-history-card inference-history-card">
@@ -311,19 +313,19 @@ function renderInferenceJobCard(job) {
           <p>${escapeHtml(primary)} 繚 ${escapeHtml(formatDate(job.created_at) || "--")}</p>
         </div>
         <div class="button-row">
-          <button class="btn btn-secondary btn-sm" data-view-inference-job="${escapeHtml(job.job_id)}">View Result</button>
+          <button class="btn btn-secondary btn-sm" data-view-inference-job="${escapeHtml(job.job_id)}">${escapeHtml(t("history.viewResult"))}</button>
         </div>
       </div>
       <div class="project-file-summary">
-        ${fileMetric("Backend", job.backend || "--")}
-        ${fileMetric("Latency", job.inference_time_ms !== undefined ? `${job.inference_time_ms} ms` : "--")}
+        ${fileMetric(t("training.modelRegistry.backend"), job.backend || "--")}
+        ${fileMetric(t("history.latency"), job.inference_time_ms !== undefined ? `${job.inference_time_ms} ms` : "--")}
         ${fileMetric(isRnn ? "Sequences" : "Predictions", count ?? "--")}
-        ${fileMetric("Files", job.files?.length ?? 0)}
+        ${fileMetric(t("history.files"), job.files?.length ?? 0)}
       </div>
       <div class="project-file-details">
-        <div><span>Model</span><code>${escapeHtml(job.model_id || "--")}</code></div>
+        <div><span>${escapeHtml(t("training.model"))}</span><code>${escapeHtml(job.model_id || "--")}</code></div>
         <div><span>Run</span><code>${escapeHtml(job.run_id || "--")}</code></div>
-        <div><span>Labels</span><code>${escapeHtml(Array.isArray(labels) && labels.length ? labels.join(", ") : "--")}</code></div>
+        <div><span>${escapeHtml(t("history.labels"))}</span><code>${escapeHtml(Array.isArray(labels) && labels.length ? labels.join(", ") : "--")}</code></div>
       </div>
     </article>
   `;
@@ -376,7 +378,7 @@ async function ensureInferenceHistoryLoaded(force = false) {
   } catch (err) {
     appState.inferenceJobs = [];
     appState.inferenceJobsProjectId = appState.currentProjectId;
-    eventBus.emit("toast", `Failed to load inference history: ${err.message}`);
+    eventBus.emit("toast", t("history.loadInferenceFailed", { message: err.message }));
   } finally {
     inferenceHistoryLoading = false;
     appState.inferenceJobsLoading = false;
@@ -386,14 +388,14 @@ async function ensureInferenceHistoryLoaded(force = false) {
 
 async function openInferenceJobDetail(jobId) {
   if (!appState.currentProjectId || !jobId) return;
-  setHTML("#inference-job-detail-body", `<div class="empty-state">Loading inference result...</div>`);
+  setHTML("#inference-job-detail-body", `<div class="empty-state">${escapeHtml(t("history.loadingInferenceResult"))}</div>`);
   const modal = qs("#inference-job-detail-modal");
   if (modal) modal.hidden = false;
   try {
     const job = await apiFetch(`/api/projects/${appState.currentProjectId}/inference/jobs/${encodeURIComponent(jobId)}`);
     renderInferenceJobDetail(job);
   } catch (err) {
-    setHTML("#inference-job-detail-body", `<div class="empty-state">Failed to load inference result: ${escapeHtml(err.message)}</div>`);
+    setHTML("#inference-job-detail-body", `<div class="empty-state">${escapeHtml(t("history.loadInferenceResultFailed", { message: err.message }))}</div>`);
   }
 }
 
@@ -420,18 +422,18 @@ function renderInferenceJobDetail(job) {
   ).join("");
   setHTML("#inference-job-detail-body", `
     <div class="path-list">
-      <div class="path-row"><span>Job ID</span><code>${escapeHtml(job.job_id || "--")}</code></div>
-      <div class="path-row"><span>Mode</span><code>${escapeHtml(String(job.mode || "--").toUpperCase())}</code></div>
-      <div class="path-row"><span>Backend</span><code>${escapeHtml(job.backend || "--")}</code></div>
-      <div class="path-row"><span>Model</span><code>${escapeHtml(job.model_id || "--")}</code></div>
-      <div class="path-row"><span>Created</span><code>${escapeHtml(formatDate(job.created_at) || "--")}</code></div>
-      <div class="path-row"><span>Latency</span><code>${escapeHtml(summary.inference_time_ms ?? "--")} ms</code></div>
+      <div class="path-row"><span>${escapeHtml(t("history.jobId"))}</span><code>${escapeHtml(job.job_id || "--")}</code></div>
+      <div class="path-row"><span>${escapeHtml(t("history.mode"))}</span><code>${escapeHtml(String(job.mode || "--").toUpperCase())}</code></div>
+      <div class="path-row"><span>${escapeHtml(t("training.modelRegistry.backend"))}</span><code>${escapeHtml(job.backend || "--")}</code></div>
+      <div class="path-row"><span>${escapeHtml(t("training.model"))}</span><code>${escapeHtml(job.model_id || "--")}</code></div>
+      <div class="path-row"><span>${escapeHtml(t("history.created"))}</span><code>${escapeHtml(formatDate(job.created_at) || "--")}</code></div>
+      <div class="path-row"><span>${escapeHtml(t("history.latency"))}</span><code>${escapeHtml(summary.inference_time_ms ?? "--")} ms</code></div>
     </div>
-    <div class="inference-job-file-actions">${fileLinks || "<span class='muted-cell'>No files available.</span>"}</div>
+    <div class="inference-job-file-actions">${fileLinks || `<span class='muted-cell'>${escapeHtml(t("history.noFilesAvailable"))}</span>`}</div>
     <div class="data-table compact-table inference-job-prediction-table">
       <table>
-        <thead><tr><th>Sequence / Class</th><th>Prediction</th><th>Confidence</th><th>Target</th></tr></thead>
-        <tbody>${rows || "<tr><td colspan='4' class='text-center muted-cell'>No prediction rows.</td></tr>"}</tbody>
+        <thead><tr><th>${escapeHtml(t("history.sequenceClass"))}</th><th>${escapeHtml(t("history.prediction"))}</th><th>${escapeHtml(t("history.confidence"))}</th><th>${escapeHtml(t("common.target"))}</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan='4' class='text-center muted-cell'>${escapeHtml(t("history.noPredictionRows"))}</td></tr>`}</tbody>
       </table>
     </div>
   `);

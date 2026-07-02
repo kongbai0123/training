@@ -100,13 +100,32 @@ class TrainingStateStore:
             return copy.deepcopy(state)
 
     @classmethod
-    def append_epoch_metrics(cls, project_id: str, metrics_data: Dict[str, Any]) -> Dict[str, Any]:
+    def append_epoch_metrics(
+        cls,
+        project_id: str,
+        metrics_data: Dict[str, Any],
+        run_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
         with cls._lock:
             state = copy.deepcopy(cls._states.get(project_id, cls.idle_state()))
+            if run_id:
+                state["run_id"] = run_id
             metrics = list(state.get("metrics") or [])
-            metrics.append(copy.deepcopy(metrics_data))
+            normalized_metrics = copy.deepcopy(metrics_data)
+            total_epochs = int(state.get("total_epochs") or 0)
+            try:
+                metric_epoch = int(normalized_metrics.get("epoch", state.get("epoch", 0)) or 0)
+            except (TypeError, ValueError):
+                metric_epoch = int(state.get("epoch", 0) or 0)
+            if total_epochs > 0 and metric_epoch > total_epochs:
+                metric_epoch = total_epochs
+                normalized_metrics["epoch"] = metric_epoch
+            if metrics and metrics[-1].get("epoch") == normalized_metrics.get("epoch"):
+                metrics[-1] = normalized_metrics
+            else:
+                metrics.append(normalized_metrics)
             state["metrics"] = metrics
-            state["epoch"] = metrics_data.get("epoch", state.get("epoch", 0))
+            state["epoch"] = metric_epoch or state.get("epoch", 0)
             state["updated_at"] = cls._now_iso()
             cls._states[project_id] = copy.deepcopy(state)
             return copy.deepcopy(state)
@@ -116,17 +135,30 @@ class TrainingStateStore:
         return cls._set_status(project_id, "stopping")
 
     @classmethod
-    def mark_stopped(cls, project_id: str, error: str = "") -> Dict[str, Any]:
-        return cls._set_status(project_id, "stopped", error=error, complete=True)
+    def mark_stopped(cls, project_id: str, error: str = "", run_id: Optional[str] = None) -> Dict[str, Any]:
+        extra = {"run_id": run_id} if run_id else None
+        return cls._set_status(project_id, "stopped", error=error, extra=extra, complete=True)
 
     @classmethod
-    def mark_completed(cls, project_id: str, best_model: Optional[str] = None) -> Dict[str, Any]:
-        extra = {"best_model": best_model} if best_model else None
+    def mark_completed(
+        cls,
+        project_id: str,
+        best_model: Optional[str] = None,
+        run_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        extra = {}
+        if best_model:
+            extra["best_model"] = best_model
+        if run_id:
+            extra["run_id"] = run_id
+        if not extra:
+            extra = None
         return cls._set_status(project_id, "completed", extra=extra, complete=True)
 
     @classmethod
-    def mark_failed(cls, project_id: str, error: str) -> Dict[str, Any]:
-        return cls._set_status(project_id, "failed", error=error, complete=True)
+    def mark_failed(cls, project_id: str, error: str, run_id: Optional[str] = None) -> Dict[str, Any]:
+        extra = {"run_id": run_id} if run_id else None
+        return cls._set_status(project_id, "failed", error=error, extra=extra, complete=True)
 
     @classmethod
     def set_field(cls, project_id: str, key: str, value: Any) -> Dict[str, Any]:

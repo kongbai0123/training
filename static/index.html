@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/style.css?v=20260701-rnn-layout-polish">
-  <script async src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
+  <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
 
@@ -43,7 +43,6 @@
           <span>System Status</span>
           <strong id="header-health-label">Checking</strong>
         </div>
-        <span id="current-project-title">No project opened</span>
         <button class="btn btn-primary btn-sm" id="btn-header-save-project" type="button">
           <i class="fa-solid fa-floppy-disk"></i>
           <span data-i18n="headerSave">Save</span>
@@ -745,11 +744,6 @@
                       <option value="cpu">CPU</option>
                     </select>
                   </label>
-                  <div class="training-recommendation-card" id="training-vram-risk">
-                    <strong data-i18n="training.autoRecommend">Auto recommendation</strong>
-                    <span id="training-vram-risk-text" data-i18n="training.autoRecommendDefault">Settings will be checked after project and hardware status are loaded.</span>
-                    <button type="button" class="btn btn-sm btn-secondary" id="btn-auto-recommend" data-i18n="training.autoRecommendButton">Auto Recommend Settings</button>
-                  </div>
                 </div>
 
                 <div id="config-advanced-fields" class="hidden">
@@ -889,7 +883,7 @@
             </div>
           </section>
 
-          <div class="two-column-layout training-lower-grid">
+          <div class="training-lower-grid">
             <section class="panel-section">
               <div class="section-title">
                 <h2 data-i18n="training.logs.title">History & Event Logs</h2>
@@ -922,12 +916,6 @@
               </div>
             </section>
 
-            <section class="panel-section">
-              <div class="section-title"><h2 data-i18n="training.artifacts.title">Model Artifacts</h2></div>
-              <div class="artifact-grid" id="artifact-list-container">
-                <div class="empty-state" data-i18n="training.artifacts.empty">No artifacts yet. Complete a training run to see best.pt, last.pt, metrics, and reports.</div>
-              </div>
-            </section>
           </div>
 
           <section class="panel-section training-run-history-card">
@@ -958,16 +946,8 @@
               </section>
 
               <section id="rnn-workspace" class="training-workspace hidden">
-                <div class="rnn-disabled-banner">
-                  <div>
-                    <strong>RNN Training</strong>
-                    <span>CSV / Feature Sequence · pytorch_lstm · Readiness gated</span>
-                  </div>
-                  <span class="summary-badge badge-warning" id="rnn-readiness-badge">Not Ready</span>
-                </div>
-
                 <div id="rnn-overview-panel" class="rnn-panel active" data-rnn-panel="overview">
-                  <div class="rnn-preview-grid">
+                  <div class="rnn-preview-grid rnn-overview-rows">
                     <section class="rnn-preview-card">
                       <div class="section-title"><h2>序列資料集摘要</h2><span class="summary-badge badge-warning">CSV gated</span></div>
                       <div class="summary-row"><span>Manifest</span><code id="rnn-manifest-status">sequence_manifest.json not connected</code></div>
@@ -993,11 +973,6 @@
                       <div class="summary-row"><span>Readiness</span><code id="rnn-readiness-status">Not Ready / Preview</code></div>
                     </section>
                   </div>
-                  <section class="rnn-preview-card rnn-readiness-card">
-                    <div class="section-title"><h2>Readiness 檢查</h2><span class="summary-badge badge-neutral" id="rnn-readiness-mode-badge">CSV required</span></div>
-                    <p class="form-hint" id="rnn-readiness-message">RNN readiness checks only inspect sequence_manifest.json and CSV feature files.</p>
-                    <ul class="rnn-readiness-list" id="rnn-readiness-checks"></ul>
-                  </section>
                 </div>
 
                 <div id="rnn-sequence-dataset-panel" class="rnn-panel" data-rnn-panel="sequence-dataset">
@@ -1083,6 +1058,15 @@
                       <div class="section-title"><h3>Model Guide</h3><span class="summary-badge badge-neutral">Loading</span></div>
                       <p>Loading model guide...</p>
                     </div>
+                    <div class="rnn-custom-model-panel">
+                      <div>
+                        <strong>自訂 RNN 模型</strong>
+                        <span>支援 RNN package .zip 與 Custom package .zip 的驗證式匯入；不共用 CNN 模型 selector。</span>
+                      </div>
+                      <button type="button" class="btn btn-secondary btn-sm" id="btn-rnn-import-model-package">
+                        <i class="fa-solid fa-file-arrow-up"></i> 匯入 RNN Package
+                      </button>
+                    </div>
                     <span class="rnn-disabled-action-hitbox">
                       <button type="button" class="btn btn-disabled" id="rnn-training-disabled-action" disabled>RNN training requires ready CSV feature sequence</button>
                     </span>
@@ -1156,21 +1140,27 @@
 
                 <div id="rnn-sequence-test-panel" class="rnn-panel" data-rnn-panel="sequence-test">
                   <section class="rnn-preview-card">
-                    <div class="section-title"><h2>序列測試</h2><span class="summary-badge badge-neutral">CSV only</span></div>
-                    <div class="rnn-schema-grid">
-                      <label><span>RNN model</span><select id="rnn-inference-model"><option value="">Select RNN model</option></select></label>
-                      <label><span>Device</span><select id="rnn-inference-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
+                    <div class="section-title"><h2>序列測試</h2><span class="summary-badge badge-neutral">CSV sequence only</span></div>
+                    <div class="rnn-sequence-test-layout">
+                      <div class="rnn-sequence-test-config">
+                        <div class="section-title compact"><h3>測試設定</h3><span class="summary-badge badge-neutral">Input</span></div>
+                        <div class="rnn-schema-grid two-col">
+                          <label><span>RNN model</span><select id="rnn-inference-model"><option value="">Select RNN model</option></select></label>
+                          <label><span>Device</span><select id="rnn-inference-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
+                          <label><span>Upload CSV</span><input id="rnn-inference-csv-file" type="file" accept=".csv,text/csv"></label>
+                          <label><span>Project CSV path</span><input id="rnn-inference-csv-path" type="text" placeholder="sequences/features.csv"></label>
+                        </div>
+                        <div class="inline-actions">
+                          <button type="button" class="btn btn-secondary" id="rnn-refresh-models">Refresh Models</button>
+                          <button type="button" class="btn btn-primary" id="rnn-run-sequence-inference" disabled>Run Sequence Test</button>
+                        </div>
+                        <p class="form-hint" id="rnn-inference-reason">Select an RNN model and provide a CSV feature sequence.</p>
+                      </div>
+                      <div class="rnn-sequence-test-result">
+                        <div class="section-title compact"><h3>測試結果</h3><span class="summary-badge badge-neutral">Result</span></div>
+                        <div class="rnn-placeholder-box" id="rnn-inference-result">No sequence inference result yet.</div>
+                      </div>
                     </div>
-                    <div class="rnn-schema-grid">
-                      <label><span>Upload CSV</span><input id="rnn-inference-csv-file" type="file" accept=".csv,text/csv"></label>
-                      <label><span>Project CSV path</span><input id="rnn-inference-csv-path" type="text" placeholder="sequences/features.csv"></label>
-                    </div>
-                    <div class="inline-actions">
-                      <button type="button" class="btn btn-secondary" id="rnn-refresh-models">Refresh Models</button>
-                      <button type="button" class="btn btn-primary" id="rnn-run-sequence-inference" disabled>Run Sequence Test</button>
-                    </div>
-                    <p class="form-hint" id="rnn-inference-reason">Select an RNN model and provide a CSV feature sequence.</p>
-                    <div class="rnn-placeholder-box" id="rnn-inference-result">No sequence inference result yet.</div>
                   </section>
                 </div>
 
@@ -1203,7 +1193,34 @@
             <div class="metric-card"><span>IoU <span class="info-icon" data-tooltip="IoU is the overlap ratio between prediction and annotation areas." data-i18n-tooltip="evaluation.iouTooltip">i</span></span><strong id="eval-iou">--</strong></div>
             <div class="metric-card"><span>Precision</span><strong id="eval-precision">--</strong></div>
             <div class="metric-card"><span>Recall</span><strong id="eval-recall">--</strong></div>
+            <div class="metric-card"><span>F1</span><strong id="eval-f1">--</strong></div>
+            <div class="metric-card"><span>cls_loss</span><strong id="eval-cls-loss">--</strong></div>
+            <div class="metric-card"><span>dfl_loss</span><strong id="eval-dfl-loss">--</strong></div>
+            <div class="metric-card"><span>box_loss</span><strong id="eval-box-loss">--</strong></div>
           </div>
+          <section class="panel-section evaluation-guidance-card">
+            <div class="section-title"><h2>CNN 評估檢查重點</h2></div>
+            <div class="evaluation-guidance-grid">
+              <div class="evaluation-guidance-item">
+                <h3>資料分散檢查</h3>
+                <ol>
+                  <li>建立類別平衡的 Train / Val / Test 分散。</li>
+                  <li>訓練前檢查類別分布與漏標風險。</li>
+                  <li>分散完成後再設定物理擴充。</li>
+                </ol>
+              </div>
+              <div class="evaluation-guidance-item">
+                <h3>物理擴充備註</h3>
+                <p>Val / Test images 不會套用擴充；擴充只套用於 Train split。請用混淆矩陣、Precision / Recall 與 F1 曲線確認模型是否真的泛化。</p>
+              </div>
+            </div>
+          </section>
+          <section class="panel-section evaluation-plots-card">
+            <div class="section-title"><h2>YOLO 評估圖表</h2></div>
+            <div id="evaluation-plots-grid" class="evaluation-plots-grid">
+              <div class="empty-state" data-i18n="evaluation.empty">尚無評估圖表。完成訓練或評估後，圖表會顯示在這裡。</div>
+            </div>
+          </section>
         </section>
 
         <section class="page" id="page-model-compare">
@@ -1674,6 +1691,13 @@
           <div class="section-title"><h2 id="page-guards-title">Page Status</h2></div>
           <div id="page-guards-container" class="guard-stack"></div>
         </section>
+        <section class="summary-section rnn-sidebar-readiness hidden" id="section-rnn-readiness">
+          <div class="section-title"><h2>RNN 訓練</h2><span class="summary-badge badge-warning" id="rnn-readiness-badge">Not Ready</span></div>
+          <p id="rnn-readiness-message">RNN readiness checks only inspect sequence_manifest.json and CSV feature files.</p>
+          <div class="summary-row"><span>Readiness</span><code id="rnn-readiness-status">Not Ready / Preview</code></div>
+          <div class="summary-row"><span>Mode</span><code id="rnn-readiness-mode-badge">CSV required</code></div>
+          <ul class="rnn-readiness-list compact" id="rnn-readiness-checks"></ul>
+        </section>
         <section class="summary-section" id="section-project-context">
           <div class="section-title"><h2 id="project-context-title">Project Context</h2></div>
           <div id="project-summary"></div>
@@ -1880,8 +1904,8 @@
 
   <div class="toast" id="toast" hidden></div>
 
-  <script async src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260701-rnn-layout-polish"></script>
+  <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
+  <script type="module" src="/static/app.js?v=20260702-rnn-ui-mode-cleanup"></script>
 </body>
 </html>
 

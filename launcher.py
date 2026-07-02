@@ -38,9 +38,10 @@ def open_desktop_window(url: str, backend_process: subprocess.Popen) -> None:
         window = webview.create_window(
             APP_TITLE,
             url,
-            width=1440,
-            height=920,
-            min_size=(1100, 720),
+            width=1920,
+            height=1080,
+            min_size=(1280, 720),
+            resizable=True,
             confirm_close=True,
         )
         window.events.closed += on_closed

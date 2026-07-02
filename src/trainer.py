@@ -4,6 +4,7 @@ import json
 import time
 import shutil
 import psutil
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -351,7 +352,7 @@ class YOLOTrainer:
                     "timestamp": time.time()
                 }
                 
-                state = TrainingStateStore.append_epoch_metrics(project_id, metrics_data)
+                state = TrainingStateStore.append_epoch_metrics(project_id, metrics_data, run_id=run_id)
                 cls._mirror_state(project_id, state)
                 
             model.add_callback("on_train_start", on_train_start)
@@ -363,6 +364,11 @@ class YOLOTrainer:
             imgsz = int(train_config.get("imgsz", 640))
             lr0 = float(train_config.get("lr0", 0.01))
             device = 0 if train_config.get("device") == "gpu" and HAS_NVML else "cpu"
+            workers = int(train_config.get("workers", 4))
+            if getattr(sys, "frozen", False):
+                # PyInstaller on Windows can deadlock when PyTorch dataloader
+                # workers spawn child processes from the frozen executable.
+                workers = 0
             
             model.train(
                 data=data_yaml_path,
@@ -378,7 +384,7 @@ class YOLOTrainer:
                 save=True,
                 save_period=int(train_config.get("save_period", 5)),
                 cache=train_config.get("cache", False),
-                workers=int(train_config.get("workers", 4)),
+                workers=workers,
                 amp=bool(train_config.get("amp", True)),
                 seed=int(train_config.get("seed", 42)),
                 deterministic=False,
@@ -396,19 +402,19 @@ class YOLOTrainer:
             # 閮毀?摰?
             best_model_path = actual_run_dir / "weights" / "best.pt"
             best_model = str(best_model_path.resolve().as_posix()) if best_model_path.exists() else None
-            state = TrainingStateStore.mark_completed(project_id, best_model=best_model)
+            state = TrainingStateStore.mark_completed(project_id, best_model=best_model, run_id=run_id)
             cls._mirror_state(project_id, state)
                 
         except KeyboardInterrupt:
             status = "stopped"
             error_msg = "Training was stopped by user."
-            state = TrainingStateStore.mark_stopped(project_id, error_msg)
+            state = TrainingStateStore.mark_stopped(project_id, error_msg, run_id=run_id)
             cls._mirror_state(project_id, state)
             print(f"[Trainer] Training {project_id} was stopped by user.")
         except Exception as e:
             status = "failed"
             error_msg = str(e)
-            state = TrainingStateStore.mark_failed(project_id, error_msg)
+            state = TrainingStateStore.mark_failed(project_id, error_msg, run_id=run_id)
             cls._mirror_state(project_id, state)
             print(f"[Trainer] Error in training {project_id}: {e}")
         finally:

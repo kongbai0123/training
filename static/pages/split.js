@@ -22,6 +22,16 @@ export function initSplit() {
       eventBus.emit("toast", t("split.toast.ratio"));
       return;
     }
+    const jobId = `split-${appState.currentProjectId || "project"}`;
+    eventBus.emit("progress:update", {
+      jobId,
+      title: t("split.progress.title"),
+      message: t("split.progress.running"),
+      percent: 5,
+      caption: "Split",
+      status: "running",
+      indeterminate: true
+    });
     try {
       const data = await apiFetch(`/api/projects/${appState.currentProjectId}/split`, {
         method: "POST",
@@ -33,9 +43,23 @@ export function initSplit() {
       });
       renderSplitReportUI(data.report);
       eventBus.emit("toast", t("split.toast.done"));
+      eventBus.emit("progress:complete", {
+        jobId,
+        title: t("split.progress.title"),
+        message: t("split.progress.done"),
+        percent: 100,
+        caption: "Split"
+      });
       eventBus.emit("refresh-project");
     } catch (err) {
       eventBus.emit("toast", t("split.toast.failed", { message: err.message }));
+      eventBus.emit("progress:failed", {
+        jobId,
+        title: t("split.progress.title"),
+        message: t("split.toast.failed", { message: err.message }),
+        percent: 100,
+        caption: "Split"
+      });
     }
   });
 }

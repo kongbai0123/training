@@ -80,7 +80,9 @@ export function initTrainingModeSidebar() {
   });
 
   qsa("[data-mode-nav]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       qsa("[data-mode-nav]").forEach((item) => item.classList.remove("active"));
       button.classList.add("active");
       if (button.dataset.modeNav === "overview") {
@@ -90,6 +92,12 @@ export function initTrainingModeSidebar() {
         renderTrainingModeSidebar();
         renderTrainingWorkspace();
         if (trainingModeState.activeMode === "rnn") loadRnnConfig({ force: true });
+        return;
+      }
+      if (button.dataset.modeNav === "history" || button.dataset.modeNav === "settings") {
+        eventBus.emit("navigate", button.dataset.modeNav);
+        renderTrainingModeSidebar();
+        renderTrainingWorkspace();
       }
     });
   });
@@ -189,9 +197,17 @@ export function renderTrainingWorkspace() {
   });
 
   renderRnnReadiness();
+  renderRnnSidebarReadiness(isCnn);
   if (!isCnn && trainingModeState.activeRnnPanel === "evaluation") {
     loadRnnEvaluation();
   }
+}
+
+function renderRnnSidebarReadiness(isCnn) {
+  const section = qs("#section-rnn-readiness");
+  if (!section) return;
+  const visible = !isCnn && appState.currentPage === "training";
+  section.classList.toggle("hidden", !visible);
 }
 
 export function initRnnPreviewEvents() {
@@ -249,6 +265,12 @@ export function initRnnPreviewEvents() {
     syncRnnModelSelection();
     renderRnnModelGuide();
     updateRnnStartControls();
+  });
+  qs("#btn-rnn-import-model-package")?.addEventListener("click", () => {
+    eventBus.emit("open-model-import", {
+      importType: "rnn_package",
+      taskFamily: getSelectedRnnTaskHead() === "regression" ? "sequence_regression" : "sequence_classification"
+    });
   });
   qs("#rnn-task-head")?.addEventListener("change", () => {
     renderRnnModelSelector();
@@ -403,7 +425,7 @@ function updateRnnDatasetDropzone() {
   if (!zone) return;
   zone.classList.toggle("has-file", Boolean(file));
   const label = zone.querySelector("strong");
-  if (label) label.textContent = file ? file.name : "? CSV / ZIP嚗?暺??豢?瑼?";
+  if (label) label.textContent = file ? file.name : "拖入 CSV / ZIP 或點擊選擇檔案";
 }
 
 async function importRnnDataset() {

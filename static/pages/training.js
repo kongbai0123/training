@@ -9,6 +9,10 @@ let metricsChart = null;
 let currentChartData = null; // Training UI helper
 let activeChartTab = "primary"; // Training UI helper
 const activeGlobalTrainingJobs = new Set();
+const trainingHudStartTimes = new Map();
+let lastRenderedMetricRunId = "";
+let lastRenderedMetricEpochCount = -1;
+let trainingHudTickTimer = null;
 let trainingModelCatalog = [];
 let loadedTrainingModelCatalogProjectId = null;
 
@@ -48,13 +52,13 @@ export function initTraining() {
     qs("#config-advanced-fields")?.classList.remove("hidden");
   });
 
-  qs("#btn-auto-recommend")?.addEventListener("click", loadRecommendedConfig);
   ["#train-model", "#train-batch", "#train-imgsz", "#train-device", "#train-profile"].forEach((selector) => {
     qs(selector)?.addEventListener("change", () => renderTrainingMonitor());
   });
   qs("#btn-training-open-model-hub")?.addEventListener("click", () => {
     openModelImportModal();
   });
+  eventBus.on("open-model-import", (options = {}) => openModelImportModal(options));
   qs("#btn-close-model-import-modal")?.addEventListener("click", closeModelImportModal);
   qs("#btn-cancel-model-import")?.addEventListener("click", closeModelImportModal);
   qs("#model-import-modal")?.addEventListener("click", (event) => {
@@ -107,12 +111,23 @@ export function initTraining() {
       const runIdInput = qs("#train-run-id-input")?.value?.trim();
       if (runIdInput) configData.run_id = runIdInput;
 
-      await apiFetch(`/api/projects/${appState.currentProjectId}/train/start`, {
+      const startPayload = await apiFetch(`/api/projects/${appState.currentProjectId}/train/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(configData)
       });
 
+      appState.trainingStatus = {
+        status: "training",
+        epoch: 0,
+        total_epochs: configData.epochs,
+        metrics: [],
+        error: "",
+        run_id: startPayload?.run_id || configData.run_id || "",
+        architecture: taskType.includes("sequence") ? "rnn" : "cnn",
+        backend: selectedOption?.dataset?.backend || "ultralytics_yolo"
+      };
+      renderTrainingMonitor();
       eventBus.emit("toast", t("training.toast.started"));
       startMonitorWebSocket();
       eventBus.emit("refresh-project");
@@ -259,7 +274,7 @@ function renderTrainingModelOptions(select, models) {
   updateTrainingModelRegistrySkeleton(getProjectStatus(appState.currentProject));
 }
 
-function openModelImportModal() {
+function openModelImportModal(options = {}) {
   if (!appState.currentProjectId) {
     eventBus.emit("toast", "Please open a project before importing a model.");
     return;
@@ -267,7 +282,9 @@ function openModelImportModal() {
   const modal = qs("#model-import-modal");
   const status = getProjectStatus(appState.currentProject);
   const taskFamily = String(status.taskType || "").toLowerCase().includes("detect") ? "detection" : "segmentation";
+  if (options.importType && qs("#model-import-type")) qs("#model-import-type").value = options.importType;
   if (qs("#model-import-task-family")) qs("#model-import-task-family").value = taskFamily;
+  if (options.taskFamily && qs("#model-import-task-family")) qs("#model-import-task-family").value = options.taskFamily;
   if (qs("#model-import-result")) qs("#model-import-result").textContent = "";
   updateModelImportTypeUi();
   if (modal) modal.hidden = false;
@@ -317,6 +334,8 @@ function initModelImportDropZone() {
     updateModelImportSelectedFile();
   });
 }
+
+
 
 function updateModelImportSelectedFile() {
   const file = qs("#model-import-file")?.files?.[0];
@@ -405,11 +424,14 @@ function getModelImportFileMessage(importType) {
   return "Please select a YOLO .pt file.";
 }
 
+
+
 function updateModelImportTypeUi() {
   const importType = qs("#model-import-type")?.value || "yolo_pt";
   const input = qs("#model-import-file");
   const submit = qs("#btn-submit-model-import");
   const taskSelect = qs("#model-import-task-family");
+
   if (importType === "yolo_yaml") {
     if (input) input.accept = ".yaml,.yml";
     setText("#model-import-drop-title", "匯入 YOLO model architecture YAML");
@@ -437,6 +459,7 @@ function updateModelImportTypeUi() {
     setText("#model-import-drop-help", "可接受 .pt。匯入後會存到目前專案 models/imports，並可直接出現在 CNN/YOLO 訓練模型選單作為訓練起點。");
     if (submit) submit.innerHTML = `<i class="fa-solid fa-file-import"></i> Import YOLO .pt`;
   }
+
   if (input) input.value = "";
   updateModelImportSelectedFile();
 }
@@ -623,7 +646,7 @@ export function renderTrainingMonitor() {
     backend: appState.currentProject?.backend,
     task_type: appState.currentProject?.task_type
   });
-  const hasMetrics = isRunning || Boolean(currentChartData?.epochs?.length);
+  const hasMetrics = Boolean(currentChartData?.epochs?.length);
 
   setText("#card-ds-total", status.hasProject ? t("training.card.imageCount", { count: status.imageCount }) : "--");
   setText("#card-ds-split", status.hasProject ? t("training.card.images", { count: status.imageCount }) : t("training.card.images", { count: "--" }));
@@ -642,7 +665,7 @@ export function renderTrainingMonitor() {
   const configForm = qs("#form-training-config");
   const startBlocker = qs("#training-start-blocker");
   const shouldLockConfig = !isReady || isRunning || isStopping;
-  const configFields = ["#config-simple-fields", "#config-advanced-fields", "#training-vram-risk"];
+  const configFields = ["#config-simple-fields", "#config-advanced-fields"];
   const configTabs = qs(".training-config-panel .config-tabs-nav");
 
   if (startBtn) {
@@ -704,6 +727,7 @@ export function renderTrainingMonitor() {
 
   const epoch = Number(trainState.epoch || 0);
   const totalEpochs = Number(trainState.total_epochs || 0);
+  const displayEpoch = totalEpochs > 0 ? Math.min(epoch, totalEpochs) : epoch;
   const progressPercent = trainState.status === "completed"
     ? 100
     : totalEpochs > 0
@@ -712,7 +736,7 @@ export function renderTrainingMonitor() {
   updateGlobalTrainingProgress(trainState, progressPercent, showMonitor);
 
   setText("#train-status-label", trainState.status || "Idle");
-  setText("#train-progress-text", showMonitor ? `Epoch ${trainState.epoch || 0} / ${trainState.total_epochs || "--"}` : "--");
+  setText("#train-progress-text", showMonitor ? `Epoch ${displayEpoch} / ${totalEpochs || "--"}` : "--");
 
   const lastMetrics = trainState.metrics && trainState.metrics.length ? trainState.metrics[trainState.metrics.length - 1] : {};
   const isRnnStatus = isSequenceTrainingRecord(trainState);
@@ -728,9 +752,16 @@ export function renderTrainingMonitor() {
   }
 
   if (isRunning) {
-    currentChartData = normalizeLiveTrainingMetrics(trainState);
-    updateChartVisualization();
-    renderEpochHistoryTable(currentChartData);
+    const liveChartData = normalizeLiveTrainingMetrics(trainState);
+    const liveEpochCount = liveChartData?.epochs?.length || 0;
+    const liveRunId = trainState.run_id || "";
+    if (liveEpochCount > 0 && (liveRunId !== lastRenderedMetricRunId || liveEpochCount !== lastRenderedMetricEpochCount)) {
+      currentChartData = liveChartData;
+      lastRenderedMetricRunId = liveRunId;
+      lastRenderedMetricEpochCount = liveEpochCount;
+      updateChartVisualization();
+      renderEpochHistoryTable(currentChartData);
+    }
   } else if (!isSequenceProject) {
     loadLatestRunMetricsOnce();
   }
@@ -747,28 +778,93 @@ function updateGlobalTrainingProgress(trainState, progressPercent, showMonitor) 
   const status = trainState.status || "idle";
   const runId = trainState.run_id || appState.currentProjectId || "training";
   const jobId = `training-${runId}`;
+  const epoch = Number(trainState.epoch || 0);
+  const totalEpochNumber = Number(trainState.total_epochs || 0);
+  const totalEpochs = totalEpochNumber || "--";
+  const displayEpoch = totalEpochNumber > 0 ? Math.min(epoch, totalEpochNumber) : epoch;
+  const isPendingFirstEpoch = status === "training" && epoch <= 0;
+  const elapsedSeconds = getTrainingHudElapsedSeconds(jobId, trainState);
+  const pendingPhase = buildTrainingHudPendingPhase(elapsedSeconds);
+  const pendingPercent = Math.min(24, Math.max(4, 4 + (elapsedSeconds * 0.45)));
   if (status === "training" || status === "stopping") {
     activeGlobalTrainingJobs.add(jobId);
+    ensureTrainingHudTicker();
   }
   if ((status === "completed" || status === "failed") && !activeGlobalTrainingJobs.has(jobId)) {
     return;
   }
   const payload = {
     jobId,
-    title: status === "completed" ? "Training complete" : status === "failed" ? "Training failed" : status === "stopping" ? "Stopping training" : "Training in progress",
-    message: `Epoch ${trainState.epoch || 0} / ${trainState.total_epochs || "--"}`,
-    percent: progressPercent,
-    caption: status === "completed" ? "Complete" : status === "failed" ? "Failed" : "Training"
+    title: status === "completed"
+      ? t("training.progress.complete")
+      : status === "failed"
+        ? t("training.progress.failed")
+        : status === "stopping"
+          ? t("training.progress.stopping")
+          : t("training.progress.inProgress"),
+    message: isPendingFirstEpoch
+      ? t(pendingPhase.key)
+      : t("training.progress.running", { epoch: displayEpoch, total: totalEpochs }),
+    percent: isPendingFirstEpoch ? pendingPercent : progressPercent,
+    caption: status === "completed"
+      ? t("training.progress.captionComplete")
+      : status === "failed"
+        ? t("training.progress.captionFailed")
+        : t("training.progress.captionTraining"),
+    indeterminate: false
   };
   if (status === "completed") {
     eventBus.emit("progress:complete", { ...payload, percent: 100 });
     activeGlobalTrainingJobs.delete(jobId);
+    trainingHudStartTimes.delete(jobId);
+    stopTrainingHudTickerIfIdle();
   } else if (status === "failed") {
     eventBus.emit("progress:failed", payload);
     activeGlobalTrainingJobs.delete(jobId);
+    trainingHudStartTimes.delete(jobId);
+    stopTrainingHudTickerIfIdle();
   } else {
     eventBus.emit("progress:update", payload);
   }
+}
+
+function ensureTrainingHudTicker() {
+  if (trainingHudTickTimer) return;
+  trainingHudTickTimer = window.setInterval(() => {
+    const status = appState.trainingStatus?.status;
+    if (status === "training" || status === "stopping") {
+      renderTrainingMonitor();
+      return;
+    }
+    stopTrainingHudTickerIfIdle();
+  }, 1000);
+}
+
+function stopTrainingHudTickerIfIdle() {
+  const status = appState.trainingStatus?.status;
+  if (status === "training" || status === "stopping") return;
+  if (trainingHudTickTimer) {
+    window.clearInterval(trainingHudTickTimer);
+    trainingHudTickTimer = null;
+  }
+}
+
+function getTrainingHudElapsedSeconds(jobId, trainState) {
+  const startedAt = Date.parse(trainState.started_at || "");
+  if (Number.isFinite(startedAt)) {
+    return Math.max(0, (Date.now() - startedAt) / 1000);
+  }
+  if (!trainingHudStartTimes.has(jobId)) {
+    trainingHudStartTimes.set(jobId, Date.now());
+  }
+  return Math.max(0, (Date.now() - trainingHudStartTimes.get(jobId)) / 1000);
+}
+
+function buildTrainingHudPendingPhase(elapsedSeconds) {
+  if (elapsedSeconds < 8) return { key: "training.progress.phasePreparing" };
+  if (elapsedSeconds < 20) return { key: "training.progress.phaseLoadingModel" };
+  if (elapsedSeconds < 45) return { key: "training.progress.phaseDataLoader" };
+  return { key: "training.progress.phaseFirstEpoch" };
 }
 
 export async function loadRecommendedConfig() {
@@ -945,15 +1041,25 @@ function normalizeLiveTrainingMetrics(trainState) {
     });
   }
 
-  const wsEpochs = metrics.map((m) => m.epoch);
-  const wsLoss = metrics.map((m) => m.loss);
-  const wsMap50 = metrics.map((m) => m.map50);
-  const wsMap50_95 = metrics.map((m) => m.map50_95);
-  const wsPrecision = metrics.map((m) => m.precision);
-  const wsRecall = metrics.map((m) => m.recall);
+  const totalEpochs = Number(trainState.total_epochs || 0);
+  const rowsByEpoch = new Map();
+  metrics.forEach((metric, index) => {
+    let epoch = Number(metric?.epoch ?? index + 1);
+    if (!Number.isFinite(epoch) || epoch < 1) return;
+    if (totalEpochs > 0) epoch = Math.min(epoch, totalEpochs);
+    rowsByEpoch.set(epoch, { ...metric, epoch });
+  });
+  const rows = Array.from(rowsByEpoch.values()).sort((a, b) => Number(a.epoch) - Number(b.epoch));
+  const wsEpochs = rows.map((m) => m.epoch);
+  const wsLoss = rows.map((m) => m.loss);
+  const wsMap50 = rows.map((m) => m.map50);
+  const wsMap50_95 = rows.map((m) => m.map50_95);
+  const wsPrecision = rows.map((m) => m.precision);
+  const wsRecall = rows.map((m) => m.recall);
 
   return {
     architecture: "cnn",
+    total_epochs: totalEpochs,
     epochs: wsEpochs,
     raw: {
       "train/box_loss": wsLoss,
@@ -1047,6 +1153,8 @@ async function loadLatestRunMetricsOnce() {
     const runs = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs`);
     if (!runs || runs.length === 0) {
       currentChartData = null;
+      lastRenderedMetricRunId = "";
+      lastRenderedMetricEpochCount = -1;
       updateChartVisualization();
       renderEpochHistoryTable(null);
       renderArtifactList(null);
@@ -1070,9 +1178,11 @@ async function loadLatestRunMetricsOnce() {
 // Training UI helper
 async function loadRunMetrics(runId) {
   try {
-    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${runId}/metrics`);
+    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${runId}/metrics`, { suppressToast: true });
     currentChartData = normalizeStoredTrainingMetrics(data);
     lastLoadedRunId = runId;
+    lastRenderedMetricRunId = runId;
+    lastRenderedMetricEpochCount = currentChartData?.epochs?.length || 0;
     setMetricsDashboardActive(Boolean(currentChartData?.epochs?.length));
     
     // Training UI helper
@@ -1085,23 +1195,35 @@ async function loadRunMetrics(runId) {
     // Training UI helper
     await loadRunArtifacts(runId);
   } catch (err) {
-    console.error("loadRunMetrics error", err);
+    if (!isExpectedMissingRunMetrics(err)) {
+      console.error("loadRunMetrics error", err);
+    }
     currentChartData = null;
+    lastRenderedMetricRunId = "";
+    lastRenderedMetricEpochCount = -1;
     updateChartVisualization();
     renderEpochHistoryTable(null);
     setMetricsDashboardActive(false);
+    renderArtifactList(null, runId);
   }
 }
 
 // Training UI helper
 async function loadRunArtifacts(runId) {
   try {
-    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${runId}/artifacts`);
+    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${runId}/artifacts`, { suppressToast: true });
     renderArtifactList(data, runId);
   } catch (err) {
-    console.error("loadRunArtifacts error", err);
+    if (!isExpectedMissingRunMetrics(err)) {
+      console.error("loadRunArtifacts error", err);
+    }
     renderArtifactList(null, runId);
   }
+}
+
+function isExpectedMissingRunMetrics(err) {
+  const message = String(err?.message || err?.detail || "");
+  return err?.status === 404 && message.includes("Metrics file not found");
 }
 
 // Training UI helper
@@ -1149,6 +1271,8 @@ function updateChartVisualization() {
   }
 
   if (!currentChartData || !currentChartData.epochs || currentChartData.epochs.length === 0) {
+    canvas.dataset.chartMaxEpoch = "0";
+    canvas.dataset.chartPointCount = "0";
     // Training UI helper
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1160,6 +1284,10 @@ function updateChartVisualization() {
   }
 
   const epochs = currentChartData.epochs;
+  const chartMaxEpoch = getChartMaxEpoch(currentChartData, epochs);
+  const chartLabels = Array.from({ length: chartMaxEpoch }, (_, index) => index + 1);
+  canvas.dataset.chartMaxEpoch = String(chartMaxEpoch);
+  canvas.dataset.chartPointCount = String(epochs.length);
   const showRaw = qs("#chart-show-raw")?.checked !== false;
   const showSmooth = qs("#chart-show-smooth")?.checked !== false;
   const alpha = Number(qs("#chart-ema-alpha")?.value || 0.25);
@@ -1255,11 +1383,12 @@ function updateChartVisualization() {
   keysToRender.forEach((item) => {
     const rawData = raw[item.key] || [];
     if (rawData.length === 0) return;
+    const expandedRawData = expandSeriesToEpochRange(rawData, epochs, chartMaxEpoch);
 
     if (showRaw) {
       datasets.push({
         label: `${item.label} (Raw)`,
-        data: rawData,
+        data: expandedRawData,
         borderColor: item.color.raw,
         backgroundColor: "transparent",
         borderWidth: 1.5,
@@ -1270,9 +1399,10 @@ function updateChartVisualization() {
 
     if (showSmooth) {
       const smoothData = computeEma(rawData);
+      const expandedSmoothData = expandSeriesToEpochRange(smoothData, epochs, chartMaxEpoch);
       datasets.push({
         label: `${item.label} (Smooth)`,
-        data: smoothData,
+        data: expandedSmoothData,
         borderColor: item.color.smooth,
         backgroundColor: "transparent",
         borderWidth: 2.5,
@@ -1283,6 +1413,7 @@ function updateChartVisualization() {
   });
 
   if (datasets.length === 0) {
+    canvas.dataset.chartDatasetCount = "0";
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#95a1b1";
@@ -1299,7 +1430,7 @@ function updateChartVisualization() {
   metricsChart = new Chart(canvas, {
     type: "line",
     data: {
-      labels: epochs,
+      labels: chartLabels,
       datasets: datasets
     },
     options: {
@@ -1327,6 +1458,23 @@ function updateChartVisualization() {
       }
     }
   });
+  canvas.dataset.chartDatasetCount = String(datasets.length);
+}
+
+function getChartMaxEpoch(chartData, epochs = []) {
+  const configuredTotal = Number(chartData?.total_epochs || appState.trainingStatus?.total_epochs || qs("#train-epochs")?.value || 0);
+  const lastEpoch = Math.max(0, ...epochs.map((epoch) => Number(epoch) || 0));
+  return Math.max(1, configuredTotal || lastEpoch || epochs.length || 1);
+}
+
+function expandSeriesToEpochRange(values = [], epochs = [], maxEpoch = 1) {
+  const expanded = Array.from({ length: maxEpoch }, () => null);
+  values.forEach((value, index) => {
+    const epoch = Number(epochs[index] ?? index + 1);
+    if (!Number.isFinite(epoch) || epoch < 1 || epoch > maxEpoch) return;
+    expanded[epoch - 1] = value;
+  });
+  return expanded;
 }
 
 // Training UI helper

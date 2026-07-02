@@ -26,7 +26,7 @@ import { initLabelMe, renderLabelMeManager } from "./pages/labelme.js";
 import { initSplit, renderSplitPage } from "./pages/split.js";
 import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js?v=20260625-augmentation-p0";
 import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js?v=20260701-rnn-layout-polish";
-import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260701-rnn-layout-polish";
+import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260702-rnn-ui-mode-cleanup";
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js?v=20260701-xgb-eval-final";
 import { initModelCompare, renderModelComparePage } from "./pages/model_compare.js?v=20260630-ui-init-fix";
 import { initInference, renderInferencePage } from "./pages/inference.js?v=20260630-class-batch-infer";
@@ -244,6 +244,7 @@ function bindInfoTooltips() {
 function bindGlobalNavigation() {
   qsa("[data-page]").forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (btn.dataset.modeNav) return;
       if (btn.dataset.page === "projects") {
         eventBus.emit("open-create-project-modal");
         return;
@@ -309,7 +310,6 @@ function bindGlobalNavigation() {
       appState.currentProject = null;
       appState.trainingStatus = null;
       updateLabelMeState();
-      setText("#current-project-title", "撠頛撠?");
       if (appState.wsConn) {
         appState.wsConn.close();
         appState.wsConn = null;
@@ -384,7 +384,6 @@ async function openProject(projectId, options = {}) {
     appState.currentProjectId = projectId;
     appState.currentProjectClasses = [...(appState.currentProject?.class_names || [])];
     syncTrainingModeForProject(appState.currentProject, options.page || appState.currentPage);
-    setText("#current-project-title", appState.currentProject.project_name || projectId);
     updateLabelMeState();
     // 瑼Ｘ銝阡?閮剛?蝺?WebSocket
     await checkCurrentTrainStatus();
@@ -423,7 +422,6 @@ async function saveCurrentProject() {
     appState.currentProject = await requestProjectSave(projectId);
     appState.currentProjectId = projectId;
     appState.currentProjectClasses = [...(appState.currentProject?.class_names || [])];
-    setText("#current-project-title", appState.currentProject.project_name || projectId);
     updateLabelMeState();
     await checkCurrentTrainStatus();
     renderAll();
@@ -569,8 +567,12 @@ function renderRightPanel(pageId, status) {
   const container = qs("#page-context-container");
   const section = qs("#section-page-context");
   const titleEl = qs("#page-context-title");
+  const actionsSection = qs("#next-actions-list")?.closest(".summary-section");
+  const warningsSection = qs("#warning-list")?.closest(".summary-section");
 
   if (!container || !section) return;
+  if (actionsSection) actionsSection.style.display = "";
+  if (warningsSection) warningsSection.style.display = "";
 
   const bypassEmptyPages = ["dashboard", "projects", "settings"];
   const showEmpty = !status.hasProject && !bypassEmptyPages.includes(pageId);
@@ -598,6 +600,8 @@ function renderRightPanel(pageId, status) {
   }
 
   const config = builder(status);
+  if (actionsSection) actionsSection.style.display = config.suppressActions ? "none" : "";
+  if (warningsSection) warningsSection.style.display = config.suppressWarnings ? "none" : "";
   if (titleEl && config.title) titleEl.textContent = config.title;
 
   if (config.emptyState && !status.hasProject) {
@@ -624,18 +628,26 @@ function renderRightPanel(pageId, status) {
   }
 
   const actions = config.actions || [];
-  setHTML("#next-actions-list", actions.length > 0
-    ? actions.map(act => `<li>${escapeHtml(act)}</li>`).join("")
-    : "<li>No suggested action right now.</li>");
+  if (!config.suppressActions) {
+    setHTML("#next-actions-list", actions.length > 0
+      ? actions.map(act => `<li>${escapeHtml(act)}</li>`).join("")
+      : "<li>No suggested action right now.</li>");
+  } else {
+    setHTML("#next-actions-list", "");
+  }
 
   const warnings = config.warnings || [];
   const notes = config.notes || [];
   const warningTitle = qs("#warning-list")?.closest(".summary-section")?.querySelector("h2");
   if (warningTitle) warningTitle.textContent = warnings.length > 0 ? "Warnings" : (notes.length > 0 ? "Notes" : "Warnings");
-  setHTML("#warning-list", warnings.length > 0
-    ? warnings.map(warn => `<div class="summary-warning-item">${escapeHtml(warn)}</div>`).join("") + notes.map(note => `<div class="summary-info-item">${escapeHtml(note)}</div>`).join("")
-    : notes.map(note => `<div class="summary-info-item">${escapeHtml(note)}</div>`).join("")
-  );
+  if (!config.suppressWarnings) {
+    setHTML("#warning-list", warnings.length > 0
+      ? warnings.map(warn => `<div class="summary-warning-item">${escapeHtml(warn)}</div>`).join("") + notes.map(note => `<div class="summary-info-item">${escapeHtml(note)}</div>`).join("")
+      : notes.map(note => `<div class="summary-info-item">${escapeHtml(note)}</div>`).join("")
+    );
+  } else {
+    setHTML("#warning-list", "");
+  }
 }
 function getPageTitle(pageId) {
   const map = {
@@ -764,8 +776,10 @@ function buildSplitRightPanel(status) {
       { label: "Quality", value: `${status.splitQuality || 0}/100`, badgeType: status.splitQuality > 80 ? "success" : "neutral" },
       { label: "Leakage Risk", value: status.splitComplete ? "Low" : "Unknown", badgeType: status.splitComplete ? "success" : "warning" }
     ],
-    actions: ["Create class-balanced split.", "Review class balance before training.", "Configure augmentation after split is ready."],
-    warnings
+    actions: [],
+    warnings: [],
+    suppressActions: true,
+    suppressWarnings: true
   };
 }
 
@@ -827,9 +841,11 @@ function buildAugmentationRightPanel(status) {
       { label: "Output", value: `+${generatedCopies}`, isCode: true },
       { label: "Risk", value: riskLabel, badgeType: previewReady ? "success" : "warning" }
     ],
-    actions,
-    warnings,
-    notes
+    actions: [],
+    warnings: [],
+    notes: [],
+    suppressActions: true,
+    suppressWarnings: true
   };
 }
 
@@ -865,8 +881,10 @@ function buildTrainingRightPanel(status) {
       { label: "Run", value: latestRun?.run_id ?? "--", isCode: true },
       { label: "Run status", value: runStatus, badgeType: statusBadge }
     ],
-    actions,
-    warnings
+    actions: [],
+    warnings: [],
+    suppressActions: true,
+    suppressWarnings: true
   };
 }
 
