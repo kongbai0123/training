@@ -225,7 +225,6 @@ function renderProjectCard(project, options = {}) {
   const progressText = progress.total
     ? t("history.imagesAnnotated", { annotated: progress.annotated || 0, total: progress.total || 0 })
     : t("history.noImagesImported");
-  const classNames = Array.isArray(project.class_names) ? project.class_names : [];
 
   return `
     <article class="project-history-card ${options.compact ? "compact" : ""}">
@@ -236,7 +235,7 @@ function renderProjectCard(project, options = {}) {
             <span class="badge badge-info">${escapeHtml(getProjectHistoryModeLabel(project))}</span>
             <span class="badge badge-muted">${escapeHtml(project.task_type || "--")}</span>
           </div>
-          <p>${escapeHtml(progressText)} · ${escapeHtml(t("history.updated"))} ${escapeHtml(updatedAt || "--")}</p>
+          <p>${escapeHtml(progressText)} - ${escapeHtml(t("history.updated"))} ${escapeHtml(updatedAt || "--")}</p>
         </div>
         <div class="button-row">
           <button class="btn btn-secondary btn-sm" data-open-project="${escapeHtml(project.project_id)}">${escapeHtml(t("historyOpen"))}</button>
@@ -246,22 +245,13 @@ function renderProjectCard(project, options = {}) {
       ${options.showFiles ? `
         <div class="project-file-summary">
           ${fileMetric(t("dataset.images"), files.images ?? progress.total ?? 0)}
-          ${fileMetric("LabelMe JSON", files.labelme_json ?? 0)}
-          ${fileMetric("YOLO labels", files.yolo_labels ?? 0)}
-          ${fileMetric(t("dataset.videos"), files.videos ?? 0)}
+          ${fileMetric(t("history.labels"), `${progress.annotated ?? 0}/${progress.total ?? 0}`)}
           ${fileMetric("Split", files.split_ready ? t("common.ready") : t("common.none"), files.split_ready ? "success" : "muted")}
           ${fileMetric("best.pt", files.best_weights ?? 0)}
           ${fileMetric("last.pt", files.last_weights ?? 0)}
           ${fileMetric(t("history.inferenceJobs"), files.inference_jobs ?? 0)}
           ${fileMetric(t("export.model"), files.exports ?? 0)}
-          ${fileMetric("Sequence manifest", files.sequence_manifest ? t("common.ready") : t("common.none"), files.sequence_manifest ? "success" : "muted")}
           ${fileMetric("Sequence CSV", files.sequence_csv_files ?? 0)}
-        </div>
-        <div class="project-file-details">
-          <div><span>${escapeHtml(t("history.projectId"))}</span><code>${escapeHtml(project.project_id || "--")}</code></div>
-          <div><span>${escapeHtml(t("history.layout"))}</span><code>${escapeHtml(files.layout_mode || "--")}</code></div>
-          <div><span>${escapeHtml(t("labelme.classes"))}</span><code>${escapeHtml(classNames.length ? classNames.join(", ") : "--")}</code></div>
-          <div><span>${escapeHtml(t("history.projectRoot"))}</span><code>${escapeHtml(files.project_root || project.path || "--")}</code></div>
         </div>
       ` : ""}
     </article>

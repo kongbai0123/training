@@ -60,8 +60,8 @@ async function bootstrapApp() {
   // 頛蝖祇?蝟餌絞????憛?頞?頞嚗?
   fetchSystemHealth();
 
-  // 頛撠?銝阡?閮剛歲頧 Dashboard
-  await loadProjects({ autoOpenLatest: true });
+  // Start with an empty workspace. Users explicitly open projects from Browse History.
+  await loadProjects({ autoOpenLatest: false });
   navigate("dashboard");
 }
 
@@ -487,6 +487,7 @@ function renderHeaderStatus() {
     setText("#header-ram-value", "Unavailable");
   }
   setText("#header-health-label", isHealthy ? "Healthy" : "Offline");
+  setText("#header-project-title", appState.currentProject?.project_name || "No project opened");
 
   const dot = qs("#api-status-dot");
   if (dot) {
@@ -510,11 +511,7 @@ function renderProjectSummary(status, pageId = appState.currentPage) {
   if (titleEl) titleEl.textContent = pageId === "dashboard" ? "Current Project" : "Project Context";
 
   if (!status.hasProject) {
-    setHTML("#project-summary", `
-      <div class="summary-empty compact">
-        <p>No project opened.</p>
-      </div>
-    `);
+    setHTML("#project-summary", "");
     return;
   }
 
