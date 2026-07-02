@@ -400,6 +400,10 @@ class DeleteModelWeightsRequest(BaseModel):
 class CleanupTrainingRunsRequest(BaseModel):
     run_ids: List[str]
     confirm: bool = False
+
+class DeleteInferenceJobsRequest(BaseModel):
+    job_ids: List[str]
+    confirm: bool = False
 # --- API Endpoints ---
 
 def _is_cleanup_candidate_run(run_id: str, run: Optional[Dict[str, Any]] = None) -> bool:
@@ -1284,6 +1288,18 @@ def list_inference_jobs(project_id: str):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return InferenceHistory.list_jobs(project)
+
+@app.post("/api/projects/{project_id}/inference/jobs/delete")
+def delete_inference_jobs(project_id: str, request: DeleteInferenceJobsRequest):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not request.confirm:
+        raise HTTPException(status_code=400, detail="Deletion requires confirmation")
+    try:
+        return InferenceHistory.delete_jobs(project, request.job_ids, confirm=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 @app.get("/api/projects/{project_id}/inference/jobs/{job_id}")
 def get_inference_job(project_id: str, job_id: str):

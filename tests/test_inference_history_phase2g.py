@@ -91,6 +91,64 @@ class InferenceHistoryPhase2GTests(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             InferenceHistory.get_job(self.project, "missing_job")
 
+    def test_delete_jobs_removes_selected_job_only(self):
+        self._write_job(
+            "job_delete_me",
+            {
+                "project_id": self.project_id,
+                "job_id": "job_delete_me",
+                "model_id": "model-cnn",
+                "created_at": "2026-06-29T01:00:00",
+            },
+        )
+        self._write_job(
+            "job_keep_me",
+            {
+                "project_id": self.project_id,
+                "job_id": "job_keep_me",
+                "model_id": "model-cnn",
+                "created_at": "2026-06-29T01:01:00",
+            },
+        )
+
+        result = InferenceHistory.delete_jobs(self.project, ["job_delete_me"], confirm=True)
+
+        self.assertTrue(result["success"])
+        self.assertEqual([item["job_id"] for item in result["deleted"]], ["job_delete_me"])
+        self.assertFalse((self.jobs_dir / "job_delete_me").exists())
+        self.assertTrue((self.jobs_dir / "job_keep_me").exists())
+        self.assertEqual(result["remaining_jobs"], 1)
+
+    def test_delete_jobs_requires_confirmation(self):
+        self._write_job(
+            "job_delete_me",
+            {
+                "project_id": self.project_id,
+                "job_id": "job_delete_me",
+                "model_id": "model-cnn",
+            },
+        )
+
+        with self.assertRaises(ValueError):
+            InferenceHistory.delete_jobs(self.project, ["job_delete_me"], confirm=False)
+        self.assertTrue((self.jobs_dir / "job_delete_me").exists())
+
+    def test_delete_jobs_rejects_path_traversal(self):
+        self._write_job(
+            "job_keep_me",
+            {
+                "project_id": self.project_id,
+                "job_id": "job_keep_me",
+                "model_id": "model-cnn",
+            },
+        )
+
+        result = InferenceHistory.delete_jobs(self.project, ["../job_keep_me"], confirm=True)
+
+        self.assertEqual(result["deleted"], [])
+        self.assertEqual(result["skipped"][0]["reason"], "invalid_job_id")
+        self.assertTrue((self.jobs_dir / "job_keep_me").exists())
+
     def _write_job(self, job_id: str, summary: dict, predictions=None):
         job_dir = self.jobs_dir / job_id
         job_dir.mkdir(parents=True)

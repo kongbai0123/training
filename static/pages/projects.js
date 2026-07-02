@@ -6,6 +6,8 @@ import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
 let historySearchQuery = "";
 let historyModeFilter = "all";
 let inferenceHistoryLoading = false;
+const selectedInferenceJobIds = new Set();
+let pendingDeleteInferenceJobIds = [];
 
 export function initProjects() {
   qs("#btn-reload-projects")?.addEventListener("click", () => {
@@ -273,6 +275,7 @@ function renderHistoryContent(projects, jobs, options = {}) {
   return `
     <div class="history-section-block">
       <div class="history-section-title"><span>${escapeHtml(t("history.inferenceJobs"))}</span><small>${escapeHtml(appState.currentProject?.project_name || appState.currentProjectId || t("history.activeProject"))}</small></div>
+      ${renderInferenceJobCleanupToolbar()}
       ${jobsHtml}
     </div>
     <div class="history-section-block">
@@ -291,6 +294,29 @@ function renderInferenceJobList(jobs) {
     return `<div class="empty-state">${escapeHtml(t("history.noInferenceJobs"))}</div>`;
   }
   return jobs.map(renderInferenceJobCard).join("");
+}
+
+function renderInferenceJobCleanupToolbar() {
+  const selectedCount = selectedInferenceJobIds.size;
+  const pendingCount = pendingDeleteInferenceJobIds.length;
+  return `
+    <div class="inference-job-cleanup-toolbar">
+      <div>
+        <strong>${escapeHtml(t("history.cleanupInferenceJobs"))}</strong>
+        <span>${escapeHtml(t("history.cleanupInferenceJobsHelp", { count: selectedCount }))}</span>
+      </div>
+      <button class="btn btn-danger btn-sm" type="button" data-request-delete-inference-jobs ${selectedCount ? "" : "disabled"}>
+        <i class="fa-solid fa-trash"></i><span>${escapeHtml(t("history.deleteSelectedInferenceJobs"))}</span>
+      </button>
+    </div>
+    <div class="inference-job-delete-confirmation" ${pendingCount ? "" : "hidden"}>
+      <span>${escapeHtml(t("history.confirmDeleteInferenceJobs", { count: pendingCount }))}</span>
+      <div class="button-row">
+        <button class="btn btn-danger btn-sm" type="button" data-confirm-delete-inference-jobs>${escapeHtml(t("common.remove"))}</button>
+        <button class="btn btn-secondary btn-sm" type="button" data-cancel-delete-inference-jobs>${escapeHtml(t("common.cancel"))}</button>
+      </div>
+    </div>
+  `;
 }
 
 function renderInferenceJobCard(job) {
@@ -313,6 +339,10 @@ function renderInferenceJobCard(job) {
           <p>${escapeHtml(primary)} 繚 ${escapeHtml(formatDate(job.created_at) || "--")}</p>
         </div>
         <div class="button-row">
+          <label class="history-job-select">
+            <input type="checkbox" data-select-inference-job="${escapeHtml(job.job_id)}" ${selectedInferenceJobIds.has(job.job_id) ? "checked" : ""}>
+            <span>${escapeHtml(t("history.selectInferenceJob"))}</span>
+          </label>
           <button class="btn btn-secondary btn-sm" data-view-inference-job="${escapeHtml(job.job_id)}">${escapeHtml(t("history.viewResult"))}</button>
         </div>
       </div>
@@ -358,6 +388,59 @@ function bindInferenceJobButtons() {
   qsa("[data-view-inference-job]").forEach((btn) => {
     btn.addEventListener("click", () => openInferenceJobDetail(btn.dataset.viewInferenceJob));
   });
+  qsa("[data-select-inference-job]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const jobId = input.dataset.selectInferenceJob;
+      if (!jobId) return;
+      if (input.checked) selectedInferenceJobIds.add(jobId);
+      else selectedInferenceJobIds.delete(jobId);
+      pendingDeleteInferenceJobIds = [];
+      renderProjectsPage();
+      renderHistoryModal();
+    });
+  });
+  qsa("[data-request-delete-inference-jobs]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      pendingDeleteInferenceJobIds = Array.from(selectedInferenceJobIds);
+      if (!pendingDeleteInferenceJobIds.length) {
+        eventBus.emit("toast", t("history.noInferenceJobsSelected"));
+        return;
+      }
+      renderProjectsPage();
+      renderHistoryModal();
+    });
+  });
+  qsa("[data-cancel-delete-inference-jobs]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      pendingDeleteInferenceJobIds = [];
+      renderProjectsPage();
+      renderHistoryModal();
+    });
+  });
+  qsa("[data-confirm-delete-inference-jobs]").forEach((btn) => {
+    btn.addEventListener("click", deleteSelectedInferenceJobs);
+  });
+}
+
+async function deleteSelectedInferenceJobs() {
+  if (!appState.currentProjectId || !pendingDeleteInferenceJobIds.length) return;
+  const jobIds = [...pendingDeleteInferenceJobIds];
+  try {
+    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/inference/jobs/delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ job_ids: jobIds, confirm: true }),
+      suppressToast: true
+    });
+    selectedInferenceJobIds.clear();
+    pendingDeleteInferenceJobIds = [];
+    await ensureInferenceHistoryLoaded(true);
+    eventBus.emit("toast", t("history.deleteInferenceJobsDone", { count: payload?.deleted?.length ?? 0 }));
+    renderProjectsPage();
+    renderHistoryModal();
+  } catch (err) {
+    eventBus.emit("toast", t("history.deleteInferenceJobsFailed", { message: err.message }));
+  }
 }
 
 async function ensureInferenceHistoryLoaded(force = false) {
