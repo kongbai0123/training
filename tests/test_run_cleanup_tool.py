@@ -59,7 +59,7 @@ class RunCleanupToolTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_lists_only_test_run_candidates(self):
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_runs.ProjectManager.get_project", return_value=self.project):
             response = self.client.get("/api/projects/proj_cleanup/runs/cleanup-candidates")
 
         self.assertEqual(response.status_code, 200)
@@ -70,7 +70,7 @@ class RunCleanupToolTest(unittest.TestCase):
         self.assertTrue(body["candidates"][0]["last"]["exists"])
 
     def test_cleanup_requires_confirmation(self):
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_runs.ProjectManager.get_project", return_value=self.project):
             response = self.client.post(
                 "/api/projects/proj_cleanup/runs/cleanup",
                 json={"run_ids": ["run_smoke_001"], "confirm": False},
@@ -90,8 +90,8 @@ class RunCleanupToolTest(unittest.TestCase):
         def get_project(_project_id):
             return self.project
 
-        with patch("app.ProjectManager.get_project", side_effect=get_project), patch(
-            "app.ProjectManager.save_project", side_effect=save_project
+        with patch("src.api.routes.training_runs.ProjectManager.get_project", side_effect=get_project), patch(
+            "src.api.routes.training_runs.ProjectManager.save_project", side_effect=save_project
         ):
             response = self.client.post(
                 "/api/projects/proj_cleanup/runs/cleanup",

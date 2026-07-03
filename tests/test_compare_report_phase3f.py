@@ -36,8 +36,18 @@ class CompareReportPhase3FTest(unittest.TestCase):
         self.assertTrue(report_dir.joinpath("report.pdf").read_bytes().startswith(b"%PDF-"))
         self.assertEqual([item["filename"] for item in payload["files"]], ["report.json", "report.md", "summary.csv", "report.pdf"])
 
+    def test_resolve_report_file_returns_safe_path_and_media_type(self):
+        payload = CompareService.export_report(self.project, "cnn", ["run_a", "run_b"], "run_a")
+
+        path, media_type = CompareService.resolve_report_file(self.project, payload["report_id"], "report.json")
+
+        self.assertEqual(path.name, "report.json")
+        self.assertEqual(media_type, "application/json")
+        with self.assertRaises(Exception):
+            CompareService.resolve_report_file(self.project, payload["report_id"], "../report.json")
+
     def test_export_report_api_and_download(self):
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_orchestration.ProjectManager.get_project", return_value=self.project):
             response = self.client.post(
                 "/api/projects/proj_compare/compare/report",
                 json={"architecture": "cnn", "run_ids": ["run_a", "run_b"], "baseline_run_id": "run_a"},
@@ -49,13 +59,13 @@ class CompareReportPhase3FTest(unittest.TestCase):
         markdown = next(item for item in body["files"] if item["filename"] == "report.md")
         pdf = next(item for item in body["files"] if item["filename"] == "report.pdf")
 
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_orchestration.ProjectManager.get_project", return_value=self.project):
             download = self.client.get(markdown["url"], headers={"X-VTS-Token": get_session().token})
 
         self.assertEqual(download.status_code, 200)
         self.assertIn("Model Compare Report", download.text)
 
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_orchestration.ProjectManager.get_project", return_value=self.project):
             pdf_download = self.client.get(pdf["url"], headers={"X-VTS-Token": get_session().token})
 
         self.assertEqual(pdf_download.status_code, 200)
@@ -65,13 +75,13 @@ class CompareReportPhase3FTest(unittest.TestCase):
     def test_list_and_delete_report_api(self):
         exported = CompareService.export_report(self.project, "cnn", ["run_a", "run_b"], "run_a")
 
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_orchestration.ProjectManager.get_project", return_value=self.project):
             list_response = self.client.get("/api/projects/proj_compare/compare/reports")
 
         self.assertEqual(list_response.status_code, 200)
         self.assertEqual(list_response.json()["reports"][0]["report_id"], exported["report_id"])
 
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_orchestration.ProjectManager.get_project", return_value=self.project):
             delete_response = self.client.delete(f"/api/projects/proj_compare/compare/reports/{exported['report_id']}")
 
         self.assertEqual(delete_response.status_code, 200)

@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import json
+import shutil
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from src.inference_engine import InferenceEngine
 from src.model_registry import ModelRegistry
+from src.project_layout import ProjectLayout
+from src.security_utils import safe_resolve_under
 
 
 class OutputCompareServiceError(ValueError):
@@ -15,6 +20,56 @@ class OutputCompareServiceError(ValueError):
 class CNNOutputCompareService:
     MIN_RUNS = 2
     MAX_RUNS = 4
+    IMAGE_INPUT_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+
+    @classmethod
+    def parse_run_ids(cls, run_ids_json: str) -> List[str]:
+        try:
+            run_ids = json.loads(run_ids_json)
+        except Exception as exc:
+            raise OutputCompareServiceError(f"Invalid run_ids_json: {exc}")
+        if not isinstance(run_ids, list):
+            raise OutputCompareServiceError("Invalid run_ids_json: run_ids_json must be a JSON array")
+        return run_ids
+
+    @classmethod
+    def resolve_image_input(
+        cls,
+        project: Dict[str, Any],
+        *,
+        upload: Any = None,
+        image_path: Optional[str] = None,
+        local_trusted_mode: bool = False,
+    ) -> Path:
+        if upload is not None and getattr(upload, "filename", ""):
+            return cls.stage_uploaded_image(project, upload)
+        if image_path:
+            return cls.resolve_local_image_path(project, image_path, local_trusted_mode=local_trusted_mode)
+        raise OutputCompareServiceError("Please provide an image file or image_path")
+
+    @classmethod
+    def stage_uploaded_image(cls, project: Dict[str, Any], upload: Any) -> Path:
+        filename = str(getattr(upload, "filename", "") or "")
+        ext = Path(filename).suffix.lower()
+        if ext not in cls.IMAGE_INPUT_EXTENSIONS:
+            raise OutputCompareServiceError("Only image files are supported")
+
+        inference_dirs = ModelRegistry.ensure_inference_dirs(project)
+        safe_name = f"compare_upload_{uuid.uuid4().hex}{ext}"
+        input_path = inference_dirs["inputs_images"] / safe_name
+        with open(input_path, "wb") as buffer:
+            shutil.copyfileobj(upload.file, buffer)
+        return input_path
+
+    @staticmethod
+    def resolve_local_image_path(project: Dict[str, Any], image_path: str, *, local_trusted_mode: bool = False) -> Path:
+        if not local_trusted_mode:
+            raise OutputCompareServiceError("Local image path compare requires Local Trusted Mode")
+        project_base = ProjectLayout.from_project(project).project_dir.resolve()
+        try:
+            return safe_resolve_under(project_base, Path(image_path))
+        except ValueError as exc:
+            raise OutputCompareServiceError(str(exc))
 
     @classmethod
     def compare_image_outputs(

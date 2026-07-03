@@ -36,8 +36,8 @@ class CNNOutputCompareApiPhase3CTests(unittest.TestCase):
             "warnings": [],
         }
 
-        with patch("app.ProjectManager.get_project", return_value=self.project), \
-             patch("app.CNNOutputCompareService.compare_image_outputs", return_value=payload) as mocked:
+        with patch("src.api.routes.training_orchestration.ProjectManager.get_project", return_value=self.project), \
+             patch("src.api.routes.training_orchestration.CNNOutputCompareService.compare_image_outputs", return_value=payload) as mocked:
             response = self.client.post(
                 "/api/projects/proj_api_output_compare/compare/output-image",
                 data={
@@ -55,7 +55,7 @@ class CNNOutputCompareApiPhase3CTests(unittest.TestCase):
         self.assertEqual(mocked.call_args.kwargs["run_ids"], ["run_a", "run_b"])
 
     def test_output_compare_endpoint_rejects_invalid_run_ids_json(self):
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_orchestration.ProjectManager.get_project", return_value=self.project):
             response = self.client.post(
                 "/api/projects/proj_api_output_compare/compare/output-image",
                 data={"run_ids_json": "not-json"},

@@ -255,6 +255,31 @@ class CompareService:
         shutil.rmtree(report_dir)
         return {"deleted": True, "report_id": report_id}
 
+    @classmethod
+    def resolve_report_file(cls, project: Dict[str, Any], report_id: str, filename: str) -> Tuple[Path, str]:
+        if not re.fullmatch(r"[A-Za-z0-9_\-\.]+", str(report_id or "")):
+            raise CompareServiceError("Invalid report_id.")
+        if filename not in {"report.json", "report.md", "summary.csv", "report.pdf"}:
+            raise CompareServiceError("Invalid report filename.")
+
+        layout = ProjectLayout.from_project(project)
+        reports_root = (layout.project_dir / "exports" / "compare_reports").resolve()
+        file_path = (reports_root / report_id / filename).resolve()
+        try:
+            file_path.relative_to(reports_root)
+        except ValueError:
+            raise CompareServiceError("Access denied: invalid report path.")
+        if not file_path.exists() or not file_path.is_file():
+            raise CompareServiceError("Compare report file not found.")
+
+        media_type = {
+            ".json": "application/json",
+            ".md": "text/markdown",
+            ".csv": "text/csv",
+            ".pdf": "application/pdf",
+        }.get(file_path.suffix.lower(), "application/octet-stream")
+        return file_path, media_type
+
     @staticmethod
     def load_run_bundle(project: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         layout = ProjectLayout.from_project(project)

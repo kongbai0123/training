@@ -18,7 +18,7 @@ import {
 } from "./utils.js";
 import { initGlobalProgressHud } from "./ui/progress_hud.js";
 
-// 頛??辣
+// Page modules.
 import { initDashboard, renderDashboard } from "./pages/dashboard.js";
 import { initProjects, renderProjectsPage } from "./pages/projects.js?v=20260630-class-batch-infer";
 import { initDataset, renderDatasetPage } from "./pages/dataset.js?v=20260630-progress-hud";
@@ -40,7 +40,7 @@ async function bootstrapApp() {
   bindGlobalNavigation();
   bindInfoTooltips();
 
-  // ????????
+  // Initialize page modules.
   initDashboard();
   initProjects();
   initDataset();
@@ -57,7 +57,7 @@ async function bootstrapApp() {
 
   await bootstrapSession();
 
-  // 頛蝖祇?蝟餌絞????憛?頞?頞嚗?
+  // Fetch system health before the first render.
   fetchSystemHealth();
 
   // Start with an empty workspace. Users explicitly open projects from Browse History.
@@ -113,7 +113,7 @@ async function fetchSystemHealth() {
   }
 }
 
-// ?典?撠汗??隞嗉???
+// Bind global floating tooltips.
 function bindInfoTooltips() {
   let tooltip = qs("#floating-tooltip");
   if (!tooltip) {
@@ -264,7 +264,7 @@ function bindGlobalNavigation() {
     navigate(navTarget.dataset.nav);
   });
 
-  // History Modal 閫貊????
+  // History modal actions.
   qs("#btn-header-save-project")?.addEventListener("click", saveCurrentProject);
   qs("#btn-header-history")?.addEventListener("click", openHistoryModal);
   qs("#btn-close-history")?.addEventListener("click", closeHistoryModal);
@@ -272,7 +272,7 @@ function bindGlobalNavigation() {
     if (event.target.id === "project-history-modal") closeHistoryModal();
   });
 
-  // EventBus 鈭辣??
+  // Event bus handlers.
   eventBus.on("state-changed", () => {
     renderAll();
   });
@@ -336,7 +336,7 @@ function renderAll() {
   
   renderHeaderStatus();
 
-  // 閫貊???皜脫?
+  // Render page modules.
   renderDashboard(status);
   renderRightPanel(appState.currentPage, status);
   renderPageGuards(appState.currentPage, status);
@@ -359,7 +359,7 @@ function renderAll() {
   applyLanguage(appState.settings.language);
 }
 
-// 頛????獢?
+// Load project list.
 async function loadProjects(options = {}) {
   try {
     appState.projects = await apiFetch("/api/projects");
@@ -385,9 +385,9 @@ async function openProject(projectId, options = {}) {
     appState.currentProjectClasses = [...(appState.currentProject?.class_names || [])];
     syncTrainingModeForProject(appState.currentProject, options.page || appState.currentPage);
     updateLabelMeState();
-    // 瑼Ｘ銝阡?閮剛?蝺?WebSocket
+    // Close any existing monitor websocket.
     await checkCurrentTrainStatus();
-    // 頛閰脣?獢?璅∪?皜
+    // Load project details and sync state.
     try {
       const models = await apiFetch(`/api/projects/${projectId}/models`);
       appState.models = Array.isArray(models) ? models : [];
@@ -395,7 +395,7 @@ async function openProject(projectId, options = {}) {
       console.warn("Failed to prefetch models:", e.message);
       appState.models = [];
     }
-    // 頛??刻?蔭
+    // Start project monitor.
     await loadRecommendedConfig();
     renderAll();
     if (!options.stayOnPage) navigate(options.page || "dashboard");
@@ -466,7 +466,7 @@ async function checkCurrentTrainStatus() {
   if (!appState.currentProjectId) return;
   try {
     appState.trainingStatus = await apiFetch(`/api/projects/${appState.currentProjectId}/train/status`);
-    // 閫貊閮毀 WebSocket ???賣炎??
+    // Close stale monitor websocket before reconnecting.
     eventBus.emit("check-training-websocket");
   } catch {
     appState.trainingStatus = null;
@@ -556,7 +556,7 @@ const RIGHT_PANEL_CONFIG = {
   settings: buildSettingsRightPanel
 };
 
-// 蝯曹??葡????(Separation of Concerns & XSS ?脰風)
+// Register global browser helpers. Keep rendering logic in modules.
 function renderRightPanel(pageId, status) {
   renderProjectSummary(status, pageId);
 

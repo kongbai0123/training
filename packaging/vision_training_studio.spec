@@ -14,6 +14,62 @@ datas = [
     (str(ROOT / "requirements.txt"), "."),
 ]
 
+EXCLUDED_MODULE_PREFIXES = (
+    "numpy.tests",
+    "numpy.typing.tests",
+    "numpy.f2py.tests",
+    "numpy.fft.tests",
+    "numpy.lib.tests",
+    "numpy.linalg.tests",
+    "numpy.ma.tests",
+    "numpy.matrixlib.tests",
+    "numpy.polynomial.tests",
+    "numpy.random.tests",
+    "numpy.testing.tests",
+    "scipy.tests",
+    "torch.testing",
+    "xgboost.testing",
+    "webview.platforms.android",
+    "webview.platforms.cocoa",
+    "webview.platforms.gtk",
+    "webview.platforms.qt",
+    "webview.platforms.cef",
+)
+
+EXCLUDES = [
+    "pytest",
+    "_pytest",
+    "mypy",
+    "tensorboard",
+    "wandb",
+    "ray",
+    "neptune",
+    "mlflow",
+    "dvclive",
+    "comet_ml",
+    "clearml",
+    "roboflow",
+    "streamlit",
+    "flask",
+    "timm",
+    "super_gradients",
+    "hub_sdk",
+    "pymongo",
+    "tensorflowjs",
+    "onnx2tf",
+    "openvino",
+    "tensorrt",
+    "coremltools",
+]
+
+
+def keep_hidden_import(module_name):
+    return not any(
+        module_name == prefix or module_name.startswith(prefix + ".")
+        for prefix in EXCLUDED_MODULE_PREFIXES
+    )
+
+
 hiddenimports = [
     "uvicorn.loops.auto",
     "uvicorn.protocols.http.auto",
@@ -43,14 +99,14 @@ for package_name in [
         package_datas, package_binaries, package_hiddenimports = collect_all(package_name)
         datas += package_datas
         binaries += package_binaries
-        hiddenimports += package_hiddenimports
+        hiddenimports += [name for name in package_hiddenimports if keep_hidden_import(name)]
     except Exception:
         pass
 
 for package_name in ["cv2", "PIL", "numpy"]:
     try:
         datas += collect_data_files(package_name)
-        hiddenimports += collect_submodules(package_name)
+        hiddenimports += [name for name in collect_submodules(package_name) if keep_hidden_import(name)]
     except Exception:
         pass
 
@@ -64,7 +120,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=EXCLUDES,
     noarchive=False,
     optimize=0,
 )

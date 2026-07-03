@@ -25,7 +25,7 @@ class CompareApiPhase3ERNNTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_list_rnn_compare_runs_endpoint(self):
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_orchestration.ProjectManager.get_project", return_value=self.project):
             response = self.client.get("/api/projects/proj_rnn_compare/compare/runs?architecture=rnn")
 
         self.assertEqual(response.status_code, 200)
@@ -34,7 +34,7 @@ class CompareApiPhase3ERNNTest(unittest.TestCase):
         self.assertEqual([run["run_id"] for run in body["runs"]], ["run_rnn_a", "run_rnn_b"])
 
     def test_compare_rnn_endpoint(self):
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_orchestration.ProjectManager.get_project", return_value=self.project):
             response = self.client.post(
                 "/api/projects/proj_rnn_compare/compare",
                 json={

@@ -27,7 +27,7 @@ class CompareApiPhase3ATest(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_list_compare_runs_endpoint(self):
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_orchestration.ProjectManager.get_project", return_value=self.project):
             response = self.client.get("/api/projects/proj_compare/compare/runs?architecture=cnn")
 
         self.assertEqual(response.status_code, 200)
@@ -36,7 +36,7 @@ class CompareApiPhase3ATest(unittest.TestCase):
         self.assertEqual([run["run_id"] for run in body["runs"]], ["run_a", "run_b"])
 
     def test_compare_endpoint(self):
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_orchestration.ProjectManager.get_project", return_value=self.project):
             response = self.client.post(
                 "/api/projects/proj_compare/compare",
                 json={
@@ -54,7 +54,7 @@ class CompareApiPhase3ATest(unittest.TestCase):
         self.assertIn("recommendation", body)
 
     def test_compare_endpoint_rejects_invalid_request(self):
-        with patch("app.ProjectManager.get_project", return_value=self.project):
+        with patch("src.api.routes.training_orchestration.ProjectManager.get_project", return_value=self.project):
             response = self.client.post(
                 "/api/projects/proj_compare/compare",
                 json={"architecture": "cnn", "run_ids": ["run_a"]},

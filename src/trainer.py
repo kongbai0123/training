@@ -14,7 +14,7 @@ from src.project_layout import ProjectLayout
 from src.training.runners.thread_runner import DEFAULT_THREAD_TRAINING_RUNNER
 from src.training.state_store import TrainingStateStore
 
-# ?岫頛 GPU ??摨?
+# Optional NVIDIA GPU telemetry.
 try:
     from pynvml import *
     nvmlInit()
@@ -23,7 +23,7 @@ except Exception:
     HAS_NVML = False
 
 class YOLOTrainer:
-    # ?澆?: { project_id: { "status": "idle/training/paused/stopped/completed/failed", "epoch": 0, "total_epochs": 0, "metrics": {...}, "error": "", "run_id": "" } }
+    # Legacy mirrored state kept for compatibility during state-store migration.
     _global_states: Dict[str, Dict[str, Any]] = {}
     _stop_flags: Dict[str, bool] = {}
     _threads: Dict[str, Any] = {}
@@ -36,18 +36,18 @@ class YOLOTrainer:
 
     @classmethod
     def get_status(cls, project_id: str) -> Dict[str, Any]:
-        """?脣??嗅?撠???蝺渡???蝖祇?鞈?"""
+        """Return the current training status with hardware telemetry."""
         state = TrainingStateStore.get_state(project_id)
         if state.get("status") == "idle" and project_id in cls._global_states:
             state = cls._global_states.get(project_id, state)
         
-        # 霈?′擃?扳??
+        # Attach runtime hardware telemetry to the training state.
         hw_info = cls.get_hardware_info()
         return {**state, "hardware": hw_info}
 
     @classmethod
     def stop_training(cls, project_id: str):
-        """閮剖?蝯迫??"""
+        """Request training stop for a project."""
         cls._stop_flags[project_id] = True
         state = TrainingStateStore.mark_stopping(project_id)
         cls._mirror_state(project_id, state)
@@ -88,8 +88,8 @@ class YOLOTrainer:
     @classmethod
     def prepare_yolo_dataset(cls, project_data: Dict[str, Any]) -> str:
         """
-        撠蝚血? YOLO ?澆?閬??????桅?蝯?銝衣???data.yaml??
-        ??湔???耦?迤閬??漣璅隞亙?隞餃??澆??寥?瑼Ｘ??
+        Prepare a YOLO dataset folder and data.yaml from project metadata.
+        Supports detection and segmentation annotation formats.
         """
         project_id = project_data["project_id"]
         dataset_path = Path(project_data["dataset_path"])
@@ -97,7 +97,7 @@ class YOLOTrainer:
         task_type = project_data.get("task_type", "detection")
         is_seg_task = "segmentation" in task_type or "seg" in task_type
         
-        # 1. 撱箇? splits 銝? YOLO ?桅?蝯?
+        # Create YOLO split folders.
         split_id = layout.current_split_id()
         yolo_dir = layout.yolo_split_dir(split_id)
         if yolo_dir.exists():
@@ -113,7 +113,7 @@ class YOLOTrainer:
         class_names = project_data.get("class_names", [])
         class_to_idx = {name: idx for idx, name in enumerate(class_names)}
         
-        # 1.5 ?券璅酉?澆????湔扳撽?
+        # Copy images and labels into split folders.
         for img in images_list:
             split_name = img.get("split")
             if not split_name or split_name not in ["train", "val", "test"]:
@@ -132,7 +132,7 @@ class YOLOTrainer:
                             f"Segmentation image '{filename}' needs at least 3 polygon points."
                         )
                         
-        # 2. 銴ˊ??銝阡?蝵?labels
+        # Build YOLO labels.
         for img in images_list:
             split_name = img.get("split")
             if not split_name or split_name not in ["train", "val", "test"]:
@@ -141,7 +141,7 @@ class YOLOTrainer:
             filename = img["filename"]
             is_aug = img.get("is_augmented", False)
             
-            # 摰儔??皞楝敺?
+            # Copy image file.
             if is_aug:
                 aug_job_id = img.get("augmentation_job_id") or img.get("aug_job_id")
                 if aug_job_id:
@@ -154,7 +154,7 @@ class YOLOTrainer:
             if not img_src_path.exists():
                 continue
                 
-            # 銴ˊ??
+            # Copy image into the YOLO split folder.
             shutil.copy(img_src_path, yolo_dir / split_name / "images" / filename)
             
             txt_filename = Path(filename).with_suffix(".txt")
@@ -162,7 +162,7 @@ class YOLOTrainer:
             
             annotations = img.get("annotations", [])
             
-            # 瑼Ｘ???箸?閮?
+            # Write normalized label rows.
             with open(target_txt_path, "w", encoding="utf-8") as f:
                 for ann in annotations:
                     cat = ann.get("category")
@@ -190,7 +190,7 @@ class YOLOTrainer:
                             except Exception:
                                 img_w, img_h = 640, 640
                         
-                        # ?脰? 0.0 ~ 1.0 ?飛銝?蒂 clip ?圈???
+                        # Clamp normalized coordinates into the 0.0 to 1.0 range.
                         norm_pts = []
                         for pt in points:
                             if len(pt) < 2:
@@ -205,7 +205,7 @@ class YOLOTrainer:
                         pts_str = " ".join(norm_pts)
                         f.write(f"{idx} {pts_str}\n")
                     else:
-                        # Detection 隞餃? (?亙??points ?芸?頧 bbox 雿?詨捆璈)
+                        # Detection labels use class plus normalized bounding box.
                         bbox = ann.get("bbox")
                         if (not bbox or len(bbox) != 4) and ann.get("points"):
                             pts = ann.get("points")
@@ -228,7 +228,7 @@ class YOLOTrainer:
                             bh = max(0.0, min(1.0, bbox[3]))
                             f.write(f"{idx} {xc:.6f} {yc:.6f} {bw:.6f} {bh:.6f}\n")
 
-        # 3. ?? data.yaml
+        # Write data.yaml for the generated YOLO split.
         data_yaml_path = yolo_dir / "data.yaml"
         with open(data_yaml_path, "w", encoding="utf-8") as f:
             f.write(f"path: {yolo_dir.resolve().as_posix()}\n")
@@ -254,7 +254,7 @@ class YOLOTrainer:
 
     @classmethod
     def start_training(cls, project_data: Dict[str, Any]):
-        """?刻??舐?蝔???YOLO 閮毀"""
+        """Start YOLO training through the thread runner."""
         project_id = project_data["project_id"]
         train_config = project_data.get("training_config", {})
         run_id = train_config.get("run_id", "")
@@ -292,10 +292,10 @@ class YOLOTrainer:
         project_dir = layout.project_dir
         runs_dir = layout.training_runs_dir()
         
-        # 1. 瑼Ｘ?臬摮??鞈?憭橘??亙歇摮??蝯???
+        # Ensure the run directory is unique before training starts.
         actual_run_dir = Path(runs_dir / run_id).resolve()
         if actual_run_dir.exists():
-            raise RuntimeError(f"閮毀頛詨?桅?撌脣??剁??粹閬神撌脫?蝯???{actual_run_dir}")
+            raise RuntimeError(f"Training run directory already exists: {actual_run_dir}")
         
         state = TrainingStateStore.init_run(
             project_id=project_id,
@@ -311,16 +311,16 @@ class YOLOTrainer:
         data_yaml_path = None
         
         try:
-            # 1. 皞?鞈??蒂?脰??湔璅酉瑼Ｘ (銝泵??? ValueError)
+            # Prepare dataset and validate split files.
             data_yaml_path = cls.prepare_yolo_dataset(project_data)
             
-            # 2. ????YOLO 璅∪?
+            # Load training model.
             model_name = ModelStore.resolve_training_model(train_config.get("model", "yolov8n.pt"))
             model = YOLO(model_name)
             
             # 3. 閮餃? Callbacks
             def on_train_start(trainer):
-                # ? Ultralytics ?典祕?遣蝡?save_dir 銋?閫貊??callback
+                # Use a fixed save_dir so callbacks and history can locate outputs.
                 path_dir = Path(trainer.save_dir).resolve()
                 RunManager.save_run_metadata(path_dir, train_config, project_data.get("images", []))
                 
@@ -358,7 +358,7 @@ class YOLOTrainer:
             model.add_callback("on_train_start", on_train_start)
             model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
             
-            # 4. ??閮毀嚗蝙?函蝡?run_id嚗?閬?????
+            # Record run metadata after training starts.
             epochs = int(train_config.get("epochs", 50))
             batch_size = int(train_config.get("batch_size", 8))
             imgsz = int(train_config.get("imgsz", 640))
@@ -393,13 +393,13 @@ class YOLOTrainer:
                 verbose=True
             )
             
-            # 5. ?脣?撖阡?閮毀頛詨?桅?嚗?蝙??trainer ??save_dir嚗?芸??????啣? fallback ?啣?摰??
+            # Resolve actual run directory from trainer save_dir, with fallback.
             try:
                 actual_run_dir = Path(model.trainer.save_dir).resolve()
             except Exception:
                 actual_run_dir = Path(runs_dir / run_id).resolve()
                 
-            # 閮毀?摰?
+            # Training completed.
             best_model_path = actual_run_dir / "weights" / "best.pt"
             best_model = str(best_model_path.resolve().as_posix()) if best_model_path.exists() else None
             state = TrainingStateStore.mark_completed(project_id, best_model=best_model, run_id=run_id)
@@ -418,20 +418,20 @@ class YOLOTrainer:
             cls._mirror_state(project_id, state)
             print(f"[Trainer] Error in training {project_id}: {e}")
         finally:
-            # 蝣箔??? actual_run_dir 霈嚗靘???train ????? fallback
+            # Save run artifacts using the resolved run directory.
             try:
                 if 'actual_run_dir' not in locals() or not actual_run_dir:
                     actual_run_dir = Path(runs_dir / run_id).resolve()
             except Exception:
                 actual_run_dir = Path(runs_dir / run_id).resolve()
 
-            # 蝣箔??脣???data_yaml_path ??Path
+            # Store data.yaml path as a Path when available.
             try:
                 actual_data_yaml = Path(data_yaml_path) if ('data_yaml_path' in locals() and data_yaml_path) else None
             except Exception:
                 actual_data_yaml = None
 
-            # 靽? artifacts?圾??CSV 銝血?撖急?閬?閮 project.json
+            # Write artifact manifest, metrics CSV, and project metadata.
             from src.project_manager import ProjectManager
             latest_project = ProjectManager.get_project(project_id)
             if latest_project:
@@ -443,7 +443,7 @@ class YOLOTrainer:
                     data_yaml_path=actual_data_yaml
                 )
                 
-                # ??閮?
+                # Mark cancellation in the state store.
                 run_record = {
                     "run_id": run_id,
                     "timestamp": datetime.now().isoformat(),
@@ -461,7 +461,7 @@ class YOLOTrainer:
                 if "training_runs" not in latest_project:
                     latest_project["training_runs"] = []
                 
-                # ?踹???
+                # Best-effort cleanup.
                 latest_project["training_runs"] = [r for r in latest_project["training_runs"] if r["run_id"] != run_id]
                 latest_project["training_runs"].append(run_record)
                 if "current" not in latest_project:
@@ -491,7 +491,7 @@ class YOLOTrainer:
                 
                 ProjectManager.save_project(project_id, latest_project)
             
-            # ? GPU VRAM 鞈????曉???
+            # Free GPU memory after training.
             import gc
             import torch
             gc.collect()

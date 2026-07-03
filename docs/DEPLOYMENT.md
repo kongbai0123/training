@@ -1,20 +1,20 @@
-# 部署與打包
+# 部署與打包指南
 
-## 1. 打包指令
+## 1. Package Build
 
-正式封裝請使用：
+從專案根目錄執行 PyInstaller 打包：
 
 ```bat
 scripts\package.bat
 ```
 
-底層 PyInstaller 指令：
+底層打包指令：
 
 ```powershell
 python -m PyInstaller --noconfirm --clean --distpath dist --workpath build packaging\vision_training_studio.spec
 ```
 
-輸出：
+預期輸出入口：
 
 ```text
 dist\VisionTrainingStudio\VisionTrainingStudio.exe
@@ -22,68 +22,58 @@ dist\VisionTrainingStudio\VisionTrainingStudio.exe
 
 ## 2. Dist Smoke Test
 
+執行 packaged runtime 煙霧測試：
+
 ```bat
 scripts\smoke_dist.bat
 ```
 
-檢查：
+測試會檢查：
 
 ```text
 GET /api/health
 GET /api/version
 ```
 
-## 3. Installer
+這只證明本機 packaged runtime 可以啟動，不等同於 installer 已在乾淨機器完成驗證。
 
-若已安裝 Inno Setup：
+## 3. Installer Build
 
-```powershell
-ISCC installer\VisionTrainingStudio.iss
+Windows installer 定義檔：
+
+```text
+installer\VisionTrainingStudio.iss
 ```
 
-輸出：
+在 `scripts\package.bat` 成功後，用 Inno Setup 建置 installer：
+
+```powershell
+scripts\build_installer.bat
+```
+
+預期 installer 輸出：
 
 ```text
 installer\output\
 ```
 
-## 4. 版本同步規則
+## 4. 版本同步
 
-版本資訊來源：
+release 前需確認以下檔案版本一致：
 
 ```text
+VERSION
 version.json
 installer\VisionTrainingStudio.iss
 packaging\vision_training_studio.spec
-README.md / docs
+README.md
+docs\RELEASE_NOTES_TEMPLATE.md
+CHANGELOG.md
 ```
 
-Release 前需確認上述版本一致。若版本升級，應同步更新：
+## 5. Release 驗證指令
 
-- `version.json`
-- installer version
-- release notes
-- build manifest
-
-## 5. Release Checklist
-
-Release 前至少確認：
-
-```text
-[ ] unittest pass
-[ ] node syntax check pass
-[ ] py_compile / compileall pass
-[ ] PyInstaller build pass
-[ ] dist exe health check pass
-[ ] browser console no new errors
-[ ] CNN project can open
-[ ] RNN / XGBoost project can open
-[ ] dashboard / artifacts / run history render
-[ ] README / docs updated
-[ ] no projects/logs/cache/tmp/build/dist committed
-```
-
-建議執行：
+產生 release candidate 前至少執行：
 
 ```bat
 scripts\test.bat
@@ -92,37 +82,67 @@ scripts\package.bat
 scripts\smoke_dist.bat
 ```
 
-## 6. Release Artifacts
-
-每次正式 release 建議產生：
+最低驗收條件：
 
 ```text
-release_artifacts/
-├─ build_manifest.json
-├─ checksum.txt
-├─ release_notes.md
-├─ license_inventory.md
-└─ THIRD_PARTY_LICENSES.md
+[ ] unittest pass
+[ ] JavaScript syntax check pass
+[ ] Python compile checks pass
+[ ] PyInstaller package build pass
+[ ] dist smoke health endpoint pass
+[ ] dist smoke version endpoint pass
+[ ] README and docs updated
+[ ] no projects/logs/cache/tmp/build/dist committed
 ```
 
-目前 repo 已有 `license_inventory.md` 與 `THIRD_PARTY_LICENSES.md`，後續可加入 release artifact 產生腳本。
+## 6. 乾淨機器驗證
 
-## 7. Offline Asset Plan
-
-目前前端必要 runtime assets 已 vendor 到：
+package 與 installer 層級驗證紀錄固定放在：
 
 ```text
-static/vendor/
+docs\CLEAN_MACHINE_VALIDATION.md
 ```
 
-包含：
+宣稱 release 可在其他電腦安裝前，必須完成該文件中的 Windows 乾淨 VM checklist。
 
-- Font Awesome
-- Chart.js
-- Dropzone
-- Inter font fallback
+`scripts\smoke_dist.bat` 只能證明本機 packaged runtime 啟動成功，不能取代乾淨機器 installer 驗證。
 
-正式 release 前仍需檢查 `static/index.html` 不應直接引用：
+乾淨機器或 VM 安裝後，可用下列腳本驗證已安裝 app：
+
+```bat
+scripts\validate_installed_app.bat "C:\Program Files\VisionTrainingStudio\VisionTrainingStudio.exe"
+```
+
+PyInstaller warning 分類紀錄：
+
+```text
+docs\PYINSTALLER_WARNING_AUDIT.md
+```
+
+## 7. Release Artifacts
+
+建議 release artifact 目錄：
+
+```text
+release_artifacts\
+  build_manifest.json
+  checksum.txt
+  release_notes.md
+  license_inventory.md
+  THIRD_PARTY_LICENSES.md
+```
+
+除非 release 流程明確要求，否則不要將產生物提交到 repo。
+
+## 8. Offline Asset Check
+
+前端 runtime asset 應 vendored 到：
+
+```text
+static\vendor\
+```
+
+release 前需檢查 `static\index.html` 與前端 bundle，避免非預期外部 CDN 依賴：
 
 ```text
 https://fonts.googleapis.com
@@ -131,42 +151,22 @@ https://cdnjs.cloudflare.com
 https://cdn.jsdelivr.net
 ```
 
-若升級 vendor 檔案，請同步更新 `static/vendor/README.md` 與第三方授權文件。
+若有刻意 vendor runtime asset，請同步更新 `static\vendor\README.md`。
 
-## 8. Diagnostics Zip 規格
+## 9. Diagnostics Package
 
-Diagnostics zip 預設應包含：
-
-```text
-app version
-health payload
-recent logs
-project summary
-system status
-runtime paths
-```
-
-預設不得包含：
-
-```text
-raw images
-model weights
-private datasets
-完整 project folder
-```
-
-如需包含敏感資料，必須由使用者明確確認。
-
-目前可用入口：
+產生 diagnostics：
 
 ```bat
 scripts\diagnostics.bat
 ```
 
-API：
+API endpoint：
 
 ```text
 GET /api/diagnostics/report
 ```
 
-Production 模式下 API 需要 `X-VTS-Token`，由 `/api/bootstrap` 取得。
+diagnostics package 應包含 app version、health payload、recent logs、project summary、system status 與 runtime paths。
+
+不得包含 raw images、private datasets、model weights 或完整 project folders。

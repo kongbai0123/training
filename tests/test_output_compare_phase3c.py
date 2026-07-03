@@ -1,6 +1,8 @@
 import shutil
 import unittest
+from io import BytesIO
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -78,6 +80,45 @@ class CNNOutputComparePhase3CTests(unittest.TestCase):
     def test_rejects_missing_model_weight_for_selected_run(self):
         with self.assertRaisesRegex(OutputCompareServiceError, "No CNN model weights"):
             CNNOutputCompareService.compare_image_outputs(self.project, ["run_a", "missing"], self.input_image, {})
+
+    def test_parse_run_ids_requires_json_array(self):
+        self.assertEqual(CNNOutputCompareService.parse_run_ids('["run_a", "run_b"]'), ["run_a", "run_b"])
+        with self.assertRaisesRegex(OutputCompareServiceError, "Invalid run_ids_json"):
+            CNNOutputCompareService.parse_run_ids("not-json")
+        with self.assertRaisesRegex(OutputCompareServiceError, "JSON array"):
+            CNNOutputCompareService.parse_run_ids('"run_a"')
+
+    def test_stage_uploaded_image_writes_to_inference_inputs(self):
+        upload = SimpleNamespace(filename="sample.jpg", file=BytesIO(b"image-bytes"))
+
+        staged = CNNOutputCompareService.stage_uploaded_image(self.project, upload)
+
+        self.assertTrue(staged.exists())
+        self.assertTrue(staged.name.startswith("compare_upload_"))
+        self.assertEqual(staged.suffix, ".jpg")
+        self.assertEqual(staged.read_bytes(), b"image-bytes")
+        self.assertIn("inference", staged.as_posix())
+
+    def test_stage_uploaded_image_rejects_non_image_extension(self):
+        upload = SimpleNamespace(filename="sample.txt", file=BytesIO(b"not-image"))
+
+        with self.assertRaisesRegex(OutputCompareServiceError, "Only image files"):
+            CNNOutputCompareService.stage_uploaded_image(self.project, upload)
+
+    def test_resolve_local_image_path_requires_trusted_mode(self):
+        with self.assertRaisesRegex(OutputCompareServiceError, "Local Trusted Mode"):
+            CNNOutputCompareService.resolve_local_image_path(
+                self.project,
+                self.input_image.as_posix(),
+                local_trusted_mode=False,
+            )
+
+        resolved = CNNOutputCompareService.resolve_local_image_path(
+            self.project,
+            self.input_image.as_posix(),
+            local_trusted_mode=True,
+        )
+        self.assertEqual(resolved, self.input_image.resolve())
 
 
 if __name__ == "__main__":

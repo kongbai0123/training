@@ -6,7 +6,8 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from app import app, _latest_completed_training_run_dir
+from app import app
+from src.api.routes.evaluation import _latest_completed_training_run_dir
 from src.project_layout import ProjectLayout
 
 
@@ -85,7 +86,7 @@ class CnnEvaluationCompletedOnlyTests(unittest.TestCase):
                 ],
             }
 
-            with patch("app.ProjectManager.get_project", return_value=project):
+            with patch("src.api.routes.evaluation.ProjectManager.get_project", return_value=project):
                 response = TestClient(app).get("/api/projects/proj_eval/evaluation/plot/results.png?run_id=run_done")
 
             self.assertEqual(response.status_code, 200)
