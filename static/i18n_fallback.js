@@ -213,6 +213,8 @@ const I18N_TEXT_KEYS = new Map([
   ["Failed to load inference result:", "history.loadInferenceResultFailed"],
   ["Inference Jobs", "history.inferenceJobs"],
   ["Project ID", "history.projectId"],
+  ["Project Name", "history.projectName"],
+  ["Full Path", "history.fullPath"],
   ["Layout", "history.layout"],
   ["Project root", "history.projectRoot"],
   ["Mode", "history.mode"],

@@ -62,6 +62,7 @@ class ProjectManager:
                     try:
                         with open(json_path, "r", encoding="utf-8") as f:
                             data = json.load(f)
+                            project_root = str(d.resolve().as_posix())
                             projects.append({
                                 "project_id": data.get("project_id"),
                                 "project_name": data.get("project_name"),
@@ -70,7 +71,9 @@ class ProjectManager:
                                 "updated_at": data.get("updated_at"),
                                 "class_names": data.get("class_names", []),
                                 "annotation_progress": data.get("annotation_progress", {"total": 0, "annotated": 0}),
-                                "path": str(d.resolve()),
+                                "path": project_root,
+                                "full_path": project_root,
+                                "copy_path": project_root,
                                 "file_summary": ProjectManager.build_project_file_summary(d, data)
                             })
                     except Exception as e:

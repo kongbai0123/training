@@ -1,7 +1,7 @@
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { apiFetch } from "../api.js";
-import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
+import { qs, qsa, setText, setHTML, escapeHtml, copyText } from "../utils.js";
 
 let historySearchQuery = "";
 let historyModeFilter = "all";
@@ -130,6 +130,8 @@ function filterProjects(projects, query, mode = "all") {
       project.task_type,
       getProjectHistoryModeLabel(project),
       project.path,
+      project.full_path,
+      project.copy_path,
       files.project_root,
       files.layout_mode,
       classes,
@@ -222,6 +224,8 @@ function renderProjectCard(project, options = {}) {
   const progress = project.annotation_progress || {};
   const files = project.file_summary || {};
   const updatedAt = formatDate(project.updated_at);
+  const projectName = project.project_name || project.project_id || "--";
+  const fullPath = project.full_path || project.copy_path || project.path || files.project_root || "";
   const progressText = progress.total
     ? t("history.imagesAnnotated", { annotated: progress.annotated || 0, total: progress.total || 0 })
     : t("history.noImagesImported");
@@ -231,7 +235,7 @@ function renderProjectCard(project, options = {}) {
       <div class="project-history-main">
         <div>
           <div class="project-history-title-row">
-            <h3>${escapeHtml(project.project_name || project.project_id)}</h3>
+            <h3>${escapeHtml(projectName)}</h3>
             <span class="badge badge-info">${escapeHtml(getProjectHistoryModeLabel(project))}</span>
             <span class="badge badge-muted">${escapeHtml(project.task_type || "--")}</span>
           </div>
@@ -252,6 +256,17 @@ function renderProjectCard(project, options = {}) {
           ${fileMetric(t("history.inferenceJobs"), files.inference_jobs ?? 0)}
           ${fileMetric(t("export.model"), files.exports ?? 0)}
           ${fileMetric("Sequence CSV", files.sequence_csv_files ?? 0)}
+        </div>
+        <div class="project-file-details">
+          <div>
+            <span>${escapeHtml(t("history.projectName"))}</span>
+            <code>${escapeHtml(projectName)}</code>
+          </div>
+          <div>
+            <span>${escapeHtml(t("history.fullPath"))}</span>
+            <code title="${escapeHtml(fullPath)}">${escapeHtml(fullPath || "--")}</code>
+            ${fullPath ? `<button class="btn btn-secondary btn-xs" type="button" data-copy-project-path="${escapeHtml(fullPath)}"><i class="fa-solid fa-copy"></i><span>${escapeHtml(t("common.copy"))}</span></button>` : ""}
+          </div>
         </div>
       ` : ""}
     </article>
@@ -370,6 +385,11 @@ export function bindProjectListButtons() {
     btn.addEventListener("click", () => {
       closeHistoryModal();
       openDeleteProjectModal(btn.dataset.deleteProject);
+    });
+  });
+  qsa("[data-copy-project-path]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      copyText(btn.dataset.copyProjectPath || "");
     });
   });
 }
