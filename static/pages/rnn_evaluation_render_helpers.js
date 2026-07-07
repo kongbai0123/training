@@ -1,4 +1,5 @@
 import { escapeHtml } from "../utils.js";
+import { formatSequenceMetric } from "./rnn_metric_helpers.js";
 
 export function resolveRnnEvaluationRunBadge({ hasMetrics = false, loading = false, activeRun = null, backend = "" } = {}) {
   return {
@@ -15,6 +16,27 @@ export function resolveRnnEvaluationMessage({ loading = false, activeRun = null 
       : activeRun
         ? ""
         : "No RNN or XGBoost training run found for this project."
+  };
+}
+
+export function resolveRnnEvaluationOverviewRender({
+  hasMetrics = false,
+  loading = false,
+  activeRun = null,
+  backend = "",
+  primary = {},
+  secondary = {},
+  metricSource = {}
+} = {}) {
+  return {
+    badge: resolveRnnEvaluationRunBadge({ hasMetrics, loading, activeRun, backend }),
+    message: resolveRnnEvaluationMessage({ loading, activeRun }),
+    primaryLabel: primary.label,
+    primaryValue: formatSequenceMetric(primary.value),
+    secondaryLabel: secondary.label,
+    secondaryValue: formatSequenceMetric(secondary.value),
+    trainLoss: formatSequenceMetric(metricSource["train/loss"]),
+    valLoss: formatSequenceMetric(metricSource["val/loss"])
   };
 }
 

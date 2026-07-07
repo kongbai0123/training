@@ -22,8 +22,7 @@ import {
   renderRnnEvaluationSidebarRows,
   renderRnnBaselineComparisonChart,
   renderRnnMetricTrendChartStack,
-  resolveRnnEvaluationMessage,
-  resolveRnnEvaluationRunBadge
+  resolveRnnEvaluationOverviewRender
 } from "./rnn_evaluation_render_helpers.js";
 import {
   renderRnnFeatureChipList,
@@ -781,33 +780,33 @@ function renderRnnEvaluation() {
     selectedRunId: trainingModeState.rnn.evaluationRunId
   });
 
+  const overview = resolveRnnEvaluationOverviewRender({
+    hasMetrics: Boolean(metrics),
+    loading: trainingModeState.rnn.evaluationLoading,
+    activeRun,
+    backend: sequenceBackendLabel(summary),
+    primary,
+    secondary,
+    metricSource
+  });
+
   if (badge) {
-    const badgeView = resolveRnnEvaluationRunBadge({
-      hasMetrics: Boolean(metrics),
-      loading: trainingModeState.rnn.evaluationLoading,
-      activeRun,
-      backend: sequenceBackendLabel(summary)
-    });
-    badge.className = badgeView.className;
-    badge.textContent = badgeView.text;
+    badge.className = overview.badge.className;
+    badge.textContent = overview.badge.text;
   }
 
-  setText("#rnn-eval-primary-label", primary.label);
-  setText("#rnn-eval-primary-value", formatRnnMetric(primary.value));
-  setText("#rnn-eval-secondary-label", secondary.label);
-  setText("#rnn-eval-secondary-value", formatRnnMetric(secondary.value));
-  setText("#rnn-eval-primary-history-label", primary.label);
-  setText("#rnn-eval-secondary-history-label", secondary.label);
-  setText("#rnn-eval-train-loss", formatRnnMetric(metricSource["train/loss"]));
-  setText("#rnn-eval-val-loss", formatRnnMetric(metricSource["val/loss"]));
+  setText("#rnn-eval-primary-label", overview.primaryLabel);
+  setText("#rnn-eval-primary-value", overview.primaryValue);
+  setText("#rnn-eval-secondary-label", overview.secondaryLabel);
+  setText("#rnn-eval-secondary-value", overview.secondaryValue);
+  setText("#rnn-eval-primary-history-label", overview.primaryLabel);
+  setText("#rnn-eval-secondary-history-label", overview.secondaryLabel);
+  setText("#rnn-eval-train-loss", overview.trainLoss);
+  setText("#rnn-eval-val-loss", overview.valLoss);
 
   if (message) {
-    const messageView = resolveRnnEvaluationMessage({
-      loading: trainingModeState.rnn.evaluationLoading,
-      activeRun
-    });
-    message.classList.toggle("hidden", messageView.hidden);
-    message.textContent = messageView.text;
+    message.classList.toggle("hidden", overview.message.hidden);
+    message.textContent = overview.message.text;
   }
 
   renderRnnEvaluationEpochRows(history);
