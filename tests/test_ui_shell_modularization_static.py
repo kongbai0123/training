@@ -6,6 +6,24 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class UIShellModularizationStaticTests(unittest.TestCase):
+    def test_state_shell_delegates_i18n_dictionary_and_fallback_to_state_module(self):
+        state_js = (ROOT / "static" / "state.js").read_text(encoding="utf-8")
+        i18n_js = (ROOT / "static" / "state" / "i18n.js").read_text(encoding="utf-8")
+
+        self.assertIn('from "./state/i18n.js"', state_js)
+        self.assertIn('export { i18n } from "./state/i18n.js";', state_js)
+        self.assertIn("return translateI18n(key, appState.settings.language, params);", state_js)
+        self.assertIn("applyLanguageToDocument({", state_js)
+        self.assertNotIn("export const i18n = {", state_js)
+        self.assertNotIn("let zhFallbackObserver", state_js)
+        self.assertNotIn("configureI18nFallback", state_js)
+
+        self.assertIn("export const i18n = {", i18n_js)
+        self.assertIn("export function translate", i18n_js)
+        self.assertIn("export function applyLanguageToDocument", i18n_js)
+        self.assertIn("let zhFallbackObserver", i18n_js)
+        self.assertIn("configureI18nFallback", i18n_js)
+
     def test_app_shell_delegates_common_shell_rendering_to_core_modules(self):
         app_js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
         header_js = (ROOT / "static" / "core" / "header_status.js").read_text(encoding="utf-8")
