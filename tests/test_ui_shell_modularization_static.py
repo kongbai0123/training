@@ -490,6 +490,9 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         rnn_inference_helpers_js = (
             ROOT / "static" / "pages" / "rnn_inference_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_inference_render_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_inference_render_helpers.js"
+        ).read_text(encoding="utf-8")
         rnn_readiness_helpers_js = (
             ROOT / "static" / "pages" / "rnn_readiness_helpers.js"
         ).read_text(encoding="utf-8")
@@ -505,6 +508,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn('} from "./rnn_config_render_helpers.js";', training_modes_js)
         self.assertIn('} from "./rnn_model_catalog_helpers.js";', training_modes_js)
         self.assertIn('} from "./rnn_inference_helpers.js";', training_modes_js)
+        self.assertIn('} from "./rnn_inference_render_helpers.js";', training_modes_js)
         self.assertIn('} from "./rnn_readiness_helpers.js";', training_modes_js)
         self.assertIn('} from "./rnn_readiness_render_helpers.js";', training_modes_js)
         self.assertNotIn("export const trainingModeState = {", training_modes_js)
@@ -538,6 +542,8 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("export function filterRnnInferenceModels", rnn_inference_helpers_js)
         self.assertIn("export function rnnInferenceBlockerMessage", rnn_inference_helpers_js)
         self.assertIn("export function resolveRnnInferenceModelValue", rnn_inference_helpers_js)
+        self.assertIn("export function renderRnnInferenceModelOptions", rnn_inference_render_helpers_js)
+        self.assertIn("export function renderRnnInferenceResultPanel", rnn_inference_render_helpers_js)
         self.assertIn("export function parseRnnFeatureColumns", rnn_readiness_helpers_js)
         self.assertIn("export function summarizeRnnReadiness", rnn_readiness_helpers_js)
         self.assertIn("export function canStartRnnTrainingFromState", rnn_readiness_helpers_js)
@@ -574,6 +580,8 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("return fallbackRnnModelCatalog();", training_modes_js)
         self.assertIn("return trainableTemplateRnnCatalog(trainingModeState.rnn.modelCatalog);", training_modes_js)
         self.assertIn("return rnnInferenceBlockerMessage({", training_modes_js)
+        self.assertIn("renderRnnInferenceModelOptions({", training_modes_js)
+        self.assertIn("renderRnnInferenceResultPanel(result)", training_modes_js)
         self.assertIn("return parseRnnFeatureColumns(", training_modes_js)
         self.assertIn("} = summarizeRnnReadiness(readiness);", training_modes_js)
         self.assertIn("requirements,\n    source", training_modes_js)
@@ -594,8 +602,11 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotIn("run.primary_metric_name ||", training_modes_js)
         self.assertIn("rnn-readiness-compact-item", rnn_readiness_render_helpers_js)
         self.assertIn("rnn-readiness-item", rnn_readiness_render_helpers_js)
+        self.assertIn("rnn-inference-list", rnn_inference_render_helpers_js)
         self.assertNotIn("rnn-readiness-compact-item", training_modes_js)
         self.assertNotIn("rnn-readiness-item", training_modes_js)
+        self.assertNotIn("rnn-inference-list", training_modes_js)
+        self.assertNotIn("No predictions returned.", training_modes_js)
 
     def test_app_shell_delegates_common_shell_rendering_to_core_modules(self):
         app_js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")

@@ -27,6 +27,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         rnn_inference_helpers_js = (
             ROOT / "static" / "pages" / "rnn_inference_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_inference_render_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_inference_render_helpers.js"
+        ).read_text(encoding="utf-8")
         rnn_readiness_helpers_js = (
             ROOT / "static" / "pages" / "rnn_readiness_helpers.js"
         ).read_text(encoding="utf-8")
@@ -224,6 +227,13 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn("export function isRnnTrainingWorkspaceActive", training_modes_js)
         self.assertIn("const firstReady = models.find((model) => model.status === \"ready\");", rnn_inference_helpers_js)
         self.assertIn("return (firstReady || models[0])?.model_id || \"\";", rnn_inference_helpers_js)
+        self.assertIn("export function renderRnnInferenceModelOptions", rnn_inference_render_helpers_js)
+        self.assertIn("export function renderRnnInferenceResultPanel", rnn_inference_render_helpers_js)
+        self.assertIn("renderRnnInferenceModelOptions({", training_modes_js)
+        self.assertIn("renderRnnInferenceResultPanel(result)", training_modes_js)
+        self.assertIn("rnn-inference-list", rnn_inference_render_helpers_js)
+        self.assertNotIn("rnn-inference-list", training_modes_js)
+        self.assertNotIn("No predictions returned.", training_modes_js)
         self.assertIn("function syncRnnInferencePathInput", training_modes_js)
         self.assertIn("Local CSV path disabled (Trusted Local Mode off)", training_modes_js)
         self.assertIn("Upload a CSV feature sequence file.", rnn_inference_helpers_js)
