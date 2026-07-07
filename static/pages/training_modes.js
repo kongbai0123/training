@@ -3,17 +3,15 @@ import { appState } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, escapeHtml, setText } from "../utils.js";
 import {
-  buildSparklinePoints,
-  extractMetricSeries,
   formatSequenceDate,
   formatSequenceMetric,
   sequenceBackendDisplayLabel
 } from "./rnn_metric_helpers.js";
 import {
+  buildRnnMetricTrendRows,
   buildRnnEvaluationSidebarSections,
   buildRnnBaselineComparisonRows,
   isSequenceEvaluationRun,
-  isSinglePointBaselineRun,
   resolveRnnEvaluationViewModel
 } from "./rnn_evaluation_helpers.js";
 import {
@@ -861,39 +859,22 @@ function renderRnnMetricTrendRows(history, isRegression, metricContext = {}) {
   const container = qs("#rnn-eval-chart-stack");
   if (!container) return;
   const baselineNote = qs("#rnn-eval-baseline-note");
-  const isSinglePointBaseline = isSinglePointBaselineRun(metricContext, history);
-  baselineNote?.classList.toggle("hidden", !isSinglePointBaseline);
-  if (!Array.isArray(history) || !history.length) {
-    container.innerHTML = `<div class="rnn-eval-chart-empty">No metric trend loaded.</div>`;
+  const trendRows = buildRnnMetricTrendRows({ history, isRegression, metricContext });
+  baselineNote?.classList.toggle("hidden", !trendRows.isSinglePointBaseline);
+  if (!trendRows.hasHistory) {
+    container.innerHTML = `<div class="rnn-eval-chart-empty">${escapeHtml(trendRows.emptyMessage)}</div>`;
     return;
   }
-  const charts = isRegression
-    ? [
-      { label: "MAE", key: "val/mae" },
-      { label: "RMSE", key: "val/rmse" },
-      { label: "Train Loss", key: "train/loss" },
-      { label: "Val Loss", key: "val/loss" }
-    ]
-    : [
-      { label: "Accuracy", key: "val/accuracy" },
-      { label: "Macro-F1", key: "val/macro_f1" },
-      { label: "Train Loss", key: "train/loss" },
-      { label: "Val Loss", key: "val/loss" }
-    ];
-  container.innerHTML = charts.map((chart) => {
-    const values = metricSeries(history, chart.key);
-    const latest = values.length ? values[values.length - 1] : null;
-    const points = sparklinePoints(values);
-    const empty = values.length < 1;
+  container.innerHTML = trendRows.charts.map((chart) => {
     return `<div class="rnn-eval-chart-row">
       <div class="rnn-eval-chart-label">
         <strong>${escapeHtml(chart.label)}</strong>
-        <span>${isSinglePointBaseline ? "Single-point baseline" : "Latest"} ${formatRnnMetric(latest)}</span>
+        <span>${trendRows.isSinglePointBaseline ? "Single-point baseline" : "Latest"} ${formatRnnMetric(chart.latest)}</span>
       </div>
-      <div class="rnn-eval-sparkline ${empty ? "is-empty" : ""}">
-        ${empty
+      <div class="rnn-eval-sparkline ${chart.empty ? "is-empty" : ""}">
+        ${chart.empty
           ? `<span>Not enough data</span>`
-          : `<svg viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"><polyline points="${escapeHtml(points)}"></polyline></svg>`}
+          : `<svg viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"><polyline points="${escapeHtml(chart.points)}"></polyline></svg>`}
       </div>
     </div>`;
   }).join("");
@@ -930,14 +911,6 @@ function renderRnnBaselineComparison(runs) {
       <code>${row.hasValue ? formatRnnMetric(row.value) : "--"}</code>
     </div>`;
   }).join("");
-}
-
-function metricSeries(history, key) {
-  return extractMetricSeries(history, key);
-}
-
-function sparklinePoints(values) {
-  return buildSparklinePoints(values);
 }
 
 function renderRnnEvaluationSidebar({ activeRun, metrics, artifacts, history, metricSource, isRegression, primary, secondary }) {

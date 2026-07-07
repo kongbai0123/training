@@ -1,4 +1,5 @@
 import {
+  buildSparklinePoints,
   extractMetricSeries,
   formatSequenceMetric,
   normalizeRnnModelGroupLabel,
@@ -57,6 +58,49 @@ export function isSinglePointBaselineRun(context = {}, history = []) {
   if (!(backend === "sklearn_xgboost" || model.includes("xgboost"))) return false;
   const metricKeys = ["val/accuracy", "val/macro_f1", "val/mae", "val/rmse"];
   return metricKeys.some((key) => extractMetricSeries(history, key).length <= 1);
+}
+
+export function buildRnnMetricTrendRows({ history = [], isRegression = false, metricContext = {} } = {}) {
+  const safeHistory = Array.isArray(history) ? history : [];
+  const isSinglePointBaseline = isSinglePointBaselineRun(metricContext, safeHistory);
+  if (!safeHistory.length) {
+    return {
+      isSinglePointBaseline,
+      hasHistory: false,
+      emptyMessage: "No metric trend loaded.",
+      charts: []
+    };
+  }
+
+  const chartDefinitions = isRegression
+    ? [
+      { label: "MAE", key: "val/mae" },
+      { label: "RMSE", key: "val/rmse" },
+      { label: "Train Loss", key: "train/loss" },
+      { label: "Val Loss", key: "val/loss" }
+    ]
+    : [
+      { label: "Accuracy", key: "val/accuracy" },
+      { label: "Macro-F1", key: "val/macro_f1" },
+      { label: "Train Loss", key: "train/loss" },
+      { label: "Val Loss", key: "val/loss" }
+    ];
+
+  return {
+    isSinglePointBaseline,
+    hasHistory: true,
+    emptyMessage: "",
+    charts: chartDefinitions.map((chart) => {
+      const values = extractMetricSeries(safeHistory, chart.key);
+      return {
+        ...chart,
+        values,
+        latest: values.length ? values[values.length - 1] : null,
+        points: buildSparklinePoints(values),
+        empty: values.length < 1
+      };
+    })
+  };
 }
 
 export function buildRnnBaselineComparisonRows({ runs = [], metricsByRun = {}, metricKey = "macro_f1" } = {}) {
