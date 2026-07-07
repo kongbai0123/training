@@ -36,7 +36,9 @@ export const trainingModeState = {
     evaluationRuns: [],
     evaluationMetrics: null,
     evaluationArtifacts: [],
-    evaluationRunId: ""
+    evaluationRunId: "",
+    evaluationRunMetrics: {},
+    comparisonMetric: "macro_f1"
   }
 };
 
@@ -181,6 +183,7 @@ export function renderTrainingModeSidebar() {
 
 export function renderTrainingWorkspace() {
   const isCnn = trainingModeState.activeMode === "cnn";
+  const isRnnEvaluation = !isCnn && appState.currentPage === "training" && trainingModeState.activeRnnPanel === "evaluation";
   qs("#cnn-workspace")?.classList.toggle("hidden", !isCnn);
   qs("#cnn-workspace")?.classList.toggle("active", isCnn);
   qs("#rnn-workspace")?.classList.toggle("hidden", isCnn);
@@ -198,16 +201,41 @@ export function renderTrainingWorkspace() {
 
   renderRnnReadiness();
   renderRnnSidebarReadiness(isCnn);
-  if (!isCnn && trainingModeState.activeRnnPanel === "evaluation") {
+  toggleRnnEvaluationRightPanel(isRnnEvaluation);
+  if (isRnnEvaluation) {
     loadRnnEvaluation();
   }
+}
+
+export function isRnnTrainingWorkspaceActive(pageId = appState.currentPage) {
+  return pageId === "training" && trainingModeState.activeMode === "rnn";
 }
 
 function renderRnnSidebarReadiness(isCnn) {
   const section = qs("#section-rnn-readiness");
   if (!section) return;
-  const visible = !isCnn && appState.currentPage === "training";
+  const visible = !isCnn && appState.currentPage === "training" && trainingModeState.activeRnnPanel !== "evaluation";
   section.classList.toggle("hidden", !visible);
+}
+
+function toggleRnnEvaluationRightPanel(visible) {
+  const evalSection = qs("#section-rnn-eval-summary");
+  evalSection?.classList.toggle("hidden", !visible);
+  const hidePageGuards = visible || (appState.currentPage === "training" && trainingModeState.activeMode === "rnn");
+  [
+    "#section-project-context",
+    "#section-page-context"
+  ].forEach((selector) => {
+    const section = qs(selector);
+    if (section) section.style.display = visible ? "none" : "";
+  });
+  const pageGuards = qs("#section-page-guards");
+  if (pageGuards) pageGuards.style.display = hidePageGuards ? "none" : "";
+  [qs("#next-actions-list")?.closest(".summary-section"), qs("#warning-list")?.closest(".summary-section")]
+    .filter(Boolean)
+    .forEach((section) => {
+      section.style.display = visible ? "none" : "";
+    });
 }
 
 export function initRnnPreviewEvents() {
@@ -283,6 +311,12 @@ export function initRnnPreviewEvents() {
   });
   qs("#rnn-refresh-models")?.addEventListener("click", () => loadRnnInferenceModels({ force: true }));
   qs("#rnn-refresh-evaluation")?.addEventListener("click", () => loadRnnEvaluation({ force: true }));
+  qsa("[data-rnn-compare-metric]").forEach((button) => {
+    button.addEventListener("click", () => {
+      trainingModeState.rnn.comparisonMetric = button.dataset.rnnCompareMetric || "macro_f1";
+      renderRnnEvaluation();
+    });
+  });
   qs("#rnn-inference-model")?.addEventListener("change", updateRnnInferenceControls);
   qs("#rnn-inference-csv-file")?.addEventListener("change", () => {
     if (qs("#rnn-inference-csv-file")?.files?.[0]) {
@@ -332,7 +366,12 @@ async function loadRnnReadiness(options = {}) {
 }
 
 async function loadRnnConfig(options = {}) {
-  if (!appState.currentProjectId || (trainingModeState.rnn.configLoading && !options.force)) {
+  if (!appState.currentProjectId) {
+    await loadRnnModelCatalog({ force: options.force });
+    renderRnnConfig();
+    return;
+  }
+  if (trainingModeState.rnn.configLoading && !options.force) {
     renderRnnConfig();
     return;
   }
@@ -565,7 +604,13 @@ function renderRnnReadiness() {
 
   if (!readiness) {
     setText("#rnn-readiness-status", loading ? "Checking..." : "Not Ready / Preview");
-    setText("#rnn-readiness-message", loading ? "Checking sequence manifest and CSV feature files..." : "RNN readiness checks only inspect sequence_manifest.json and CSV feature files.");
+    setText("#rnn-readiness-message", loading ? "Checking sequence manifest and CSV feature files..." : "Sequence CSV readiness summary appears here when a project is active.");
+    const compactGrid = qs("#rnn-readiness-compact-grid");
+    if (compactGrid) compactGrid.innerHTML = "";
+    const list = qs("#rnn-readiness-checks");
+    if (list) list.innerHTML = "";
+    const details = qs("#rnn-readiness-details");
+    if (details) details.open = false;
     updateRnnStartControls();
     return;
   }
@@ -589,17 +634,53 @@ function renderRnnReadiness() {
   setText("#rnn-target-status", (manifest.label_count || csv.label_count) ? `${manifest.label_count || csv.label_count} labeled sequence(s)` : "label / target missing");
   setText("#rnn-feature-dim-status", String(featureDim));
   setText("#rnn-readiness-status", canStart ? "Ready / CSV training enabled" : readiness.ready ? "Ready but CSV required for training" : "Not Ready");
-  setText("#rnn-readiness-message", readiness.message || "RNN readiness preview is available.");
+  setText("#rnn-readiness-message", canStart
+    ? "Sequence CSV is ready for RNN training. Full checks are available only for diagnostics."
+    : readiness.message || "Sequence dataset still needs attention. Open full checks for diagnostics.");
   setText("#rnn-readiness-mode-badge", canStart ? "Training enabled" : "CSV required");
   setText("#rnn-sequence-dataset-message", canStart
     ? `${sequenceCount} sequence(s) detected from CSV. RNN training can start.`
-    : `${sequenceCount} sequence(s) detected. RNNBackend MVP requires CSV feature sequence readiness before training.`);
+    : `${sequenceCount} sequence(s) detected. CSV must include sequence id, target label/value, at least one feature column, train/val split, and enough rows for sequence_length.`);
   setText("#rnn-sequence-dataset-preview", source === "none" ? "sequence_id, timestep, feature_1, feature_2, target" : `source=${source}, feature_dim=${featureDim}, split=${splitText}`);
   updateRnnStartControls();
 
+  const compactGrid = qs("#rnn-readiness-compact-grid");
+  if (compactGrid) {
+    const compactRows = [
+      { label: "CSV", value: source === "csv" ? `${csvFiles} file(s)` : "Required", ok: source === "csv" },
+      { label: "Features", value: csv.feature_dim ? `${csv.feature_dim} columns` : "--", ok: Boolean(csv.feature_dim) },
+      { label: "Labels", value: csv.label_count ? `${csv.label_count} sequences` : "--", ok: Boolean(csv.label_count) },
+      { label: "Split", value: splitText, ok: Boolean(requirements.train_val_split) },
+      { label: "Window", value: `min ${csv.min_length || 0} / need ${readiness.sequence_length || 1}`, ok: Number(csv.min_length || 0) >= Number(readiness.sequence_length || 1) }
+    ];
+    compactGrid.innerHTML = compactRows.map((item) => `
+      <div class="rnn-readiness-compact-item ${item.ok ? "success" : "danger"}">
+        <span>${escapeHtml(item.label)}</span>
+        <strong>${escapeHtml(item.value)}</strong>
+      </div>
+    `).join("");
+  }
+  const details = qs("#rnn-readiness-details");
+  if (details) details.open = !canStart;
+
   const list = qs("#rnn-readiness-checks");
   if (list) {
-    list.innerHTML = (readiness.checks || []).map((check) => {
+    const requirementRows = [
+      { label: "CSV source", ok: source === "csv", message: source === "csv" ? `${csvFiles} CSV file(s) detected.` : "Import CSV feature sequence files; manifest-only sources cannot start MVP training." },
+      { label: "Feature columns", ok: Boolean(csv.feature_dim), message: csv.feature_dim ? `${csv.feature_dim} feature column(s) detected.` : "Configure at least one valid feature column." },
+      { label: "Target labels", ok: Boolean(csv.label_count), message: csv.label_count ? `${csv.label_count} labeled sequence(s) detected.` : "CSV must include label/target values." },
+      { label: "Train/Val split", ok: Boolean(requirements.train_val_split), message: splitText === "-- / -- / --" ? "CSV must include train and val split rows." : `Split counts: ${splitText}.` },
+      { label: "Window length", ok: Number(csv.min_length || 0) >= Number(readiness.sequence_length || 1), message: `Minimum length ${csv.min_length || 0}; required ${readiness.sequence_length || 1}.` }
+    ];
+    const checks = [
+      ...requirementRows.map((item) => ({
+        label: item.label,
+        status: item.ok ? "pass" : "fail",
+        message: item.message
+      })),
+      ...(readiness.checks || [])
+    ];
+    list.innerHTML = checks.map((check) => {
       const statusClass = check.status === "pass" ? "success" : check.status === "warning" ? "warning" : "danger";
       return `<li class="rnn-readiness-item ${statusClass}">
         <strong>${escapeHtml(check.label || check.key)}</strong>
@@ -615,6 +696,7 @@ async function loadRnnEvaluation(options = {}) {
     trainingModeState.rnn.evaluationMetrics = null;
     trainingModeState.rnn.evaluationArtifacts = [];
     trainingModeState.rnn.evaluationRunId = "";
+    trainingModeState.rnn.evaluationRunMetrics = {};
     renderRnnEvaluation();
     return;
   }
@@ -639,20 +721,32 @@ async function loadRnnEvaluation(options = {}) {
       trainingModeState.rnn.evaluationMetrics = null;
       trainingModeState.rnn.evaluationArtifacts = [];
       trainingModeState.rnn.evaluationRunId = "";
+      trainingModeState.rnn.evaluationRunMetrics = {};
       return;
     }
 
-    const [metrics, artifacts] = await Promise.all([
-      apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${encodeURIComponent(latestRun.run_id)}/metrics`),
+    const runMetricEntries = await Promise.all(runs.map(async (run) => {
+      try {
+        const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${encodeURIComponent(run.run_id)}/metrics`, { suppressToast: true });
+        return [run.run_id, payload || null];
+      } catch (err) {
+        return [run.run_id, null];
+      }
+    }));
+    const metricsByRun = Object.fromEntries(runMetricEntries.filter(([runId, payload]) => runId && payload));
+    const metrics = metricsByRun[latestRun.run_id] || null;
+    const [artifacts] = await Promise.all([
       apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${encodeURIComponent(latestRun.run_id)}/artifacts`)
     ]);
     trainingModeState.rnn.evaluationMetrics = metrics || null;
     trainingModeState.rnn.evaluationArtifacts = Array.isArray(artifacts) ? artifacts : [];
     trainingModeState.rnn.evaluationRunId = latestRun.run_id;
+    trainingModeState.rnn.evaluationRunMetrics = metricsByRun;
   } catch (err) {
     eventBus.emit("toast", `RNN evaluation load failed: ${err.message}`);
     trainingModeState.rnn.evaluationMetrics = null;
     trainingModeState.rnn.evaluationArtifacts = [];
+    trainingModeState.rnn.evaluationRunMetrics = {};
   } finally {
     trainingModeState.rnn.evaluationLoading = false;
     renderRnnEvaluation();
@@ -707,6 +801,8 @@ function renderRnnEvaluation() {
   setText("#rnn-eval-primary-value", formatRnnMetric(primary.value));
   setText("#rnn-eval-secondary-label", secondary.label);
   setText("#rnn-eval-secondary-value", formatRnnMetric(secondary.value));
+  setText("#rnn-eval-primary-history-label", primary.label);
+  setText("#rnn-eval-secondary-history-label", secondary.label);
   setText("#rnn-eval-train-loss", formatRnnMetric(metricSource["train/loss"]));
   setText("#rnn-eval-val-loss", formatRnnMetric(metricSource["val/loss"]));
 
@@ -720,8 +816,20 @@ function renderRnnEvaluation() {
   }
 
   renderRnnEvaluationEpochRows(history);
+  renderRnnMetricTrendRows(history, isRegression, metrics || summary);
+  renderRnnBaselineComparison(runs);
   renderRnnEvaluationArtifacts(artifacts, activeRun?.run_id || "");
   renderRnnEvaluationRunHistory(runs);
+  renderRnnEvaluationSidebar({
+    activeRun,
+    metrics,
+    artifacts,
+    history,
+    metricSource,
+    isRegression,
+    primary,
+    secondary
+  });
 }
 
 function renderRnnEvaluationEpochRows(history) {
@@ -746,13 +854,13 @@ function renderRnnEvaluationEpochRows(history) {
 }
 
 function renderRnnEvaluationArtifacts(artifacts, runId) {
-  const container = qs("#rnn-eval-artifact-list");
+  const container = qs("#rnn-eval-sidebar-artifacts") || qs("#rnn-eval-artifact-list");
   if (!container) return;
   if (!Array.isArray(artifacts) || !artifacts.length || !runId) {
     container.textContent = "No artifacts.";
     return;
   }
-  const priority = ["best.json", "last.json", "model_metadata.json", "metrics.json", "results.csv", "run_summary.json", "artifact_manifest.json"];
+  const priority = ["best.pt", "last.pt", "best.json", "last.json", "metrics.json", "results.csv", "run_summary.json", "feature_schema.json", "normalization_stats.json", "label_encoder.json", "model_metadata.json", "artifact_manifest.json"];
   const sorted = [...artifacts].sort((a, b) => {
     const ai = priority.indexOf(a.filename);
     const bi = priority.indexOf(b.filename);
@@ -770,6 +878,213 @@ function renderRnnEvaluationArtifacts(artifacts, runId) {
       </div>
       <a class="btn btn-secondary btn-sm" href="${url}" target="_blank" download>Download</a>
     </div>`;
+  }).join("");
+}
+
+function renderRnnMetricTrendRows(history, isRegression, metricContext = {}) {
+  const container = qs("#rnn-eval-chart-stack");
+  if (!container) return;
+  const baselineNote = qs("#rnn-eval-baseline-note");
+  const isSinglePointBaseline = isSinglePointBaselineRun(metricContext, history);
+  baselineNote?.classList.toggle("hidden", !isSinglePointBaseline);
+  if (!Array.isArray(history) || !history.length) {
+    container.innerHTML = `<div class="rnn-eval-chart-empty">No metric trend loaded.</div>`;
+    return;
+  }
+  const charts = isRegression
+    ? [
+      { label: "MAE", key: "val/mae" },
+      { label: "RMSE", key: "val/rmse" },
+      { label: "Train Loss", key: "train/loss" },
+      { label: "Val Loss", key: "val/loss" }
+    ]
+    : [
+      { label: "Accuracy", key: "val/accuracy" },
+      { label: "Macro-F1", key: "val/macro_f1" },
+      { label: "Train Loss", key: "train/loss" },
+      { label: "Val Loss", key: "val/loss" }
+    ];
+  container.innerHTML = charts.map((chart) => {
+    const values = metricSeries(history, chart.key);
+    const latest = values.length ? values[values.length - 1] : null;
+    const points = sparklinePoints(values);
+    const empty = values.length < 1;
+    return `<div class="rnn-eval-chart-row">
+      <div class="rnn-eval-chart-label">
+        <strong>${escapeHtml(chart.label)}</strong>
+        <span>${isSinglePointBaseline ? "Single-point baseline" : "Latest"} ${formatRnnMetric(latest)}</span>
+      </div>
+      <div class="rnn-eval-sparkline ${empty ? "is-empty" : ""}">
+        ${empty
+          ? `<span>Not enough data</span>`
+          : `<svg viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"><polyline points="${escapeHtml(points)}"></polyline></svg>`}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function isSinglePointBaselineRun(context = {}, history = []) {
+  const backend = String(context.backend || "").toLowerCase();
+  const model = String(context.model || "").toLowerCase();
+  if (!(backend === "sklearn_xgboost" || model.includes("xgboost"))) return false;
+  const metricKeys = ["val/accuracy", "val/macro_f1", "val/mae", "val/rmse"];
+  return metricKeys.some((key) => metricSeries(history, key).length <= 1);
+}
+
+function renderRnnBaselineComparison(runs) {
+  const container = qs("#rnn-eval-compare-chart");
+  if (!container) return;
+  const metricKey = trainingModeState.rnn.comparisonMetric || "macro_f1";
+  qsa("[data-rnn-compare-metric]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.rnnCompareMetric === metricKey);
+  });
+  const metricConfig = getComparisonMetricConfig(metricKey);
+  const completedRuns = (Array.isArray(runs) ? runs : []).filter((run) => String(run.status || "").toLowerCase() === "completed");
+  if (!completedRuns.length) {
+    container.innerHTML = `<div class="rnn-eval-chart-empty">No comparable runs loaded.</div>`;
+    return;
+  }
+  const metricsByRun = trainingModeState.rnn.evaluationRunMetrics || {};
+  const grouped = new Map();
+  completedRuns.forEach((run) => {
+    const key = normalizeRnnModelGroup(run);
+    const metrics = metricsByRun[run.run_id] || {};
+    const value = getRunComparisonMetric(run, metrics, metricConfig);
+    if (!Number.isFinite(value)) return;
+    const current = grouped.get(key);
+    const better = !current || (metricConfig.lowerBetter ? value < current.value : value > current.value);
+    if (better) grouped.set(key, { label: key, value, run, metricConfig });
+  });
+  const order = ["LSTM", "GRU", "BiLSTM", "XGBoost"];
+  const rows = order.map((label) => grouped.get(label) || { label, value: null, metricConfig });
+  const availableRows = rows.filter((row) => Number.isFinite(row.value));
+  if (!availableRows.length) {
+    container.innerHTML = `<div class="rnn-eval-chart-empty">No ${escapeHtml(metricConfig.label)} values loaded for completed runs.</div>`;
+    return;
+  }
+  const values = availableRows.map((row) => row.value);
+  const max = Math.max(...values, 0.000001);
+  const min = Math.min(...values);
+  container.innerHTML = rows.map((row) => {
+    const hasValue = Number.isFinite(row.value);
+    const percent = !hasValue
+      ? 0
+      : metricConfig.lowerBetter
+        ? Math.max(4, ((max - row.value) / Math.max(max - min, 0.000001)) * 100)
+        : Math.max(4, (row.value / max) * 100);
+    return `<div class="rnn-compare-mini-row ${hasValue ? "" : "is-missing"}">
+      <div class="rnn-compare-mini-label">
+        <strong>${escapeHtml(row.label)}</strong>
+        <span>${escapeHtml(metricConfig.hint)}</span>
+      </div>
+      <div class="rnn-compare-mini-track"><span style="width: ${percent.toFixed(1)}%;"></span></div>
+      <code>${hasValue ? formatRnnMetric(row.value) : "--"}</code>
+    </div>`;
+  }).join("");
+}
+
+function getComparisonMetricConfig(metricKey) {
+  const configs = {
+    accuracy: { key: "val/accuracy", label: "Accuracy", hint: "higher better", lowerBetter: false, runFields: ["best_accuracy", "accuracy"] },
+    macro_f1: { key: "val/macro_f1", label: "Macro-F1", hint: "higher better", lowerBetter: false, runFields: ["best_macro_f1", "macro_f1", "primary_metric_value"] },
+    val_loss: { key: "val/loss", label: "Val Loss", hint: "lower better", lowerBetter: true, runFields: ["best_val_loss", "val_loss"] }
+  };
+  return configs[metricKey] || configs.macro_f1;
+}
+
+function normalizeRnnModelGroup(run = {}) {
+  const model = String(run.model || "").toLowerCase();
+  const runId = String(run.run_id || "").toLowerCase();
+  const backend = String(run.backend || "").toLowerCase();
+  const source = `${model} ${runId}`;
+  if (source.includes("xgboost") || backend === "sklearn_xgboost") return "XGBoost";
+  if (source.includes("bilstm") || run.bidirectional) return "BiLSTM";
+  if (source.includes("gru")) return "GRU";
+  return "LSTM";
+}
+
+function getRunComparisonMetric(run = {}, metrics = {}, metricConfig = getComparisonMetricConfig("macro_f1")) {
+  const bestMetrics = metrics.best_metrics || {};
+  const history = Array.isArray(metrics.history) ? metrics.history : [];
+  const historyValues = metricSeries(history, metricConfig.key);
+  if (historyValues.length) {
+    return metricConfig.lowerBetter ? Math.min(...historyValues) : Math.max(...historyValues);
+  }
+  const direct = bestMetrics[metricConfig.key];
+  if (direct !== undefined && direct !== null && direct !== "") return Number(direct);
+  for (const field of metricConfig.runFields || []) {
+    const value = run[field];
+    if (value !== undefined && value !== null && value !== "") return Number(value);
+  }
+  return Number.NaN;
+}
+
+function metricSeries(history, key) {
+  return history
+    .map((row) => Number(row?.[key]))
+    .filter((value) => Number.isFinite(value));
+}
+
+function sparklinePoints(values) {
+  if (!values.length) return "";
+  if (values.length === 1) return "0.00,16.00 100.00,16.00";
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const spread = Math.max(max - min, 0.000001);
+  return values.map((value, index) => {
+    const x = values.length === 1 ? 50 : (index / (values.length - 1)) * 100;
+    const y = 28 - ((value - min) / spread) * 24;
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(" ");
+}
+
+function renderRnnEvaluationSidebar({ activeRun, metrics, artifacts, history, metricSource, isRegression, primary, secondary }) {
+  toggleRnnEvaluationRightPanel(trainingModeState.activeMode === "rnn" && trainingModeState.activeRnnPanel === "evaluation" && appState.currentPage === "training");
+  const statusBadge = qs("#rnn-eval-sidebar-status");
+  if (statusBadge) {
+    statusBadge.className = `summary-badge ${activeRun ? "badge-success" : "badge-neutral"}`;
+    statusBadge.textContent = activeRun ? activeRun.status || "loaded" : "No run";
+  }
+
+  const dataset = metrics?.dataset_summary || {};
+  const readiness = trainingModeState.rnn.readiness?.summary?.csv || {};
+  const splitCounts = dataset.split_counts || readiness.split_counts || {};
+  const splitText = ["train", "val", "test"].map((key) => `${key}: ${splitCounts[key] ?? 0}`).join(" / ");
+  const config = trainingModeState.rnn.config || {};
+  const modelLabel = activeRun?.model || metrics?.model || sequenceBackendLabel(activeRun || metrics || {});
+  const backendLabel = metrics?.backend || activeRun?.backend || "--";
+  const taskLabel = isRegression ? "regression" : "classification";
+
+  renderRnnSidebarRows("#rnn-eval-sidebar-run", [
+    ["Run ID", activeRun?.run_id || "--", true],
+    ["Model", modelLabel || "--"],
+    ["Backend", backendLabel || "--", true],
+    ["Status", activeRun?.status || "--"],
+    ["Task", activeRun?.task_type || metrics?.task_type || taskLabel]
+  ]);
+  renderRnnSidebarRows("#rnn-eval-sidebar-dataset", [
+    ["CSV files", String((dataset.csv_files || []).length || readiness.csv_files || 0)],
+    ["Sequences", String(dataset.sequence_count ?? readiness.sequence_count ?? "--")],
+    ["Feature dim", String(dataset.feature_dim ?? readiness.feature_dim ?? "--")],
+    ["Split", splitText],
+    ["Window", `length ${dataset.sequence_length ?? config.sequence_length ?? "--"} / stride ${dataset.stride ?? config.stride ?? "--"} / horizon ${config.horizon ?? "--"}`]
+  ]);
+  renderRnnSidebarRows("#rnn-eval-sidebar-metrics", [
+    [primary.label, formatRnnMetric(primary.value)],
+    [secondary.label, formatRnnMetric(secondary.value)],
+    ["Val Loss", formatRnnMetric(metricSource?.["val/loss"])],
+    ["Best epoch", String(metrics?.best_epoch ?? activeRun?.best_epoch ?? "--")]
+  ]);
+  renderRnnEvaluationArtifacts(artifacts, activeRun?.run_id || "");
+}
+
+function renderRnnSidebarRows(selector, rows) {
+  const container = qs(selector);
+  if (!container) return;
+  container.innerHTML = rows.map(([label, value, isCode]) => {
+    const safeValue = escapeHtml(value ?? "--");
+    const valueHtml = isCode ? `<code>${safeValue}</code>` : `<span>${safeValue}</span>`;
+    return `<div class="summary-row"><span>${escapeHtml(label)}</span>${valueHtml}</div>`;
   }).join("");
 }
 
@@ -853,8 +1168,14 @@ function renderRnnInferenceModels() {
       const label = `${model.run_id || "run"} / ${model.weight_type || "weight"} / ${model.model_name || "RNN"}`;
       return `<option value="${escapeHtml(model.model_id)}">${escapeHtml(label)}</option>`;
     }).join("")}`;
-    if (models.some((model) => model.model_id === current)) select.value = current;
+    const firstReady = models.find((model) => model.status === "ready");
+    if (models.some((model) => model.model_id === current)) {
+      select.value = current;
+    } else {
+      select.value = (firstReady || models[0])?.model_id || "";
+    }
   }
+  syncRnnInferencePathInput();
   updateRnnInferenceControls();
 }
 
@@ -862,6 +1183,7 @@ function updateRnnInferenceControls() {
   const btn = qs("#rnn-run-sequence-inference");
   const reason = qs("#rnn-inference-reason");
   if (!btn) return;
+  syncRnnInferencePathInput();
   const message = getRnnInferenceBlockerMessage();
   const canRun = !message;
   btn.disabled = !canRun;
@@ -870,14 +1192,30 @@ function updateRnnInferenceControls() {
   if (reason) reason.textContent = message || "Ready to run CSV sequence inference.";
 }
 
+function syncRnnInferencePathInput() {
+  const pathInput = qs("#rnn-inference-csv-path");
+  if (!pathInput) return;
+  const trusted = appState.systemHealth?.local_trusted_mode === true;
+  pathInput.disabled = !trusted;
+  if (!trusted) {
+    pathInput.placeholder = "Local CSV path disabled (Trusted Local Mode off)";
+    pathInput.value = "";
+  } else {
+    pathInput.placeholder = "Project CSV path, e.g. sequences/data.csv";
+  }
+}
+
 function getRnnInferenceBlockerMessage() {
   if (!appState.currentProjectId) return "Open a project before sequence inference.";
   if (trainingModeState.rnn.inferenceLoading) return "Loading RNN models.";
   if (trainingModeState.rnn.inferenceRunning) return "Sequence inference is running.";
   if (!qs("#rnn-inference-model")?.value) return "Select an RNN model.";
   const hasFile = Boolean(qs("#rnn-inference-csv-file")?.files?.[0]);
-  const hasPath = Boolean(qs("#rnn-inference-csv-path")?.value?.trim());
-  if (!hasFile && !hasPath) return "Provide a CSV feature sequence file or project CSV path.";
+  const trusted = appState.systemHealth?.local_trusted_mode === true;
+  const hasPath = trusted && Boolean(qs("#rnn-inference-csv-path")?.value?.trim());
+  if (!hasFile && !hasPath) {
+    return trusted ? "Provide a CSV feature sequence file or project CSV path." : "Upload a CSV feature sequence file.";
+  }
   return "";
 }
 
@@ -981,23 +1319,27 @@ function getFallbackRnnModelCatalog() {
     { model_id: "fallback.rnn.gru-regressor", display_name: "GRU Regressor", backend: "pytorch_lstm", task_family: "sequence_regression", selector_value: "gru", guide_key: "gru_regression", trainable: true, training_enabled: true, status: "available" },
     { model_id: "fallback.rnn.bilstm-classifier", display_name: "BiLSTM Classifier", backend: "pytorch_lstm", task_family: "sequence_classification", selector_value: "bilstm", guide_key: "bilstm_classification", trainable: true, training_enabled: true, status: "available" },
     { model_id: "fallback.rnn.bilstm-regressor", display_name: "BiLSTM Regressor", backend: "pytorch_lstm", task_family: "sequence_regression", selector_value: "bilstm", guide_key: "bilstm_regression", trainable: true, training_enabled: true, status: "available" },
+    { model_id: "fallback.rnn.fastrnn-classifier", display_name: "FastRNN Classifier", backend: "pytorch_fastrnn", task_family: "sequence_classification", selector_value: "fastrnn", guide_key: "fastrnn_classification", trainable: false, training_enabled: false, status: "planned" },
+    { model_id: "fallback.rnn.fastrnn-regressor", display_name: "FastRNN Regressor", backend: "pytorch_fastrnn", task_family: "sequence_regression", selector_value: "fastrnn", guide_key: "fastrnn_regression", trainable: false, training_enabled: false, status: "planned" },
     { model_id: "fallback.xgboost.classifier", display_name: "XGBoost Classifier", backend: "sklearn_xgboost", task_family: "sequence_classification", selector_value: "xgboost_classifier", guide_key: "xgboost_classification", trainable: true, training_enabled: true, status: "available" },
-    { model_id: "fallback.xgboost.regressor", display_name: "XGBoost Regressor", backend: "sklearn_xgboost", task_family: "sequence_regression", selector_value: "xgboost_regressor", guide_key: "xgboost_regression", trainable: true, training_enabled: true, status: "available" }
+    { model_id: "fallback.xgboost.regressor", display_name: "XGBoost Regressor", backend: "sklearn_xgboost", task_family: "sequence_regression", selector_value: "xgboost_regressor", guide_key: "xgboost_regression", trainable: true, training_enabled: true, status: "available" },
+    { model_id: "fallback.isolation_forest.classifier", display_name: "Isolation Forest Baseline", backend: "sklearn_isolation_forest", task_family: "sequence_classification", selector_value: "isolation_forest", guide_key: "isolation_forest_classification", trainable: false, training_enabled: false, status: "planned" }
   ];
+}
+
+function getTrainableTemplateRnnCatalog() {
+  const catalog = trainingModeState.rnn.modelCatalog.length ? trainingModeState.rnn.modelCatalog : getFallbackRnnModelCatalog();
+  const templates = catalog.filter((model) => model.source !== "project_trained");
+  return templates.length ? templates : getFallbackRnnModelCatalog();
 }
 
 function renderRnnModelSelector() {
   const select = qs("#rnn-model-family");
   if (!select) return;
-  if (trainingModeState.rnn.modelCatalogLoading) {
-    select.innerHTML = `<option value="">Loading model catalog...</option>`;
-    return;
-  }
 
   const taskFamily = getSelectedRnnTaskHead() === "regression" ? "sequence_regression" : "sequence_classification";
   const current = select.value;
-  const models = (trainingModeState.rnn.modelCatalog.length ? trainingModeState.rnn.modelCatalog : getFallbackRnnModelCatalog())
-    .filter((model) => model.task_family === taskFamily);
+  const models = getTrainableTemplateRnnCatalog().filter((model) => model.task_family === taskFamily);
 
   if (!models.length) {
     select.innerHTML = `<option value="">No compatible RNN model found</option>`;
@@ -1007,9 +1349,14 @@ function renderRnnModelSelector() {
 
   const groups = [
     ["pytorch_lstm", "RNN / Sequence"],
-    ["sklearn_xgboost", "Tabular Baseline"]
+    ["pytorch_fastrnn", "RNN / Sequence · planned"],
+    ["sklearn_xgboost", "Tabular Baseline"],
+    ["sklearn_isolation_forest", "Anomaly Baseline · planned"]
   ];
-  select.innerHTML = groups.map(([backend, label]) => {
+  const loadingOption = trainingModeState.rnn.modelCatalogLoading
+    ? `<option value="" disabled>Loading catalog in background...</option>`
+    : "";
+  select.innerHTML = loadingOption + groups.map(([backend, label]) => {
     const items = models.filter((model) => model.backend === backend);
     if (!items.length) return "";
     return `<optgroup label="${escapeHtml(label)}">${items.map((model) => {
@@ -1057,7 +1404,7 @@ function getSelectedRnnModel() {
 
 function getSelectedRnnModelEntry() {
   const value = qs("#rnn-model-family")?.value || "";
-  const catalog = trainingModeState.rnn.modelCatalog.length ? trainingModeState.rnn.modelCatalog : getFallbackRnnModelCatalog();
+  const catalog = getTrainableTemplateRnnCatalog();
   return catalog.find((model) => model.model_id === value || model.selector_value === value) || null;
 }
 
@@ -1090,11 +1437,24 @@ function syncRnnModelSelection() {
   const model = getSelectedRnnModel();
   const taskHead = qs("#rnn-task-head");
   const backend = qs("#rnn-backend");
+  const infoIcon = qs("#rnn-model-info-icon");
   if (model === "xgboost_classifier" && taskHead) taskHead.value = "classification";
   if (model === "xgboost_regressor" && taskHead) taskHead.value = "regression";
   if (backend) {
     const backendName = entry?.backend || (model.startsWith("xgboost") ? "sklearn_xgboost" : "pytorch_lstm");
     backend.value = entry?.training_enabled === false ? `${backendName} (planned)` : backendName;
+  }
+  if (infoIcon) {
+    const tooltips = {
+      lstm: "LSTM uses input/forget/output gates and is the default choice for general CSV sequence learning.",
+      gru: "GRU has fewer gates than LSTM, often trains faster, and is useful when data is limited.",
+      bilstm: "BiLSTM reads the window in both directions. Use it for offline sequence tasks, not streaming inference.",
+      fastrnn: "FastRNN is planned as a lightweight recurrent option. It is visible for roadmap clarity but not trainable yet.",
+      xgboost_classifier: "XGBoost Classifier is a strong tabular baseline for sequence-window features.",
+      xgboost_regressor: "XGBoost Regressor is a strong tabular baseline for numeric sequence targets.",
+      isolation_forest: "Isolation Forest is planned for anomaly-oriented sequence-window baselines and is not trainable yet."
+    };
+    infoIcon.dataset.tooltip = tooltips[model] || entry?.display_name || "Select a compatible sequence model.";
   }
 }
 
@@ -1231,7 +1591,9 @@ async function startRnnTraining(event) {
     hidden_size: Number(qs("#rnn-hidden-size")?.value || 128),
     num_layers: Number(qs("#rnn-layers")?.value || 2),
     dropout: Number(qs("#rnn-dropout")?.value || 0.2),
-    bidirectional: model === "bilstm"
+    bidirectional: model === "bilstm",
+    gradient_clip_norm: Number(qs("#rnn-gradient-clip")?.value || 0),
+    early_stopping_patience: Number(qs("#rnn-early-stopping-patience")?.value || 0)
   };
 
   try {

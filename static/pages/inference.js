@@ -1,11 +1,13 @@
 import { eventBus } from "../event_bus.js";
 import { appState } from "../state.js";
-import { apiFetch } from "../api.js";
+import { apiFetch, apiFetchBlob } from "../api.js";
 import { qs, qsa, setHTML, escapeHtml, copyText } from "../utils.js";
 
 let loadedProjectId = null;
 let selectedFileUrl = "";
 let modelsLoading = false;
+let resultImageObjectUrl = "";
+let resultImageKey = "";
 
 export function initInference() {
   qs("#btn-refresh-models")?.addEventListener("click", () => loadInferenceModels(true));
@@ -51,8 +53,7 @@ export function initInference() {
   });
 
   qs("#btn-view-inference-output")?.addEventListener("click", () => {
-    const url = appState.inferenceLastResult?.urls?.annotated_image;
-    if (url) window.open(url, "_blank", "noopener");
+    openInferenceOutput();
   });
 }
 
@@ -302,14 +303,11 @@ function renderInferenceResult() {
   const outputImg = qs("#inference-result-img");
   const outputPlaceholder = qs("#inference-result-placeholder");
 
-  if (result?.urls?.annotated_image && outputImg) {
-    outputImg.src = `${result.urls.annotated_image}?t=${Date.now()}`;
-    outputImg.style.display = "block";
-    if (outputPlaceholder) outputPlaceholder.style.display = "none";
-  }
+  loadInferenceResultImage(result);
 
   const summary = result?.summary;
   if (!summary) {
+    resetInferenceResultImage();
     setHTML("#inference-summary", `<div class="empty-state">尚未執行推論。</div>`);
     setHTML("#inference-prediction-signals", "");
     return;
@@ -352,6 +350,68 @@ function renderInferenceResult() {
   const copyBtn = qs("#btn-copy-inference-path");
   if (viewBtn) viewBtn.disabled = false;
   if (copyBtn) copyBtn.disabled = false;
+}
+
+function resetInferenceResultImage() {
+  if (resultImageObjectUrl) {
+    URL.revokeObjectURL(resultImageObjectUrl);
+    resultImageObjectUrl = "";
+  }
+  resultImageKey = "";
+  const outputImg = qs("#inference-result-img");
+  const outputPlaceholder = qs("#inference-result-placeholder");
+  if (outputImg) {
+    outputImg.removeAttribute("src");
+    outputImg.style.display = "none";
+  }
+  if (outputPlaceholder) outputPlaceholder.style.display = "block";
+}
+
+async function loadInferenceResultImage(result) {
+  const outputImg = qs("#inference-result-img");
+  const outputPlaceholder = qs("#inference-result-placeholder");
+  const imageUrl = result?.urls?.annotated_image || "";
+  const imageKey = `${result?.job_id || ""}:${imageUrl}`;
+
+  if (!outputImg || !imageUrl) {
+    resetInferenceResultImage();
+    return;
+  }
+
+  if (resultImageObjectUrl && resultImageKey === imageKey) {
+    outputImg.src = resultImageObjectUrl;
+    outputImg.style.display = "block";
+    if (outputPlaceholder) outputPlaceholder.style.display = "none";
+    return;
+  }
+
+  resultImageKey = imageKey;
+  try {
+    const blob = await apiFetchBlob(imageUrl, { suppressToast: true });
+    if (resultImageKey !== imageKey) return;
+    if (resultImageObjectUrl) URL.revokeObjectURL(resultImageObjectUrl);
+    resultImageObjectUrl = URL.createObjectURL(blob);
+    outputImg.src = resultImageObjectUrl;
+    outputImg.style.display = "block";
+    if (outputPlaceholder) outputPlaceholder.style.display = "none";
+  } catch (err) {
+    console.warn("Failed to load inference output image:", err.message);
+    resetInferenceResultImage();
+  }
+}
+
+async function openInferenceOutput() {
+  const result = appState.inferenceLastResult;
+  const imageUrl = result?.urls?.annotated_image || "";
+  if (!imageUrl) return;
+  const imageKey = `${result?.job_id || ""}:${imageUrl}`;
+
+  if (!resultImageObjectUrl || resultImageKey !== imageKey) {
+    await loadInferenceResultImage(result);
+  }
+  if (resultImageObjectUrl) {
+    window.open(resultImageObjectUrl, "_blank", "noopener");
+  }
 }
 
 function updateRunButtonState() {

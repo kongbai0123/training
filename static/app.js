@@ -26,11 +26,11 @@ import { initLabelMe, renderLabelMeManager } from "./pages/labelme.js";
 import { initSplit, renderSplitPage } from "./pages/split.js";
 import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js?v=20260625-augmentation-p0";
 import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js?v=20260702-cnn-eval-polish2";
-import { renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject } from "./pages/training_modes.js?v=20260702-rnn-ui-mode-cleanup";
+import { initTrainingModeSidebar, renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject, trainingModeState, isRnnTrainingWorkspaceActive } from "./pages/training_modes.js?v=20260706-rnn-pc-catalog";
 import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js?v=20260702-cnn-eval-polish2";
 import { initModelCompare, renderModelComparePage } from "./pages/model_compare.js?v=20260630-ui-init-fix";
 import { initInference, renderInferencePage } from "./pages/inference.js?v=20260702-model-scroll-bounds";
-import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260702-auto-best-only";
+import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260703-auto-workbench-rules";
 import { initExport, renderExportPage } from "./pages/export.js?v=20260701-xgb-eval-final";
 import { initSettings, renderSettingsPage } from "./pages/settings.js";
 
@@ -54,6 +54,7 @@ async function bootstrapApp() {
   initAutoLabeling();
   initExport();
   initSettings();
+  initTrainingModeSidebar();
 
   await bootstrapSession();
 
@@ -847,6 +848,10 @@ function buildAugmentationRightPanel(status) {
 }
 
 function buildTrainingRightPanel(status) {
+  if (isRnnTrainingWorkspaceActive("training")) {
+    return buildRnnTrainingRightPanel(status);
+  }
+
   const gpu = appState.systemHealth?.device?.device_name || "CPU";
   const model = qs("#train-model")?.value || "--";
   const runs = appState.currentProject?.training_runs || [];
@@ -875,6 +880,43 @@ function buildTrainingRightPanel(status) {
       { label: "Split", value: status.splitComplete ? `${status.splitCounts.train}/${status.splitCounts.val}/${status.splitCounts.test}` : "Missing", badgeType: status.splitComplete ? "success" : "danger" },
       { label: "Model", value: model },
       { label: "Hardware", value: gpu, isCode: true },
+      { label: "Run", value: latestRun?.run_id ?? "--", isCode: true },
+      { label: "Run status", value: runStatus, badgeType: statusBadge }
+    ],
+    actions: [],
+    warnings: [],
+    suppressActions: true,
+    suppressWarnings: true
+  };
+}
+
+function buildRnnTrainingRightPanel(status) {
+  const readiness = trainingModeState.rnn.readiness || {};
+  const csv = readiness.summary?.csv || {};
+  const config = trainingModeState.rnn.config || {};
+  const runs = (appState.currentProject?.training_runs || []).filter((run) =>
+    String(run.architecture || run.model_family || run.backend || "").toLowerCase().includes("rnn")
+      || String(run.model_id || run.run_id || "").toLowerCase().includes("rnn")
+      || String(run.model_type || "").toLowerCase().includes("lstm")
+      || String(run.model_type || "").toLowerCase().includes("gru")
+      || String(run.model_type || "").toLowerCase().includes("bilstm")
+  );
+  const latestRun = runs.length > 0 ? runs[runs.length - 1] : null;
+  const isReady = readiness.ready === true || csv.valid === true;
+  const panelLabel = String(trainingModeState.activeRnnPanel || "overview").replace(/-/g, " ");
+  const featureDim = csv.feature_dim || config.feature_dim || (Array.isArray(config.feature_columns) ? config.feature_columns.length : 0);
+  const runStatus = latestRun?.status ?? "--";
+  const statusBadge = runStatus === "completed" ? "success" : runStatus === "failed" ? "danger" : runStatus === "training" ? "warning" : "neutral";
+
+  return {
+    title: "RNN Context",
+    rows: [
+      { label: "Panel", value: panelLabel || "overview" },
+      { label: "Sequence data", value: isReady ? "Ready" : "Not ready", badgeType: isReady ? "success" : "warning" },
+      { label: "CSV files", value: String(csv.file_count || 0), badgeType: (csv.file_count || 0) > 0 ? "success" : "neutral" },
+      { label: "Sequences", value: String(csv.sequence_count || 0) },
+      { label: "Feature dim", value: featureDim ? String(featureDim) : "--" },
+      { label: "Backend", value: trainingModeState.rnn.backend || "--", isCode: true },
       { label: "Run", value: latestRun?.run_id ?? "--", isCode: true },
       { label: "Run status", value: runStatus, badgeType: statusBadge }
     ],
@@ -953,7 +995,7 @@ function buildAutoLabelingRightPanel(status) {
       { label: "Compatible", value: String(compatibleModels.length), badgeType: compatibleModels.length > 0 ? "success" : "warning" },
       { label: "Output", value: "Draft only", badgeType: "neutral" },
       { label: "Format", value: "LabelMe / YOLO", isCode: true },
-      { label: "Backend", value: "Pending", badgeType: "neutral" }
+      { label: "Backend", value: "Draft API ready", badgeType: "success" }
     ],
     actions: ["Choose input images.", "Select best.pt or last.pt.", "Generate drafts, then review before apply."],
     warnings
@@ -1016,6 +1058,16 @@ function renderWarnings(status) {
 }
 
 function renderPageGuards(pageId, status) {
+  if (isRnnTrainingWorkspaceActive(pageId)) {
+    const container = qs("#page-guards-container");
+    const section = qs("#section-page-guards");
+    if (container && section) {
+      section.style.display = "none";
+      setHTML("#page-guards-container", "");
+    }
+    return;
+  }
+
   const guards = {
     dataset: [],
     labelme: [],
