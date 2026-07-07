@@ -54,3 +54,13 @@ export function buildRnnArtifactViewModels({ artifacts = [], projectId = "", run
     };
   });
 }
+
+export function buildRnnArtifactListViewModel({ artifacts = [], projectId = "", runId = "" } = {}) {
+  const rows = buildRnnArtifactViewModels({ artifacts, projectId, runId });
+  const hasArtifacts = Boolean(runId) && rows.length > 0;
+  return {
+    hasArtifacts,
+    emptyMessage: hasArtifacts ? "" : "No artifacts.",
+    rows
+  };
+}

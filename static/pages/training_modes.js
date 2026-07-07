@@ -50,7 +50,7 @@ import {
   rnnStartBlockerMessage,
   summarizeRnnReadiness
 } from "./rnn_readiness_helpers.js";
-import { buildRnnArtifactViewModels } from "./rnn_artifact_helpers.js";
+import { buildRnnArtifactListViewModel } from "./rnn_artifact_helpers.js";
 import { buildRnnTrainingPayload } from "./rnn_training_payload_helpers.js";
 import { trainingModeState } from "./training_mode_state.js";
 
@@ -835,16 +835,16 @@ function renderRnnEvaluationEpochRows(history) {
 function renderRnnEvaluationArtifacts(artifacts, runId) {
   const container = qs("#rnn-eval-sidebar-artifacts") || qs("#rnn-eval-artifact-list");
   if (!container) return;
-  if (!Array.isArray(artifacts) || !artifacts.length || !runId) {
-    container.textContent = "No artifacts.";
-    return;
-  }
-  const artifactRows = buildRnnArtifactViewModels({
+  const artifactList = buildRnnArtifactListViewModel({
     artifacts,
     projectId: appState.currentProjectId,
     runId
   });
-  container.innerHTML = artifactRows.map((artifact) => {
+  if (!artifactList.hasArtifacts) {
+    container.textContent = artifactList.emptyMessage;
+    return;
+  }
+  container.innerHTML = artifactList.rows.map((artifact) => {
     return `<div class="rnn-result-item">
       <div>
         <strong>${escapeHtml(artifact.filename)}</strong>
