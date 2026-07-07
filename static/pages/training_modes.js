@@ -44,9 +44,7 @@ import {
   trainableTemplateRnnCatalog
 } from "./rnn_model_catalog_helpers.js";
 import {
-  renderRnnModelGuideLoading,
-  renderRnnModelGuideMissing,
-  renderRnnModelGuidePanel,
+  renderRnnModelGuideContent,
   renderRnnModelSelectorOptions
 } from "./rnn_model_render_helpers.js";
 import {
@@ -1183,16 +1181,11 @@ function syncRnnModelSelection() {
 function renderRnnModelGuide() {
   const container = qs("#rnn-model-guide");
   if (!container) return;
-  if (trainingModeState.rnn.modelGuidesLoading) {
-    container.innerHTML = renderRnnModelGuideLoading();
-    return;
-  }
   const guide = trainingModeState.rnn.modelGuides?.[getRnnGuideKey()];
-  if (!guide) {
-    container.innerHTML = renderRnnModelGuideMissing();
-    return;
-  }
-  container.innerHTML = renderRnnModelGuidePanel(guide);
+  container.innerHTML = renderRnnModelGuideContent({
+    loading: trainingModeState.rnn.modelGuidesLoading,
+    guide
+  });
 }
 
 function canStartRnnTraining() {

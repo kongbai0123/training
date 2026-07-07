@@ -27,6 +27,12 @@ export function renderRnnModelGuideMissing() {
   return `<div class="section-title"><h3>Model Guide</h3><span class="summary-badge badge-warning">Missing</span></div><p>No guide found for this model/task combination.</p>`;
 }
 
+export function renderRnnModelGuideContent({ loading = false, guide = null } = {}) {
+  if (loading) return renderRnnModelGuideLoading();
+  if (!guide) return renderRnnModelGuideMissing();
+  return renderRnnModelGuidePanel(guide);
+}
+
 export function renderRnnModelGuidePanel(guide = {}) {
   const statusClass = guide.status === "trainable" ? "badge-success" : "badge-warning";
   return `
