@@ -1,5 +1,23 @@
 import { escapeHtml } from "../utils.js";
 
+export function resolveRnnEvaluationRunBadge({ hasMetrics = false, loading = false, activeRun = null, backend = "" } = {}) {
+  return {
+    className: `summary-badge ${hasMetrics ? "badge-success" : loading ? "badge-neutral" : "badge-warning"}`,
+    text: loading ? "Loading" : activeRun ? backend : "No run"
+  };
+}
+
+export function resolveRnnEvaluationMessage({ loading = false, activeRun = null } = {}) {
+  return {
+    hidden: Boolean(activeRun && !loading),
+    text: loading
+      ? "Loading sequence training metrics, artifacts, and run history..."
+      : activeRun
+        ? ""
+        : "No RNN or XGBoost training run found for this project."
+  };
+}
+
 export function renderRnnEvaluationEpochTableRows(epochRows = {}) {
   if (!epochRows.hasRows) {
     return `<tr><td colspan="6">${escapeHtml(epochRows.emptyMessage)}</td></tr>`;

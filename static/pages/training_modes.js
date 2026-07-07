@@ -21,7 +21,9 @@ import {
   renderRnnEvaluationRunHistoryTableRows,
   renderRnnEvaluationSidebarRows,
   renderRnnBaselineComparisonChart,
-  renderRnnMetricTrendChartStack
+  renderRnnMetricTrendChartStack,
+  resolveRnnEvaluationMessage,
+  resolveRnnEvaluationRunBadge
 } from "./rnn_evaluation_render_helpers.js";
 import {
   renderRnnConfigMismatchWarning,
@@ -788,9 +790,14 @@ function renderRnnEvaluation() {
   });
 
   if (badge) {
-    const backend = sequenceBackendLabel(summary);
-    badge.className = `summary-badge ${metrics ? "badge-success" : trainingModeState.rnn.evaluationLoading ? "badge-neutral" : "badge-warning"}`;
-    badge.textContent = trainingModeState.rnn.evaluationLoading ? "Loading" : activeRun ? backend : "No run";
+    const badgeView = resolveRnnEvaluationRunBadge({
+      hasMetrics: Boolean(metrics),
+      loading: trainingModeState.rnn.evaluationLoading,
+      activeRun,
+      backend: sequenceBackendLabel(summary)
+    });
+    badge.className = badgeView.className;
+    badge.textContent = badgeView.text;
   }
 
   setText("#rnn-eval-primary-label", primary.label);
@@ -803,12 +810,12 @@ function renderRnnEvaluation() {
   setText("#rnn-eval-val-loss", formatRnnMetric(metricSource["val/loss"]));
 
   if (message) {
-    message.classList.toggle("hidden", Boolean(activeRun && !trainingModeState.rnn.evaluationLoading));
-    message.textContent = trainingModeState.rnn.evaluationLoading
-      ? "Loading sequence training metrics, artifacts, and run history..."
-      : activeRun
-        ? ""
-        : "No RNN or XGBoost training run found for this project.";
+    const messageView = resolveRnnEvaluationMessage({
+      loading: trainingModeState.rnn.evaluationLoading,
+      activeRun
+    });
+    message.classList.toggle("hidden", messageView.hidden);
+    message.textContent = messageView.text;
   }
 
   renderRnnEvaluationEpochRows(history);
