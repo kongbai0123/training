@@ -16,6 +16,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         augmentation_css = (ROOT / "static" / "styles" / "pages" / "augmentation.css").read_text(encoding="utf-8")
         model_compare_css = (ROOT / "static" / "styles" / "pages" / "model_compare.css").read_text(encoding="utf-8")
         inference_css = (ROOT / "static" / "styles" / "pages" / "inference.css").read_text(encoding="utf-8")
+        evaluation_css = (ROOT / "static" / "styles" / "pages" / "evaluation.css").read_text(encoding="utf-8")
 
         self.assertTrue(
             style_css.startswith(
@@ -26,7 +27,8 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/dashboard.css";\n'
                 '@import "./styles/pages/augmentation.css";\n'
                 '@import "./styles/pages/model_compare.css";\n'
-                '@import "./styles/pages/inference.css";'
+                '@import "./styles/pages/inference.css";\n'
+                '@import "./styles/pages/evaluation.css";'
             )
         )
         self.assertNotIn(":root {\n  --bg:", style_css)
@@ -71,6 +73,10 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.inference-settings-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.inference-preview-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.inference-summary-grid \{")
+        self.assertNotRegex(style_css, r"(?m)^\.evaluation-guidance-grid \{")
+        self.assertNotRegex(style_css, r"(?m)^\.evaluation-plots-grid \{")
+        self.assertNotRegex(style_css, r"(?m)^\.evaluation-plot-card \{")
+        self.assertNotRegex(style_css, r"(?m)^\.evaluation-plot-modal \{")
         self.assertRegex(style_css, r"(?m)^\.preview-tile \{")
         self.assertIn(".dashboard-lower-grid,\n.two-column-layout", style_css)
         self.assertIn(".preview-panel {", style_css)
@@ -158,6 +164,17 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(inference_css, r"(?m)^\.inference-summary-grid \{")
         self.assertNotRegex(inference_css, r"(?m)^\.preview-tile \{")
         self.assertIn("@media (max-width: 840px) {", inference_css)
+
+        self.assertRegex(evaluation_css, r"(?m)^\.evaluation-guidance-grid \{")
+        self.assertRegex(evaluation_css, r"(?m)^\.evaluation-guidance-item \{")
+        self.assertRegex(evaluation_css, r"(?m)^\.evaluation-plots-grid \{")
+        self.assertRegex(evaluation_css, r"(?m)^\.evaluation-metric-grid \{")
+        self.assertRegex(evaluation_css, r"(?m)^\.evaluation-plot-card \{")
+        self.assertRegex(evaluation_css, r"(?m)^\.evaluation-plot-download \{")
+        self.assertRegex(evaluation_css, r"(?m)^\.evaluation-plot-preview \{")
+        self.assertRegex(evaluation_css, r"(?m)^\.evaluation-plot-modal \{")
+        self.assertRegex(evaluation_css, r"(?m)^\.evaluation-wide-empty \{")
+        self.assertIn("@media (max-width: 1280px) {", evaluation_css)
 
     def test_state_shell_delegates_i18n_dictionary_and_fallback_to_state_module(self):
         state_js = (ROOT / "static" / "state.js").read_text(encoding="utf-8")
