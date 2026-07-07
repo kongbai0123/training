@@ -16,6 +16,10 @@ import {
   resolveRnnEvaluationViewModel
 } from "./rnn_evaluation_helpers.js";
 import {
+  renderRnnEvaluationArtifactList,
+  renderRnnEvaluationEpochTableRows,
+  renderRnnEvaluationRunHistoryTableRows,
+  renderRnnEvaluationSidebarRows,
   renderRnnBaselineComparisonChart,
   renderRnnMetricTrendChartStack
 } from "./rnn_evaluation_render_helpers.js";
@@ -816,20 +820,7 @@ function renderRnnEvaluationEpochRows(history) {
   const tbody = qs("#rnn-eval-epoch-rows");
   if (!tbody) return;
   const epochRows = buildRnnEvaluationEpochRows(history);
-  if (!epochRows.hasRows) {
-    tbody.innerHTML = `<tr><td colspan="6">${escapeHtml(epochRows.emptyMessage)}</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = epochRows.rows.map((row) => {
-    return `<tr>
-      <td><strong>${escapeHtml(row.epoch)}</strong></td>
-      <td><code>${escapeHtml(row.trainLoss)}</code></td>
-      <td><code>${escapeHtml(row.valLoss)}</code></td>
-      <td>${escapeHtml(row.primary)}</td>
-      <td>${escapeHtml(row.secondary)}</td>
-      <td><span class="badge ${escapeHtml(row.statusClass)}">${escapeHtml(row.statusLabel)}</span></td>
-    </tr>`;
-  }).join("");
+  tbody.innerHTML = renderRnnEvaluationEpochTableRows(epochRows);
 }
 
 function renderRnnEvaluationArtifacts(artifacts, runId) {
@@ -840,19 +831,7 @@ function renderRnnEvaluationArtifacts(artifacts, runId) {
     projectId: appState.currentProjectId,
     runId
   });
-  if (!artifactList.hasArtifacts) {
-    container.textContent = artifactList.emptyMessage;
-    return;
-  }
-  container.innerHTML = artifactList.rows.map((artifact) => {
-    return `<div class="rnn-result-item">
-      <div>
-        <strong>${escapeHtml(artifact.filename)}</strong>
-        <span>${escapeHtml(artifact.relPath)} · ${escapeHtml(artifact.sizeLabel)}</span>
-      </div>
-      <a class="btn btn-secondary btn-sm" href="${escapeHtml(artifact.downloadUrl)}" target="_blank" download>Download</a>
-    </div>`;
-  }).join("");
+  container.innerHTML = renderRnnEvaluationArtifactList(artifactList);
 }
 
 function renderRnnMetricTrendRows(history, isRegression, metricContext = {}) {
@@ -905,31 +884,14 @@ function renderRnnEvaluationSidebar({ activeRun, metrics, artifacts, history, me
 function renderRnnSidebarRows(selector, rows) {
   const container = qs(selector);
   if (!container) return;
-  container.innerHTML = rows.map(([label, value, isCode]) => {
-    const safeValue = escapeHtml(value ?? "--");
-    const valueHtml = isCode ? `<code>${safeValue}</code>` : `<span>${safeValue}</span>`;
-    return `<div class="summary-row"><span>${escapeHtml(label)}</span>${valueHtml}</div>`;
-  }).join("");
+  container.innerHTML = renderRnnEvaluationSidebarRows(rows);
 }
 
 function renderRnnEvaluationRunHistory(runs) {
   const tbody = qs("#rnn-eval-run-history");
   if (!tbody) return;
   const runRows = buildRnnEvaluationRunHistoryRows(runs);
-  if (!runRows.hasRows) {
-    tbody.innerHTML = `<tr><td colspan="6">${escapeHtml(runRows.emptyMessage)}</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = runRows.rows.map((run) => {
-    return `<tr>
-      <td><code>${escapeHtml(run.runId)}</code></td>
-      <td>${escapeHtml(run.model)}</td>
-      <td>${escapeHtml(run.backend)}</td>
-      <td>${escapeHtml(run.primary)}</td>
-      <td><span class="badge ${escapeHtml(run.statusClass)}">${escapeHtml(run.status)}</span></td>
-      <td>${escapeHtml(run.date)}</td>
-    </tr>`;
-  }).join("");
+  tbody.innerHTML = renderRnnEvaluationRunHistoryTableRows(runRows);
 }
 
 function sequenceBackendLabel(run = {}) {
