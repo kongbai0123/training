@@ -12,13 +12,15 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         base_css = (ROOT / "static" / "styles" / "base.css").read_text(encoding="utf-8")
         layout_css = (ROOT / "static" / "styles" / "layout.css").read_text(encoding="utf-8")
         components_css = (ROOT / "static" / "styles" / "components.css").read_text(encoding="utf-8")
+        augmentation_css = (ROOT / "static" / "styles" / "pages" / "augmentation.css").read_text(encoding="utf-8")
 
         self.assertTrue(
             style_css.startswith(
                 '@import "./styles/tokens.css";\n'
                 '@import "./styles/base.css";\n'
                 '@import "./styles/layout.css";\n'
-                '@import "./styles/components.css";'
+                '@import "./styles/components.css";\n'
+                '@import "./styles/pages/augmentation.css";'
             )
         )
         self.assertNotIn(":root {\n  --bg:", style_css)
@@ -43,6 +45,12 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.summary-row \{")
         self.assertNotRegex(style_css, r"(?m)^\.summary-badge \{")
         self.assertNotRegex(style_css, r"(?m)^\.product-state-card \{")
+        self.assertNotRegex(style_css, r"(?m)^\.augmentation-workspace \{")
+        self.assertNotRegex(style_css, r"(?m)^\.augmentation-settings-layout \{")
+        self.assertNotRegex(style_css, r"(?m)^\.custom-setting-item \{")
+        self.assertNotRegex(style_css, r"(?m)^\.preset-item \{")
+        self.assertNotRegex(style_css, r"(?m)^\.aug-preview-container \{")
+        self.assertNotIn("Physical Augmentation Redesign Styles", style_css)
         self.assertIn(".dashboard-lower-grid,\n.two-column-layout", style_css)
         self.assertIn(".preview-panel {", style_css)
         self.assertIn("@media (max-width: 840px) {", style_css)
@@ -92,6 +100,15 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(components_css, r"(?m)^\.summary-badge \{")
         self.assertRegex(components_css, r"(?m)^\.product-state-card \{")
         self.assertNotIn(".dashboard-lower-grid,\n.two-column-layout", components_css)
+        self.assertNotRegex(components_css, r"(?m)^\.augmentation-workspace \{")
+
+        self.assertRegex(augmentation_css, r"(?m)^\.augmentation-workspace \{")
+        self.assertRegex(augmentation_css, r"(?m)^\.augmentation-settings-layout \{")
+        self.assertRegex(augmentation_css, r"(?m)^\.custom-setting-item \{")
+        self.assertRegex(augmentation_css, r"(?m)^\.preset-item \{")
+        self.assertRegex(augmentation_css, r"(?m)^\.aug-preview-container \{")
+        self.assertIn("Physical Augmentation Redesign Styles", augmentation_css)
+        self.assertIn("@media (max-width: 840px) {", augmentation_css)
 
     def test_state_shell_delegates_i18n_dictionary_and_fallback_to_state_module(self):
         state_js = (ROOT / "static" / "state.js").read_text(encoding="utf-8")
