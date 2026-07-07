@@ -10,13 +10,24 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         style_css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
         tokens_css = (ROOT / "static" / "styles" / "tokens.css").read_text(encoding="utf-8")
         base_css = (ROOT / "static" / "styles" / "base.css").read_text(encoding="utf-8")
+        layout_css = (ROOT / "static" / "styles" / "layout.css").read_text(encoding="utf-8")
 
-        self.assertTrue(style_css.startswith('@import "./styles/tokens.css";\n@import "./styles/base.css";'))
+        self.assertTrue(
+            style_css.startswith(
+                '@import "./styles/tokens.css";\n'
+                '@import "./styles/base.css";\n'
+                '@import "./styles/layout.css";'
+            )
+        )
         self.assertNotIn(":root {\n  --bg:", style_css)
         self.assertNotIn('body[data-theme="light"] {\n  --bg:', style_css)
         self.assertNotIn("html,\nbody {\n  margin: 0;", style_css)
         self.assertNotIn("button,\ninput,\nselect", style_css)
-        self.assertIn(".app-shell {", style_css)
+        self.assertNotIn(".app-shell {", style_css)
+        self.assertNotIn(".top-header {", style_css)
+        self.assertNotIn(".app-body {", style_css)
+        self.assertNotIn(".right-summary-panel {", style_css)
+        self.assertIn(".btn {", style_css)
 
         self.assertIn(":root {", tokens_css)
         self.assertIn("--bg: #0f1318;", tokens_css)
@@ -31,6 +42,17 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("button,\ninput,\nselect", base_css)
         self.assertIn("code {", base_css)
         self.assertNotIn(".app-shell {", base_css)
+
+        self.assertIn(".app-shell {", layout_css)
+        self.assertIn("grid-template-rows: 64px 1fr;", layout_css)
+        self.assertIn(".top-header {", layout_css)
+        self.assertIn(".app-body {", layout_css)
+        self.assertIn("grid-template-columns: 250px minmax(0, 1fr) 300px;", layout_css)
+        self.assertIn(".sidebar {", layout_css)
+        self.assertIn(".main-content {", layout_css)
+        self.assertIn(".right-summary-panel {", layout_css)
+        self.assertIn(".page-header {", layout_css)
+        self.assertNotIn(".btn {", layout_css)
 
     def test_state_shell_delegates_i18n_dictionary_and_fallback_to_state_module(self):
         state_js = (ROOT / "static" / "state.js").read_text(encoding="utf-8")
