@@ -3,6 +3,7 @@
 @import "./styles/layout.css";
 @import "./styles/components.css";
 @import "./styles/pages/dashboard.css";
+@import "./styles/pages/dataset.css";
 @import "./styles/pages/augmentation.css";
 @import "./styles/pages/model_compare.css";
 @import "./styles/pages/inference.css";
@@ -366,33 +367,11 @@
   }
 }
 
-.dataset-manager-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-}
-
-.dataset-manager-layout > * {
-  min-width: 0;
-}
-
-.dataset-classes-card,
-.dataset-browser-card {
-  grid-column: 1 / -1;
-}
-
 .section-help {
   margin: -4px 0 12px;
   color: var(--text-muted);
   line-height: 1.45;
   font-size: 0.88rem;
-}
-
-.dataset-video-fields {
-  grid-template-columns: 120px minmax(180px, auto);
-  justify-content: start;
-  align-items: end;
 }
 
 .zip-storage-box {
@@ -439,28 +418,6 @@
   margin: 0;
   color: var(--text-muted);
   line-height: 1.45;
-}
-
-.dataset-browser-header {
-  align-items: flex-start;
-}
-
-.dataset-browser-header h2 {
-  margin-bottom: 0;
-}
-
-.dataset-browser-tools {
-  min-width: min(380px, 100%);
-  display: grid;
-  grid-template-columns: minmax(180px, 1fr) 170px;
-  gap: 8px;
-}
-
-.dataset-meta-row {
-  justify-content: flex-start;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
 }
 
 .labelme-layout {
@@ -2452,7 +2409,6 @@ body[data-theme="light"] .floating-tooltip {
   .auto-basic-settings,
   .auto-basic-settings.expanded,
   .auto-readable-preview,
-  .dataset-manager-layout,
   .labelme-layout,
   .kpi-grid,
   .metric-grid,
@@ -2475,12 +2431,6 @@ body[data-theme="light"] .floating-tooltip {
 
   .path-row {
     grid-template-columns: 1fr;
-  }
-
-  .dataset-video-fields,
-  .dataset-browser-tools {
-    grid-template-columns: 1fr;
-    min-width: 0;
   }
 
   .zip-drop-zone {
