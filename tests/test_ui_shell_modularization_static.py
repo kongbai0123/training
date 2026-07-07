@@ -9,10 +9,14 @@ class UIShellModularizationStaticTests(unittest.TestCase):
     def test_style_shell_delegates_design_tokens_to_styles_module(self):
         style_css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
         tokens_css = (ROOT / "static" / "styles" / "tokens.css").read_text(encoding="utf-8")
+        base_css = (ROOT / "static" / "styles" / "base.css").read_text(encoding="utf-8")
 
-        self.assertTrue(style_css.startswith('@import "./styles/tokens.css";'))
+        self.assertTrue(style_css.startswith('@import "./styles/tokens.css";\n@import "./styles/base.css";'))
         self.assertNotIn(":root {\n  --bg:", style_css)
         self.assertNotIn('body[data-theme="light"] {\n  --bg:', style_css)
+        self.assertNotIn("html,\nbody {\n  margin: 0;", style_css)
+        self.assertNotIn("button,\ninput,\nselect", style_css)
+        self.assertIn(".app-shell {", style_css)
 
         self.assertIn(":root {", tokens_css)
         self.assertIn("--bg: #0f1318;", tokens_css)
@@ -20,6 +24,13 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("--radius: 8px;", tokens_css)
         self.assertIn('body[data-theme="light"] {', tokens_css)
         self.assertIn("--shadow: 0 12px 30px rgba(15, 23, 42, 0.12);", tokens_css)
+
+        self.assertIn("* {\n  box-sizing: border-box;", base_css)
+        self.assertIn("html,\nbody {\n  margin: 0;", base_css)
+        self.assertIn('font-family: "Inter", "Microsoft JhengHei", "PingFang TC", sans-serif;', base_css)
+        self.assertIn("button,\ninput,\nselect", base_css)
+        self.assertIn("code {", base_css)
+        self.assertNotIn(".app-shell {", base_css)
 
     def test_state_shell_delegates_i18n_dictionary_and_fallback_to_state_module(self):
         state_js = (ROOT / "static" / "state.js").read_text(encoding="utf-8")
