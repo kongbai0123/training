@@ -26,9 +26,9 @@ import {
   resolveRnnEvaluationRunBadge
 } from "./rnn_evaluation_render_helpers.js";
 import {
-  renderRnnConfigMismatchWarning,
   renderRnnFeatureChipList,
   renderRnnPreviewContent,
+  resolveRnnConfigMismatchRender,
   resolveRnnWindowSummaryRender
 } from "./rnn_config_render_helpers.js";
 import {
@@ -617,12 +617,9 @@ function renderRnnConfigMismatch() {
   const box = qs("#rnn-config-mismatch-warning");
   if (!box) return;
   const mismatchSummary = buildRnnMismatchSummary(trainingModeState.rnn.configMismatches);
-  box.classList.toggle("hidden", !mismatchSummary.visible);
-  if (!mismatchSummary.visible) {
-    box.textContent = "";
-    return;
-  }
-  box.innerHTML = renderRnnConfigMismatchWarning(mismatchSummary);
+  const renderView = resolveRnnConfigMismatchRender(mismatchSummary);
+  box.classList.toggle("hidden", renderView.hidden);
+  box.innerHTML = renderView.html;
 }
 
 function renderRnnReadiness() {

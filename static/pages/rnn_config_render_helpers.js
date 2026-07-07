@@ -41,3 +41,11 @@ export function renderRnnFeatureChipList(chips = []) {
 export function renderRnnConfigMismatchWarning(mismatchSummary = {}) {
   return `<strong>${escapeHtml(mismatchSummary.title)}</strong><span>${escapeHtml(mismatchSummary.message)}</span>`;
 }
+
+export function resolveRnnConfigMismatchRender(mismatchSummary = {}) {
+  const visible = Boolean(mismatchSummary.visible);
+  return {
+    hidden: !visible,
+    html: visible ? renderRnnConfigMismatchWarning(mismatchSummary) : ""
+  };
+}
