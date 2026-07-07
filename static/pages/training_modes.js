@@ -31,6 +31,12 @@ import {
   rnnInferenceBlockerMessage,
   rnnInferenceModelLabel
 } from "./rnn_inference_helpers.js";
+import {
+  canStartRnnTrainingFromState,
+  parseRnnFeatureColumns,
+  rnnStartBlockerMessage,
+  summarizeRnnReadiness
+} from "./rnn_readiness_helpers.js";
 import { trainingModeState } from "./training_mode_state.js";
 
 export { trainingModeState } from "./training_mode_state.js";
@@ -408,13 +414,7 @@ function applyRnnConfigToForm() {
 }
 
 function parseRnnFeatureInput() {
-  const value = qs("#rnn-feature-columns")?.value || "";
-  const seen = new Set();
-  return value.split(/[,;\n\r]+/).map((item) => item.trim()).filter((item) => {
-    if (!item || seen.has(item)) return false;
-    seen.add(item);
-    return true;
-  });
+  return parseRnnFeatureColumns(qs("#rnn-feature-columns")?.value || "");
 }
 
 async function saveRnnFeatureConfig(options = {}) {
@@ -608,17 +608,17 @@ function renderRnnReadiness() {
     return;
   }
 
-  const manifest = readiness.summary?.manifest || {};
-  const csv = readiness.summary?.csv || {};
-  const requirements = readiness.summary?.ready_requirements || {};
-  const source = readiness.summary?.source || "none";
-  const splitCounts = source === "manifest" ? manifest.split_counts || {} : csv.split_counts || {};
-  const splitText = Object.keys(splitCounts).length
-    ? Object.entries(splitCounts).map(([key, value]) => `${key}: ${value}`).join(" / ")
-    : "-- / -- / --";
-  const featureDim = csv.feature_dim || manifest.feature_dim || "--";
-  const sequenceCount = csv.sequence_count || manifest.sequence_count || 0;
-  const csvFiles = csv.file_count || 0;
+  const {
+    manifest,
+    csv,
+    source,
+    splitText,
+    featureDim,
+    sequenceCount,
+    csvFiles,
+    compactRows,
+    requirementRows
+  } = summarizeRnnReadiness(readiness);
 
   setText("#rnn-manifest-status", manifest.exists ? `${manifest.sequence_count || 0} sequences` : "sequence_manifest.json not connected");
   setText("#rnn-source-status", source === "manifest" ? "sequence_manifest.json" : source === "csv" ? `${csvFiles} CSV feature file(s)` : "No sequence source");
@@ -639,13 +639,6 @@ function renderRnnReadiness() {
 
   const compactGrid = qs("#rnn-readiness-compact-grid");
   if (compactGrid) {
-    const compactRows = [
-      { label: "CSV", value: source === "csv" ? `${csvFiles} file(s)` : "Required", ok: source === "csv" },
-      { label: "Features", value: csv.feature_dim ? `${csv.feature_dim} columns` : "--", ok: Boolean(csv.feature_dim) },
-      { label: "Labels", value: csv.label_count ? `${csv.label_count} sequences` : "--", ok: Boolean(csv.label_count) },
-      { label: "Split", value: splitText, ok: Boolean(requirements.train_val_split) },
-      { label: "Window", value: `min ${csv.min_length || 0} / need ${readiness.sequence_length || 1}`, ok: Number(csv.min_length || 0) >= Number(readiness.sequence_length || 1) }
-    ];
     compactGrid.innerHTML = compactRows.map((item) => `
       <div class="rnn-readiness-compact-item ${item.ok ? "success" : "danger"}">
         <span>${escapeHtml(item.label)}</span>
@@ -658,13 +651,6 @@ function renderRnnReadiness() {
 
   const list = qs("#rnn-readiness-checks");
   if (list) {
-    const requirementRows = [
-      { label: "CSV source", ok: source === "csv", message: source === "csv" ? `${csvFiles} CSV file(s) detected.` : "Import CSV feature sequence files; manifest-only sources cannot start MVP training." },
-      { label: "Feature columns", ok: Boolean(csv.feature_dim), message: csv.feature_dim ? `${csv.feature_dim} feature column(s) detected.` : "Configure at least one valid feature column." },
-      { label: "Target labels", ok: Boolean(csv.label_count), message: csv.label_count ? `${csv.label_count} labeled sequence(s) detected.` : "CSV must include label/target values." },
-      { label: "Train/Val split", ok: Boolean(requirements.train_val_split), message: splitText === "-- / -- / --" ? "CSV must include train and val split rows." : `Split counts: ${splitText}.` },
-      { label: "Window length", ok: Number(csv.min_length || 0) >= Number(readiness.sequence_length || 1), message: `Minimum length ${csv.min_length || 0}; required ${readiness.sequence_length || 1}.` }
-    ];
     const checks = [
       ...requirementRows.map((item) => ({
         label: item.label,
@@ -1400,20 +1386,14 @@ function renderRnnModelGuide() {
 }
 
 function canStartRnnTraining() {
-  const readiness = trainingModeState.rnn.readiness;
-  const csv = readiness?.summary?.csv || {};
-  const trainState = appState.trainingStatus || {};
-  const isRunning = trainState.status === "training" || trainState.status === "stopping";
-  return Boolean(
-    appState.currentProjectId &&
-    isSelectedRnnModelTrainable() &&
-    readiness?.ready &&
-    csv.valid &&
-    Number(csv.file_count || 0) > 0 &&
-    !trainingModeState.rnn.readinessLoading &&
-    !trainingModeState.rnn.trainingStarting &&
-    !isRunning
-  );
+  return canStartRnnTrainingFromState({
+    hasProject: Boolean(appState.currentProjectId),
+    modelTrainable: isSelectedRnnModelTrainable(),
+    readiness: trainingModeState.rnn.readiness,
+    readinessLoading: trainingModeState.rnn.readinessLoading,
+    trainingStarting: trainingModeState.rnn.trainingStarting,
+    trainingStatus: appState.trainingStatus?.status || ""
+  });
 }
 
 function updateRnnStartControls() {
@@ -1452,23 +1432,15 @@ function preferGpuDevice(selector) {
 }
 
 function getRnnStartBlockerMessage() {
-  if (!appState.currentProjectId) return "Open a project before starting RNN training.";
-  if (trainingModeState.rnn.readinessLoading) return "RNN readiness is still checking.";
-  if (trainingModeState.rnn.trainingStarting) return "RNN training is starting.";
-  const trainState = appState.trainingStatus || {};
-  if (trainState.status === "training" || trainState.status === "stopping") return "Another training job is already active.";
-  if (!isSelectedRnnModelTrainable()) {
-    const entry = getSelectedRnnModelEntry();
-    return `${entry?.display_name || "Selected model"} is available in the catalog, but its training backend is not enabled yet.`;
-  }
-  const readiness = trainingModeState.rnn.readiness;
-  if (!readiness) return "Run RNN readiness check before starting training.";
-  const csv = readiness.summary?.csv || {};
-  if (!csv.valid || Number(csv.file_count || 0) === 0) {
-    return "RNNBackend MVP requires ready CSV feature sequence files under project/sequences.";
-  }
-  if (!readiness.ready) return readiness.message || "RNN readiness is not ready.";
-  return "RNN training is disabled until readiness passes.";
+  return rnnStartBlockerMessage({
+    hasProject: Boolean(appState.currentProjectId),
+    readinessLoading: trainingModeState.rnn.readinessLoading,
+    trainingStarting: trainingModeState.rnn.trainingStarting,
+    trainingStatus: appState.trainingStatus?.status || "",
+    modelTrainable: isSelectedRnnModelTrainable(),
+    modelLabel: getSelectedRnnModelEntry()?.display_name || "Selected model",
+    readiness: trainingModeState.rnn.readiness
+  });
 }
 
 async function startRnnTraining(event) {

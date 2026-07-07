@@ -481,12 +481,16 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         rnn_inference_helpers_js = (
             ROOT / "static" / "pages" / "rnn_inference_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_readiness_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_readiness_helpers.js"
+        ).read_text(encoding="utf-8")
 
         self.assertIn('import { trainingModeState } from "./training_mode_state.js";', training_modes_js)
         self.assertIn('export { trainingModeState } from "./training_mode_state.js";', training_modes_js)
         self.assertIn('} from "./rnn_metric_helpers.js";', training_modes_js)
         self.assertIn('} from "./rnn_model_catalog_helpers.js";', training_modes_js)
         self.assertIn('} from "./rnn_inference_helpers.js";', training_modes_js)
+        self.assertIn('} from "./rnn_readiness_helpers.js";', training_modes_js)
         self.assertNotIn("export const trainingModeState = {", training_modes_js)
         self.assertIn("export const trainingModeState = {", training_mode_state_js)
         self.assertIn('activeMode: "cnn"', training_mode_state_js)
@@ -502,14 +506,24 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("export function filterRnnInferenceModels", rnn_inference_helpers_js)
         self.assertIn("export function rnnInferenceBlockerMessage", rnn_inference_helpers_js)
         self.assertIn("export function resolveRnnInferenceModelValue", rnn_inference_helpers_js)
+        self.assertIn("export function parseRnnFeatureColumns", rnn_readiness_helpers_js)
+        self.assertIn("export function summarizeRnnReadiness", rnn_readiness_helpers_js)
+        self.assertIn("export function canStartRnnTrainingFromState", rnn_readiness_helpers_js)
+        self.assertIn("export function rnnStartBlockerMessage", rnn_readiness_helpers_js)
         self.assertIn('return resolveComparisonMetricConfig(metricKey);', training_modes_js)
         self.assertIn("return buildSparklinePoints(values);", training_modes_js)
         self.assertIn("return fallbackRnnModelCatalog();", training_modes_js)
         self.assertIn("return trainableTemplateRnnCatalog(trainingModeState.rnn.modelCatalog);", training_modes_js)
         self.assertIn("return rnnInferenceBlockerMessage({", training_modes_js)
+        self.assertIn("return parseRnnFeatureColumns(", training_modes_js)
+        self.assertIn("} = summarizeRnnReadiness(readiness);", training_modes_js)
+        self.assertIn("return canStartRnnTrainingFromState({", training_modes_js)
+        self.assertIn("return rnnStartBlockerMessage({", training_modes_js)
         self.assertNotIn("const configs = {\n    accuracy:", training_modes_js)
         self.assertNotIn('display_name: "FastRNN Classifier"', training_modes_js)
         self.assertNotIn('model.architecture === "rnn" || model.backend === trainingModeState.rnn.backend', training_modes_js)
+        self.assertNotIn("const seen = new Set();\n  return value.split", training_modes_js)
+        self.assertNotIn("csv.valid &&\n    Number(csv.file_count || 0) > 0", training_modes_js)
 
     def test_app_shell_delegates_common_shell_rendering_to_core_modules(self):
         app_js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")

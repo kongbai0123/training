@@ -18,6 +18,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         rnn_inference_helpers_js = (
             ROOT / "static" / "pages" / "rnn_inference_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_readiness_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_readiness_helpers.js"
+        ).read_text(encoding="utf-8")
         training_js = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
         right_panel_js = (ROOT / "static" / "core" / "right_panel.js").read_text(encoding="utf-8")
         page_guards_js = (ROOT / "static" / "core" / "page_guards.js").read_text(encoding="utf-8")
@@ -63,6 +66,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertNotIn('select.innerHTML = `<option value="">Loading model catalog...</option>`', training_modes_js)
         self.assertIn("await loadRnnModelCatalog({ force: options.force });", training_modes_js)
         self.assertIn("Sequence CSV is ready for RNN training", training_modes_js)
+        self.assertIn("RNNBackend MVP requires ready CSV feature sequence files", rnn_readiness_helpers_js)
+        self.assertIn("CSV must include train and val split rows.", rnn_readiness_helpers_js)
+        self.assertIn("parseRnnFeatureColumns(qs(\"#rnn-feature-columns\")?.value || \"\")", training_modes_js)
         self.assertIn("rnn-eval-primary-history-label", training_modes_js)
         self.assertIn("function renderRnnMetricTrendRows", training_modes_js)
         self.assertIn("function renderRnnBaselineComparison", training_modes_js)
