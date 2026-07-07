@@ -83,7 +83,7 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn('isRegression ? "Regression" : "Classification"', training_js)
 
     def test_rnn_evaluation_layout_has_vertical_chart_and_scroll_table_rules(self):
-        style_css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
+        style_css = (ROOT / "static" / "styles" / "pages" / "rnn_training.css").read_text(encoding="utf-8")
 
         self.assertIn(".rnn-eval-flow", style_css)
         self.assertIn("grid-template-columns: minmax(0, 1fr);", style_css)
