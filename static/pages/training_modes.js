@@ -77,6 +77,9 @@ import {
   renderRnnReadinessCheckList,
   renderRnnReadinessCompactGrid,
   renderRnnStartBannerButtonContent,
+  resolveRnnReadinessBadge,
+  resolveRnnReadinessEmptyView,
+  resolveRnnReadinessSummaryView,
   resolveRnnTrainingActionText,
   resolveRnnTrainingStateBadge
 } from "./rnn_readiness_render_helpers.js";
@@ -632,13 +635,15 @@ function renderRnnReadiness() {
   const canStart = canStartRnnTraining();
   const badge = qs("#rnn-readiness-badge");
   if (badge) {
-    badge.className = `summary-badge ${canStart ? "badge-success" : loading ? "badge-neutral" : "badge-warning"}`;
-    badge.textContent = canStart ? "Ready" : loading ? "Checking" : readiness?.ready ? "Manifest only" : "Not Ready";
+    const badgeView = resolveRnnReadinessBadge({ canStart, loading, readiness });
+    badge.className = badgeView.className;
+    badge.textContent = badgeView.text;
   }
 
   if (!readiness) {
-    setText("#rnn-readiness-status", loading ? "Checking..." : "Not Ready / Preview");
-    setText("#rnn-readiness-message", loading ? "Checking sequence manifest and CSV feature files..." : "Sequence CSV readiness summary appears here when a project is active.");
+    const emptyView = resolveRnnReadinessEmptyView(loading);
+    setText("#rnn-readiness-status", emptyView.status);
+    setText("#rnn-readiness-message", emptyView.message);
     const compactGrid = qs("#rnn-readiness-compact-grid");
     if (compactGrid) compactGrid.innerHTML = "";
     const list = qs("#rnn-readiness-checks");
@@ -668,15 +673,19 @@ function renderRnnReadiness() {
   setText("#rnn-feature-columns-status", csv.feature_dim ? `${csv.feature_dim} CSV feature columns` : requirements.feature_dim ? `${featureDim} manifest feature dim` : "not parsed");
   setText("#rnn-target-status", (manifest.label_count || csv.label_count) ? `${manifest.label_count || csv.label_count} labeled sequence(s)` : "label / target missing");
   setText("#rnn-feature-dim-status", String(featureDim));
-  setText("#rnn-readiness-status", canStart ? "Ready / CSV training enabled" : readiness.ready ? "Ready but CSV required for training" : "Not Ready");
-  setText("#rnn-readiness-message", canStart
-    ? "Sequence CSV is ready for RNN training. Full checks are available only for diagnostics."
-    : readiness.message || "Sequence dataset still needs attention. Open full checks for diagnostics.");
-  setText("#rnn-readiness-mode-badge", canStart ? "Training enabled" : "CSV required");
-  setText("#rnn-sequence-dataset-message", canStart
-    ? `${sequenceCount} sequence(s) detected from CSV. RNN training can start.`
-    : `${sequenceCount} sequence(s) detected. CSV must include sequence id, target label/value, at least one feature column, train/val split, and enough rows for sequence_length.`);
-  setText("#rnn-sequence-dataset-preview", source === "none" ? "sequence_id, timestep, feature_1, feature_2, target" : `source=${source}, feature_dim=${featureDim}, split=${splitText}`);
+  const summaryView = resolveRnnReadinessSummaryView({
+    canStart,
+    readiness,
+    sequenceCount,
+    source,
+    featureDim,
+    splitText
+  });
+  setText("#rnn-readiness-status", summaryView.status);
+  setText("#rnn-readiness-message", summaryView.message);
+  setText("#rnn-readiness-mode-badge", summaryView.modeBadge);
+  setText("#rnn-sequence-dataset-message", summaryView.datasetMessage);
+  setText("#rnn-sequence-dataset-preview", summaryView.datasetPreview);
   updateRnnStartControls();
 
   const compactGrid = qs("#rnn-readiness-compact-grid");

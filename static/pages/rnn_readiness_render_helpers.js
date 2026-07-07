@@ -30,6 +30,45 @@ export function renderRnnReadinessCheckList(checks = []) {
   }).join("");
 }
 
+export function resolveRnnReadinessBadge({ canStart = false, loading = false, readiness = null } = {}) {
+  return {
+    className: `summary-badge ${canStart ? "badge-success" : loading ? "badge-neutral" : "badge-warning"}`,
+    text: canStart ? "Ready" : loading ? "Checking" : readiness?.ready ? "Manifest only" : "Not Ready"
+  };
+}
+
+export function resolveRnnReadinessEmptyView(loading = false) {
+  return {
+    status: loading ? "Checking..." : "Not Ready / Preview",
+    message: loading
+      ? "Checking sequence manifest and CSV feature files..."
+      : "Sequence CSV readiness summary appears here when a project is active."
+  };
+}
+
+export function resolveRnnReadinessSummaryView({
+  canStart = false,
+  readiness = {},
+  sequenceCount = 0,
+  source = "none",
+  featureDim = 0,
+  splitText = ""
+} = {}) {
+  return {
+    status: canStart ? "Ready / CSV training enabled" : readiness.ready ? "Ready but CSV required for training" : "Not Ready",
+    message: canStart
+      ? "Sequence CSV is ready for RNN training. Full checks are available only for diagnostics."
+      : readiness.message || "Sequence dataset still needs attention. Open full checks for diagnostics.",
+    modeBadge: canStart ? "Training enabled" : "CSV required",
+    datasetMessage: canStart
+      ? `${sequenceCount} sequence(s) detected from CSV. RNN training can start.`
+      : `${sequenceCount} sequence(s) detected. CSV must include sequence id, target label/value, at least one feature column, train/val split, and enough rows for sequence_length.`,
+    datasetPreview: source === "none"
+      ? "sequence_id, timestep, feature_1, feature_2, target"
+      : `source=${source}, feature_dim=${featureDim}, split=${splitText}`
+  };
+}
+
 export function renderRnnStartBannerButtonContent(canStart = false) {
   return canStart
     ? `<i class="fa-solid fa-play"></i> Start RNN`
