@@ -12,6 +12,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         base_css = (ROOT / "static" / "styles" / "base.css").read_text(encoding="utf-8")
         layout_css = (ROOT / "static" / "styles" / "layout.css").read_text(encoding="utf-8")
         components_css = (ROOT / "static" / "styles" / "components.css").read_text(encoding="utf-8")
+        dashboard_css = (ROOT / "static" / "styles" / "pages" / "dashboard.css").read_text(encoding="utf-8")
         augmentation_css = (ROOT / "static" / "styles" / "pages" / "augmentation.css").read_text(encoding="utf-8")
         model_compare_css = (ROOT / "static" / "styles" / "pages" / "model_compare.css").read_text(encoding="utf-8")
         inference_css = (ROOT / "static" / "styles" / "pages" / "inference.css").read_text(encoding="utf-8")
@@ -22,6 +23,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/base.css";\n'
                 '@import "./styles/layout.css";\n'
                 '@import "./styles/components.css";\n'
+                '@import "./styles/pages/dashboard.css";\n'
                 '@import "./styles/pages/augmentation.css";\n'
                 '@import "./styles/pages/model_compare.css";\n'
                 '@import "./styles/pages/inference.css";'
@@ -49,6 +51,10 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.summary-row \{")
         self.assertNotRegex(style_css, r"(?m)^\.summary-badge \{")
         self.assertNotRegex(style_css, r"(?m)^\.product-state-card \{")
+        self.assertNotRegex(style_css, r"(?m)^\.workflow-map-panel \{")
+        self.assertNotRegex(style_css, r"(?m)^\.workflow-grid \{")
+        self.assertNotRegex(style_css, r"(?m)^\.workflow-card \{")
+        self.assertNotRegex(style_css, r"(?m)^\.workflow-row \{")
         self.assertNotRegex(style_css, r"(?m)^\.augmentation-workspace \{")
         self.assertNotRegex(style_css, r"(?m)^\.augmentation-settings-layout \{")
         self.assertNotRegex(style_css, r"(?m)^\.custom-setting-item \{")
@@ -115,7 +121,17 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(components_css, r"(?m)^\.summary-badge \{")
         self.assertRegex(components_css, r"(?m)^\.product-state-card \{")
         self.assertNotIn(".dashboard-lower-grid,\n.two-column-layout", components_css)
+        self.assertNotRegex(components_css, r"(?m)^\.workflow-card \{")
         self.assertNotRegex(components_css, r"(?m)^\.augmentation-workspace \{")
+
+        self.assertRegex(dashboard_css, r"(?m)^#page-dashboard \.dashboard-lower-grid \{")
+        self.assertRegex(dashboard_css, r"(?m)^\.workflow-map-panel \{")
+        self.assertRegex(dashboard_css, r"(?m)^\.workflow-map-title \{")
+        self.assertRegex(dashboard_css, r"(?m)^\.workflow-grid \{")
+        self.assertRegex(dashboard_css, r"(?m)^\.workflow-card \{")
+        self.assertRegex(dashboard_css, r"(?m)^\.workflow-row \{")
+        self.assertIn("@media (max-width: 1500px) {", dashboard_css)
+        self.assertIn("@media (max-width: 1180px) {", dashboard_css)
 
         self.assertRegex(augmentation_css, r"(?m)^\.augmentation-workspace \{")
         self.assertRegex(augmentation_css, r"(?m)^\.augmentation-settings-layout \{")
