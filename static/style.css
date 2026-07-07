@@ -4,6 +4,7 @@
 @import "./styles/components.css";
 @import "./styles/pages/augmentation.css";
 @import "./styles/pages/model_compare.css";
+@import "./styles/pages/inference.css";
 
 .dashboard-lower-grid,
 .two-column-layout {
@@ -1088,13 +1089,6 @@ select:focus {
   color: var(--danger);
 }
 
-.inference-lab-grid {
-  display: grid;
-  grid-template-columns: minmax(360px, 0.95fr) minmax(420px, 1.05fr);
-  gap: 16px;
-  align-items: start;
-}
-
 .model-registry-list {
   display: grid;
   gap: 10px;
@@ -1154,30 +1148,6 @@ select:focus {
   color: #f59e0b;
 }
 
-.inference-settings-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.sub-section-title {
-  margin-top: 16px;
-}
-
-.inference-toggle-row {
-  margin: 12px 0;
-}
-
-.inference-result-panel {
-  margin: 0 0 16px;
-}
-
-.inference-preview-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
-  gap: 16px;
-}
-
 .preview-tile {
   display: grid;
   gap: 8px;
@@ -1198,18 +1168,6 @@ select:focus {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: #0b0f14;
-}
-
-.inference-result-panel .preview-placeholder {
-  min-height: min(68vh, 760px);
-}
-
-.inference-summary-grid {
-  display: grid;
-  grid-template-columns: minmax(420px, 1.1fr) minmax(320px, 0.9fr) minmax(260px, 0.7fr);
-  gap: 16px;
-  margin-top: 16px;
-  align-items: start;
 }
 
 .metric-grid.compact {
@@ -2628,9 +2586,6 @@ body[data-theme="light"] .floating-tooltip {
 @media (max-width: 840px) {
   .dashboard-lower-grid,
   .two-column-layout,
-  .inference-lab-grid,
-  .inference-preview-grid,
-  .inference-summary-grid,
   .auto-label-layout,
   .auto-label-layout.simplified,
   .auto-label-status-strip,
