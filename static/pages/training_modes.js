@@ -24,6 +24,13 @@ import {
   selectedRnnModelValue,
   trainableTemplateRnnCatalog
 } from "./rnn_model_catalog_helpers.js";
+import {
+  filterRnnInferenceModels,
+  formatRnnPredictionConfidence,
+  resolveRnnInferenceModelValue,
+  rnnInferenceBlockerMessage,
+  rnnInferenceModelLabel
+} from "./rnn_inference_helpers.js";
 import { trainingModeState } from "./training_mode_state.js";
 
 export { trainingModeState } from "./training_mode_state.js";
@@ -1086,9 +1093,7 @@ async function loadRnnInferenceModels(options = {}) {
   renderRnnInferenceModels();
   try {
     const models = await apiFetch(`/api/projects/${appState.currentProjectId}/models`);
-    trainingModeState.rnn.inferenceModels = (Array.isArray(models) ? models : []).filter((model) =>
-      model.architecture === "rnn" || model.backend === trainingModeState.rnn.backend
-    );
+    trainingModeState.rnn.inferenceModels = filterRnnInferenceModels(models, trainingModeState.rnn.backend);
   } catch (err) {
     trainingModeState.rnn.inferenceModels = [];
     eventBus.emit("toast", `Failed to load RNN models: ${err.message}`);
@@ -1109,15 +1114,10 @@ function renderRnnInferenceModels() {
     select.innerHTML = `<option value="">No RNN model found</option>`;
   } else {
     select.innerHTML = `<option value="">Select RNN model</option>${models.map((model) => {
-      const label = `${model.run_id || "run"} / ${model.weight_type || "weight"} / ${model.model_name || "RNN"}`;
+      const label = rnnInferenceModelLabel(model);
       return `<option value="${escapeHtml(model.model_id)}">${escapeHtml(label)}</option>`;
     }).join("")}`;
-    const firstReady = models.find((model) => model.status === "ready");
-    if (models.some((model) => model.model_id === current)) {
-      select.value = current;
-    } else {
-      select.value = (firstReady || models[0])?.model_id || "";
-    }
+    select.value = resolveRnnInferenceModelValue(models, current);
   }
   syncRnnInferencePathInput();
   updateRnnInferenceControls();
@@ -1150,17 +1150,18 @@ function syncRnnInferencePathInput() {
 }
 
 function getRnnInferenceBlockerMessage() {
-  if (!appState.currentProjectId) return "Open a project before sequence inference.";
-  if (trainingModeState.rnn.inferenceLoading) return "Loading RNN models.";
-  if (trainingModeState.rnn.inferenceRunning) return "Sequence inference is running.";
-  if (!qs("#rnn-inference-model")?.value) return "Select an RNN model.";
   const hasFile = Boolean(qs("#rnn-inference-csv-file")?.files?.[0]);
   const trusted = appState.systemHealth?.local_trusted_mode === true;
   const hasPath = trusted && Boolean(qs("#rnn-inference-csv-path")?.value?.trim());
-  if (!hasFile && !hasPath) {
-    return trusted ? "Provide a CSV feature sequence file or project CSV path." : "Upload a CSV feature sequence file.";
-  }
-  return "";
+  return rnnInferenceBlockerMessage({
+    hasProject: Boolean(appState.currentProjectId),
+    isLoading: trainingModeState.rnn.inferenceLoading,
+    isRunning: trainingModeState.rnn.inferenceRunning,
+    selectedModel: qs("#rnn-inference-model")?.value || "",
+    hasFile,
+    trusted,
+    hasPath
+  });
 }
 
 async function runRnnSequenceInference(event) {
@@ -1210,7 +1211,7 @@ function renderRnnInferenceResult() {
   const summary = result.summary || {};
   const predictions = result.predictions || [];
   const firstRows = predictions.slice(0, 6).map((item) => {
-    const confidence = item.confidence !== undefined ? ` (${Number(item.confidence).toFixed(3)})` : "";
+    const confidence = formatRnnPredictionConfidence(item.confidence);
     return `<li><code>${escapeHtml(item.sequence_id)}</code> -> <strong>${escapeHtml(item.prediction)}</strong>${confidence}</li>`;
   }).join("");
   container.innerHTML = `

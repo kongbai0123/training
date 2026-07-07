@@ -15,6 +15,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         rnn_model_catalog_helpers_js = (
             ROOT / "static" / "pages" / "rnn_model_catalog_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_inference_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_inference_helpers.js"
+        ).read_text(encoding="utf-8")
         training_js = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
         right_panel_js = (ROOT / "static" / "core" / "right_panel.js").read_text(encoding="utf-8")
         page_guards_js = (ROOT / "static" / "core" / "page_guards.js").read_text(encoding="utf-8")
@@ -74,11 +77,11 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertNotIn('renderRnnSidebarRows("#rnn-eval-sidebar-settings"', training_modes_js)
         self.assertIn("XGBoost Classifier is a strong tabular baseline", rnn_model_catalog_helpers_js)
         self.assertIn("export function isRnnTrainingWorkspaceActive", training_modes_js)
-        self.assertIn("const firstReady = models.find((model) => model.status === \"ready\");", training_modes_js)
-        self.assertIn("select.value = (firstReady || models[0])?.model_id || \"\";", training_modes_js)
+        self.assertIn("const firstReady = models.find((model) => model.status === \"ready\");", rnn_inference_helpers_js)
+        self.assertIn("return (firstReady || models[0])?.model_id || \"\";", rnn_inference_helpers_js)
         self.assertIn("function syncRnnInferencePathInput", training_modes_js)
         self.assertIn("Local CSV path disabled (Trusted Local Mode off)", training_modes_js)
-        self.assertIn("Upload a CSV feature sequence file.", training_modes_js)
+        self.assertIn("Upload a CSV feature sequence file.", rnn_inference_helpers_js)
         self.assertIn('const hidePageGuards = visible || (appState.currentPage === "training" && trainingModeState.activeMode === "rnn");', training_modes_js)
         self.assertIn("buildRnnTrainingRightPanel", right_panel_js)
         self.assertIn("RNN Context", right_panel_js)
