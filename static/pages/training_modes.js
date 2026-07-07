@@ -61,6 +61,11 @@ import {
   rnnStartBlockerMessage,
   summarizeRnnReadiness
 } from "./rnn_readiness_helpers.js";
+import {
+  buildRnnReadinessCheckRows,
+  renderRnnReadinessCheckList,
+  renderRnnReadinessCompactGrid
+} from "./rnn_readiness_render_helpers.js";
 import { buildRnnArtifactListViewModel } from "./rnn_artifact_helpers.js";
 import { buildRnnTrainingPayload } from "./rnn_training_payload_helpers.js";
 import { trainingModeState } from "./training_mode_state.js";
@@ -633,6 +638,7 @@ function renderRnnReadiness() {
   const {
     manifest,
     csv,
+    requirements,
     source,
     splitText,
     featureDim,
@@ -661,33 +667,15 @@ function renderRnnReadiness() {
 
   const compactGrid = qs("#rnn-readiness-compact-grid");
   if (compactGrid) {
-    compactGrid.innerHTML = compactRows.map((item) => `
-      <div class="rnn-readiness-compact-item ${item.ok ? "success" : "danger"}">
-        <span>${escapeHtml(item.label)}</span>
-        <strong>${escapeHtml(item.value)}</strong>
-      </div>
-    `).join("");
+    compactGrid.innerHTML = renderRnnReadinessCompactGrid(compactRows);
   }
   const details = qs("#rnn-readiness-details");
   if (details) details.open = !canStart;
 
   const list = qs("#rnn-readiness-checks");
   if (list) {
-    const checks = [
-      ...requirementRows.map((item) => ({
-        label: item.label,
-        status: item.ok ? "pass" : "fail",
-        message: item.message
-      })),
-      ...(readiness.checks || [])
-    ];
-    list.innerHTML = checks.map((check) => {
-      const statusClass = check.status === "pass" ? "success" : check.status === "warning" ? "warning" : "danger";
-      return `<li class="rnn-readiness-item ${statusClass}">
-        <strong>${escapeHtml(check.label || check.key)}</strong>
-        <span>${escapeHtml(check.message || "")}</span>
-      </li>`;
-    }).join("");
+    const checks = buildRnnReadinessCheckRows(requirementRows, readiness.checks);
+    list.innerHTML = renderRnnReadinessCheckList(checks);
   }
 }
 

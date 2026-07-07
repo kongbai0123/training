@@ -493,6 +493,9 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         rnn_readiness_helpers_js = (
             ROOT / "static" / "pages" / "rnn_readiness_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_readiness_render_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_readiness_render_helpers.js"
+        ).read_text(encoding="utf-8")
 
         self.assertIn('import { trainingModeState } from "./training_mode_state.js";', training_modes_js)
         self.assertIn('export { trainingModeState } from "./training_mode_state.js";', training_modes_js)
@@ -503,6 +506,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn('} from "./rnn_model_catalog_helpers.js";', training_modes_js)
         self.assertIn('} from "./rnn_inference_helpers.js";', training_modes_js)
         self.assertIn('} from "./rnn_readiness_helpers.js";', training_modes_js)
+        self.assertIn('} from "./rnn_readiness_render_helpers.js";', training_modes_js)
         self.assertNotIn("export const trainingModeState = {", training_modes_js)
         self.assertIn("export const trainingModeState = {", training_mode_state_js)
         self.assertIn('activeMode: "cnn"', training_mode_state_js)
@@ -538,6 +542,9 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("export function summarizeRnnReadiness", rnn_readiness_helpers_js)
         self.assertIn("export function canStartRnnTrainingFromState", rnn_readiness_helpers_js)
         self.assertIn("export function rnnStartBlockerMessage", rnn_readiness_helpers_js)
+        self.assertIn("export function renderRnnReadinessCompactGrid", rnn_readiness_render_helpers_js)
+        self.assertIn("export function buildRnnReadinessCheckRows", rnn_readiness_render_helpers_js)
+        self.assertIn("export function renderRnnReadinessCheckList", rnn_readiness_render_helpers_js)
         self.assertIn("} = resolveRnnEvaluationViewModel({", training_modes_js)
         self.assertIn("buildRnnEvaluationEpochRows(history)", training_modes_js)
         self.assertIn("buildRnnEvaluationRunHistoryRows(runs)", training_modes_js)
@@ -569,6 +576,10 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("return rnnInferenceBlockerMessage({", training_modes_js)
         self.assertIn("return parseRnnFeatureColumns(", training_modes_js)
         self.assertIn("} = summarizeRnnReadiness(readiness);", training_modes_js)
+        self.assertIn("requirements,\n    source", training_modes_js)
+        self.assertIn("renderRnnReadinessCompactGrid(compactRows)", training_modes_js)
+        self.assertIn("buildRnnReadinessCheckRows(requirementRows, readiness.checks)", training_modes_js)
+        self.assertIn("renderRnnReadinessCheckList(checks)", training_modes_js)
         self.assertIn("return canStartRnnTrainingFromState({", training_modes_js)
         self.assertIn("return rnnStartBlockerMessage({", training_modes_js)
         self.assertNotIn("const configs = {\n    accuracy:", training_modes_js)
@@ -581,6 +592,10 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotIn("function getRunComparisonMetric", training_modes_js)
         self.assertNotIn("function sparklinePoints", training_modes_js)
         self.assertNotIn("run.primary_metric_name ||", training_modes_js)
+        self.assertIn("rnn-readiness-compact-item", rnn_readiness_render_helpers_js)
+        self.assertIn("rnn-readiness-item", rnn_readiness_render_helpers_js)
+        self.assertNotIn("rnn-readiness-compact-item", training_modes_js)
+        self.assertNotIn("rnn-readiness-item", training_modes_js)
 
     def test_app_shell_delegates_common_shell_rendering_to_core_modules(self):
         app_js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")

@@ -30,6 +30,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         rnn_readiness_helpers_js = (
             ROOT / "static" / "pages" / "rnn_readiness_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_readiness_render_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_readiness_render_helpers.js"
+        ).read_text(encoding="utf-8")
         rnn_training_payload_helpers_js = (
             ROOT / "static" / "pages" / "rnn_training_payload_helpers.js"
         ).read_text(encoding="utf-8")
@@ -128,6 +131,17 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn("Sequence CSV is ready for RNN training", training_modes_js)
         self.assertIn("RNNBackend MVP requires ready CSV feature sequence files", rnn_readiness_helpers_js)
         self.assertIn("CSV must include train and val split rows.", rnn_readiness_helpers_js)
+        self.assertIn("export function renderRnnReadinessCompactGrid", rnn_readiness_render_helpers_js)
+        self.assertIn("export function buildRnnReadinessCheckRows", rnn_readiness_render_helpers_js)
+        self.assertIn("export function renderRnnReadinessCheckList", rnn_readiness_render_helpers_js)
+        self.assertIn("renderRnnReadinessCompactGrid(compactRows)", training_modes_js)
+        self.assertIn("buildRnnReadinessCheckRows(requirementRows, readiness.checks)", training_modes_js)
+        self.assertIn("renderRnnReadinessCheckList(checks)", training_modes_js)
+        self.assertIn("requirements,\n    source", training_modes_js)
+        self.assertIn("rnn-readiness-compact-item", rnn_readiness_render_helpers_js)
+        self.assertIn("rnn-readiness-item", rnn_readiness_render_helpers_js)
+        self.assertNotIn("rnn-readiness-compact-item", training_modes_js)
+        self.assertNotIn("rnn-readiness-item", training_modes_js)
         self.assertIn("parseRnnFeatureColumns(qs(\"#rnn-feature-columns\")?.value || \"\")", training_modes_js)
         self.assertIn("rnn-eval-primary-history-label", training_modes_js)
         self.assertIn("function renderRnnMetricTrendRows", training_modes_js)
