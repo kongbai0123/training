@@ -7,11 +7,14 @@ import {
   extractMetricSeries,
   formatSequenceDate,
   formatSequenceMetric,
-  normalizeRnnModelGroupLabel,
-  resolveComparisonMetricConfig,
-  resolveRunComparisonMetric,
   sequenceBackendDisplayLabel
 } from "./rnn_metric_helpers.js";
+import {
+  buildRnnBaselineComparisonRows,
+  isSequenceEvaluationRun,
+  isSinglePointBaselineRun,
+  resolveRnnEvaluationViewModel
+} from "./rnn_evaluation_helpers.js";
 import {
   RNN_MODEL_GROUPS,
   RNN_MODEL_TOOLTIPS,
@@ -732,20 +735,6 @@ async function loadRnnEvaluation(options = {}) {
   }
 }
 
-function isSequenceEvaluationRun(run) {
-  const architecture = String(run?.architecture || "").toLowerCase();
-  const backend = String(run?.backend || "").toLowerCase();
-  const taskType = String(run?.task_type || run?.task || "").toLowerCase();
-  const model = String(run?.model || "").toLowerCase();
-  return (
-    architecture === "rnn" ||
-    backend === "pytorch_lstm" ||
-    backend === "sklearn_xgboost" ||
-    taskType.includes("sequence") ||
-    model.includes("xgboost")
-  );
-}
-
 function renderRnnEvaluation() {
   const badge = qs("#rnn-eval-run-badge");
   const message = qs("#rnn-eval-message");
@@ -754,27 +743,25 @@ function renderRnnEvaluation() {
   const runs = trainingModeState.rnn.evaluationRuns || [];
   const metrics = trainingModeState.rnn.evaluationMetrics || null;
   const artifacts = trainingModeState.rnn.evaluationArtifacts || [];
-  const activeRun = runs.find((run) => run.run_id === trainingModeState.rnn.evaluationRunId) || runs[0] || null;
-  const summary = activeRun || {};
-  const bestMetrics = metrics?.best_metrics || summary.best_metrics || {};
-  const history = Array.isArray(metrics?.history) ? metrics.history : [];
-  const latestMetrics = history.length ? history[history.length - 1] : {};
-  const metricSource = { ...latestMetrics, ...bestMetrics };
-  const isRegression = String(metrics?.task_type || summary.task_type || "").toLowerCase().includes("regression") ||
-    metricSource["val/mae"] !== undefined || metricSource["val/rmse"] !== undefined;
+  const {
+    activeRun,
+    summary,
+    history,
+    metricSource,
+    isRegression,
+    primary,
+    secondary
+  } = resolveRnnEvaluationViewModel({
+    runs,
+    metrics,
+    selectedRunId: trainingModeState.rnn.evaluationRunId
+  });
 
   if (badge) {
     const backend = sequenceBackendLabel(summary);
     badge.className = `summary-badge ${metrics ? "badge-success" : trainingModeState.rnn.evaluationLoading ? "badge-neutral" : "badge-warning"}`;
     badge.textContent = trainingModeState.rnn.evaluationLoading ? "Loading" : activeRun ? backend : "No run";
   }
-
-  const primary = isRegression
-    ? { label: "MAE", value: metricSource["val/mae"] ?? summary.primary_metric_value }
-    : { label: "Accuracy", value: metricSource["val/accuracy"] ?? summary.best_accuracy };
-  const secondary = isRegression
-    ? { label: "RMSE", value: metricSource["val/rmse"] }
-    : { label: "Macro-F1", value: metricSource["val/macro_f1"] ?? summary.primary_metric_value };
 
   setText("#rnn-eval-primary-label", primary.label);
   setText("#rnn-eval-primary-value", formatRnnMetric(primary.value));
@@ -902,14 +889,6 @@ function renderRnnMetricTrendRows(history, isRegression, metricContext = {}) {
   }).join("");
 }
 
-function isSinglePointBaselineRun(context = {}, history = []) {
-  const backend = String(context.backend || "").toLowerCase();
-  const model = String(context.model || "").toLowerCase();
-  if (!(backend === "sklearn_xgboost" || model.includes("xgboost"))) return false;
-  const metricKeys = ["val/accuracy", "val/macro_f1", "val/mae", "val/rmse"];
-  return metricKeys.some((key) => metricSeries(history, key).length <= 1);
-}
-
 function renderRnnBaselineComparison(runs) {
   const container = qs("#rnn-eval-compare-chart");
   if (!container) return;
@@ -917,61 +896,30 @@ function renderRnnBaselineComparison(runs) {
   qsa("[data-rnn-compare-metric]").forEach((button) => {
     button.classList.toggle("active", button.dataset.rnnCompareMetric === metricKey);
   });
-  const metricConfig = getComparisonMetricConfig(metricKey);
-  const completedRuns = (Array.isArray(runs) ? runs : []).filter((run) => String(run.status || "").toLowerCase() === "completed");
-  if (!completedRuns.length) {
+  const metricsByRun = trainingModeState.rnn.evaluationRunMetrics || {};
+  const { metricConfig, rows, hasCompletedRuns, hasAvailableRows } = buildRnnBaselineComparisonRows({
+    runs,
+    metricsByRun,
+    metricKey
+  });
+  if (!hasCompletedRuns) {
     container.innerHTML = `<div class="rnn-eval-chart-empty">No comparable runs loaded.</div>`;
     return;
   }
-  const metricsByRun = trainingModeState.rnn.evaluationRunMetrics || {};
-  const grouped = new Map();
-  completedRuns.forEach((run) => {
-    const key = normalizeRnnModelGroup(run);
-    const metrics = metricsByRun[run.run_id] || {};
-    const value = getRunComparisonMetric(run, metrics, metricConfig);
-    if (!Number.isFinite(value)) return;
-    const current = grouped.get(key);
-    const better = !current || (metricConfig.lowerBetter ? value < current.value : value > current.value);
-    if (better) grouped.set(key, { label: key, value, run, metricConfig });
-  });
-  const order = ["LSTM", "GRU", "BiLSTM", "XGBoost"];
-  const rows = order.map((label) => grouped.get(label) || { label, value: null, metricConfig });
-  const availableRows = rows.filter((row) => Number.isFinite(row.value));
-  if (!availableRows.length) {
+  if (!hasAvailableRows) {
     container.innerHTML = `<div class="rnn-eval-chart-empty">No ${escapeHtml(metricConfig.label)} values loaded for completed runs.</div>`;
     return;
   }
-  const values = availableRows.map((row) => row.value);
-  const max = Math.max(...values, 0.000001);
-  const min = Math.min(...values);
   container.innerHTML = rows.map((row) => {
-    const hasValue = Number.isFinite(row.value);
-    const percent = !hasValue
-      ? 0
-      : metricConfig.lowerBetter
-        ? Math.max(4, ((max - row.value) / Math.max(max - min, 0.000001)) * 100)
-        : Math.max(4, (row.value / max) * 100);
-    return `<div class="rnn-compare-mini-row ${hasValue ? "" : "is-missing"}">
+    return `<div class="rnn-compare-mini-row ${row.hasValue ? "" : "is-missing"}">
       <div class="rnn-compare-mini-label">
         <strong>${escapeHtml(row.label)}</strong>
         <span>${escapeHtml(metricConfig.hint)}</span>
       </div>
-      <div class="rnn-compare-mini-track"><span style="width: ${percent.toFixed(1)}%;"></span></div>
-      <code>${hasValue ? formatRnnMetric(row.value) : "--"}</code>
+      <div class="rnn-compare-mini-track"><span style="width: ${row.percent.toFixed(1)}%;"></span></div>
+      <code>${row.hasValue ? formatRnnMetric(row.value) : "--"}</code>
     </div>`;
   }).join("");
-}
-
-function getComparisonMetricConfig(metricKey) {
-  return resolveComparisonMetricConfig(metricKey);
-}
-
-function normalizeRnnModelGroup(run = {}) {
-  return normalizeRnnModelGroupLabel(run);
-}
-
-function getRunComparisonMetric(run = {}, metrics = {}, metricConfig = getComparisonMetricConfig("macro_f1")) {
-  return resolveRunComparisonMetric(run, metrics, metricConfig);
 }
 
 function metricSeries(history, key) {

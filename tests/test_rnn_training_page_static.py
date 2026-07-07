@@ -12,6 +12,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         rnn_metric_helpers_js = (
             ROOT / "static" / "pages" / "rnn_metric_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_evaluation_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_evaluation_helpers.js"
+        ).read_text(encoding="utf-8")
         rnn_model_catalog_helpers_js = (
             ROOT / "static" / "pages" / "rnn_model_catalog_helpers.js"
         ).read_text(encoding="utf-8")
@@ -73,10 +76,14 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn("function renderRnnMetricTrendRows", training_modes_js)
         self.assertIn("function renderRnnBaselineComparison", training_modes_js)
         self.assertIn("comparisonMetric", training_modes_js)
-        self.assertIn("function getComparisonMetricConfig", training_modes_js)
+        self.assertIn("export function buildRnnBaselineComparisonRows", rnn_evaluation_helpers_js)
+        self.assertIn("export function resolveRnnEvaluationViewModel", rnn_evaluation_helpers_js)
+        self.assertNotIn("function getComparisonMetricConfig", training_modes_js)
         self.assertIn('"val/accuracy"', rnn_metric_helpers_js)
         self.assertIn('"val/macro_f1"', rnn_metric_helpers_js)
         self.assertIn('"val/loss"', rnn_metric_helpers_js)
+        self.assertIn("resolveComparisonMetricConfig(metricKey)", rnn_evaluation_helpers_js)
+        self.assertIn("resolveRunComparisonMetric(run, metrics, metricConfig)", rnn_evaluation_helpers_js)
         self.assertIn("Single-point baseline", training_modes_js)
         self.assertIn("function renderRnnEvaluationSidebar", training_modes_js)
         self.assertIn("toggleRnnEvaluationRightPanel", training_modes_js)
