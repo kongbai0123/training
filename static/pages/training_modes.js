@@ -42,6 +42,7 @@ import {
   summarizeRnnReadiness
 } from "./rnn_readiness_helpers.js";
 import { buildRnnArtifactViewModels } from "./rnn_artifact_helpers.js";
+import { buildRnnTrainingPayload } from "./rnn_training_payload_helpers.js";
 import { trainingModeState } from "./training_mode_state.js";
 
 export { trainingModeState } from "./training_mode_state.js";
@@ -1384,25 +1385,12 @@ async function startRnnTraining(event) {
   syncRnnModelSelection();
   const model = getSelectedRnnModel();
   const taskHead = getSelectedRnnTaskHead();
-  const configData = {
+  const configData = buildRnnTrainingPayload({
     backend: getSelectedRnnBackend(),
     model,
-    epochs: Number(qs("#rnn-epochs")?.value || 10),
-    batch_size: Number(qs("#rnn-batch-size")?.value || 16),
-    imgsz: 320,
-    lr0: 0.001,
-    device: qs("#rnn-device")?.value || "gpu",
-    sequence_length: Number(qs("#rnn-sequence-length")?.value || 16),
-    stride: Number(qs("#rnn-stride")?.value || 8),
-    horizon: Number(qs("#rnn-horizon")?.value || 1),
-    task_head: taskHead,
-    hidden_size: Number(qs("#rnn-hidden-size")?.value || 128),
-    num_layers: Number(qs("#rnn-layers")?.value || 2),
-    dropout: Number(qs("#rnn-dropout")?.value || 0.2),
-    bidirectional: model === "bilstm",
-    gradient_clip_norm: Number(qs("#rnn-gradient-clip")?.value || 0),
-    early_stopping_patience: Number(qs("#rnn-early-stopping-patience")?.value || 0)
-  };
+    taskHead,
+    formValues: collectRnnTrainingFormValues()
+  });
 
   try {
     await apiFetch(`/api/projects/${appState.currentProjectId}/train/start`, {
@@ -1419,5 +1407,21 @@ async function startRnnTraining(event) {
     trainingModeState.rnn.trainingStarting = false;
     updateRnnStartControls();
   }
+}
+
+function collectRnnTrainingFormValues() {
+  return {
+    epochs: qs("#rnn-epochs")?.value,
+    batchSize: qs("#rnn-batch-size")?.value,
+    device: qs("#rnn-device")?.value,
+    sequenceLength: qs("#rnn-sequence-length")?.value,
+    stride: qs("#rnn-stride")?.value,
+    horizon: qs("#rnn-horizon")?.value,
+    hiddenSize: qs("#rnn-hidden-size")?.value,
+    layers: qs("#rnn-layers")?.value,
+    dropout: qs("#rnn-dropout")?.value,
+    gradientClipNorm: qs("#rnn-gradient-clip")?.value,
+    earlyStoppingPatience: qs("#rnn-early-stopping-patience")?.value
+  };
 }
 

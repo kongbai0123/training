@@ -27,6 +27,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         rnn_readiness_helpers_js = (
             ROOT / "static" / "pages" / "rnn_readiness_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_training_payload_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_training_payload_helpers.js"
+        ).read_text(encoding="utf-8")
         training_js = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
         right_panel_js = (ROOT / "static" / "core" / "right_panel.js").read_text(encoding="utf-8")
         page_guards_js = (ROOT / "static" / "core" / "page_guards.js").read_text(encoding="utf-8")
@@ -59,8 +62,15 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn('data-rnn-nav="export"', index_html)
         self.assertNotIn('id="rnn-eval-sidebar-settings"', index_html)
 
-        self.assertIn("gradient_clip_norm", training_modes_js)
-        self.assertIn("early_stopping_patience", training_modes_js)
+        self.assertIn("export function buildRnnTrainingPayload", rnn_training_payload_helpers_js)
+        self.assertIn("buildRnnTrainingPayload({", training_modes_js)
+        self.assertIn("gradient_clip_norm", rnn_training_payload_helpers_js)
+        self.assertIn("early_stopping_patience", rnn_training_payload_helpers_js)
+        self.assertIn('bidirectional: model === "bilstm"', rnn_training_payload_helpers_js)
+        self.assertIn("epochs: numberOrDefault(formValues.epochs, 10)", rnn_training_payload_helpers_js)
+        self.assertNotIn("const configData = {", training_modes_js)
+        self.assertNotIn('Number(qs("#rnn-epochs")', training_modes_js)
+        self.assertNotIn('bidirectional: model === "bilstm"', training_modes_js)
         self.assertIn("CSV must include sequence id", training_modes_js)
         self.assertIn("function getTrainableTemplateRnnCatalog", training_modes_js)
         self.assertIn('model.source !== "project_trained"', rnn_model_catalog_helpers_js)
