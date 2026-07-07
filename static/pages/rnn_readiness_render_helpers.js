@@ -29,3 +29,20 @@ export function renderRnnReadinessCheckList(checks = []) {
     </li>`;
   }).join("");
 }
+
+export function renderRnnStartBannerButtonContent(canStart = false) {
+  return canStart
+    ? `<i class="fa-solid fa-play"></i> Start RNN`
+    : `<i class="fa-solid fa-lock"></i> Start RNN Disabled`;
+}
+
+export function resolveRnnTrainingActionText({ canStart = false, message = "" } = {}) {
+  return canStart ? "Start RNN Training" : message;
+}
+
+export function resolveRnnTrainingStateBadge({ canStart = false, modelTrainable = false } = {}) {
+  return {
+    className: `summary-badge ${canStart ? "badge-success" : "badge-warning"}`,
+    text: canStart ? "Training enabled" : modelTrainable ? "Readiness required" : "Backend planned"
+  };
+}

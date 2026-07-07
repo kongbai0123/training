@@ -75,7 +75,10 @@ import {
 import {
   buildRnnReadinessCheckRows,
   renderRnnReadinessCheckList,
-  renderRnnReadinessCompactGrid
+  renderRnnReadinessCompactGrid,
+  renderRnnStartBannerButtonContent,
+  resolveRnnTrainingActionText,
+  resolveRnnTrainingStateBadge
 } from "./rnn_readiness_render_helpers.js";
 import { buildRnnArtifactListViewModel } from "./rnn_artifact_helpers.js";
 import { buildRnnTrainingPayload } from "./rnn_training_payload_helpers.js";
@@ -1200,18 +1203,20 @@ function updateRnnStartControls() {
 
   const bannerBtn = qs("#rnn-start-disabled");
   if (bannerBtn) {
-    bannerBtn.innerHTML = canStart
-      ? `<i class="fa-solid fa-play"></i> Start RNN`
-      : `<i class="fa-solid fa-lock"></i> Start RNN Disabled`;
+    bannerBtn.innerHTML = renderRnnStartBannerButtonContent(canStart);
   }
   const trainingBtn = qs("#rnn-training-disabled-action");
   if (trainingBtn) {
-    trainingBtn.textContent = canStart ? "Start RNN Training" : message;
+    trainingBtn.textContent = resolveRnnTrainingActionText({ canStart, message });
   }
   const stateBadge = qs("#rnn-training-state-badge");
   if (stateBadge) {
-    stateBadge.className = `summary-badge ${canStart ? "badge-success" : "badge-warning"}`;
-    stateBadge.textContent = canStart ? "Training enabled" : isSelectedRnnModelTrainable() ? "Readiness required" : "Backend planned";
+    const stateBadgeView = resolveRnnTrainingStateBadge({
+      canStart,
+      modelTrainable: isSelectedRnnModelTrainable()
+    });
+    stateBadge.className = stateBadgeView.className;
+    stateBadge.textContent = stateBadgeView.text;
   }
 }
 
