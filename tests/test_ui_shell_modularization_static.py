@@ -13,6 +13,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         layout_css = (ROOT / "static" / "styles" / "layout.css").read_text(encoding="utf-8")
         components_css = (ROOT / "static" / "styles" / "components.css").read_text(encoding="utf-8")
         dashboard_css = (ROOT / "static" / "styles" / "pages" / "dashboard.css").read_text(encoding="utf-8")
+        history_css = (ROOT / "static" / "styles" / "pages" / "history.css").read_text(encoding="utf-8")
         dataset_css = (ROOT / "static" / "styles" / "pages" / "dataset.css").read_text(encoding="utf-8")
         labelme_css = (ROOT / "static" / "styles" / "pages" / "labelme.css").read_text(encoding="utf-8")
         training_css = (ROOT / "static" / "styles" / "pages" / "training.css").read_text(encoding="utf-8")
@@ -28,6 +29,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/layout.css";\n'
                 '@import "./styles/components.css";\n'
                 '@import "./styles/pages/dashboard.css";\n'
+                '@import "./styles/pages/history.css";\n'
                 '@import "./styles/pages/dataset.css";\n'
                 '@import "./styles/pages/labelme.css";\n'
                 '@import "./styles/pages/training.css";\n'
@@ -63,6 +65,11 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.workflow-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-card \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-row \{")
+        self.assertNotRegex(style_css, r"(?m)^\.project-history-card \{")
+        self.assertNotRegex(style_css, r"(?m)^\.history-filter-row \{")
+        self.assertNotRegex(style_css, r"(?m)^\.project-history-modal-content \{")
+        self.assertNotRegex(style_css, r"(?m)^\.inference-job-cleanup-toolbar,")
+        self.assertNotRegex(style_css, r"(?m)^\.migration-candidate-card \{")
         self.assertNotRegex(style_css, r"(?m)^\.dataset-manager-layout \{")
         self.assertNotRegex(style_css, r"(?m)^\.dataset-video-fields \{")
         self.assertNotRegex(style_css, r"(?m)^\.dataset-browser-tools \{")
@@ -158,6 +165,16 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(dashboard_css, r"(?m)^\.workflow-row \{")
         self.assertIn("@media (max-width: 1500px) {", dashboard_css)
         self.assertIn("@media (max-width: 1180px) {", dashboard_css)
+
+        self.assertRegex(history_css, r"(?m)^\.project-history-card \{")
+        self.assertRegex(history_css, r"(?m)^\.project-file-summary \{")
+        self.assertRegex(history_css, r"(?m)^\.history-filter-row \{")
+        self.assertRegex(history_css, r"(?m)^\.project-history-modal-content \{")
+        self.assertRegex(history_css, r"(?m)^\.history-search-row \{")
+        self.assertRegex(history_css, r"(?m)^\.inference-history-card \{")
+        self.assertRegex(history_css, r"(?m)^\.inference-job-cleanup-toolbar,")
+        self.assertRegex(history_css, r"(?m)^\.migration-candidate-card \{")
+        self.assertIn("@media (max-width: 760px) {", history_css)
 
         self.assertRegex(dataset_css, r"(?m)^\.dataset-manager-layout \{")
         self.assertRegex(dataset_css, r"(?m)^\.dataset-manager-layout > \* \{")
