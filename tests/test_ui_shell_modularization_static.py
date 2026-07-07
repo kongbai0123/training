@@ -33,6 +33,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         router_js = (ROOT / "static" / "core" / "router.js").read_text(encoding="utf-8")
         right_panel_js = (ROOT / "static" / "core" / "right_panel.js").read_text(encoding="utf-8")
         page_registry_js = (ROOT / "static" / "core" / "page_registry.js").read_text(encoding="utf-8")
+        tooltip_js = (ROOT / "static" / "core" / "tooltip.js").read_text(encoding="utf-8")
 
         self.assertIn('from "./core/header_status.js"', app_js)
         self.assertIn('from "./core/page_guards.js"', app_js)
@@ -40,8 +41,10 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn('from "./core/toast.js"', app_js)
         self.assertIn('from "./core/router.js"', app_js)
         self.assertIn('from "./core/right_panel.js"', app_js)
+        self.assertIn('from "./core/tooltip.js"', app_js)
         self.assertIn('from "./core/page_registry.js"', app_js)
         self.assertIn("initPageModules();", app_js)
+        self.assertIn("initInfoTooltips();", app_js)
         self.assertIn("renderHeaderStatusCore();", app_js)
         self.assertIn("renderPrimaryPageModules(status);", app_js)
         self.assertIn("renderRightPanelCore(appState.currentPage, status);", app_js)
@@ -61,6 +64,8 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotIn("function renderPageGuards(pageId, status)", app_js)
         self.assertNotIn("function updateActionAvailability(status)", app_js)
         self.assertNotIn("function showToast(message)", app_js)
+        self.assertNotIn("function bindInfoTooltips()", app_js)
+        self.assertNotIn("renderTooltipContent", app_js)
 
         self.assertIn("export function renderHeaderStatus", header_js)
         self.assertIn("#header-gpu-value", header_js)
@@ -95,6 +100,12 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("export function loadPageRecommendedConfig", page_registry_js)
         self.assertIn("renderDashboard(status);", page_registry_js)
         self.assertIn("renderTrainingWorkspace();", page_registry_js)
+
+        self.assertIn("export function initInfoTooltips", tooltip_js)
+        self.assertIn("#floating-tooltip", tooltip_js)
+        self.assertIn(".info-icon[data-tooltip]", tooltip_js)
+        self.assertIn("escapeHtml", tooltip_js)
+        self.assertIn('window.addEventListener("resize"', tooltip_js)
 
 
 if __name__ == "__main__":
