@@ -13,6 +13,16 @@ export function renderRnnInferenceModelOptions({ loading = false, models = [] } 
   }).join("")}`;
 }
 
+export function resolveRnnInferenceControlRender(message = "") {
+  const canRun = !message;
+  return {
+    disabled: !canRun,
+    primaryActive: canRun,
+    disabledActive: !canRun,
+    reasonText: message || "Ready to run CSV sequence inference."
+  };
+}
+
 export function renderRnnInferencePredictionRows(predictions = []) {
   return predictions.slice(0, 6).map((item) => {
     const confidence = formatRnnPredictionConfidence(item.confidence);

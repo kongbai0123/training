@@ -53,7 +53,8 @@ import {
 } from "./rnn_inference_helpers.js";
 import {
   renderRnnInferenceModelOptions,
-  renderRnnInferenceResultPanel
+  renderRnnInferenceResultPanel,
+  resolveRnnInferenceControlRender
 } from "./rnn_inference_render_helpers.js";
 import {
   buildRnnDatasetBadge,
@@ -958,11 +959,11 @@ function updateRnnInferenceControls() {
   if (!btn) return;
   syncRnnInferencePathInput();
   const message = getRnnInferenceBlockerMessage();
-  const canRun = !message;
-  btn.disabled = !canRun;
-  btn.classList.toggle("btn-primary", canRun);
-  btn.classList.toggle("btn-disabled", !canRun);
-  if (reason) reason.textContent = message || "Ready to run CSV sequence inference.";
+  const renderView = resolveRnnInferenceControlRender(message);
+  btn.disabled = renderView.disabled;
+  btn.classList.toggle("btn-primary", renderView.primaryActive);
+  btn.classList.toggle("btn-disabled", renderView.disabledActive);
+  if (reason) reason.textContent = renderView.reasonText;
 }
 
 function syncRnnInferencePathInput() {
