@@ -434,6 +434,8 @@ class UIShellModularizationStaticTests(unittest.TestCase):
     def test_state_shell_delegates_i18n_dictionary_and_fallback_to_state_module(self):
         state_js = (ROOT / "static" / "state.js").read_text(encoding="utf-8")
         i18n_js = (ROOT / "static" / "state" / "i18n.js").read_text(encoding="utf-8")
+        zh_tw_js = (ROOT / "static" / "state" / "i18n" / "zh-TW.js").read_text(encoding="utf-8")
+        en_js = (ROOT / "static" / "state" / "i18n" / "en.js").read_text(encoding="utf-8")
 
         self.assertIn('from "./state/i18n.js"', state_js)
         self.assertIn('export { i18n } from "./state/i18n.js";', state_js)
@@ -443,11 +445,27 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotIn("let zhFallbackObserver", state_js)
         self.assertNotIn("configureI18nFallback", state_js)
 
+        self.assertIn('import { zhTW } from "./i18n/zh-TW.js";', i18n_js)
+        self.assertIn('import { en } from "./i18n/en.js";', i18n_js)
         self.assertIn("export const i18n = {", i18n_js)
+        self.assertIn('"zh-TW": zhTW,', i18n_js)
+        self.assertIn("  en,", i18n_js)
         self.assertIn("export function translate", i18n_js)
         self.assertIn("export function applyLanguageToDocument", i18n_js)
         self.assertIn("let zhFallbackObserver", i18n_js)
         self.assertIn("configureI18nFallback", i18n_js)
+        self.assertNotIn("themeToggle: \"Light\"", i18n_js)
+        self.assertNotIn("\"compare.toast.downloadFailed\"", i18n_js)
+
+        self.assertIn("export const zhTW = {", zh_tw_js)
+        self.assertIn("themeToggle:", zh_tw_js)
+        self.assertIn("\"compare.toast.downloadFailed\"", zh_tw_js)
+        self.assertNotIn("export function translate", zh_tw_js)
+
+        self.assertIn("export const en = {", en_js)
+        self.assertIn('themeToggle: "Light"', en_js)
+        self.assertIn("\"compare.toast.downloadFailed\"", en_js)
+        self.assertNotIn("export function translate", en_js)
 
     def test_app_shell_delegates_common_shell_rendering_to_core_modules(self):
         app_js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
