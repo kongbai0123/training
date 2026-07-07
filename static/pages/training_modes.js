@@ -36,8 +36,13 @@ import {
   rnnInferenceModelLabel
 } from "./rnn_inference_helpers.js";
 import {
+  buildRnnDatasetBadge,
+  buildRnnFeatureChipModels,
   buildRnnMismatchSummary,
+  buildRnnPreviewTableModel,
   buildRnnWindowSummaryRows,
+  formatRnnFeatureConfigHash,
+  resolveRnnFeatureDimension,
   resolveRnnWindowSummary
 } from "./rnn_config_view_helpers.js";
 import {
@@ -516,23 +521,28 @@ function renderRnnConfig(validation = null) {
   const config = trainingModeState.rnn.config || {};
   const headers = inspection.headers || [];
   const files = inspection.files || [];
+  const datasetBadge = buildRnnDatasetBadge({
+    files,
+    datasetImporting: trainingModeState.rnn.datasetImporting
+  });
   const badge = qs("#rnn-dataset-badge");
   if (badge) {
-    badge.className = `summary-badge ${files.length ? "badge-success" : "badge-warning"}`;
-    badge.textContent = trainingModeState.rnn.datasetImporting ? "Importing" : files.length ? `${files.length} CSV` : "CSV required";
+    badge.className = `summary-badge ${datasetBadge.badgeClass}`;
+    badge.textContent = datasetBadge.label;
   }
   const featureDimInput = qs("#rnn-feature-dim");
-  if (featureDimInput) featureDimInput.value = String((config.feature_columns || []).length || inspection.feature_dim || 0);
-  const hash = config.feature_config_hash ? `hash ${String(config.feature_config_hash).slice(0, 8)}` : "No config";
-  setText("#rnn-config-hash-badge", hash);
+  if (featureDimInput) featureDimInput.value = String(resolveRnnFeatureDimension({ config, inspection }));
+  setText("#rnn-config-hash-badge", formatRnnFeatureConfigHash(config));
   const preview = qs("#rnn-sequence-dataset-preview");
   if (preview) {
-    const rows = inspection.preview_rows || [];
-    if (rows.length) {
-      const cols = headers.slice(0, 8);
-      preview.innerHTML = `<div class="rnn-preview-table-wrap"><table class="rnn-preview-table"><thead><tr>${cols.map((col) => `<th>${escapeHtml(col)}</th>`).join("")}</tr></thead><tbody>${rows.slice(0, 6).map((row) => `<tr>${cols.map((col) => `<td>${escapeHtml(row[col] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    const previewModel = buildRnnPreviewTableModel({
+      headers,
+      rows: inspection.preview_rows
+    });
+    if (previewModel.hasRows) {
+      preview.innerHTML = `<div class="rnn-preview-table-wrap"><table class="rnn-preview-table"><thead><tr>${previewModel.columns.map((col) => `<th>${escapeHtml(col)}</th>`).join("")}</tr></thead><tbody>${previewModel.rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
     } else {
-      preview.textContent = "sequence_id, timestep, feature_1, feature_2, target";
+      preview.textContent = previewModel.placeholder;
     }
   }
   renderRnnFeatureChips(validation);
@@ -571,14 +581,14 @@ function renderRnnWindowSummary(validation = null) {
 function renderRnnFeatureChips(validation = null) {
   const list = qs("#rnn-feature-chip-list");
   if (!list) return;
-  const headers = new Set(trainingModeState.rnn.configInspection?.headers || []);
-  const validationStatus = new Map((validation?.feature_status || []).map((item) => [item.name, item]));
-  const features = parseRnnFeatureInput();
-  list.innerHTML = features.map((name) => {
-    const exists = validationStatus.get(name)?.exists ?? headers.has(name);
-    const cls = exists ? "valid" : "invalid";
-    return `<span class="rnn-chip ${cls}">${escapeHtml(name)}${exists ? "" : " 繚 missing"}</span>`;
-  }).join("");
+  const chips = buildRnnFeatureChipModels({
+    features: parseRnnFeatureInput(),
+    headers: trainingModeState.rnn.configInspection?.headers,
+    validation
+  });
+  list.innerHTML = chips
+    .map((chip) => `<span class="rnn-chip ${chip.className}">${escapeHtml(chip.name)}${chip.exists ? "" : " 繚 missing"}</span>`)
+    .join("");
 }
 
 function renderRnnConfigMismatch() {
