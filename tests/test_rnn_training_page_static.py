@@ -15,6 +15,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         rnn_evaluation_helpers_js = (
             ROOT / "static" / "pages" / "rnn_evaluation_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_artifact_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_artifact_helpers.js"
+        ).read_text(encoding="utf-8")
         rnn_model_catalog_helpers_js = (
             ROOT / "static" / "pages" / "rnn_model_catalog_helpers.js"
         ).read_text(encoding="utf-8")
@@ -76,6 +79,15 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn("function renderRnnMetricTrendRows", training_modes_js)
         self.assertIn("function renderRnnBaselineComparison", training_modes_js)
         self.assertIn("comparisonMetric", training_modes_js)
+        self.assertIn("buildRnnArtifactViewModels", training_modes_js)
+        self.assertIn("export const RNN_ARTIFACT_PRIORITY", rnn_artifact_helpers_js)
+        self.assertIn("export function sortRnnArtifacts", rnn_artifact_helpers_js)
+        self.assertIn("export function formatRnnArtifactSize", rnn_artifact_helpers_js)
+        self.assertIn("export function buildRnnArtifactDownloadUrl", rnn_artifact_helpers_js)
+        self.assertIn("export function buildRnnArtifactViewModels", rnn_artifact_helpers_js)
+        self.assertNotIn("const priority = [\"best.pt\"", training_modes_js)
+        self.assertNotIn("Number(artifact.size) / 1024", training_modes_js)
+        self.assertNotIn("/artifacts/download/${encodeURIComponent(filename)}", training_modes_js)
         self.assertIn("export function buildRnnBaselineComparisonRows", rnn_evaluation_helpers_js)
         self.assertIn("export function resolveRnnEvaluationViewModel", rnn_evaluation_helpers_js)
         self.assertNotIn("function getComparisonMetricConfig", training_modes_js)

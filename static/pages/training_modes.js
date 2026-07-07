@@ -40,6 +40,7 @@ import {
   rnnStartBlockerMessage,
   summarizeRnnReadiness
 } from "./rnn_readiness_helpers.js";
+import { buildRnnArtifactViewModels } from "./rnn_artifact_helpers.js";
 import { trainingModeState } from "./training_mode_state.js";
 
 export { trainingModeState } from "./training_mode_state.js";
@@ -826,23 +827,18 @@ function renderRnnEvaluationArtifacts(artifacts, runId) {
     container.textContent = "No artifacts.";
     return;
   }
-  const priority = ["best.pt", "last.pt", "best.json", "last.json", "metrics.json", "results.csv", "run_summary.json", "feature_schema.json", "normalization_stats.json", "label_encoder.json", "model_metadata.json", "artifact_manifest.json"];
-  const sorted = [...artifacts].sort((a, b) => {
-    const ai = priority.indexOf(a.filename);
-    const bi = priority.indexOf(b.filename);
-    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi) || String(a.filename).localeCompare(String(b.filename));
+  const artifactRows = buildRnnArtifactViewModels({
+    artifacts,
+    projectId: appState.currentProjectId,
+    runId
   });
-  container.innerHTML = sorted.map((artifact) => {
-    const filename = artifact.filename || "artifact";
-    const relPath = artifact.rel_path || filename;
-    const sizeKb = artifact.size !== undefined ? `${(Number(artifact.size) / 1024).toFixed(1)} KB` : "--";
-    const url = `/api/projects/${appState.currentProjectId}/train/runs/${encodeURIComponent(runId)}/artifacts/download/${encodeURIComponent(filename)}?path=${encodeURIComponent(relPath)}`;
+  container.innerHTML = artifactRows.map((artifact) => {
     return `<div class="rnn-result-item">
       <div>
-        <strong>${escapeHtml(filename)}</strong>
-        <span>${escapeHtml(relPath)} · ${escapeHtml(sizeKb)}</span>
+        <strong>${escapeHtml(artifact.filename)}</strong>
+        <span>${escapeHtml(artifact.relPath)} · ${escapeHtml(artifact.sizeLabel)}</span>
       </div>
-      <a class="btn btn-secondary btn-sm" href="${url}" target="_blank" download>Download</a>
+      <a class="btn btn-secondary btn-sm" href="${escapeHtml(artifact.downloadUrl)}" target="_blank" download>Download</a>
     </div>`;
   }).join("");
 }
