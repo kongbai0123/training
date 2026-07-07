@@ -2,45 +2,9 @@
 import { appState } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, escapeHtml, setText } from "../utils.js";
+import { trainingModeState } from "./training_mode_state.js";
 
-export const trainingModeState = {
-  activeMode: "cnn",
-  activeCnnPanel: "overview",
-  activeRnnPanel: "overview",
-  cnn: {
-    backend: "ultralytics_yolo",
-    trainingEnabled: true
-  },
-  rnn: {
-    backend: "pytorch_lstm",
-    trainingEnabled: false,
-    readiness: null,
-    config: null,
-    configInspection: null,
-    configValidation: null,
-    windowSummary: null,
-    configMismatches: [],
-    configLoading: false,
-    datasetImporting: false,
-    readinessLoading: false,
-    trainingStarting: false,
-    modelCatalog: [],
-    modelCatalogLoading: false,
-    modelGuides: null,
-    modelGuidesLoading: false,
-    inferenceModels: [],
-    inferenceLoading: false,
-    inferenceRunning: false,
-    inferenceResult: null,
-    evaluationLoading: false,
-    evaluationRuns: [],
-    evaluationMetrics: null,
-    evaluationArtifacts: [],
-    evaluationRunId: "",
-    evaluationRunMetrics: {},
-    comparisonMetric: "macro_f1"
-  }
-};
+export { trainingModeState } from "./training_mode_state.js";
 
 export function initTrainingModeSidebar() {
   qsa("[data-training-mode]").forEach((button) => {

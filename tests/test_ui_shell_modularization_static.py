@@ -467,6 +467,21 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("\"compare.toast.downloadFailed\"", en_js)
         self.assertNotIn("export function translate", en_js)
 
+    def test_training_mode_shell_delegates_state_to_state_module(self):
+        training_modes_js = (ROOT / "static" / "pages" / "training_modes.js").read_text(encoding="utf-8")
+        training_mode_state_js = (
+            ROOT / "static" / "pages" / "training_mode_state.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('import { trainingModeState } from "./training_mode_state.js";', training_modes_js)
+        self.assertIn('export { trainingModeState } from "./training_mode_state.js";', training_modes_js)
+        self.assertNotIn("export const trainingModeState = {", training_modes_js)
+        self.assertIn("export const trainingModeState = {", training_mode_state_js)
+        self.assertIn('activeMode: "cnn"', training_mode_state_js)
+        self.assertIn('backend: "ultralytics_yolo"', training_mode_state_js)
+        self.assertIn('backend: "pytorch_lstm"', training_mode_state_js)
+        self.assertIn('comparisonMetric: "macro_f1"', training_mode_state_js)
+
     def test_app_shell_delegates_common_shell_rendering_to_core_modules(self):
         app_js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
         bootstrap_js = (ROOT / "static" / "core" / "bootstrap.js").read_text(encoding="utf-8")
