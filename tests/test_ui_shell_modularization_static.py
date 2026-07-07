@@ -13,6 +13,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         layout_css = (ROOT / "static" / "styles" / "layout.css").read_text(encoding="utf-8")
         components_css = (ROOT / "static" / "styles" / "components.css").read_text(encoding="utf-8")
         augmentation_css = (ROOT / "static" / "styles" / "pages" / "augmentation.css").read_text(encoding="utf-8")
+        model_compare_css = (ROOT / "static" / "styles" / "pages" / "model_compare.css").read_text(encoding="utf-8")
 
         self.assertTrue(
             style_css.startswith(
@@ -20,7 +21,8 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/base.css";\n'
                 '@import "./styles/layout.css";\n'
                 '@import "./styles/components.css";\n'
-                '@import "./styles/pages/augmentation.css";'
+                '@import "./styles/pages/augmentation.css";\n'
+                '@import "./styles/pages/model_compare.css";'
             )
         )
         self.assertNotIn(":root {\n  --bg:", style_css)
@@ -51,6 +53,12 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.preset-item \{")
         self.assertNotRegex(style_css, r"(?m)^\.aug-preview-container \{")
         self.assertNotIn("Physical Augmentation Redesign Styles", style_css)
+        self.assertNotRegex(style_css, r"(?m)^\.model-compare-mode-card \{")
+        self.assertNotRegex(style_css, r"(?m)^\.compare-mode-row \{")
+        self.assertNotRegex(style_css, r"(?m)^\.model-compare-layout \{")
+        self.assertNotRegex(style_css, r"(?m)^\.compare-run-card \{")
+        self.assertNotRegex(style_css, r"(?m)^\.compare-output-controls \{")
+        self.assertNotIn("Model Compare Center", style_css)
         self.assertIn(".dashboard-lower-grid,\n.two-column-layout", style_css)
         self.assertIn(".preview-panel {", style_css)
         self.assertIn("@media (max-width: 840px) {", style_css)
@@ -109,6 +117,15 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(augmentation_css, r"(?m)^\.aug-preview-container \{")
         self.assertIn("Physical Augmentation Redesign Styles", augmentation_css)
         self.assertIn("@media (max-width: 840px) {", augmentation_css)
+
+        self.assertIn("Model Compare Center", model_compare_css)
+        self.assertRegex(model_compare_css, r"(?m)^\.model-compare-mode-card \{")
+        self.assertRegex(model_compare_css, r"(?m)^\.compare-mode-row \{")
+        self.assertRegex(model_compare_css, r"(?m)^\.model-compare-layout \{")
+        self.assertRegex(model_compare_css, r"(?m)^\.compare-run-card \{")
+        self.assertRegex(model_compare_css, r"(?m)^\.compare-output-controls \{")
+        self.assertRegex(model_compare_css, r"(?m)^\.compare-report-history-card \{")
+        self.assertIn("@media (max-width: 840px) {", model_compare_css)
 
     def test_state_shell_delegates_i18n_dictionary_and_fallback_to_state_module(self):
         state_js = (ROOT / "static" / "state.js").read_text(encoding="utf-8")
