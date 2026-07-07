@@ -12,6 +12,18 @@ import {
   resolveRunComparisonMetric,
   sequenceBackendDisplayLabel
 } from "./rnn_metric_helpers.js";
+import {
+  RNN_MODEL_GROUPS,
+  RNN_MODEL_TOOLTIPS,
+  fallbackRnnModelCatalog,
+  isRnnModelTrainable,
+  resolveRnnGuideKey,
+  resolveRnnModelEntry,
+  selectedRnnBackend,
+  selectedRnnBackendDisplay,
+  selectedRnnModelValue,
+  trainableTemplateRnnCatalog
+} from "./rnn_model_catalog_helpers.js";
 import { trainingModeState } from "./training_mode_state.js";
 
 export { trainingModeState } from "./training_mode_state.js";
@@ -1244,25 +1256,11 @@ async function loadRnnModelCatalog(options = {}) {
 }
 
 function getFallbackRnnModelCatalog() {
-  return [
-    { model_id: "fallback.rnn.lstm-classifier", display_name: "LSTM Classifier", backend: "pytorch_lstm", task_family: "sequence_classification", selector_value: "lstm", guide_key: "lstm_classification", trainable: true, training_enabled: true, status: "available" },
-    { model_id: "fallback.rnn.lstm-regressor", display_name: "LSTM Regressor", backend: "pytorch_lstm", task_family: "sequence_regression", selector_value: "lstm", guide_key: "lstm_regression", trainable: true, training_enabled: true, status: "available" },
-    { model_id: "fallback.rnn.gru-classifier", display_name: "GRU Classifier", backend: "pytorch_lstm", task_family: "sequence_classification", selector_value: "gru", guide_key: "gru_classification", trainable: true, training_enabled: true, status: "available" },
-    { model_id: "fallback.rnn.gru-regressor", display_name: "GRU Regressor", backend: "pytorch_lstm", task_family: "sequence_regression", selector_value: "gru", guide_key: "gru_regression", trainable: true, training_enabled: true, status: "available" },
-    { model_id: "fallback.rnn.bilstm-classifier", display_name: "BiLSTM Classifier", backend: "pytorch_lstm", task_family: "sequence_classification", selector_value: "bilstm", guide_key: "bilstm_classification", trainable: true, training_enabled: true, status: "available" },
-    { model_id: "fallback.rnn.bilstm-regressor", display_name: "BiLSTM Regressor", backend: "pytorch_lstm", task_family: "sequence_regression", selector_value: "bilstm", guide_key: "bilstm_regression", trainable: true, training_enabled: true, status: "available" },
-    { model_id: "fallback.rnn.fastrnn-classifier", display_name: "FastRNN Classifier", backend: "pytorch_fastrnn", task_family: "sequence_classification", selector_value: "fastrnn", guide_key: "fastrnn_classification", trainable: false, training_enabled: false, status: "planned" },
-    { model_id: "fallback.rnn.fastrnn-regressor", display_name: "FastRNN Regressor", backend: "pytorch_fastrnn", task_family: "sequence_regression", selector_value: "fastrnn", guide_key: "fastrnn_regression", trainable: false, training_enabled: false, status: "planned" },
-    { model_id: "fallback.xgboost.classifier", display_name: "XGBoost Classifier", backend: "sklearn_xgboost", task_family: "sequence_classification", selector_value: "xgboost_classifier", guide_key: "xgboost_classification", trainable: true, training_enabled: true, status: "available" },
-    { model_id: "fallback.xgboost.regressor", display_name: "XGBoost Regressor", backend: "sklearn_xgboost", task_family: "sequence_regression", selector_value: "xgboost_regressor", guide_key: "xgboost_regression", trainable: true, training_enabled: true, status: "available" },
-    { model_id: "fallback.isolation_forest.classifier", display_name: "Isolation Forest Baseline", backend: "sklearn_isolation_forest", task_family: "sequence_classification", selector_value: "isolation_forest", guide_key: "isolation_forest_classification", trainable: false, training_enabled: false, status: "planned" }
-  ];
+  return fallbackRnnModelCatalog();
 }
 
 function getTrainableTemplateRnnCatalog() {
-  const catalog = trainingModeState.rnn.modelCatalog.length ? trainingModeState.rnn.modelCatalog : getFallbackRnnModelCatalog();
-  const templates = catalog.filter((model) => model.source !== "project_trained");
-  return templates.length ? templates : getFallbackRnnModelCatalog();
+  return trainableTemplateRnnCatalog(trainingModeState.rnn.modelCatalog);
 }
 
 function renderRnnModelSelector() {
@@ -1279,16 +1277,10 @@ function renderRnnModelSelector() {
     return;
   }
 
-  const groups = [
-    ["pytorch_lstm", "RNN / Sequence"],
-    ["pytorch_fastrnn", "RNN / Sequence · planned"],
-    ["sklearn_xgboost", "Tabular Baseline"],
-    ["sklearn_isolation_forest", "Anomaly Baseline · planned"]
-  ];
   const loadingOption = trainingModeState.rnn.modelCatalogLoading
     ? `<option value="" disabled>Loading catalog in background...</option>`
     : "";
-  select.innerHTML = loadingOption + groups.map(([backend, label]) => {
+  select.innerHTML = loadingOption + RNN_MODEL_GROUPS.map(([backend, label]) => {
     const items = models.filter((model) => model.backend === backend);
     if (!items.length) return "";
     return `<optgroup label="${escapeHtml(label)}">${items.map((model) => {
@@ -1331,17 +1323,16 @@ async function loadRnnModelGuides() {
 
 function getSelectedRnnModel() {
   const entry = getSelectedRnnModelEntry();
-  return entry?.selector_value || qs("#rnn-model-family")?.value || "lstm";
+  return selectedRnnModelValue(entry, qs("#rnn-model-family")?.value || "");
 }
 
 function getSelectedRnnModelEntry() {
   const value = qs("#rnn-model-family")?.value || "";
-  const catalog = getTrainableTemplateRnnCatalog();
-  return catalog.find((model) => model.model_id === value || model.selector_value === value) || null;
+  return resolveRnnModelEntry(getTrainableTemplateRnnCatalog(), value);
 }
 
 function getSelectedRnnBackend() {
-  return getSelectedRnnModelEntry()?.backend || "pytorch_lstm";
+  return selectedRnnBackend(getSelectedRnnModelEntry(), getSelectedRnnModel());
 }
 
 function getSelectedRnnTaskHead() {
@@ -1350,18 +1341,11 @@ function getSelectedRnnTaskHead() {
 
 function getRnnGuideKey() {
   const entry = getSelectedRnnModelEntry();
-  if (entry?.guide_key) return entry.guide_key;
-  const model = getSelectedRnnModel();
-  const taskHead = getSelectedRnnTaskHead();
-  if (model === "xgboost_classifier") return "xgboost_classification";
-  if (model === "xgboost_regressor") return "xgboost_regression";
-  return `${model}_${taskHead}`;
+  return resolveRnnGuideKey(entry, getSelectedRnnModel(), getSelectedRnnTaskHead());
 }
 
 function isSelectedRnnModelTrainable() {
-  const entry = getSelectedRnnModelEntry();
-  if (entry) return Boolean(entry.trainable && entry.training_enabled);
-  return ["lstm", "gru", "bilstm"].includes(getSelectedRnnModel());
+  return isRnnModelTrainable(getSelectedRnnModelEntry(), getSelectedRnnModel());
 }
 
 function syncRnnModelSelection() {
@@ -1373,20 +1357,10 @@ function syncRnnModelSelection() {
   if (model === "xgboost_classifier" && taskHead) taskHead.value = "classification";
   if (model === "xgboost_regressor" && taskHead) taskHead.value = "regression";
   if (backend) {
-    const backendName = entry?.backend || (model.startsWith("xgboost") ? "sklearn_xgboost" : "pytorch_lstm");
-    backend.value = entry?.training_enabled === false ? `${backendName} (planned)` : backendName;
+    backend.value = selectedRnnBackendDisplay(entry, model);
   }
   if (infoIcon) {
-    const tooltips = {
-      lstm: "LSTM uses input/forget/output gates and is the default choice for general CSV sequence learning.",
-      gru: "GRU has fewer gates than LSTM, often trains faster, and is useful when data is limited.",
-      bilstm: "BiLSTM reads the window in both directions. Use it for offline sequence tasks, not streaming inference.",
-      fastrnn: "FastRNN is planned as a lightweight recurrent option. It is visible for roadmap clarity but not trainable yet.",
-      xgboost_classifier: "XGBoost Classifier is a strong tabular baseline for sequence-window features.",
-      xgboost_regressor: "XGBoost Regressor is a strong tabular baseline for numeric sequence targets.",
-      isolation_forest: "Isolation Forest is planned for anomaly-oriented sequence-window baselines and is not trainable yet."
-    };
-    infoIcon.dataset.tooltip = tooltips[model] || entry?.display_name || "Select a compatible sequence model.";
+    infoIcon.dataset.tooltip = RNN_MODEL_TOOLTIPS[model] || entry?.display_name || "Select a compatible sequence model.";
   }
 }
 

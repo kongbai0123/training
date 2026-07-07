@@ -12,6 +12,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         rnn_metric_helpers_js = (
             ROOT / "static" / "pages" / "rnn_metric_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_model_catalog_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_model_catalog_helpers.js"
+        ).read_text(encoding="utf-8")
         training_js = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
         right_panel_js = (ROOT / "static" / "core" / "right_panel.js").read_text(encoding="utf-8")
         page_guards_js = (ROOT / "static" / "core" / "page_guards.js").read_text(encoding="utf-8")
@@ -48,11 +51,11 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn("early_stopping_patience", training_modes_js)
         self.assertIn("CSV must include sequence id", training_modes_js)
         self.assertIn("function getTrainableTemplateRnnCatalog", training_modes_js)
-        self.assertIn('model.source !== "project_trained"', training_modes_js)
-        self.assertIn("FastRNN Classifier", training_modes_js)
-        self.assertIn("Isolation Forest Baseline", training_modes_js)
-        self.assertIn("pytorch_fastrnn", training_modes_js)
-        self.assertIn("sklearn_isolation_forest", training_modes_js)
+        self.assertIn('model.source !== "project_trained"', rnn_model_catalog_helpers_js)
+        self.assertIn("FastRNN Classifier", rnn_model_catalog_helpers_js)
+        self.assertIn("Isolation Forest Baseline", rnn_model_catalog_helpers_js)
+        self.assertIn("pytorch_fastrnn", rnn_model_catalog_helpers_js)
+        self.assertIn("sklearn_isolation_forest", rnn_model_catalog_helpers_js)
         self.assertIn("Loading catalog in background", training_modes_js)
         self.assertNotIn('select.innerHTML = `<option value="">Loading model catalog...</option>`', training_modes_js)
         self.assertIn("await loadRnnModelCatalog({ force: options.force });", training_modes_js)
@@ -69,7 +72,7 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn("function renderRnnEvaluationSidebar", training_modes_js)
         self.assertIn("toggleRnnEvaluationRightPanel", training_modes_js)
         self.assertNotIn('renderRnnSidebarRows("#rnn-eval-sidebar-settings"', training_modes_js)
-        self.assertIn("XGBoost Classifier is a strong tabular baseline", training_modes_js)
+        self.assertIn("XGBoost Classifier is a strong tabular baseline", rnn_model_catalog_helpers_js)
         self.assertIn("export function isRnnTrainingWorkspaceActive", training_modes_js)
         self.assertIn("const firstReady = models.find((model) => model.status === \"ready\");", training_modes_js)
         self.assertIn("select.value = (firstReady || models[0])?.model_id || \"\";", training_modes_js)

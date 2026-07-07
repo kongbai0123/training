@@ -475,10 +475,14 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         rnn_metric_helpers_js = (
             ROOT / "static" / "pages" / "rnn_metric_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_model_catalog_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_model_catalog_helpers.js"
+        ).read_text(encoding="utf-8")
 
         self.assertIn('import { trainingModeState } from "./training_mode_state.js";', training_modes_js)
         self.assertIn('export { trainingModeState } from "./training_mode_state.js";', training_modes_js)
         self.assertIn('} from "./rnn_metric_helpers.js";', training_modes_js)
+        self.assertIn('} from "./rnn_model_catalog_helpers.js";', training_modes_js)
         self.assertNotIn("export const trainingModeState = {", training_modes_js)
         self.assertIn("export const trainingModeState = {", training_mode_state_js)
         self.assertIn('activeMode: "cnn"', training_mode_state_js)
@@ -488,9 +492,15 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("export function resolveComparisonMetricConfig", rnn_metric_helpers_js)
         self.assertIn("export function buildSparklinePoints", rnn_metric_helpers_js)
         self.assertIn("export function sequenceBackendDisplayLabel", rnn_metric_helpers_js)
+        self.assertIn("export function fallbackRnnModelCatalog", rnn_model_catalog_helpers_js)
+        self.assertIn("export function trainableTemplateRnnCatalog", rnn_model_catalog_helpers_js)
+        self.assertIn("export const RNN_MODEL_TOOLTIPS", rnn_model_catalog_helpers_js)
         self.assertIn('return resolveComparisonMetricConfig(metricKey);', training_modes_js)
         self.assertIn("return buildSparklinePoints(values);", training_modes_js)
+        self.assertIn("return fallbackRnnModelCatalog();", training_modes_js)
+        self.assertIn("return trainableTemplateRnnCatalog(trainingModeState.rnn.modelCatalog);", training_modes_js)
         self.assertNotIn("const configs = {\n    accuracy:", training_modes_js)
+        self.assertNotIn('display_name: "FastRNN Classifier"', training_modes_js)
 
     def test_app_shell_delegates_common_shell_rendering_to_core_modules(self):
         app_js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
