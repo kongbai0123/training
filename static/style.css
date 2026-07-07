@@ -3,6 +3,7 @@
 @import "./styles/layout.css";
 @import "./styles/components.css";
 @import "./styles/components/model_registry.css";
+@import "./styles/components/selection_controls.css";
 @import "./styles/pages/dashboard.css";
 @import "./styles/pages/history.css";
 @import "./styles/pages/dataset.css";
@@ -242,93 +243,6 @@ select:focus {
   border-top: 1px solid var(--border);
 }
 
-.simple-step-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.simple-step {
-  min-height: 72px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-panel-soft);
-  display: grid;
-  gap: 4px;
-}
-
-.simple-step.active {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18);
-}
-
-.simple-step strong {
-  font-size: 0.84rem;
-}
-
-.simple-step span {
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  line-height: 1.35;
-}
-
-.compact-source-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.compact-source-grid .source-option {
-  min-height: 82px;
-}
-
-.source-drop-preview {
-  margin: 2px 0 14px;
-}
-
-.advanced-collapse {
-  margin-top: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-panel-soft);
-}
-
-.advanced-collapse summary {
-  cursor: pointer;
-  padding: 12px;
-  font-weight: 700;
-}
-
-.compact-strategy-list {
-  display: grid;
-  gap: 8px;
-  padding: 0 12px 12px;
-}
-
-.compact-strategy-list div {
-  display: grid;
-  gap: 3px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-panel);
-}
-
-.compact-strategy-list strong {
-  font-size: 0.86rem;
-}
-
-.compact-strategy-list span,
-.muted-note {
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  line-height: 1.45;
-}
-
-.compact-toolbar .btn-primary {
-  margin-left: 0;
-}
-
 .btn.success {
   border-color: rgba(22, 163, 74, 0.5);
 }
@@ -344,64 +258,6 @@ select:focus {
 .compact-table {
   max-height: 260px;
   overflow: auto;
-}
-
-.source-option-grid,
-.mode-grid {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.source-option,
-.mode-card {
-  width: 100%;
-  min-height: 74px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-panel-soft);
-  color: var(--text);
-  text-align: left;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 10px;
-  row-gap: 4px;
-  align-items: center;
-}
-
-.source-option i {
-  grid-row: span 2;
-  color: var(--primary);
-  font-size: 1rem;
-}
-
-.source-option span,
-.mode-card span {
-  grid-column: 2;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-}
-
-.source-option.active,
-.mode-card.selected {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.22);
-}
-
-.source-option.disabled,
-.mode-card.disabled,
-.disabled-drop {
-  opacity: 0.62;
-  cursor: not-allowed;
-}
-
-.mode-card {
-  cursor: pointer;
-}
-
-.mode-card input {
-  grid-row: span 2;
 }
 
 .auto-settings-grid {
@@ -433,30 +289,6 @@ select:focus {
 .compact-title h3 {
   margin: 0;
   font-size: 0.92rem;
-}
-
-.strategy-list {
-  display: grid;
-  gap: 10px;
-}
-
-.strategy-item {
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-panel-soft);
-  display: grid;
-  gap: 4px;
-}
-
-.strategy-item strong {
-  font-size: 0.9rem;
-}
-
-.strategy-item span {
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  line-height: 1.45;
 }
 
 .auto-label-bottom-grid {
@@ -884,8 +716,6 @@ body[data-theme="light"] .floating-tooltip {
 @media (max-width: 840px) {
   .dashboard-lower-grid,
   .two-column-layout,
-  .simple-step-list,
-  .compact-source-grid,
   .kpi-grid,
   .metric-grid,
   .control-card-grid,

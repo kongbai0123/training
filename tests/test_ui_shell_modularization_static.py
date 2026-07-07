@@ -13,6 +13,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         layout_css = (ROOT / "static" / "styles" / "layout.css").read_text(encoding="utf-8")
         components_css = (ROOT / "static" / "styles" / "components.css").read_text(encoding="utf-8")
         model_registry_css = (ROOT / "static" / "styles" / "components" / "model_registry.css").read_text(encoding="utf-8")
+        selection_controls_css = (ROOT / "static" / "styles" / "components" / "selection_controls.css").read_text(encoding="utf-8")
         dashboard_css = (ROOT / "static" / "styles" / "pages" / "dashboard.css").read_text(encoding="utf-8")
         history_css = (ROOT / "static" / "styles" / "pages" / "history.css").read_text(encoding="utf-8")
         dataset_css = (ROOT / "static" / "styles" / "pages" / "dataset.css").read_text(encoding="utf-8")
@@ -32,6 +33,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/layout.css";\n'
                 '@import "./styles/components.css";\n'
                 '@import "./styles/components/model_registry.css";\n'
+                '@import "./styles/components/selection_controls.css";\n'
                 '@import "./styles/pages/dashboard.css";\n'
                 '@import "./styles/pages/history.css";\n'
                 '@import "./styles/pages/dataset.css";\n'
@@ -72,6 +74,12 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.weight-manager-modal-content \{")
         self.assertNotRegex(style_css, r"(?m)^\.model-import-supported-types \{")
         self.assertNotRegex(style_css, r"(?m)^\.model-approval-panel \{")
+        self.assertNotRegex(style_css, r"(?m)^\.simple-step-list \{")
+        self.assertNotRegex(style_css, r"(?m)^\.source-option-grid,")
+        self.assertNotRegex(style_css, r"(?m)^\.source-option,")
+        self.assertNotRegex(style_css, r"(?m)^\.mode-card \{")
+        self.assertNotRegex(style_css, r"(?m)^\.strategy-list \{")
+        self.assertNotRegex(style_css, r"(?m)^\.advanced-collapse \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-map-panel \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-card \{")
@@ -195,6 +203,15 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(model_registry_css, r"(?m)^\.model-approval-panel \{")
         self.assertIn("@media (max-width: 860px) {", model_registry_css)
         self.assertIn("@media (max-width: 980px) {", model_registry_css)
+
+        self.assertRegex(selection_controls_css, r"(?m)^\.simple-step-list \{")
+        self.assertRegex(selection_controls_css, r"(?m)^\.compact-source-grid \{")
+        self.assertRegex(selection_controls_css, r"(?m)^\.source-option-grid,")
+        self.assertRegex(selection_controls_css, r"(?m)^\.source-option,")
+        self.assertRegex(selection_controls_css, r"(?m)^\.mode-card \{")
+        self.assertRegex(selection_controls_css, r"(?m)^\.strategy-list \{")
+        self.assertRegex(selection_controls_css, r"(?m)^\.advanced-collapse \{")
+        self.assertIn("@media (max-width: 840px) {", selection_controls_css)
 
         self.assertRegex(dashboard_css, r"(?m)^#page-dashboard \.dashboard-lower-grid \{")
         self.assertRegex(dashboard_css, r"(?m)^\.workflow-map-panel \{")
