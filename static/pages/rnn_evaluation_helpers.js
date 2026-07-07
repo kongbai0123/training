@@ -1,8 +1,10 @@
 import {
   extractMetricSeries,
+  formatSequenceMetric,
   normalizeRnnModelGroupLabel,
   resolveComparisonMetricConfig,
-  resolveRunComparisonMetric
+  resolveRunComparisonMetric,
+  sequenceBackendDisplayLabel
 } from "./rnn_metric_helpers.js";
 
 export function isSequenceEvaluationRun(run) {
@@ -90,5 +92,50 @@ export function buildRnnBaselineComparisonRows({ runs = [], metricsByRun = {}, m
           : Math.max(4, (row.value / max) * 100);
       return { ...row, hasValue, percent };
     })
+  };
+}
+
+export function buildRnnEvaluationSidebarSections({
+  activeRun = null,
+  metrics = null,
+  readiness = {},
+  config = {},
+  metricSource = {},
+  isRegression = false,
+  primary = { label: "Accuracy", value: null },
+  secondary = { label: "Macro-F1", value: null }
+} = {}) {
+  const dataset = metrics?.dataset_summary || {};
+  const splitCounts = dataset.split_counts || readiness.split_counts || {};
+  const splitText = ["train", "val", "test"].map((key) => `${key}: ${splitCounts[key] ?? 0}`).join(" / ");
+  const modelLabel = activeRun?.model || metrics?.model || sequenceBackendDisplayLabel(activeRun || metrics || {});
+  const backendLabel = metrics?.backend || activeRun?.backend || "--";
+  const taskLabel = isRegression ? "regression" : "classification";
+
+  return {
+    status: {
+      className: `summary-badge ${activeRun ? "badge-success" : "badge-neutral"}`,
+      text: activeRun ? activeRun.status || "loaded" : "No run"
+    },
+    runRows: [
+      ["Run ID", activeRun?.run_id || "--", true],
+      ["Model", modelLabel || "--"],
+      ["Backend", backendLabel || "--", true],
+      ["Status", activeRun?.status || "--"],
+      ["Task", activeRun?.task_type || metrics?.task_type || taskLabel]
+    ],
+    datasetRows: [
+      ["CSV files", String((dataset.csv_files || []).length || readiness.csv_files || 0)],
+      ["Sequences", String(dataset.sequence_count ?? readiness.sequence_count ?? "--")],
+      ["Feature dim", String(dataset.feature_dim ?? readiness.feature_dim ?? "--")],
+      ["Split", splitText],
+      ["Window", `length ${dataset.sequence_length ?? config.sequence_length ?? "--"} / stride ${dataset.stride ?? config.stride ?? "--"} / horizon ${config.horizon ?? "--"}`]
+    ],
+    metricRows: [
+      [primary.label, formatSequenceMetric(primary.value)],
+      [secondary.label, formatSequenceMetric(secondary.value)],
+      ["Val Loss", formatSequenceMetric(metricSource?.["val/loss"])],
+      ["Best epoch", String(metrics?.best_epoch ?? activeRun?.best_epoch ?? "--")]
+    ]
   };
 }

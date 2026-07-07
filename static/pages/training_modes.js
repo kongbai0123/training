@@ -10,6 +10,7 @@ import {
   sequenceBackendDisplayLabel
 } from "./rnn_metric_helpers.js";
 import {
+  buildRnnEvaluationSidebarSections,
   buildRnnBaselineComparisonRows,
   isSequenceEvaluationRun,
   isSinglePointBaselineRun,
@@ -928,41 +929,25 @@ function sparklinePoints(values) {
 
 function renderRnnEvaluationSidebar({ activeRun, metrics, artifacts, history, metricSource, isRegression, primary, secondary }) {
   toggleRnnEvaluationRightPanel(trainingModeState.activeMode === "rnn" && trainingModeState.activeRnnPanel === "evaluation" && appState.currentPage === "training");
+  const sidebar = buildRnnEvaluationSidebarSections({
+    activeRun,
+    metrics,
+    readiness: trainingModeState.rnn.readiness?.summary?.csv || {},
+    config: trainingModeState.rnn.config || {},
+    metricSource,
+    isRegression,
+    primary,
+    secondary
+  });
   const statusBadge = qs("#rnn-eval-sidebar-status");
   if (statusBadge) {
-    statusBadge.className = `summary-badge ${activeRun ? "badge-success" : "badge-neutral"}`;
-    statusBadge.textContent = activeRun ? activeRun.status || "loaded" : "No run";
+    statusBadge.className = sidebar.status.className;
+    statusBadge.textContent = sidebar.status.text;
   }
 
-  const dataset = metrics?.dataset_summary || {};
-  const readiness = trainingModeState.rnn.readiness?.summary?.csv || {};
-  const splitCounts = dataset.split_counts || readiness.split_counts || {};
-  const splitText = ["train", "val", "test"].map((key) => `${key}: ${splitCounts[key] ?? 0}`).join(" / ");
-  const config = trainingModeState.rnn.config || {};
-  const modelLabel = activeRun?.model || metrics?.model || sequenceBackendLabel(activeRun || metrics || {});
-  const backendLabel = metrics?.backend || activeRun?.backend || "--";
-  const taskLabel = isRegression ? "regression" : "classification";
-
-  renderRnnSidebarRows("#rnn-eval-sidebar-run", [
-    ["Run ID", activeRun?.run_id || "--", true],
-    ["Model", modelLabel || "--"],
-    ["Backend", backendLabel || "--", true],
-    ["Status", activeRun?.status || "--"],
-    ["Task", activeRun?.task_type || metrics?.task_type || taskLabel]
-  ]);
-  renderRnnSidebarRows("#rnn-eval-sidebar-dataset", [
-    ["CSV files", String((dataset.csv_files || []).length || readiness.csv_files || 0)],
-    ["Sequences", String(dataset.sequence_count ?? readiness.sequence_count ?? "--")],
-    ["Feature dim", String(dataset.feature_dim ?? readiness.feature_dim ?? "--")],
-    ["Split", splitText],
-    ["Window", `length ${dataset.sequence_length ?? config.sequence_length ?? "--"} / stride ${dataset.stride ?? config.stride ?? "--"} / horizon ${config.horizon ?? "--"}`]
-  ]);
-  renderRnnSidebarRows("#rnn-eval-sidebar-metrics", [
-    [primary.label, formatRnnMetric(primary.value)],
-    [secondary.label, formatRnnMetric(secondary.value)],
-    ["Val Loss", formatRnnMetric(metricSource?.["val/loss"])],
-    ["Best epoch", String(metrics?.best_epoch ?? activeRun?.best_epoch ?? "--")]
-  ]);
+  renderRnnSidebarRows("#rnn-eval-sidebar-run", sidebar.runRows);
+  renderRnnSidebarRows("#rnn-eval-sidebar-dataset", sidebar.datasetRows);
+  renderRnnSidebarRows("#rnn-eval-sidebar-metrics", sidebar.metricRows);
   renderRnnEvaluationArtifacts(artifacts, activeRun?.run_id || "");
 }
 
