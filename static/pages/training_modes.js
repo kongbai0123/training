@@ -10,7 +10,7 @@ import {
   buildRnnEvaluationEpochRows,
   buildRnnEvaluationRunHistoryRows,
   buildRnnMetricTrendRows,
-  buildRnnEvaluationSidebarSections,
+  buildRnnEvaluationSidebarViewModel,
   buildRnnBaselineComparisonViewModel,
   isSequenceEvaluationRun,
   resolveRnnEvaluationViewModel
@@ -911,7 +911,7 @@ function renderRnnBaselineComparison(runs) {
 
 function renderRnnEvaluationSidebar({ activeRun, metrics, artifacts, history, metricSource, isRegression, primary, secondary }) {
   toggleRnnEvaluationRightPanel(trainingModeState.activeMode === "rnn" && trainingModeState.activeRnnPanel === "evaluation" && appState.currentPage === "training");
-  const sidebar = buildRnnEvaluationSidebarSections({
+  const sidebar = buildRnnEvaluationSidebarViewModel({
     activeRun,
     metrics,
     readiness: trainingModeState.rnn.readiness?.summary?.csv || {},
@@ -921,16 +921,14 @@ function renderRnnEvaluationSidebar({ activeRun, metrics, artifacts, history, me
     primary,
     secondary
   });
-  const statusBadge = qs("#rnn-eval-sidebar-status");
+  const statusBadge = qs(sidebar.statusSelector);
   if (statusBadge) {
     statusBadge.className = sidebar.status.className;
     statusBadge.textContent = sidebar.status.text;
   }
 
-  renderRnnSidebarRows("#rnn-eval-sidebar-run", sidebar.runRows);
-  renderRnnSidebarRows("#rnn-eval-sidebar-dataset", sidebar.datasetRows);
-  renderRnnSidebarRows("#rnn-eval-sidebar-metrics", sidebar.metricRows);
-  renderRnnEvaluationArtifacts(artifacts, activeRun?.run_id || "");
+  sidebar.rowSections.forEach((section) => renderRnnSidebarRows(section.selector, section.rows));
+  renderRnnEvaluationArtifacts(artifacts, sidebar.artifactRunId);
 }
 
 function renderRnnSidebarRows(selector, rows) {

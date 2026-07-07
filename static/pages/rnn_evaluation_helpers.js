@@ -256,3 +256,17 @@ export function buildRnnEvaluationSidebarSections({
     ]
   };
 }
+
+export function buildRnnEvaluationSidebarViewModel(options = {}) {
+  const sections = buildRnnEvaluationSidebarSections(options);
+  return {
+    statusSelector: "#rnn-eval-sidebar-status",
+    status: sections.status,
+    artifactRunId: options.activeRun?.run_id || "",
+    rowSections: [
+      { selector: "#rnn-eval-sidebar-run", rows: sections.runRows },
+      { selector: "#rnn-eval-sidebar-dataset", rows: sections.datasetRows },
+      { selector: "#rnn-eval-sidebar-metrics", rows: sections.metricRows }
+    ]
+  };
+}
