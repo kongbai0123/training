@@ -28,6 +28,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         inference_css = (ROOT / "static" / "styles" / "pages" / "inference.css").read_text(encoding="utf-8")
         auto_labeling_css = (ROOT / "static" / "styles" / "pages" / "auto_labeling.css").read_text(encoding="utf-8")
         evaluation_css = (ROOT / "static" / "styles" / "pages" / "evaluation.css").read_text(encoding="utf-8")
+        shared_css = (ROOT / "static" / "styles" / "shared.css").read_text(encoding="utf-8")
 
         self.assertTrue(
             style_css.startswith(
@@ -50,9 +51,11 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/model_compare.css";\n'
                 '@import "./styles/pages/inference.css";\n'
                 '@import "./styles/pages/auto_labeling.css";\n'
-                '@import "./styles/pages/evaluation.css";'
+                '@import "./styles/pages/evaluation.css";\n'
+                '@import "./styles/shared.css";'
             )
         )
+        self.assertNotRegex(style_css, r"(?m)^[.#a-zA-Z][^{]+\{")
         self.assertNotIn(":root {\n  --bg:", style_css)
         self.assertNotIn('body[data-theme="light"] {\n  --bg:', style_css)
         self.assertNotIn("html,\nbody {\n  margin: 0;", style_css)
@@ -175,8 +178,8 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.evaluation-plots-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.evaluation-plot-card \{")
         self.assertNotRegex(style_css, r"(?m)^\.evaluation-plot-modal \{")
-        self.assertIn(".dashboard-lower-grid,\n.two-column-layout", style_css)
-        self.assertIn("@media (max-width: 840px) {", style_css)
+        self.assertNotIn(".dashboard-lower-grid,\n.two-column-layout", style_css)
+        self.assertNotIn("@media (max-width: 840px) {", style_css)
 
         self.assertIn(":root {", tokens_css)
         self.assertIn("--bg: #0f1318;", tokens_css)
@@ -409,6 +412,24 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(evaluation_css, r"(?m)^\.evaluation-plot-modal \{")
         self.assertRegex(evaluation_css, r"(?m)^\.evaluation-wide-empty \{")
         self.assertIn("@media (max-width: 1280px) {", evaluation_css)
+
+        self.assertIn(".dashboard-lower-grid,\n.two-column-layout", shared_css)
+        self.assertRegex(shared_css, r"(?m)^\.compact-table \{")
+        self.assertRegex(shared_css, r"(?m)^\.settings-controls \{")
+        self.assertRegex(shared_css, r"(?m)^input\[type=\"range\"\] \{")
+        self.assertRegex(shared_css, r"(?m)^\.inline-fields,")
+        self.assertRegex(shared_css, r"(?m)^\.split-ratio-total \{")
+        self.assertRegex(shared_css, r"(?m)^\.phase-card \{")
+        self.assertRegex(shared_css, r"(?m)^\.btn\.success \{")
+        self.assertRegex(shared_css, r"(?m)^\.auto-settings-grid \{")
+        self.assertRegex(shared_css, r"(?m)^\.checkbox-row \{")
+        self.assertRegex(shared_css, r"(?m)^\.list-stack,")
+        self.assertRegex(shared_css, r"(?m)^\.empty-state \{")
+        self.assertRegex(shared_css, r"(?m)^body\[data-theme=\"light\"\] \.empty-state \{")
+        self.assertRegex(shared_css, r"(?m)^\.workflow-list \{")
+        self.assertRegex(shared_css, r"(?m)^\.next-actions \{")
+        self.assertRegex(shared_css, r"(?m)^\.hidden \{")
+        self.assertIn("@media (max-width: 840px) {", shared_css)
 
     def test_state_shell_delegates_i18n_dictionary_and_fallback_to_state_module(self):
         state_js = (ROOT / "static" / "state.js").read_text(encoding="utf-8")
