@@ -11,12 +11,14 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         tokens_css = (ROOT / "static" / "styles" / "tokens.css").read_text(encoding="utf-8")
         base_css = (ROOT / "static" / "styles" / "base.css").read_text(encoding="utf-8")
         layout_css = (ROOT / "static" / "styles" / "layout.css").read_text(encoding="utf-8")
+        components_css = (ROOT / "static" / "styles" / "components.css").read_text(encoding="utf-8")
 
         self.assertTrue(
             style_css.startswith(
                 '@import "./styles/tokens.css";\n'
                 '@import "./styles/base.css";\n'
-                '@import "./styles/layout.css";'
+                '@import "./styles/layout.css";\n'
+                '@import "./styles/components.css";'
             )
         )
         self.assertNotIn(":root {\n  --bg:", style_css)
@@ -27,7 +29,11 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotIn(".top-header {", style_css)
         self.assertNotIn(".app-body {", style_css)
         self.assertNotIn(".right-summary-panel {", style_css)
-        self.assertIn(".btn {", style_css)
+        self.assertNotRegex(style_css, r"(?m)^\.btn \{")
+        self.assertNotRegex(style_css, r"(?m)^\.badge \{")
+        self.assertNotRegex(style_css, r"(?m)^\.global-progress-hud \{")
+        self.assertNotRegex(style_css, r"(?m)^\.guard-stack \{")
+        self.assertIn(".dashboard-lower-grid,\n.two-column-layout", style_css)
 
         self.assertIn(":root {", tokens_css)
         self.assertIn("--bg: #0f1318;", tokens_css)
@@ -53,6 +59,16 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn(".right-summary-panel {", layout_css)
         self.assertIn(".page-header {", layout_css)
         self.assertNotIn(".btn {", layout_css)
+
+        self.assertRegex(components_css, r"(?m)^\.btn \{")
+        self.assertRegex(components_css, r"(?m)^\.icon-btn \{")
+        self.assertIn(".panel-section,\n.summary-section,\n.control-card,\n.metric-card,\n.status-guard", components_css)
+        self.assertRegex(components_css, r"(?m)^\.badge \{")
+        self.assertRegex(components_css, r"(?m)^\.global-progress-hud \{")
+        self.assertIn("@keyframes progress-hud-pending", components_css)
+        self.assertRegex(components_css, r"(?m)^\.guard-stack \{")
+        self.assertRegex(components_css, r"(?m)^\.guard-next-actions \{")
+        self.assertNotIn(".dashboard-lower-grid,\n.two-column-layout", components_css)
 
     def test_state_shell_delegates_i18n_dictionary_and_fallback_to_state_module(self):
         state_js = (ROOT / "static" / "state.js").read_text(encoding="utf-8")
