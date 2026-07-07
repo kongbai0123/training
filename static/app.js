@@ -23,22 +23,13 @@ import { updateActionAvailability as updateActionAvailabilityCore } from "./core
 import { showToast as showToastCore } from "./core/toast.js";
 import { setActivePage } from "./core/router.js";
 import { renderRightPanel as renderRightPanelCore } from "./core/right_panel.js";
-
-// Page modules.
-import { initDashboard, renderDashboard } from "./pages/dashboard.js";
-import { initProjects, renderProjectsPage } from "./pages/projects.js?v=20260630-class-batch-infer";
-import { initDataset, renderDatasetPage } from "./pages/dataset.js?v=20260630-progress-hud";
-import { initLabelMe, renderLabelMeManager } from "./pages/labelme.js";
-import { initSplit, renderSplitPage } from "./pages/split.js";
-import { initAugmentation, renderAugmentationPage } from "./pages/augmentation.js?v=20260625-augmentation-p0";
-import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "./pages/training.js?v=20260702-cnn-eval-polish2";
-import { initTrainingModeSidebar, renderTrainingModeSidebar, renderTrainingWorkspace, syncTrainingModeForProject, trainingModeState, isRnnTrainingWorkspaceActive } from "./pages/training_modes.js?v=20260706-rnn-pc-catalog";
-import { initEvaluation, renderEvaluationPage } from "./pages/evaluation.js?v=20260702-cnn-eval-polish2";
-import { initModelCompare, renderModelComparePage } from "./pages/model_compare.js?v=20260630-ui-init-fix";
-import { initInference, renderInferencePage } from "./pages/inference.js?v=20260702-model-scroll-bounds";
-import { initAutoLabeling, renderAutoLabelingPage } from "./pages/auto_labeling.js?v=20260703-auto-workbench-rules";
-import { initExport, renderExportPage } from "./pages/export.js?v=20260701-xgb-eval-final";
-import { initSettings, renderSettingsPage } from "./pages/settings.js";
+import {
+  initPageModules,
+  loadPageRecommendedConfig,
+  renderPrimaryPageModules,
+  renderSecondaryPageModules,
+  syncPageModeForProject,
+} from "./core/page_registry.js";
 
 async function bootstrapApp() {
   initPreferences();
@@ -46,21 +37,7 @@ async function bootstrapApp() {
   bindGlobalNavigation();
   bindInfoTooltips();
 
-  // Initialize page modules.
-  initDashboard();
-  initProjects();
-  initDataset();
-  initLabelMe();
-  initSplit();
-  initAugmentation();
-  initTraining();
-  initEvaluation();
-  initModelCompare();
-  initInference();
-  initAutoLabeling();
-  initExport();
-  initSettings();
-  initTrainingModeSidebar();
+  initPageModules();
 
   await bootstrapSession();
 
@@ -337,24 +314,10 @@ function renderAll() {
   
   renderHeaderStatusCore();
 
-  // Render page modules.
-  renderDashboard(status);
+  renderPrimaryPageModules(status);
   renderRightPanelCore(appState.currentPage, status);
   renderPageGuardsCore(appState.currentPage, status);
-  renderDatasetPage(status);
-  renderLabelMeManager(status);
-  renderSplitPage(status);
-  renderAugmentationPage(status);
-  renderTrainingMonitor();
-  renderTrainingModeSidebar();
-  renderTrainingWorkspace();
-  renderEvaluationPage(status);
-  renderModelComparePage();
-  renderInferencePage(status);
-  renderAutoLabelingPage(status);
-  renderExportPage(status);
-  renderSettingsPage();
-  renderProjectsPage();
+  renderSecondaryPageModules(status);
 
   updateActionAvailabilityCore(status);
   applyLanguage(appState.settings.language);
@@ -384,7 +347,7 @@ async function openProject(projectId, options = {}) {
     appState.currentProject = await apiFetch(`/api/projects/${projectId}`);
     appState.currentProjectId = projectId;
     appState.currentProjectClasses = [...(appState.currentProject?.class_names || [])];
-    syncTrainingModeForProject(appState.currentProject, options.page || appState.currentPage);
+    syncPageModeForProject(appState.currentProject, options.page || appState.currentPage);
     updateLabelMeState();
     // Close any existing monitor websocket.
     await checkCurrentTrainStatus();
@@ -397,7 +360,7 @@ async function openProject(projectId, options = {}) {
       appState.models = [];
     }
     // Start project monitor.
-    await loadRecommendedConfig();
+    await loadPageRecommendedConfig();
     renderAll();
     if (!options.stayOnPage) navigate(options.page || "dashboard");
   } catch (err) {
