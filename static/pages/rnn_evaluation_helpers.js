@@ -93,12 +93,16 @@ export function buildRnnMetricTrendRows({ history = [], isRegression = false, me
     emptyMessage: "",
     charts: chartDefinitions.map((chart) => {
       const values = extractMetricSeries(safeHistory, chart.key);
+      const latest = values.length ? values[values.length - 1] : null;
       return {
         ...chart,
         values,
-        latest: values.length ? values[values.length - 1] : null,
+        latest,
+        latestPrefix: isSinglePointBaseline ? "Single-point baseline" : "Latest",
+        latestLabel: formatSequenceMetric(latest),
         points: buildSparklinePoints(values),
-        empty: values.length < 1
+        empty: values.length < 1,
+        emptyMessage: "Not enough data"
       };
     })
   };
@@ -208,7 +212,12 @@ export function buildRnnBaselineComparisonViewModel({ runs = [], metricsByRun = 
   return {
     metricKey,
     ...comparison,
-    emptyMessage
+    emptyMessage,
+    rows: comparison.rows.map((row) => ({
+      ...row,
+      percentLabel: `${row.percent.toFixed(1)}%`,
+      valueLabel: row.hasValue ? formatSequenceMetric(row.value) : "--"
+    }))
   };
 }
 

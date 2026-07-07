@@ -869,11 +869,11 @@ function renderRnnMetricTrendRows(history, isRegression, metricContext = {}) {
     return `<div class="rnn-eval-chart-row">
       <div class="rnn-eval-chart-label">
         <strong>${escapeHtml(chart.label)}</strong>
-        <span>${trendRows.isSinglePointBaseline ? "Single-point baseline" : "Latest"} ${formatRnnMetric(chart.latest)}</span>
+        <span>${escapeHtml(chart.latestPrefix)} ${escapeHtml(chart.latestLabel)}</span>
       </div>
       <div class="rnn-eval-sparkline ${chart.empty ? "is-empty" : ""}">
         ${chart.empty
-          ? `<span>Not enough data</span>`
+          ? `<span>${escapeHtml(chart.emptyMessage)}</span>`
           : `<svg viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"><polyline points="${escapeHtml(chart.points)}"></polyline></svg>`}
       </div>
     </div>`;
@@ -903,8 +903,8 @@ function renderRnnBaselineComparison(runs) {
         <strong>${escapeHtml(row.label)}</strong>
         <span>${escapeHtml(comparison.metricConfig.hint)}</span>
       </div>
-      <div class="rnn-compare-mini-track"><span style="width: ${row.percent.toFixed(1)}%;"></span></div>
-      <code>${row.hasValue ? formatRnnMetric(row.value) : "--"}</code>
+      <div class="rnn-compare-mini-track"><span style="width: ${escapeHtml(row.percentLabel)};"></span></div>
+      <code>${escapeHtml(row.valueLabel)}</code>
     </div>`;
   }).join("");
 }
