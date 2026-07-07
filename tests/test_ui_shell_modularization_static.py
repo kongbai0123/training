@@ -16,6 +16,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         selection_controls_css = (ROOT / "static" / "styles" / "components" / "selection_controls.css").read_text(encoding="utf-8")
         media_preview_css = (ROOT / "static" / "styles" / "components" / "media_preview.css").read_text(encoding="utf-8")
         data_inputs_css = (ROOT / "static" / "styles" / "components" / "data_inputs.css").read_text(encoding="utf-8")
+        tooltip_css = (ROOT / "static" / "styles" / "components" / "tooltip.css").read_text(encoding="utf-8")
         dashboard_css = (ROOT / "static" / "styles" / "pages" / "dashboard.css").read_text(encoding="utf-8")
         history_css = (ROOT / "static" / "styles" / "pages" / "history.css").read_text(encoding="utf-8")
         dataset_css = (ROOT / "static" / "styles" / "pages" / "dataset.css").read_text(encoding="utf-8")
@@ -38,6 +39,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/components/selection_controls.css";\n'
                 '@import "./styles/components/media_preview.css";\n'
                 '@import "./styles/components/data_inputs.css";\n'
+                '@import "./styles/components/tooltip.css";\n'
                 '@import "./styles/pages/dashboard.css";\n'
                 '@import "./styles/pages/history.css";\n'
                 '@import "./styles/pages/dataset.css";\n'
@@ -100,6 +102,10 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.empty-class-list \{")
         self.assertNotRegex(style_css, r"(?m)^\.ingest-progress-container \{")
         self.assertNotRegex(style_css, r"(?m)^\.ingest-progress-bar-bg \{")
+        self.assertNotRegex(style_css, r"(?m)^\.info-icon \{")
+        self.assertNotRegex(style_css, r"(?m)^\.info-icon::after \{")
+        self.assertNotRegex(style_css, r"(?m)^\.floating-tooltip \{")
+        self.assertNotRegex(style_css, r"(?m)^\.floating-tooltip\.is-visible \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-map-panel \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-card \{")
@@ -262,6 +268,13 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(data_inputs_css, r"(?m)^\.ingest-progress-bar-bg \{")
         self.assertIn("@media (max-width: 560px) {", data_inputs_css)
         self.assertIn("@media (max-width: 840px) {", data_inputs_css)
+
+        self.assertRegex(tooltip_css, r"(?m)^\.info-icon \{")
+        self.assertRegex(tooltip_css, r"(?m)^body\[data-theme=\"light\"\] \.info-icon \{")
+        self.assertRegex(tooltip_css, r"(?m)^\.info-icon::after \{")
+        self.assertRegex(tooltip_css, r"(?m)^\.floating-tooltip \{")
+        self.assertRegex(tooltip_css, r"(?m)^\.floating-tooltip\.is-visible \{")
+        self.assertIn(".floating-tooltip.place-right,\n.floating-tooltip.place-left", tooltip_css)
 
         self.assertRegex(dashboard_css, r"(?m)^#page-dashboard \.dashboard-lower-grid \{")
         self.assertRegex(dashboard_css, r"(?m)^\.workflow-map-panel \{")

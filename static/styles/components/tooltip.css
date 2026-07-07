@@ -1,0 +1,101 @@
+/* Shared tooltip trigger and floating tooltip styles. */
+
+.info-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  background: #263140;
+  border: 1px solid var(--border-strong);
+  color: var(--text-soft);
+  font-size: 0.7rem;
+  line-height: 1;
+  position: relative;
+  cursor: help;
+  font-style: normal;
+  margin-left: 4px;
+}
+
+body[data-theme="light"] .info-icon {
+  background: #ffffff;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.info-icon::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  width: 280px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: #0d1117;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  display: none;
+  text-align: left;
+}
+
+body[data-theme="light"] .info-icon::after {
+  background: #ffffff;
+  color: #17202c;
+  border-color: #94a3b8;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+}
+
+.info-icon:hover::after {
+  display: none;
+}
+
+.floating-tooltip {
+  position: fixed;
+  z-index: 5000;
+  width: min(320px, calc(100vw - 24px));
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: #0d1117;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.floating-tooltip.place-right,
+.floating-tooltip.place-left {
+  width: min(320px, calc(100vw - 24px));
+}
+
+.floating-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.floating-tooltip ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.floating-tooltip li + li {
+  margin-top: 5px;
+}
+
+body[data-theme="light"] .floating-tooltip {
+  background: #ffffff;
+  color: #17202c;
+  border-color: #94a3b8;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+}
