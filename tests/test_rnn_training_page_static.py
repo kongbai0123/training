@@ -9,6 +9,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
     def test_rnn_training_controls_expose_p1_hardening_fields(self):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
         training_modes_js = (ROOT / "static" / "pages" / "training_modes.js").read_text(encoding="utf-8")
+        rnn_metric_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_metric_helpers.js"
+        ).read_text(encoding="utf-8")
         training_js = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
         right_panel_js = (ROOT / "static" / "core" / "right_panel.js").read_text(encoding="utf-8")
         page_guards_js = (ROOT / "static" / "core" / "page_guards.js").read_text(encoding="utf-8")
@@ -59,9 +62,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn("function renderRnnBaselineComparison", training_modes_js)
         self.assertIn("comparisonMetric", training_modes_js)
         self.assertIn("function getComparisonMetricConfig", training_modes_js)
-        self.assertIn('"val/accuracy"', training_modes_js)
-        self.assertIn('"val/macro_f1"', training_modes_js)
-        self.assertIn('"val/loss"', training_modes_js)
+        self.assertIn('"val/accuracy"', rnn_metric_helpers_js)
+        self.assertIn('"val/macro_f1"', rnn_metric_helpers_js)
+        self.assertIn('"val/loss"', rnn_metric_helpers_js)
         self.assertIn("Single-point baseline", training_modes_js)
         self.assertIn("function renderRnnEvaluationSidebar", training_modes_js)
         self.assertIn("toggleRnnEvaluationRightPanel", training_modes_js)
