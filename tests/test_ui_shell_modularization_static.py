@@ -14,6 +14,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         components_css = (ROOT / "static" / "styles" / "components.css").read_text(encoding="utf-8")
         dashboard_css = (ROOT / "static" / "styles" / "pages" / "dashboard.css").read_text(encoding="utf-8")
         dataset_css = (ROOT / "static" / "styles" / "pages" / "dataset.css").read_text(encoding="utf-8")
+        labelme_css = (ROOT / "static" / "styles" / "pages" / "labelme.css").read_text(encoding="utf-8")
         augmentation_css = (ROOT / "static" / "styles" / "pages" / "augmentation.css").read_text(encoding="utf-8")
         model_compare_css = (ROOT / "static" / "styles" / "pages" / "model_compare.css").read_text(encoding="utf-8")
         inference_css = (ROOT / "static" / "styles" / "pages" / "inference.css").read_text(encoding="utf-8")
@@ -27,6 +28,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/components.css";\n'
                 '@import "./styles/pages/dashboard.css";\n'
                 '@import "./styles/pages/dataset.css";\n'
+                '@import "./styles/pages/labelme.css";\n'
                 '@import "./styles/pages/augmentation.css";\n'
                 '@import "./styles/pages/model_compare.css";\n'
                 '@import "./styles/pages/inference.css";\n'
@@ -62,6 +64,12 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.dataset-manager-layout \{")
         self.assertNotRegex(style_css, r"(?m)^\.dataset-video-fields \{")
         self.assertNotRegex(style_css, r"(?m)^\.dataset-browser-tools \{")
+        self.assertNotRegex(style_css, r"(?m)^\.labelme-clean-layout \{")
+        self.assertNotRegex(style_css, r"(?m)^\.labelme-step-card \{")
+        self.assertNotRegex(style_css, r"(?m)^\.labelme-progress-hero \{")
+        self.assertNotRegex(style_css, r"(?m)^\.labelme-export-details \{")
+        self.assertRegex(style_css, r"(?m)^\.zip-drop-zone \{")
+        self.assertRegex(style_css, r"(?m)^\.annotation-import-report \{")
         self.assertNotRegex(style_css, r"(?m)^\.augmentation-workspace \{")
         self.assertNotRegex(style_css, r"(?m)^\.augmentation-settings-layout \{")
         self.assertNotRegex(style_css, r"(?m)^\.custom-setting-item \{")
@@ -134,6 +142,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotIn(".dashboard-lower-grid,\n.two-column-layout", components_css)
         self.assertNotRegex(components_css, r"(?m)^\.workflow-card \{")
         self.assertNotRegex(components_css, r"(?m)^\.dataset-manager-layout \{")
+        self.assertNotRegex(components_css, r"(?m)^\.labelme-step-card \{")
         self.assertNotRegex(components_css, r"(?m)^\.augmentation-workspace \{")
 
         self.assertRegex(dashboard_css, r"(?m)^#page-dashboard \.dashboard-lower-grid \{")
@@ -153,6 +162,21 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(dataset_css, r"(?m)^\.dataset-browser-tools \{")
         self.assertRegex(dataset_css, r"(?m)^\.dataset-meta-row \{")
         self.assertIn("@media (max-width: 840px) {", dataset_css)
+
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-layout \{")
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-clean-layout \{")
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-step-strip \{")
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-step-card \{")
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-drop-zone \{")
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-path-list \.path-row \{")
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-progress-hero \{")
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-review-table \{")
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-export-details \{")
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-conversion-grid \{")
+        self.assertNotRegex(labelme_css, r"(?m)^\.zip-drop-zone \{")
+        self.assertNotRegex(labelme_css, r"(?m)^\.annotation-import-report \{")
+        self.assertIn("@media (max-width: 1500px) {", labelme_css)
+        self.assertIn("@media (max-width: 840px) {", labelme_css)
 
         self.assertRegex(augmentation_css, r"(?m)^\.augmentation-workspace \{")
         self.assertRegex(augmentation_css, r"(?m)^\.augmentation-settings-layout \{")

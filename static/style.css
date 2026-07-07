@@ -4,6 +4,7 @@
 @import "./styles/components.css";
 @import "./styles/pages/dashboard.css";
 @import "./styles/pages/dataset.css";
+@import "./styles/pages/labelme.css";
 @import "./styles/pages/augmentation.css";
 @import "./styles/pages/model_compare.css";
 @import "./styles/pages/inference.css";
@@ -344,29 +345,6 @@
   }
 }
 
-@media (max-width: 1500px) {
-  .labelme-clean-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.86fr);
-  }
-
-  .labelme-step-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .labelme-conversion-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 1180px) {
-  .labelme-clean-layout,
-  .labelme-step-strip,
-  .labelme-metric-grid,
-  .labelme-conversion-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 .section-help {
   margin: -4px 0 12px;
   color: var(--text-muted);
@@ -418,132 +396,6 @@
   margin: 0;
   color: var(--text-muted);
   line-height: 1.45;
-}
-
-.labelme-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 14px;
-}
-
-.labelme-layout .wide {
-  grid-column: 1 / -1;
-}
-
-.labelme-layout #annotations-drop-card {
-  grid-column: 1 / -1;
-}
-
-#annotations-drop-card .zip-drop-zone {
-  width: 100%;
-  min-height: 118px;
-}
-
-.labelme-page-header h1 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.labelme-clean-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
-  gap: 14px;
-  align-items: start;
-}
-
-.labelme-step-strip,
-.labelme-import-panel,
-.labelme-review-panel,
-.labelme-export-card {
-  grid-column: 1 / -1;
-}
-
-.labelme-step-strip {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.labelme-step-card {
-  min-height: 86px;
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-panel);
-}
-
-body[data-theme="light"] .labelme-step-card {
-  background: #ffffff;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
-}
-
-.labelme-step-card i {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: rgba(59, 130, 246, 0.14);
-  color: var(--primary);
-  font-size: 1.05rem;
-}
-
-.labelme-step-card strong,
-.labelme-step-card span {
-  display: block;
-  min-width: 0;
-}
-
-.labelme-step-card strong {
-  color: var(--text);
-  font-size: 0.94rem;
-  line-height: 1.25;
-}
-
-.labelme-step-card span {
-  margin-top: 4px;
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  line-height: 1.35;
-}
-
-.labelme-drop-zone {
-  cursor: pointer;
-  min-height: 106px;
-}
-
-.labelme-drop-zone i {
-  background: rgba(16, 185, 129, 0.16);
-  color: var(--success);
-}
-
-.labelme-path-list .path-row {
-  grid-template-columns: 72px minmax(0, 1fr) auto;
-}
-
-.labelme-path-list .path-row code {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.labelme-primary-actions {
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-.labelme-progress-panel {
-  min-height: 100%;
-}
-
-.labelme-import-report-panel {
-  grid-column: 1 / -1;
 }
 
 .annotation-import-report {
@@ -668,117 +520,6 @@ body[data-theme="light"] .labelme-step-card {
 
 .modal-report-table .data-table {
   min-width: 720px;
-}
-
-.labelme-progress-hero {
-  min-height: 112px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 6px;
-  margin-bottom: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.04));
-}
-
-.labelme-progress-hero strong {
-  color: var(--text);
-  font-size: 2.25rem;
-  line-height: 1;
-}
-
-.labelme-progress-hero span {
-  color: var(--text-muted);
-  font-size: 0.82rem;
-}
-
-.labelme-metric-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 12px;
-}
-
-.labelme-metric-grid .metric-card {
-  min-height: 72px;
-}
-
-.labelme-review-table {
-  max-height: 250px;
-  overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.labelme-review-table .data-table {
-  min-width: 720px;
-}
-
-.labelme-review-table th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.labelme-issue-toggle {
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  cursor: pointer;
-}
-
-.labelme-issue-toggle input {
-  width: 15px;
-  height: 15px;
-  accent-color: var(--primary);
-}
-
-.labelme-preview-card .preview-panel {
-  min-height: 300px;
-}
-
-.labelme-export-details {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-panel-soft);
-  overflow: hidden;
-}
-
-.labelme-export-details summary {
-  min-height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 14px;
-  color: var(--text);
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.labelme-export-details summary span {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.labelme-export-details summary small {
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.labelme-conversion-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  padding: 12px;
-  border-top: 1px solid var(--border);
-}
-
-.labelme-conversion-grid .btn {
-  min-height: 40px;
 }
 
 .settings-controls {
@@ -2409,7 +2150,6 @@ body[data-theme="light"] .floating-tooltip {
   .auto-basic-settings,
   .auto-basic-settings.expanded,
   .auto-readable-preview,
-  .labelme-layout,
   .kpi-grid,
   .metric-grid,
   .control-card-grid,
