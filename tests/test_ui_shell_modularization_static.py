@@ -15,6 +15,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         dashboard_css = (ROOT / "static" / "styles" / "pages" / "dashboard.css").read_text(encoding="utf-8")
         dataset_css = (ROOT / "static" / "styles" / "pages" / "dataset.css").read_text(encoding="utf-8")
         labelme_css = (ROOT / "static" / "styles" / "pages" / "labelme.css").read_text(encoding="utf-8")
+        training_css = (ROOT / "static" / "styles" / "pages" / "training.css").read_text(encoding="utf-8")
         augmentation_css = (ROOT / "static" / "styles" / "pages" / "augmentation.css").read_text(encoding="utf-8")
         model_compare_css = (ROOT / "static" / "styles" / "pages" / "model_compare.css").read_text(encoding="utf-8")
         inference_css = (ROOT / "static" / "styles" / "pages" / "inference.css").read_text(encoding="utf-8")
@@ -29,6 +30,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/dashboard.css";\n'
                 '@import "./styles/pages/dataset.css";\n'
                 '@import "./styles/pages/labelme.css";\n'
+                '@import "./styles/pages/training.css";\n'
                 '@import "./styles/pages/augmentation.css";\n'
                 '@import "./styles/pages/model_compare.css";\n'
                 '@import "./styles/pages/inference.css";\n'
@@ -70,6 +72,8 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.labelme-export-details \{")
         self.assertRegex(style_css, r"(?m)^\.zip-drop-zone \{")
         self.assertRegex(style_css, r"(?m)^\.annotation-import-report \{")
+        self.assertNotRegex(style_css, r"(?m)^\.training-main-grid \{")
+        self.assertNotRegex(style_css, r"(?m)^\.monitor-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.augmentation-workspace \{")
         self.assertNotRegex(style_css, r"(?m)^\.augmentation-settings-layout \{")
         self.assertNotRegex(style_css, r"(?m)^\.custom-setting-item \{")
@@ -143,6 +147,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(components_css, r"(?m)^\.workflow-card \{")
         self.assertNotRegex(components_css, r"(?m)^\.dataset-manager-layout \{")
         self.assertNotRegex(components_css, r"(?m)^\.labelme-step-card \{")
+        self.assertNotRegex(components_css, r"(?m)^\.training-main-grid \{")
         self.assertNotRegex(components_css, r"(?m)^\.augmentation-workspace \{")
 
         self.assertRegex(dashboard_css, r"(?m)^#page-dashboard \.dashboard-lower-grid \{")
@@ -177,6 +182,13 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(labelme_css, r"(?m)^\.annotation-import-report \{")
         self.assertIn("@media (max-width: 1500px) {", labelme_css)
         self.assertIn("@media (max-width: 840px) {", labelme_css)
+
+        self.assertRegex(training_css, r"(?m)^\.training-main-grid \{")
+        self.assertRegex(training_css, r"(?m)^\.training-config-panel,")
+        self.assertRegex(training_css, r"(?m)^\.monitor-grid \{")
+        self.assertRegex(training_css, r"(?m)^\.monitor-grid \.metric-card \{")
+        self.assertIn("@media (max-width: 840px) {", training_css)
+        self.assertIn("@media (max-width: 760px) {", training_css)
 
         self.assertRegex(augmentation_css, r"(?m)^\.augmentation-workspace \{")
         self.assertRegex(augmentation_css, r"(?m)^\.augmentation-settings-layout \{")

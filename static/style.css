@@ -5,6 +5,7 @@
 @import "./styles/pages/dashboard.css";
 @import "./styles/pages/dataset.css";
 @import "./styles/pages/labelme.css";
+@import "./styles/pages/training.css";
 @import "./styles/pages/augmentation.css";
 @import "./styles/pages/model_compare.css";
 @import "./styles/pages/inference.css";
@@ -15,18 +16,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 14px;
-}
-
-.training-main-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  align-items: start;
-}
-
-.training-config-panel,
-.training-monitor-panel {
-  min-width: 0;
 }
 
 .project-history-card {
@@ -601,26 +590,10 @@ select:focus {
 }
 
 .inline-fields,
-.ratio-grid,
-.monitor-grid {
+.ratio-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-}
-
-.monitor-grid .metric-card {
-  min-height: 74px;
-  padding: 12px;
-}
-
-.monitor-grid .metric-card span {
-  font-size: 0.78rem;
-}
-
-.monitor-grid .metric-card strong {
-  font-size: 1rem;
-  line-height: 1.25;
-  word-break: break-word;
 }
 
 .split-ratio-total {
@@ -2155,8 +2128,7 @@ body[data-theme="light"] .floating-tooltip {
   .control-card-grid,
   .control-card-grid.compact,
   .inline-fields,
-  .ratio-grid,
-  .monitor-grid {
+  .ratio-grid {
     grid-template-columns: 1fr;
     display: grid;
   }
@@ -3211,13 +3183,6 @@ body[data-theme="light"] .floating-tooltip {
   text-overflow: ellipsis;
 }
 
-.training-main-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  align-items: start;
-}
-
 #config-simple-fields,
 #config-advanced-fields:not(.hidden) {
   display: grid;
@@ -3696,12 +3661,6 @@ body[data-theme="light"] .floating-tooltip {
   }
   .rnn-preview-grid,
   .rnn-schema-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 760px) {
-  .training-main-grid {
     grid-template-columns: 1fr;
   }
 }
