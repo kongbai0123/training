@@ -15,6 +15,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         rnn_evaluation_helpers_js = (
             ROOT / "static" / "pages" / "rnn_evaluation_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_evaluation_render_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_evaluation_render_helpers.js"
+        ).read_text(encoding="utf-8")
         rnn_artifact_helpers_js = (
             ROOT / "static" / "pages" / "rnn_artifact_helpers.js"
         ).read_text(encoding="utf-8")
@@ -136,7 +139,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn("buildRnnEvaluationEpochRows(history)", training_modes_js)
         self.assertIn("buildRnnEvaluationRunHistoryRows(runs)", training_modes_js)
         self.assertIn("buildRnnMetricTrendRows({ history, isRegression, metricContext })", training_modes_js)
+        self.assertIn("renderRnnMetricTrendChartStack(trendRows)", training_modes_js)
         self.assertIn("buildRnnBaselineComparisonViewModel({", training_modes_js)
+        self.assertIn("renderRnnBaselineComparisonChart(comparison)", training_modes_js)
         self.assertIn("buildRnnEvaluationSidebarViewModel({", training_modes_js)
         self.assertIn('statusSelector: "#rnn-eval-sidebar-status"', rnn_evaluation_helpers_js)
         self.assertIn('selector: "#rnn-eval-sidebar-run"', rnn_evaluation_helpers_js)
@@ -175,6 +180,12 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertNotIn("formatRnnMetric(chart.latest)", training_modes_js)
         self.assertNotIn("formatRnnMetric(row.value)", training_modes_js)
         self.assertNotIn("row.percent.toFixed", training_modes_js)
+        self.assertIn("export function renderRnnMetricTrendChartStack", rnn_evaluation_render_helpers_js)
+        self.assertIn("export function renderRnnBaselineComparisonChart", rnn_evaluation_render_helpers_js)
+        self.assertIn("rnn-eval-chart-row", rnn_evaluation_render_helpers_js)
+        self.assertIn("rnn-compare-mini-row", rnn_evaluation_render_helpers_js)
+        self.assertNotIn("rnn-eval-chart-row", training_modes_js)
+        self.assertNotIn("rnn-compare-mini-row", training_modes_js)
         self.assertIn("function renderRnnEvaluationSidebar", training_modes_js)
         self.assertIn("toggleRnnEvaluationRightPanel", training_modes_js)
         self.assertNotIn('renderRnnSidebarRows("#rnn-eval-sidebar-settings"', training_modes_js)

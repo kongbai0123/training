@@ -478,6 +478,9 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         rnn_evaluation_helpers_js = (
             ROOT / "static" / "pages" / "rnn_evaluation_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_evaluation_render_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_evaluation_render_helpers.js"
+        ).read_text(encoding="utf-8")
         rnn_model_catalog_helpers_js = (
             ROOT / "static" / "pages" / "rnn_model_catalog_helpers.js"
         ).read_text(encoding="utf-8")
@@ -492,6 +495,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn('export { trainingModeState } from "./training_mode_state.js";', training_modes_js)
         self.assertIn('} from "./rnn_metric_helpers.js";', training_modes_js)
         self.assertIn('} from "./rnn_evaluation_helpers.js";', training_modes_js)
+        self.assertIn('} from "./rnn_evaluation_render_helpers.js";', training_modes_js)
         self.assertIn('} from "./rnn_model_catalog_helpers.js";', training_modes_js)
         self.assertIn('} from "./rnn_inference_helpers.js";', training_modes_js)
         self.assertIn('} from "./rnn_readiness_helpers.js";', training_modes_js)
@@ -513,6 +517,8 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("export function buildRnnBaselineComparisonRows", rnn_evaluation_helpers_js)
         self.assertIn("export function buildRnnBaselineComparisonViewModel", rnn_evaluation_helpers_js)
         self.assertIn("export function buildRnnEvaluationSidebarViewModel", rnn_evaluation_helpers_js)
+        self.assertIn("export function renderRnnMetricTrendChartStack", rnn_evaluation_render_helpers_js)
+        self.assertIn("export function renderRnnBaselineComparisonChart", rnn_evaluation_render_helpers_js)
         self.assertIn("export function fallbackRnnModelCatalog", rnn_model_catalog_helpers_js)
         self.assertIn("export function trainableTemplateRnnCatalog", rnn_model_catalog_helpers_js)
         self.assertIn("export const RNN_MODEL_TOOLTIPS", rnn_model_catalog_helpers_js)
@@ -527,13 +533,19 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("buildRnnEvaluationEpochRows(history)", training_modes_js)
         self.assertIn("buildRnnEvaluationRunHistoryRows(runs)", training_modes_js)
         self.assertIn("buildRnnMetricTrendRows({ history, isRegression, metricContext })", training_modes_js)
+        self.assertIn("renderRnnMetricTrendChartStack(trendRows)", training_modes_js)
         self.assertIn("buildRnnBaselineComparisonViewModel({", training_modes_js)
+        self.assertIn("renderRnnBaselineComparisonChart(comparison)", training_modes_js)
         self.assertIn("buildRnnEvaluationSidebarViewModel({", training_modes_js)
         self.assertIn("latestLabel: formatSequenceMetric(latest)", rnn_evaluation_helpers_js)
         self.assertIn("valueLabel: row.hasValue ? formatSequenceMetric(row.value) : \"--\"", rnn_evaluation_helpers_js)
         self.assertNotIn("formatRnnMetric(chart.latest)", training_modes_js)
         self.assertNotIn("formatRnnMetric(row.value)", training_modes_js)
         self.assertNotIn("row.percent.toFixed", training_modes_js)
+        self.assertIn("rnn-eval-chart-row", rnn_evaluation_render_helpers_js)
+        self.assertIn("rnn-compare-mini-row", rnn_evaluation_render_helpers_js)
+        self.assertNotIn("rnn-eval-chart-row", training_modes_js)
+        self.assertNotIn("rnn-compare-mini-row", training_modes_js)
         self.assertIn("return fallbackRnnModelCatalog();", training_modes_js)
         self.assertIn("return trainableTemplateRnnCatalog(trainingModeState.rnn.modelCatalog);", training_modes_js)
         self.assertIn("return rnnInferenceBlockerMessage({", training_modes_js)

@@ -16,6 +16,10 @@ import {
   resolveRnnEvaluationViewModel
 } from "./rnn_evaluation_helpers.js";
 import {
+  renderRnnBaselineComparisonChart,
+  renderRnnMetricTrendChartStack
+} from "./rnn_evaluation_render_helpers.js";
+import {
   RNN_MODEL_GROUPS,
   RNN_MODEL_TOOLTIPS,
   fallbackRnnModelCatalog,
@@ -861,23 +865,7 @@ function renderRnnMetricTrendRows(history, isRegression, metricContext = {}) {
   const baselineNote = qs("#rnn-eval-baseline-note");
   const trendRows = buildRnnMetricTrendRows({ history, isRegression, metricContext });
   baselineNote?.classList.toggle("hidden", !trendRows.isSinglePointBaseline);
-  if (!trendRows.hasHistory) {
-    container.innerHTML = `<div class="rnn-eval-chart-empty">${escapeHtml(trendRows.emptyMessage)}</div>`;
-    return;
-  }
-  container.innerHTML = trendRows.charts.map((chart) => {
-    return `<div class="rnn-eval-chart-row">
-      <div class="rnn-eval-chart-label">
-        <strong>${escapeHtml(chart.label)}</strong>
-        <span>${escapeHtml(chart.latestPrefix)} ${escapeHtml(chart.latestLabel)}</span>
-      </div>
-      <div class="rnn-eval-sparkline ${chart.empty ? "is-empty" : ""}">
-        ${chart.empty
-          ? `<span>${escapeHtml(chart.emptyMessage)}</span>`
-          : `<svg viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"><polyline points="${escapeHtml(chart.points)}"></polyline></svg>`}
-      </div>
-    </div>`;
-  }).join("");
+  container.innerHTML = renderRnnMetricTrendChartStack(trendRows);
 }
 
 function renderRnnBaselineComparison(runs) {
@@ -893,20 +881,7 @@ function renderRnnBaselineComparison(runs) {
     metricsByRun,
     metricKey
   });
-  if (!comparison.hasCompletedRuns || !comparison.hasAvailableRows) {
-    container.innerHTML = `<div class="rnn-eval-chart-empty">${escapeHtml(comparison.emptyMessage)}</div>`;
-    return;
-  }
-  container.innerHTML = comparison.rows.map((row) => {
-    return `<div class="rnn-compare-mini-row ${row.hasValue ? "" : "is-missing"}">
-      <div class="rnn-compare-mini-label">
-        <strong>${escapeHtml(row.label)}</strong>
-        <span>${escapeHtml(comparison.metricConfig.hint)}</span>
-      </div>
-      <div class="rnn-compare-mini-track"><span style="width: ${escapeHtml(row.percentLabel)};"></span></div>
-      <code>${escapeHtml(row.valueLabel)}</code>
-    </div>`;
-  }).join("");
+  container.innerHTML = renderRnnBaselineComparisonChart(comparison);
 }
 
 function renderRnnEvaluationSidebar({ activeRun, metrics, artifacts, history, metricSource, isRegression, primary, secondary }) {
