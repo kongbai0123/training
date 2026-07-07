@@ -20,6 +20,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         augmentation_css = (ROOT / "static" / "styles" / "pages" / "augmentation.css").read_text(encoding="utf-8")
         model_compare_css = (ROOT / "static" / "styles" / "pages" / "model_compare.css").read_text(encoding="utf-8")
         inference_css = (ROOT / "static" / "styles" / "pages" / "inference.css").read_text(encoding="utf-8")
+        auto_labeling_css = (ROOT / "static" / "styles" / "pages" / "auto_labeling.css").read_text(encoding="utf-8")
         evaluation_css = (ROOT / "static" / "styles" / "pages" / "evaluation.css").read_text(encoding="utf-8")
 
         self.assertTrue(
@@ -36,6 +37,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/augmentation.css";\n'
                 '@import "./styles/pages/model_compare.css";\n'
                 '@import "./styles/pages/inference.css";\n'
+                '@import "./styles/pages/auto_labeling.css";\n'
                 '@import "./styles/pages/evaluation.css";'
             )
         )
@@ -103,6 +105,14 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.inference-settings-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.inference-preview-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.inference-summary-grid \{")
+        self.assertNotRegex(style_css, r"(?m)^\.auto-label-workbench \{")
+        self.assertNotRegex(style_css, r"(?m)^\.auto-job-builder \{")
+        self.assertNotRegex(style_css, r"(?m)^\.auto-step-block \{")
+        self.assertNotRegex(style_css, r"(?m)^\.model-source-tabs \{")
+        self.assertNotRegex(style_css, r"(?m)^\.target-card \{")
+        self.assertNotRegex(style_css, r"(?m)^\.review-preview-grid \{")
+        self.assertNotRegex(style_css, r"(?m)^\.auto-review-workstation \{")
+        self.assertNotRegex(style_css, r"(?m)^\.auto-shape-review-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.evaluation-guidance-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.evaluation-plots-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.evaluation-plot-card \{")
@@ -246,6 +256,19 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(inference_css, r"(?m)^\.inference-summary-grid \{")
         self.assertNotRegex(inference_css, r"(?m)^\.preview-tile \{")
         self.assertIn("@media (max-width: 840px) {", inference_css)
+
+        self.assertRegex(auto_labeling_css, r"(?m)^\.auto-label-layout \{")
+        self.assertRegex(auto_labeling_css, r"(?m)^\.auto-label-status-strip \{")
+        self.assertRegex(auto_labeling_css, r"(?m)^\.auto-label-workbench \{")
+        self.assertRegex(auto_labeling_css, r"(?m)^\.auto-job-builder \{")
+        self.assertRegex(auto_labeling_css, r"(?m)^\.auto-step-block \{")
+        self.assertRegex(auto_labeling_css, r"(?m)^\.model-source-tabs \{")
+        self.assertRegex(auto_labeling_css, r"(?m)^\.target-card \{")
+        self.assertRegex(auto_labeling_css, r"(?m)^\.review-preview-grid \{")
+        self.assertRegex(auto_labeling_css, r"(?m)^\.auto-review-workstation \{")
+        self.assertRegex(auto_labeling_css, r"(?m)^\.auto-shape-review-grid \{")
+        self.assertIn("@media (max-width: 1600px) {", auto_labeling_css)
+        self.assertIn("@media (max-width: 840px) {", auto_labeling_css)
 
         self.assertRegex(evaluation_css, r"(?m)^\.evaluation-guidance-grid \{")
         self.assertRegex(evaluation_css, r"(?m)^\.evaluation-guidance-item \{")
