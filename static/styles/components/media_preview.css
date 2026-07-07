@@ -1,0 +1,234 @@
+/* Shared media preview, thumbnail, and path display components. */
+
+.preview-tile {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.preview-tile h3 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.preview-tile img {
+  display: none;
+  width: 100%;
+  height: min(68vh, 760px);
+  min-height: 420px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #0b0f14;
+}
+
+.thumbnail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  max-height: 560px;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.thumb-card {
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: 132px 96px;
+}
+
+.thumb-image-frame {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #0d1117;
+  overflow: hidden;
+}
+
+body[data-theme="light"] .thumb-image-frame {
+  background: #e2e8f0;
+}
+
+.thumb-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumb-card footer {
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+}
+
+.thumb-card strong {
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thumb-card .badge {
+  width: fit-content;
+  font-size: 0.68rem;
+  padding: 3px 6px;
+}
+
+.load-more-card {
+  min-height: 124px;
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  color: var(--text);
+  background: var(--bg-panel-soft);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 10px;
+}
+
+.load-more-card span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.path-list {
+  display: grid;
+  gap: 10px;
+}
+
+.path-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.path-row code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.right-summary-panel .path-row {
+  grid-template-columns: 64px minmax(0, 1fr);
+  padding: 8px 10px;
+  min-height: 36px;
+}
+
+.right-summary-panel .path-row code {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.right-summary-panel .path-row span {
+  line-height: 1.25;
+}
+
+.project-context-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.project-context-compact > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.project-context-compact strong,
+.project-context-compact span {
+  min-width: 0;
+}
+
+.project-context-compact strong {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-context-compact > div > span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.right-summary-panel .summary-empty.compact {
+  min-height: 58px;
+  padding: 10px;
+}
+
+.right-summary-panel .project-context-full .path-row {
+  grid-template-columns: 64px minmax(0, 1fr);
+}
+
+.path-row span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.preview-panel {
+  min-height: 260px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #0d1117;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  position: relative;
+}
+
+body[data-theme="light"] .preview-panel {
+  background: #f8fafc;
+}
+
+.preview-panel img {
+  display: none;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.preview-placeholder {
+  color: var(--text-muted);
+  text-align: center;
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  max-width: 420px;
+}
+
+.preview-placeholder i {
+  font-size: 2rem;
+  color: var(--text-soft);
+}
+
+@media (max-width: 840px) {
+  .path-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -14,6 +14,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         components_css = (ROOT / "static" / "styles" / "components.css").read_text(encoding="utf-8")
         model_registry_css = (ROOT / "static" / "styles" / "components" / "model_registry.css").read_text(encoding="utf-8")
         selection_controls_css = (ROOT / "static" / "styles" / "components" / "selection_controls.css").read_text(encoding="utf-8")
+        media_preview_css = (ROOT / "static" / "styles" / "components" / "media_preview.css").read_text(encoding="utf-8")
         dashboard_css = (ROOT / "static" / "styles" / "pages" / "dashboard.css").read_text(encoding="utf-8")
         history_css = (ROOT / "static" / "styles" / "pages" / "history.css").read_text(encoding="utf-8")
         dataset_css = (ROOT / "static" / "styles" / "pages" / "dataset.css").read_text(encoding="utf-8")
@@ -34,6 +35,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/components.css";\n'
                 '@import "./styles/components/model_registry.css";\n'
                 '@import "./styles/components/selection_controls.css";\n'
+                '@import "./styles/components/media_preview.css";\n'
                 '@import "./styles/pages/dashboard.css";\n'
                 '@import "./styles/pages/history.css";\n'
                 '@import "./styles/pages/dataset.css";\n'
@@ -80,6 +82,13 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.mode-card \{")
         self.assertNotRegex(style_css, r"(?m)^\.strategy-list \{")
         self.assertNotRegex(style_css, r"(?m)^\.advanced-collapse \{")
+        self.assertNotRegex(style_css, r"(?m)^\.preview-tile \{")
+        self.assertNotRegex(style_css, r"(?m)^\.thumbnail-grid \{")
+        self.assertNotRegex(style_css, r"(?m)^\.path-list \{")
+        self.assertNotRegex(style_css, r"(?m)^\.path-row \{")
+        self.assertNotRegex(style_css, r"(?m)^\.project-context-compact \{")
+        self.assertNotRegex(style_css, r"(?m)^\.preview-panel \{")
+        self.assertNotRegex(style_css, r"(?m)^\.preview-placeholder \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-map-panel \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-card \{")
@@ -138,9 +147,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.evaluation-plots-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.evaluation-plot-card \{")
         self.assertNotRegex(style_css, r"(?m)^\.evaluation-plot-modal \{")
-        self.assertRegex(style_css, r"(?m)^\.preview-tile \{")
         self.assertIn(".dashboard-lower-grid,\n.two-column-layout", style_css)
-        self.assertIn(".preview-panel {", style_css)
         self.assertIn("@media (max-width: 840px) {", style_css)
 
         self.assertIn(":root {", tokens_css)
@@ -212,6 +219,15 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(selection_controls_css, r"(?m)^\.strategy-list \{")
         self.assertRegex(selection_controls_css, r"(?m)^\.advanced-collapse \{")
         self.assertIn("@media (max-width: 840px) {", selection_controls_css)
+
+        self.assertRegex(media_preview_css, r"(?m)^\.preview-tile \{")
+        self.assertRegex(media_preview_css, r"(?m)^\.thumbnail-grid \{")
+        self.assertRegex(media_preview_css, r"(?m)^\.path-list \{")
+        self.assertRegex(media_preview_css, r"(?m)^\.path-row \{")
+        self.assertRegex(media_preview_css, r"(?m)^\.project-context-compact \{")
+        self.assertRegex(media_preview_css, r"(?m)^\.preview-panel \{")
+        self.assertRegex(media_preview_css, r"(?m)^\.preview-placeholder \{")
+        self.assertIn("@media (max-width: 840px) {", media_preview_css)
 
         self.assertRegex(dashboard_css, r"(?m)^#page-dashboard \.dashboard-lower-grid \{")
         self.assertRegex(dashboard_css, r"(?m)^\.workflow-map-panel \{")
