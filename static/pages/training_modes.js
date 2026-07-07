@@ -20,6 +20,13 @@ import {
   renderRnnMetricTrendChartStack
 } from "./rnn_evaluation_render_helpers.js";
 import {
+  renderRnnConfigMismatchWarning,
+  renderRnnFeatureChipList,
+  renderRnnPreviewTable,
+  renderRnnWindowSummaryRows,
+  renderRnnWindowWarning
+} from "./rnn_config_render_helpers.js";
+import {
   RNN_MODEL_GROUPS,
   RNN_MODEL_TOOLTIPS,
   fallbackRnnModelCatalog,
@@ -543,7 +550,7 @@ function renderRnnConfig(validation = null) {
       rows: inspection.preview_rows
     });
     if (previewModel.hasRows) {
-      preview.innerHTML = `<div class="rnn-preview-table-wrap"><table class="rnn-preview-table"><thead><tr>${previewModel.columns.map((col) => `<th>${escapeHtml(col)}</th>`).join("")}</tr></thead><tbody>${previewModel.rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+      preview.innerHTML = renderRnnPreviewTable(previewModel);
     } else {
       preview.textContent = previewModel.placeholder;
     }
@@ -569,15 +576,11 @@ function renderRnnWindowSummary(validation = null) {
     badge.textContent = viewModel.badgeLabel;
   }
   if (summary) {
-    summary.innerHTML = viewModel.rows
-      .map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`)
-      .join("");
+    summary.innerHTML = renderRnnWindowSummaryRows(viewModel.rows);
   }
   if (warning) {
     warning.classList.toggle("hidden", !viewModel.messages.length);
-    warning.innerHTML = viewModel.messages.length
-      ? `<strong>Window config</strong><span>${viewModel.messages.map((item) => escapeHtml(item)).join("<br>")}</span>`
-      : "";
+    warning.innerHTML = renderRnnWindowWarning(viewModel.messages);
   }
 }
 
@@ -589,9 +592,7 @@ function renderRnnFeatureChips(validation = null) {
     headers: trainingModeState.rnn.configInspection?.headers,
     validation
   });
-  list.innerHTML = chips
-    .map((chip) => `<span class="rnn-chip ${chip.className}">${escapeHtml(chip.name)}${chip.exists ? "" : " 繚 missing"}</span>`)
-    .join("");
+  list.innerHTML = renderRnnFeatureChipList(chips);
 }
 
 function renderRnnConfigMismatch() {
@@ -603,7 +604,7 @@ function renderRnnConfigMismatch() {
     box.textContent = "";
     return;
   }
-  box.innerHTML = `<strong>${escapeHtml(mismatchSummary.title)}</strong><span>${escapeHtml(mismatchSummary.message)}</span>`;
+  box.innerHTML = renderRnnConfigMismatchWarning(mismatchSummary);
 }
 
 function renderRnnReadiness() {
