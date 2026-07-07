@@ -6,6 +6,21 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class UIShellModularizationStaticTests(unittest.TestCase):
+    def test_style_shell_delegates_design_tokens_to_styles_module(self):
+        style_css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
+        tokens_css = (ROOT / "static" / "styles" / "tokens.css").read_text(encoding="utf-8")
+
+        self.assertTrue(style_css.startswith('@import "./styles/tokens.css";'))
+        self.assertNotIn(":root {\n  --bg:", style_css)
+        self.assertNotIn('body[data-theme="light"] {\n  --bg:', style_css)
+
+        self.assertIn(":root {", tokens_css)
+        self.assertIn("--bg: #0f1318;", tokens_css)
+        self.assertIn("--primary: #3b82f6;", tokens_css)
+        self.assertIn("--radius: 8px;", tokens_css)
+        self.assertIn('body[data-theme="light"] {', tokens_css)
+        self.assertIn("--shadow: 0 12px 30px rgba(15, 23, 42, 0.12);", tokens_css)
+
     def test_state_shell_delegates_i18n_dictionary_and_fallback_to_state_module(self):
         state_js = (ROOT / "static" / "state.js").read_text(encoding="utf-8")
         i18n_js = (ROOT / "static" / "state" / "i18n.js").read_text(encoding="utf-8")
