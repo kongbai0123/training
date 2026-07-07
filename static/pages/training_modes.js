@@ -27,7 +27,6 @@ import {
   renderRnnWindowWarning
 } from "./rnn_config_render_helpers.js";
 import {
-  RNN_MODEL_GROUPS,
   RNN_MODEL_TOOLTIPS,
   fallbackRnnModelCatalog,
   isRnnModelTrainable,
@@ -38,6 +37,12 @@ import {
   selectedRnnModelValue,
   trainableTemplateRnnCatalog
 } from "./rnn_model_catalog_helpers.js";
+import {
+  renderRnnModelGuideLoading,
+  renderRnnModelGuideMissing,
+  renderRnnModelGuidePanel,
+  renderRnnModelSelectorOptions
+} from "./rnn_model_render_helpers.js";
 import {
   filterRnnInferenceModels,
   resolveRnnInferenceModelValue,
@@ -1109,23 +1114,15 @@ function renderRnnModelSelector() {
   const current = select.value;
   const models = getTrainableTemplateRnnCatalog().filter((model) => model.task_family === taskFamily);
 
+  select.innerHTML = renderRnnModelSelectorOptions({
+    loading: trainingModeState.rnn.modelCatalogLoading,
+    models
+  });
+
   if (!models.length) {
-    select.innerHTML = `<option value="">No compatible RNN model found</option>`;
     syncRnnModelSelection();
     return;
   }
-
-  const loadingOption = trainingModeState.rnn.modelCatalogLoading
-    ? `<option value="" disabled>Loading catalog in background...</option>`
-    : "";
-  select.innerHTML = loadingOption + RNN_MODEL_GROUPS.map(([backend, label]) => {
-    const items = models.filter((model) => model.backend === backend);
-    if (!items.length) return "";
-    return `<optgroup label="${escapeHtml(label)}">${items.map((model) => {
-      const suffix = model.training_enabled ? "" : " · planned";
-      return `<option value="${escapeHtml(model.model_id)}">${escapeHtml(model.display_name || model.model_id)}${suffix}</option>`;
-    }).join("")}</optgroup>`;
-  }).join("");
 
   const values = models.map((model) => model.model_id);
   if (values.includes(current)) {
@@ -1206,34 +1203,15 @@ function renderRnnModelGuide() {
   const container = qs("#rnn-model-guide");
   if (!container) return;
   if (trainingModeState.rnn.modelGuidesLoading) {
-    container.innerHTML = `<div class="section-title"><h3>Model Guide</h3><span class="summary-badge badge-neutral">Loading</span></div><p>Loading model guide...</p>`;
+    container.innerHTML = renderRnnModelGuideLoading();
     return;
   }
   const guide = trainingModeState.rnn.modelGuides?.[getRnnGuideKey()];
   if (!guide) {
-    container.innerHTML = `<div class="section-title"><h3>Model Guide</h3><span class="summary-badge badge-warning">Missing</span></div><p>No guide found for this model/task combination.</p>`;
+    container.innerHTML = renderRnnModelGuideMissing();
     return;
   }
-  const statusClass = guide.status === "trainable" ? "badge-success" : "badge-warning";
-  container.innerHTML = `
-    <div class="section-title">
-      <h3>${escapeHtml(guide.title)}</h3>
-      <span class="summary-badge ${statusClass}">${escapeHtml(guide.status === "trainable" ? "Trainable" : "Planned")}</span>
-    </div>
-    <p>${escapeHtml(guide.summary)}</p>
-    <div class="rnn-guide-grid">
-      <div>
-        <strong>適合</strong>
-        <ul>${(guide.best_for || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-      </div>
-      <div>
-        <strong>不適合</strong>
-        <ul>${(guide.not_for || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-      </div>
-    </div>
-    <div class="rnn-guide-note"><span>好結果通常長這樣</span><p>${escapeHtml(guide.good_result || "--")}</p></div>
-    <div class="rnn-guide-note warning"><span>風險</span><p>${escapeHtml(guide.risk || "--")}</p></div>
-  `;
+  container.innerHTML = renderRnnModelGuidePanel(guide);
 }
 
 function canStartRnnTraining() {

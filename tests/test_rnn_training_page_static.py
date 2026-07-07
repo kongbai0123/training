@@ -24,6 +24,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         rnn_model_catalog_helpers_js = (
             ROOT / "static" / "pages" / "rnn_model_catalog_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_model_render_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_model_render_helpers.js"
+        ).read_text(encoding="utf-8")
         rnn_inference_helpers_js = (
             ROOT / "static" / "pages" / "rnn_inference_helpers.js"
         ).read_text(encoding="utf-8")
@@ -128,7 +131,16 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn("Isolation Forest Baseline", rnn_model_catalog_helpers_js)
         self.assertIn("pytorch_fastrnn", rnn_model_catalog_helpers_js)
         self.assertIn("sklearn_isolation_forest", rnn_model_catalog_helpers_js)
-        self.assertIn("Loading catalog in background", training_modes_js)
+        self.assertIn("export function renderRnnModelSelectorOptions", rnn_model_render_helpers_js)
+        self.assertIn("export function renderRnnModelGuidePanel", rnn_model_render_helpers_js)
+        self.assertIn("renderRnnModelSelectorOptions({", training_modes_js)
+        self.assertIn("renderRnnModelGuidePanel(guide)", training_modes_js)
+        self.assertIn("Loading catalog in background", rnn_model_render_helpers_js)
+        self.assertIn("rnn-guide-grid", rnn_model_render_helpers_js)
+        self.assertIn("No guide found for this model/task combination.", rnn_model_render_helpers_js)
+        self.assertNotIn("Loading catalog in background", training_modes_js)
+        self.assertNotIn("rnn-guide-grid", training_modes_js)
+        self.assertNotIn("No guide found for this model/task combination.", training_modes_js)
         self.assertNotIn('select.innerHTML = `<option value="">Loading model catalog...</option>`', training_modes_js)
         self.assertIn("await loadRnnModelCatalog({ force: options.force });", training_modes_js)
         self.assertIn("Sequence CSV is ready for RNN training", training_modes_js)
