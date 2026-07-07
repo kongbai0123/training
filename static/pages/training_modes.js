@@ -11,7 +11,7 @@ import {
   buildRnnEvaluationRunHistoryRows,
   buildRnnMetricTrendRows,
   buildRnnEvaluationSidebarSections,
-  buildRnnBaselineComparisonRows,
+  buildRnnBaselineComparisonViewModel,
   isSequenceEvaluationRun,
   resolveRnnEvaluationViewModel
 } from "./rnn_evaluation_helpers.js";
@@ -888,24 +888,20 @@ function renderRnnBaselineComparison(runs) {
     button.classList.toggle("active", button.dataset.rnnCompareMetric === metricKey);
   });
   const metricsByRun = trainingModeState.rnn.evaluationRunMetrics || {};
-  const { metricConfig, rows, hasCompletedRuns, hasAvailableRows } = buildRnnBaselineComparisonRows({
+  const comparison = buildRnnBaselineComparisonViewModel({
     runs,
     metricsByRun,
     metricKey
   });
-  if (!hasCompletedRuns) {
-    container.innerHTML = `<div class="rnn-eval-chart-empty">No comparable runs loaded.</div>`;
+  if (!comparison.hasCompletedRuns || !comparison.hasAvailableRows) {
+    container.innerHTML = `<div class="rnn-eval-chart-empty">${escapeHtml(comparison.emptyMessage)}</div>`;
     return;
   }
-  if (!hasAvailableRows) {
-    container.innerHTML = `<div class="rnn-eval-chart-empty">No ${escapeHtml(metricConfig.label)} values loaded for completed runs.</div>`;
-    return;
-  }
-  container.innerHTML = rows.map((row) => {
+  container.innerHTML = comparison.rows.map((row) => {
     return `<div class="rnn-compare-mini-row ${row.hasValue ? "" : "is-missing"}">
       <div class="rnn-compare-mini-label">
         <strong>${escapeHtml(row.label)}</strong>
-        <span>${escapeHtml(metricConfig.hint)}</span>
+        <span>${escapeHtml(comparison.metricConfig.hint)}</span>
       </div>
       <div class="rnn-compare-mini-track"><span style="width: ${row.percent.toFixed(1)}%;"></span></div>
       <code>${row.hasValue ? formatRnnMetric(row.value) : "--"}</code>

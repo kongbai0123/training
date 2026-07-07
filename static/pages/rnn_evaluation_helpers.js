@@ -196,6 +196,22 @@ export function buildRnnBaselineComparisonRows({ runs = [], metricsByRun = {}, m
   };
 }
 
+export function buildRnnBaselineComparisonViewModel({ runs = [], metricsByRun = {}, metricKey = "macro_f1" } = {}) {
+  const comparison = buildRnnBaselineComparisonRows({ runs, metricsByRun, metricKey });
+  let emptyMessage = "";
+  if (!comparison.hasCompletedRuns) {
+    emptyMessage = "No comparable runs loaded.";
+  } else if (!comparison.hasAvailableRows) {
+    emptyMessage = `No ${comparison.metricConfig.label} values loaded for completed runs.`;
+  }
+
+  return {
+    metricKey,
+    ...comparison,
+    emptyMessage
+  };
+}
+
 export function buildRnnEvaluationSidebarSections({
   activeRun = null,
   metrics = null,
