@@ -5,6 +5,7 @@
 @import "./styles/components/model_registry.css";
 @import "./styles/components/selection_controls.css";
 @import "./styles/components/media_preview.css";
+@import "./styles/components/data_inputs.css";
 @import "./styles/pages/dashboard.css";
 @import "./styles/pages/history.css";
 @import "./styles/pages/dataset.css";
@@ -24,59 +25,6 @@
   gap: 14px;
 }
 
-.section-help {
-  margin: -4px 0 12px;
-  color: var(--text-muted);
-  line-height: 1.45;
-  font-size: 0.88rem;
-}
-
-.zip-storage-box {
-  display: grid;
-  gap: 12px;
-}
-
-.zip-drop-zone {
-  min-height: 112px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 18px;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--bg-panel-soft);
-  transition: all 0.2s ease;
-}
-
-.zip-drop-zone.dz-drag-hover {
-  border-color: var(--primary) !important;
-  background: rgba(59, 130, 246, 0.08) !important;
-  box-shadow: 0 0 16px rgba(59, 130, 246, 0.25);
-  transform: scale(0.99);
-}
-
-.zip-drop-zone i {
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius);
-  background: rgba(59, 130, 246, 0.16);
-  color: var(--primary);
-  font-size: 1.35rem;
-}
-
-.zip-drop-zone strong {
-  display: block;
-  margin-bottom: 4px;
-}
-
-.zip-drop-zone p {
-  margin: 0;
-  color: var(--text-muted);
-  line-height: 1.45;
-}
-
 .compact-table {
   max-height: 220px;
   overflow: auto;
@@ -93,65 +41,6 @@
 
 .settings-system-panel {
   margin-top: 14px;
-}
-
-.class-entry-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-}
-
-.class-list-box {
-  min-height: 44px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-panel-soft);
-}
-
-.class-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 30px;
-  padding: 4px 8px 4px 10px;
-  border-radius: 999px;
-  background: rgba(59, 130, 246, 0.16);
-  border: 1px solid rgba(59, 130, 246, 0.35);
-  color: var(--text);
-  font-size: 0.84rem;
-  font-weight: 700;
-}
-
-.class-chip button {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.class-chip button:hover {
-  background: rgba(239, 68, 68, 0.14);
-  color: var(--danger);
-}
-
-.empty-class-list {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-@media (max-width: 560px) {
-  .class-entry-row {
-    grid-template-columns: 1fr;
-  }
 }
 
 input[type="range"] {
@@ -499,57 +388,4 @@ body[data-theme="light"] .floating-tooltip {
     grid-template-columns: 1fr;
     display: grid;
   }
-
-
-
-  .path-row {
-    grid-template-columns: 1fr;
-  }
-
-  .zip-drop-zone {
-    align-items: flex-start;
-  }
-}
-
-/* Ingestion progress bar UI */
-.ingest-progress-container {
-  margin-top: 12px;
-  background: var(--bg-panel-soft);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.ingest-progress-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.84rem;
-}
-
-.ingest-progress-status {
-  font-weight: 600;
-  color: var(--primary);
-}
-
-.ingest-progress-bar-bg {
-  background: var(--border);
-  height: 6px;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.ingest-progress-bar-fill {
-  background: var(--primary);
-  height: 100%;
-  width: 0%;
-  transition: width 0.2s ease-out;
-}
-
-.ingest-progress-details {
-  font-size: 0.76rem;
-  color: var(--text-muted);
 }

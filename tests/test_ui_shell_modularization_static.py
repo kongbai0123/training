@@ -15,6 +15,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         model_registry_css = (ROOT / "static" / "styles" / "components" / "model_registry.css").read_text(encoding="utf-8")
         selection_controls_css = (ROOT / "static" / "styles" / "components" / "selection_controls.css").read_text(encoding="utf-8")
         media_preview_css = (ROOT / "static" / "styles" / "components" / "media_preview.css").read_text(encoding="utf-8")
+        data_inputs_css = (ROOT / "static" / "styles" / "components" / "data_inputs.css").read_text(encoding="utf-8")
         dashboard_css = (ROOT / "static" / "styles" / "pages" / "dashboard.css").read_text(encoding="utf-8")
         history_css = (ROOT / "static" / "styles" / "pages" / "history.css").read_text(encoding="utf-8")
         dataset_css = (ROOT / "static" / "styles" / "pages" / "dataset.css").read_text(encoding="utf-8")
@@ -36,6 +37,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/components/model_registry.css";\n'
                 '@import "./styles/components/selection_controls.css";\n'
                 '@import "./styles/components/media_preview.css";\n'
+                '@import "./styles/components/data_inputs.css";\n'
                 '@import "./styles/pages/dashboard.css";\n'
                 '@import "./styles/pages/history.css";\n'
                 '@import "./styles/pages/dataset.css";\n'
@@ -89,6 +91,15 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.project-context-compact \{")
         self.assertNotRegex(style_css, r"(?m)^\.preview-panel \{")
         self.assertNotRegex(style_css, r"(?m)^\.preview-placeholder \{")
+        self.assertNotRegex(style_css, r"(?m)^\.section-help \{")
+        self.assertNotRegex(style_css, r"(?m)^\.zip-storage-box \{")
+        self.assertNotRegex(style_css, r"(?m)^\.zip-drop-zone \{")
+        self.assertNotRegex(style_css, r"(?m)^\.class-entry-row \{")
+        self.assertNotRegex(style_css, r"(?m)^\.class-list-box \{")
+        self.assertNotRegex(style_css, r"(?m)^\.class-chip \{")
+        self.assertNotRegex(style_css, r"(?m)^\.empty-class-list \{")
+        self.assertNotRegex(style_css, r"(?m)^\.ingest-progress-container \{")
+        self.assertNotRegex(style_css, r"(?m)^\.ingest-progress-bar-bg \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-map-panel \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-grid \{")
         self.assertNotRegex(style_css, r"(?m)^\.workflow-card \{")
@@ -105,7 +116,6 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotRegex(style_css, r"(?m)^\.labelme-step-card \{")
         self.assertNotRegex(style_css, r"(?m)^\.labelme-progress-hero \{")
         self.assertNotRegex(style_css, r"(?m)^\.labelme-export-details \{")
-        self.assertRegex(style_css, r"(?m)^\.zip-drop-zone \{")
         self.assertNotRegex(style_css, r"(?m)^\.annotation-import-report \{")
         self.assertNotRegex(style_css, r"(?m)^\.annotation-import-summary \{")
         self.assertNotRegex(style_css, r"(?m)^\.csv-mapping-wizard \{")
@@ -240,6 +250,18 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(media_preview_css, r"(?m)^\.preview-panel \{")
         self.assertRegex(media_preview_css, r"(?m)^\.preview-placeholder \{")
         self.assertIn("@media (max-width: 840px) {", media_preview_css)
+
+        self.assertRegex(data_inputs_css, r"(?m)^\.section-help \{")
+        self.assertRegex(data_inputs_css, r"(?m)^\.zip-storage-box \{")
+        self.assertRegex(data_inputs_css, r"(?m)^\.zip-drop-zone \{")
+        self.assertRegex(data_inputs_css, r"(?m)^\.class-entry-row \{")
+        self.assertRegex(data_inputs_css, r"(?m)^\.class-list-box \{")
+        self.assertRegex(data_inputs_css, r"(?m)^\.class-chip \{")
+        self.assertRegex(data_inputs_css, r"(?m)^\.empty-class-list \{")
+        self.assertRegex(data_inputs_css, r"(?m)^\.ingest-progress-container \{")
+        self.assertRegex(data_inputs_css, r"(?m)^\.ingest-progress-bar-bg \{")
+        self.assertIn("@media (max-width: 560px) {", data_inputs_css)
+        self.assertIn("@media (max-width: 840px) {", data_inputs_css)
 
         self.assertRegex(dashboard_css, r"(?m)^#page-dashboard \.dashboard-lower-grid \{")
         self.assertRegex(dashboard_css, r"(?m)^\.workflow-map-panel \{")
