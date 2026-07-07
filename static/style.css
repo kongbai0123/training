@@ -72,104 +72,6 @@
   line-height: 1.45;
 }
 
-.annotation-import-report {
-  display: grid;
-  gap: 12px;
-}
-
-.annotation-import-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 8px;
-}
-
-.annotation-import-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  color: var(--text-muted);
-  font-size: 0.82rem;
-}
-
-.annotation-import-meta code {
-  color: var(--text);
-}
-
-.annotation-import-issues {
-  display: grid;
-  gap: 8px;
-}
-
-.annotation-import-issues .summary-warning-item {
-  display: grid;
-  gap: 4px;
-}
-
-.annotation-import-issues .summary-warning-item .btn-xs {
-  justify-self: flex-start;
-}
-
-.csv-mapping-wizard {
-  margin-top: 14px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-2);
-}
-
-.csv-mapping-grid {
-  display: grid;
-  gap: 10px;
-  margin: 12px 0;
-}
-
-.csv-file-mapping {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-
-.csv-file-mapping h4 {
-  margin: 0;
-  font-size: 0.92rem;
-}
-
-.csv-mapping-grid-inner {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-}
-
-.csv-map-field {
-  display: grid;
-  gap: 6px;
-}
-
-.csv-map-field span {
-  color: var(--text-muted);
-  font-size: 0.8rem;
-}
-
-.csv-map-field select {
-  width: 100%;
-}
-
-.annotation-import-details {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-2);
-}
-
-.annotation-import-details summary {
-  cursor: pointer;
-  padding: 10px 12px;
-  color: var(--text);
-  font-weight: 700;
-}
-
 .compact-table {
   max-height: 220px;
   overflow: auto;
@@ -178,22 +80,6 @@
 
 .compact-table .data-table {
   min-width: 620px;
-}
-
-.annotation-import-report-modal-content {
-  width: min(960px, calc(100vw - 48px));
-}
-
-.modal-report-table {
-  max-height: 300px;
-  overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  margin: 10px 0 18px;
-}
-
-.modal-report-table .data-table {
-  min-width: 720px;
 }
 
 .settings-controls {
