@@ -30,6 +30,9 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         rnn_training_payload_helpers_js = (
             ROOT / "static" / "pages" / "rnn_training_payload_helpers.js"
         ).read_text(encoding="utf-8")
+        rnn_config_view_helpers_js = (
+            ROOT / "static" / "pages" / "rnn_config_view_helpers.js"
+        ).read_text(encoding="utf-8")
         training_js = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
         right_panel_js = (ROOT / "static" / "core" / "right_panel.js").read_text(encoding="utf-8")
         page_guards_js = (ROOT / "static" / "core" / "page_guards.js").read_text(encoding="utf-8")
@@ -71,6 +74,13 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertNotIn("const configData = {", training_modes_js)
         self.assertNotIn('Number(qs("#rnn-epochs")', training_modes_js)
         self.assertNotIn('bidirectional: model === "bilstm"', training_modes_js)
+        self.assertIn("export function resolveRnnWindowSummary", rnn_config_view_helpers_js)
+        self.assertIn("export function buildRnnWindowSummaryRows", rnn_config_view_helpers_js)
+        self.assertIn("export function buildRnnMismatchSummary", rnn_config_view_helpers_js)
+        self.assertIn("buildRnnWindowSummaryRows(windowSummary)", training_modes_js)
+        self.assertIn("buildRnnMismatchSummary(trainingModeState.rnn.configMismatches)", training_modes_js)
+        self.assertNotIn('const estimated = windowSummary.estimated_windows ?? "--";', training_modes_js)
+        self.assertNotIn("const mismatches = trainingModeState.rnn.configMismatches || [];", training_modes_js)
         self.assertIn("CSV must include sequence id", training_modes_js)
         self.assertIn("function getTrainableTemplateRnnCatalog", training_modes_js)
         self.assertIn('model.source !== "project_trained"', rnn_model_catalog_helpers_js)

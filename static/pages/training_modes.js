@@ -36,6 +36,11 @@ import {
   rnnInferenceModelLabel
 } from "./rnn_inference_helpers.js";
 import {
+  buildRnnMismatchSummary,
+  buildRnnWindowSummaryRows,
+  resolveRnnWindowSummary
+} from "./rnn_config_view_helpers.js";
+import {
   canStartRnnTrainingFromState,
   parseRnnFeatureColumns,
   rnnStartBlockerMessage,
@@ -537,31 +542,28 @@ function renderRnnConfig(validation = null) {
 }
 
 function renderRnnWindowSummary(validation = null) {
-  const windowSummary = validation?.window || trainingModeState.rnn.windowSummary || trainingModeState.rnn.configValidation?.window || {};
+  const windowSummary = resolveRnnWindowSummary({
+    validation,
+    windowSummary: trainingModeState.rnn.windowSummary,
+    configValidation: trainingModeState.rnn.configValidation
+  });
+  const viewModel = buildRnnWindowSummaryRows(windowSummary);
   const badge = qs("#rnn-window-status-badge");
   const warning = qs("#rnn-window-warning");
   const summary = qs("#rnn-window-summary");
-  const status = windowSummary.status || "warning";
   if (badge) {
-    badge.className = `summary-badge ${status === "ok" ? "badge-success" : status === "error" ? "badge-danger" : "badge-warning"}`;
-    badge.textContent = status === "ok" ? "Ready" : status === "error" ? "Invalid" : "Needs CSV";
+    badge.className = `summary-badge ${viewModel.badgeClass}`;
+    badge.textContent = viewModel.badgeLabel;
   }
   if (summary) {
-    const estimated = windowSummary.estimated_windows ?? "--";
-    const sequences = windowSummary.sequence_count ?? "--";
-    const minLength = windowSummary.min_sequence_length || "--";
-    const maxLength = windowSummary.max_sequence_length || "--";
-    summary.innerHTML = `
-      <div><span>Estimated windows</span><strong>${escapeHtml(estimated)}</strong></div>
-      <div><span>Sequence count</span><strong>${escapeHtml(sequences)}</strong></div>
-      <div><span>Min / Max length</span><strong>${escapeHtml(minLength)} / ${escapeHtml(maxLength)}</strong></div>
-    `;
+    summary.innerHTML = viewModel.rows
+      .map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`)
+      .join("");
   }
   if (warning) {
-    const messages = [...(windowSummary.errors || []), ...(windowSummary.warnings || [])];
-    warning.classList.toggle("hidden", !messages.length);
-    warning.innerHTML = messages.length
-      ? `<strong>Window config</strong><span>${messages.map((item) => escapeHtml(item)).join("<br>")}</span>`
+    warning.classList.toggle("hidden", !viewModel.messages.length);
+    warning.innerHTML = viewModel.messages.length
+      ? `<strong>Window config</strong><span>${viewModel.messages.map((item) => escapeHtml(item)).join("<br>")}</span>`
       : "";
   }
 }
@@ -582,13 +584,13 @@ function renderRnnFeatureChips(validation = null) {
 function renderRnnConfigMismatch() {
   const box = qs("#rnn-config-mismatch-warning");
   if (!box) return;
-  const mismatches = trainingModeState.rnn.configMismatches || [];
-  box.classList.toggle("hidden", !mismatches.length);
-  if (!mismatches.length) {
+  const mismatchSummary = buildRnnMismatchSummary(trainingModeState.rnn.configMismatches);
+  box.classList.toggle("hidden", !mismatchSummary.visible);
+  if (!mismatchSummary.visible) {
     box.textContent = "";
     return;
   }
-  box.innerHTML = `<strong>Feature config mismatch</strong><span>${escapeHtml(mismatches.length)} previous RNN run(s) use different feature config. Existing runs are kept, but direct comparison may be inconsistent.</span>`;
+  box.innerHTML = `<strong>${escapeHtml(mismatchSummary.title)}</strong><span>${escapeHtml(mismatchSummary.message)}</span>`;
 }
 
 function renderRnnReadiness() {
