@@ -1,6 +1,7 @@
 import {
   buildSparklinePoints,
   extractMetricSeries,
+  formatSequenceDate,
   formatSequenceMetric,
   normalizeRnnModelGroupLabel,
   resolveComparisonMetricConfig,
@@ -98,6 +99,62 @@ export function buildRnnMetricTrendRows({ history = [], isRegression = false, me
         latest: values.length ? values[values.length - 1] : null,
         points: buildSparklinePoints(values),
         empty: values.length < 1
+      };
+    })
+  };
+}
+
+export function buildRnnEvaluationEpochRows(history = []) {
+  if (!Array.isArray(history) || !history.length) {
+    return {
+      hasRows: false,
+      emptyMessage: "No metric rows.",
+      rows: []
+    };
+  }
+
+  return {
+    hasRows: true,
+    emptyMessage: "",
+    rows: history.map((row, index) => {
+      const accuracyOrMae = row["val/accuracy"] ?? row["val/mae"];
+      const macroOrRmse = row["val/macro_f1"] ?? row["val/rmse"];
+      return {
+        epoch: row.epoch ?? index + 1,
+        trainLoss: formatSequenceMetric(row["train/loss"]),
+        valLoss: formatSequenceMetric(row["val/loss"]),
+        primary: formatSequenceMetric(accuracyOrMae),
+        secondary: formatSequenceMetric(macroOrRmse),
+        statusLabel: "Completed",
+        statusClass: "badge-success"
+      };
+    })
+  };
+}
+
+export function buildRnnEvaluationRunHistoryRows(runs = []) {
+  if (!Array.isArray(runs) || !runs.length) {
+    return {
+      hasRows: false,
+      emptyMessage: "No sequence runs.",
+      rows: []
+    };
+  }
+
+  return {
+    hasRows: true,
+    emptyMessage: "",
+    rows: runs.map((run) => {
+      const primaryLabel = run.primary_metric_name || (String(run.task_type || "").includes("regression") ? "MAE" : "Macro-F1");
+      const primaryValue = run.primary_metric_value ?? run.platform_score ?? run.best_macro_f1 ?? run.best_mae;
+      return {
+        runId: run.run_id || "--",
+        model: run.model || "--",
+        backend: sequenceBackendDisplayLabel(run),
+        primary: `${primaryLabel} ${formatSequenceMetric(primaryValue)}`,
+        status: run.status || "--",
+        statusClass: run.status === "completed" ? "badge-success" : "badge-warning",
+        date: formatSequenceDate(run.completed_at || run.created_at || run.started_at)
       };
     })
   };

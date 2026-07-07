@@ -3,11 +3,12 @@ import { appState } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, escapeHtml, setText } from "../utils.js";
 import {
-  formatSequenceDate,
   formatSequenceMetric,
   sequenceBackendDisplayLabel
 } from "./rnn_metric_helpers.js";
 import {
+  buildRnnEvaluationEpochRows,
+  buildRnnEvaluationRunHistoryRows,
   buildRnnMetricTrendRows,
   buildRnnEvaluationSidebarSections,
   buildRnnBaselineComparisonRows,
@@ -814,20 +815,19 @@ function renderRnnEvaluation() {
 function renderRnnEvaluationEpochRows(history) {
   const tbody = qs("#rnn-eval-epoch-rows");
   if (!tbody) return;
-  if (!Array.isArray(history) || !history.length) {
-    tbody.innerHTML = `<tr><td colspan="6">No metric rows.</td></tr>`;
+  const epochRows = buildRnnEvaluationEpochRows(history);
+  if (!epochRows.hasRows) {
+    tbody.innerHTML = `<tr><td colspan="6">${escapeHtml(epochRows.emptyMessage)}</td></tr>`;
     return;
   }
-  tbody.innerHTML = history.map((row, index) => {
-    const accuracyOrMae = row["val/accuracy"] ?? row["val/mae"];
-    const macroOrRmse = row["val/macro_f1"] ?? row["val/rmse"];
+  tbody.innerHTML = epochRows.rows.map((row) => {
     return `<tr>
-      <td><strong>${escapeHtml(row.epoch ?? index + 1)}</strong></td>
-      <td><code>${formatRnnMetric(row["train/loss"])}</code></td>
-      <td><code>${formatRnnMetric(row["val/loss"])}</code></td>
-      <td>${formatRnnMetric(accuracyOrMae)}</td>
-      <td>${formatRnnMetric(macroOrRmse)}</td>
-      <td><span class="badge badge-success">Completed</span></td>
+      <td><strong>${escapeHtml(row.epoch)}</strong></td>
+      <td><code>${escapeHtml(row.trainLoss)}</code></td>
+      <td><code>${escapeHtml(row.valLoss)}</code></td>
+      <td>${escapeHtml(row.primary)}</td>
+      <td>${escapeHtml(row.secondary)}</td>
+      <td><span class="badge ${escapeHtml(row.statusClass)}">${escapeHtml(row.statusLabel)}</span></td>
     </tr>`;
   }).join("");
 }
@@ -950,20 +950,19 @@ function renderRnnSidebarRows(selector, rows) {
 function renderRnnEvaluationRunHistory(runs) {
   const tbody = qs("#rnn-eval-run-history");
   if (!tbody) return;
-  if (!Array.isArray(runs) || !runs.length) {
-    tbody.innerHTML = `<tr><td colspan="6">No sequence runs.</td></tr>`;
+  const runRows = buildRnnEvaluationRunHistoryRows(runs);
+  if (!runRows.hasRows) {
+    tbody.innerHTML = `<tr><td colspan="6">${escapeHtml(runRows.emptyMessage)}</td></tr>`;
     return;
   }
-  tbody.innerHTML = runs.map((run) => {
-    const primaryLabel = run.primary_metric_name || (String(run.task_type || "").includes("regression") ? "MAE" : "Macro-F1");
-    const primaryValue = run.primary_metric_value ?? run.platform_score ?? run.best_macro_f1 ?? run.best_mae;
+  tbody.innerHTML = runRows.rows.map((run) => {
     return `<tr>
-      <td><code>${escapeHtml(run.run_id || "--")}</code></td>
-      <td>${escapeHtml(run.model || "--")}</td>
-      <td>${escapeHtml(sequenceBackendLabel(run))}</td>
-      <td>${escapeHtml(primaryLabel)} ${formatRnnMetric(primaryValue)}</td>
-      <td><span class="badge ${run.status === "completed" ? "badge-success" : "badge-warning"}">${escapeHtml(run.status || "--")}</span></td>
-      <td>${escapeHtml(formatRnnDate(run.completed_at || run.created_at || run.started_at))}</td>
+      <td><code>${escapeHtml(run.runId)}</code></td>
+      <td>${escapeHtml(run.model)}</td>
+      <td>${escapeHtml(run.backend)}</td>
+      <td>${escapeHtml(run.primary)}</td>
+      <td><span class="badge ${escapeHtml(run.statusClass)}">${escapeHtml(run.status)}</span></td>
+      <td>${escapeHtml(run.date)}</td>
     </tr>`;
   }).join("");
 }
@@ -974,10 +973,6 @@ function sequenceBackendLabel(run = {}) {
 
 function formatRnnMetric(value, digits = 3) {
   return formatSequenceMetric(value, digits);
-}
-
-function formatRnnDate(value) {
-  return formatSequenceDate(value);
 }
 
 async function loadRnnInferenceModels(options = {}) {
