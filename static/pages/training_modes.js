@@ -28,9 +28,8 @@ import {
 import {
   renderRnnConfigMismatchWarning,
   renderRnnFeatureChipList,
-  renderRnnPreviewTable,
-  renderRnnWindowSummaryRows,
-  renderRnnWindowWarning
+  renderRnnPreviewContent,
+  resolveRnnWindowSummaryRender
 } from "./rnn_config_render_helpers.js";
 import {
   RNN_MODEL_TOOLTIPS,
@@ -571,11 +570,7 @@ function renderRnnConfig(validation = null) {
       headers,
       rows: inspection.preview_rows
     });
-    if (previewModel.hasRows) {
-      preview.innerHTML = renderRnnPreviewTable(previewModel);
-    } else {
-      preview.textContent = previewModel.placeholder;
-    }
+    preview.innerHTML = renderRnnPreviewContent(previewModel);
   }
   renderRnnFeatureChips(validation);
   renderRnnWindowSummary(validation);
@@ -593,16 +588,17 @@ function renderRnnWindowSummary(validation = null) {
   const badge = qs("#rnn-window-status-badge");
   const warning = qs("#rnn-window-warning");
   const summary = qs("#rnn-window-summary");
+  const renderView = resolveRnnWindowSummaryRender(viewModel);
   if (badge) {
-    badge.className = `summary-badge ${viewModel.badgeClass}`;
-    badge.textContent = viewModel.badgeLabel;
+    badge.className = renderView.badgeClassName;
+    badge.textContent = renderView.badgeLabel;
   }
   if (summary) {
-    summary.innerHTML = renderRnnWindowSummaryRows(viewModel.rows);
+    summary.innerHTML = renderView.summaryHtml;
   }
   if (warning) {
-    warning.classList.toggle("hidden", !viewModel.messages.length);
-    warning.innerHTML = renderRnnWindowWarning(viewModel.messages);
+    warning.classList.toggle("hidden", renderView.warningHidden);
+    warning.innerHTML = renderView.warningHtml;
   }
 }
 

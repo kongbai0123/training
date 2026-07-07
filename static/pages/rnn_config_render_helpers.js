@@ -4,6 +4,12 @@ export function renderRnnPreviewTable(previewModel = {}) {
   return `<div class="rnn-preview-table-wrap"><table class="rnn-preview-table"><thead><tr>${(previewModel.columns || []).map((col) => `<th>${escapeHtml(col)}</th>`).join("")}</tr></thead><tbody>${(previewModel.rows || []).map((row) => `<tr>${(row || []).map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 
+export function renderRnnPreviewContent(previewModel = {}) {
+  return previewModel.hasRows
+    ? renderRnnPreviewTable(previewModel)
+    : escapeHtml(previewModel.placeholder || "");
+}
+
 export function renderRnnWindowSummaryRows(rows = []) {
   return rows
     .map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`)
@@ -13,6 +19,17 @@ export function renderRnnWindowSummaryRows(rows = []) {
 export function renderRnnWindowWarning(messages = []) {
   if (!messages.length) return "";
   return `<strong>Window config</strong><span>${messages.map((item) => escapeHtml(item)).join("<br>")}</span>`;
+}
+
+export function resolveRnnWindowSummaryRender(viewModel = {}) {
+  const messages = viewModel.messages || [];
+  return {
+    badgeClassName: `summary-badge ${viewModel.badgeClass}`,
+    badgeLabel: viewModel.badgeLabel,
+    summaryHtml: renderRnnWindowSummaryRows(viewModel.rows),
+    warningHidden: !messages.length,
+    warningHtml: renderRnnWindowWarning(messages)
+  };
 }
 
 export function renderRnnFeatureChipList(chips = []) {
