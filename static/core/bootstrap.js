@@ -101,7 +101,7 @@ function bindGlobalNavigation() {
   });
 
   eventBus.on("open-project", async (projectId) => {
-    await openProject(projectId, { page: "dashboard" });
+    await openProject(projectId, { stayOnPage: true });
   });
 
   eventBus.on("reload-projects", async (options = {}) => {

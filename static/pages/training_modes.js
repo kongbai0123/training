@@ -188,10 +188,13 @@ function ensureTrainingPageActive() {
 export function syncTrainingModeForProject(project, targetPage = "dashboard") {
   const taskType = String(project?.task_type || "").toLowerCase();
   const isRnnProject = taskType.includes("sequence") || taskType.includes("time_series") || taskType.includes("rnn");
+  const previousRnnPanel = trainingModeState.activeMode === "rnn" ? trainingModeState.activeRnnPanel : "";
 
   if (isRnnProject) {
     trainingModeState.activeMode = "rnn";
-    trainingModeState.activeRnnPanel = "overview";
+    trainingModeState.activeRnnPanel = targetPage === "training" && previousRnnPanel
+      ? previousRnnPanel
+      : "overview";
     return;
   }
 
@@ -708,6 +711,7 @@ function renderRnnReadiness() {
 
 async function loadRnnEvaluation(options = {}) {
   if (!appState.currentProjectId) {
+    trainingModeState.rnn.evaluationProjectId = "";
     trainingModeState.rnn.evaluationRuns = [];
     trainingModeState.rnn.evaluationMetrics = null;
     trainingModeState.rnn.evaluationArtifacts = [];
@@ -716,11 +720,20 @@ async function loadRnnEvaluation(options = {}) {
     renderRnnEvaluation();
     return;
   }
+  const projectId = appState.currentProjectId;
+  const projectChanged = trainingModeState.rnn.evaluationProjectId !== projectId;
+  if (projectChanged) {
+    trainingModeState.rnn.evaluationRuns = [];
+    trainingModeState.rnn.evaluationMetrics = null;
+    trainingModeState.rnn.evaluationArtifacts = [];
+    trainingModeState.rnn.evaluationRunId = "";
+    trainingModeState.rnn.evaluationRunMetrics = {};
+  }
   if (trainingModeState.rnn.evaluationLoading && !options.force) {
     renderRnnEvaluation();
     return;
   }
-  if (!options.force && trainingModeState.rnn.evaluationRuns.length && trainingModeState.rnn.evaluationMetrics) {
+  if (!projectChanged && !options.force && trainingModeState.rnn.evaluationRuns.length && trainingModeState.rnn.evaluationMetrics) {
     renderRnnEvaluation();
     return;
   }
@@ -728,8 +741,9 @@ async function loadRnnEvaluation(options = {}) {
   trainingModeState.rnn.evaluationLoading = true;
   renderRnnEvaluation();
   try {
-    const runsPayload = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs`);
-    const runs = (Array.isArray(runsPayload) ? runsPayload : []).filter(isSequenceEvaluationRun);
+    const runsPayload = await apiFetch(`/api/projects/${projectId}/train/runs`);
+    const runs = sortRnnEvaluationRuns((Array.isArray(runsPayload) ? runsPayload : []).filter(isSequenceEvaluationRun));
+    trainingModeState.rnn.evaluationProjectId = projectId;
     trainingModeState.rnn.evaluationRuns = runs;
 
     const latestRun = runs[0] || null;
@@ -743,7 +757,7 @@ async function loadRnnEvaluation(options = {}) {
 
     const runMetricEntries = await Promise.all(runs.map(async (run) => {
       try {
-        const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${encodeURIComponent(run.run_id)}/metrics`, { suppressToast: true });
+        const payload = await apiFetch(`/api/projects/${projectId}/train/runs/${encodeURIComponent(run.run_id)}/metrics`, { suppressToast: true });
         return [run.run_id, payload || null];
       } catch (err) {
         return [run.run_id, null];
@@ -752,7 +766,7 @@ async function loadRnnEvaluation(options = {}) {
     const metricsByRun = Object.fromEntries(runMetricEntries.filter(([runId, payload]) => runId && payload));
     const metrics = metricsByRun[latestRun.run_id] || null;
     const [artifacts] = await Promise.all([
-      apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${encodeURIComponent(latestRun.run_id)}/artifacts`)
+      apiFetch(`/api/projects/${projectId}/train/runs/${encodeURIComponent(latestRun.run_id)}/artifacts`)
     ]);
     trainingModeState.rnn.evaluationMetrics = metrics || null;
     trainingModeState.rnn.evaluationArtifacts = Array.isArray(artifacts) ? artifacts : [];
@@ -767,6 +781,14 @@ async function loadRnnEvaluation(options = {}) {
     trainingModeState.rnn.evaluationLoading = false;
     renderRnnEvaluation();
   }
+}
+
+function sortRnnEvaluationRuns(runs = []) {
+  return [...runs].sort((a, b) => {
+    const timeA = Date.parse(a?.completed_at || a?.updated_at || a?.created_at || a?.started_at || "");
+    const timeB = Date.parse(b?.completed_at || b?.updated_at || b?.created_at || b?.started_at || "");
+    return (Number.isFinite(timeB) ? timeB : 0) - (Number.isFinite(timeA) ? timeA : 0);
+  });
 }
 
 function renderRnnEvaluation() {

@@ -28,6 +28,7 @@ export const trainingModeState = {
     inferenceRunning: false,
     inferenceResult: null,
     evaluationLoading: false,
+    evaluationProjectId: "",
     evaluationRuns: [],
     evaluationMetrics: null,
     evaluationArtifacts: [],
