@@ -970,6 +970,9 @@ function renderRnnLineChart(canvasId, emptyId, chartModel = {}, variant = "score
   canvas.classList.toggle("hidden", !hasSeries);
   const chartRef = canvasId === "rnn-eval-score-chart" ? rnnScoreChart : rnnLossChart;
   if (chartRef) chartRef.destroy();
+  if (typeof Chart !== "undefined" && typeof Chart.getChart === "function") {
+    Chart.getChart(canvas)?.destroy();
+  }
   if (!hasSeries || typeof Chart === "undefined") {
     if (canvasId === "rnn-eval-score-chart") rnnScoreChart = null;
     if (canvasId === "rnn-eval-loss-chart") rnnLossChart = null;
