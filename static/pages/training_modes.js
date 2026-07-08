@@ -111,17 +111,20 @@ export function initTrainingModeSidebar() {
       renderTrainingModeSidebar();
       renderTrainingWorkspace();
       loadRnnConfig({ force: true });
-      if (trainingModeState.activeRnnPanel === "sequence-test") loadRnnInferenceModels();
+      if (trainingModeState.activeRnnPanel === "sequence-test") {
+        loadRnnInferenceModels();
+        loadLatestRnnInferenceResult();
+      }
       if (trainingModeState.activeRnnPanel === "evaluation") loadRnnEvaluation({ force: true });
     });
   });
 
   qsa("[data-cnn-nav]").forEach((button) => {
     button.addEventListener("click", () => {
+      if (isHiddenModeNavButton(button)) return;
       const nav = button.dataset.cnnNav;
       const page = button.dataset.page || nav || "dashboard";
       trainingModeState.activeMode = "cnn";
-      if (isHiddenModeNavButton(button)) return;
       trainingModeState.activeCnnPanel = nav === "training" ? "training" : "overview";
       if (nav === "model-compare") eventBus.emit("set-compare-architecture", "cnn");
       eventBus.emit("navigate", page);
@@ -159,13 +162,13 @@ export function initTrainingModeSidebar() {
   renderTrainingWorkspace();
 }
 
-export function setTrainingMode(mode) {
-  if (!["cnn", "rnn"].includes(mode) || trainingModeState.activeMode === mode) return;
-  trainingModeState.activeMode = mode;
 function isHiddenModeNavButton(button) {
   return Boolean(button.closest(".training-mode-nav.hidden"));
 }
 
+export function setTrainingMode(mode) {
+  if (!["cnn", "rnn"].includes(mode) || trainingModeState.activeMode === mode) return;
+  trainingModeState.activeMode = mode;
   if (mode === "cnn") trainingModeState.activeCnnPanel = "overview";
   if (mode === "rnn") trainingModeState.activeRnnPanel = "overview";
   eventBus.emit("navigate", mode === "cnn" ? "dashboard" : "training");
@@ -363,6 +366,7 @@ export function initRnnPreviewEvents() {
     qs(selector)?.addEventListener("click", startRnnTraining);
   });
   qs("#rnn-refresh-models")?.addEventListener("click", () => loadRnnInferenceModels({ force: true }));
+  qs("#rnn-refresh-inference-result")?.addEventListener("click", () => loadLatestRnnInferenceResult({ force: true }));
   qs("#rnn-refresh-evaluation")?.addEventListener("click", () => loadRnnEvaluation({ force: true }));
   qsa("[data-rnn-compare-metric]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -933,7 +937,7 @@ async function loadRnnInferenceModels(options = {}) {
   trainingModeState.rnn.inferenceLoading = true;
   renderRnnInferenceModels();
   try {
-    const models = await apiFetch(`/api/projects/${appState.currentProjectId}/models`);
+    const models = await apiFetch(`/api/projects/${appState.currentProjectId}/models?scope=all`);
     trainingModeState.rnn.inferenceModels = filterRnnInferenceModels(models, trainingModeState.rnn.backend);
   } catch (err) {
     trainingModeState.rnn.inferenceModels = [];
@@ -1035,6 +1039,74 @@ async function runRnnSequenceInference(event) {
     trainingModeState.rnn.inferenceRunning = false;
     updateRnnInferenceControls();
   }
+}
+
+async function loadLatestRnnInferenceResult(options = {}) {
+  if (!appState.currentProjectId) {
+    trainingModeState.rnn.inferenceResult = null;
+    renderRnnInferenceResult();
+    return;
+  }
+  if (trainingModeState.rnn.inferenceResult && !options.force) {
+    renderRnnInferenceResult();
+    return;
+  }
+
+  const container = qs("#rnn-inference-result");
+  if (container && options.force) {
+    container.textContent = "Loading latest sequence inference result...";
+  }
+
+  try {
+    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/inference/jobs`, { suppressToast: true });
+    const jobs = Array.isArray(payload?.jobs) ? payload.jobs : [];
+    const latest = jobs.find((job) =>
+      job?.kind === "sequence" || job?.mode === "rnn" || job?.architecture === "rnn"
+    );
+    if (!latest?.job_id) {
+      if (options.force) trainingModeState.rnn.inferenceResult = null;
+      renderRnnInferenceResult();
+      return;
+    }
+    const detail = await apiFetch(`/api/projects/${appState.currentProjectId}/inference/jobs/${encodeURIComponent(latest.job_id)}`, {
+      suppressToast: true
+    });
+    trainingModeState.rnn.inferenceResult = normalizeRnnInferenceJobResult(detail);
+    renderRnnInferenceResult();
+  } catch (err) {
+    if (options.force) eventBus.emit("toast", `Failed to load sequence inference result: ${err.message}`);
+    renderRnnInferenceResult();
+  }
+}
+
+function normalizeRnnInferenceJobResult(job = {}) {
+  const files = Array.isArray(job.files) ? job.files : [];
+  const urlFor = (name) => files.find((file) => file.name === name)?.url || "";
+  return {
+    job_id: job.job_id,
+    model: {
+      model_id: job.model_id,
+      run_id: job.run_id,
+      backend: job.backend,
+      task_type: job.task_type,
+      architecture: job.architecture
+    },
+    summary: {
+      ...(job.summary || {}),
+      sequence_count: job.summary?.sequence_count ?? job.sequence_count,
+      inference_time_ms: job.summary?.inference_time_ms ?? job.inference_time_ms,
+      created_at: job.summary?.created_at ?? job.created_at,
+      run_id: job.summary?.run_id ?? job.run_id
+    },
+    predictions: Array.isArray(job.predictions)
+      ? job.predictions
+      : (Array.isArray(job.prediction?.predictions) ? job.prediction.predictions : []),
+    urls: {
+      prediction_json: urlFor("prediction.json"),
+      prediction_csv: urlFor("predictions.csv"),
+      summary_json: urlFor("summary.json")
+    }
+  };
 }
 
 function renderRnnInferenceResult() {

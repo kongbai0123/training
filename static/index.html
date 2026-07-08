@@ -1224,11 +1224,21 @@
                     <div class="rnn-sequence-test-layout">
                       <div class="rnn-sequence-test-config">
                         <div class="section-title compact"><h3>測試設定</h3><span class="summary-badge badge-neutral">Input</span></div>
-                        <div class="rnn-schema-grid two-col">
-                          <label><span>RNN model</span><select id="rnn-inference-model"><option value="">Select RNN model</option></select></label>
-                          <label><span>Device</span><select id="rnn-inference-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
-                          <label><span>Upload CSV</span><input id="rnn-inference-csv-file" type="file" accept=".csv,text/csv"></label>
-                          <label><span>Project CSV path</span><input id="rnn-inference-csv-path" type="text" placeholder="sequences/features.csv"></label>
+                        <div class="rnn-sequence-config-stack">
+                          <div class="rnn-sequence-config-group">
+                            <div class="config-group-title">模型與執行</div>
+                            <div class="rnn-schema-grid two-col">
+                              <label><span>RNN model</span><select id="rnn-inference-model"><option value="">Select RNN model</option></select></label>
+                              <label><span>Device</span><select id="rnn-inference-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
+                            </div>
+                          </div>
+                          <div class="rnn-sequence-config-group">
+                            <div class="config-group-title">CSV 輸入</div>
+                            <div class="rnn-schema-grid two-col">
+                              <label><span>Upload CSV</span><input id="rnn-inference-csv-file" type="file" accept=".csv,text/csv"></label>
+                              <label><span>Project CSV path</span><input id="rnn-inference-csv-path" type="text" placeholder="sequences/features.csv"></label>
+                            </div>
+                          </div>
                         </div>
                         <div class="inline-actions">
                           <button type="button" class="btn btn-secondary" id="rnn-refresh-models">Refresh Models</button>
@@ -1237,7 +1247,13 @@
                         <p class="form-hint" id="rnn-inference-reason">Select an RNN model and provide a CSV feature sequence.</p>
                       </div>
                       <div class="rnn-sequence-test-result">
-                        <div class="section-title compact"><h3>測試結果</h3><span class="summary-badge badge-neutral">Result</span></div>
+                        <div class="section-title compact">
+                          <h3>測試結果</h3>
+                          <div class="inline-actions compact-actions">
+                            <button type="button" class="btn btn-secondary btn-sm" id="rnn-refresh-inference-result">Refresh Result</button>
+                            <span class="summary-badge badge-neutral">Result</span>
+                          </div>
+                        </div>
                         <div class="rnn-placeholder-box" id="rnn-inference-result">No sequence inference result yet.</div>
                       </div>
                     </div>

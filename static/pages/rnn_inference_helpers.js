@@ -1,6 +1,7 @@
 export function filterRnnInferenceModels(models = [], backend = "pytorch_lstm") {
   return (Array.isArray(models) ? models : []).filter((model) =>
-    model.architecture === "rnn" || model.backend === backend
+    (model.architecture === "rnn" || model.backend === backend)
+    && (!model.weight_type || model.weight_type === "best")
   );
 }
 
