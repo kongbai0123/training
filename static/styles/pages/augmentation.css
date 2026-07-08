@@ -85,7 +85,7 @@
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--bg-panel-soft);
+  background: var(--bg-panel);
   cursor: pointer;
 }
 
@@ -386,7 +386,7 @@ body[data-theme="light"] .aug-preview-box h4 {
 
 .augmentation-console-grid {
   display: grid;
-  grid-template-columns: minmax(320px, 0.42fr) minmax(420px, 0.58fr);
+  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
@@ -399,11 +399,15 @@ body[data-theme="light"] .aug-preview-box h4 {
 }
 
 .preset-list.compact {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
+  max-height: calc((66px * 4) + (8px * 3));
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .preset-list.compact .preset-item {
-  min-height: 76px;
+  min-height: 66px;
   padding: 10px;
 }
 
@@ -414,21 +418,6 @@ body[data-theme="light"] .aug-preview-box h4 {
 .preset-list.compact .preset-item strong i {
   width: 18px;
   color: var(--primary);
-}
-
-.preset-item.recommended {
-  border-color: rgba(245, 158, 11, 0.75);
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14), var(--bg-panel-soft));
-}
-
-.preset-item.recommended em {
-  margin-left: auto;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: rgba(245, 158, 11, 0.18);
-  color: #fbbf24;
-  font-size: 0.68rem;
-  font-style: normal;
 }
 
 .aug-preset-detail {
@@ -478,7 +467,7 @@ body[data-theme="light"] .aug-preview-box h4 {
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: rgba(15, 23, 42, 0.18);
+  background: var(--bg-panel-soft);
 }
 
 .aug-setting-group summary {
@@ -511,7 +500,8 @@ body[data-theme="light"] .aug-preview-box h4 {
 
 .custom-setting-item.is-related {
   border-color: rgba(59, 130, 246, 0.7);
-  background: rgba(59, 130, 246, 0.08);
+  background: var(--bg-panel);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.16);
 }
 
 .custom-setting-item.is-disabled {
@@ -723,10 +713,6 @@ body[data-theme="light"] .aug-preview-box h4 {
 }
 
 @media (max-width: 1200px) {
-  .augmentation-console-grid {
-    grid-template-columns: 1fr;
-  }
-
   .aug-scope-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -737,6 +723,12 @@ body[data-theme="light"] .aug-preview-box h4 {
 
   .aug-overlay-buttons {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 980px) {
+  .augmentation-console-grid {
+    grid-template-columns: 1fr;
   }
 }
 

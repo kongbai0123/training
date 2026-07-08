@@ -1,12 +1,142 @@
 .dataset-manager-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
+  gap: 16px;
+  align-items: stretch;
 }
 
 .dataset-manager-layout > * {
   min-width: 0;
+}
+
+.dataset-import-card {
+  min-height: 364px;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+}
+
+.dataset-card-body {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  margin-top: 2px;
+}
+
+.dataset-field-group {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.dataset-field-label {
+  color: var(--text-soft);
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.dataset-action-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.dataset-action-row input,
+.dataset-action-row .btn,
+.dataset-browser-tools input,
+.dataset-browser-tools select {
+  min-height: 38px;
+}
+
+.dataset-action-button {
+  width: 100%;
+  min-width: 0;
+}
+
+.dataset-section-divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.dataset-upload-header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
+  align-items: center;
+  gap: 10px;
+}
+
+.dataset-storage-status {
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.dataset-storage-status span {
+  min-width: 0;
+}
+
+.dataset-storage-status code {
+  display: inline-block;
+  max-width: min(320px, 42vw);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-panel-soft);
+  font-family: monospace;
+  line-height: 1.35;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dataset-copy-button {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  font-size: 0.72rem;
+}
+
+.dataset-drop-zone {
+  min-height: 96px;
+  cursor: pointer;
+  padding: 14px;
+}
+
+.dataset-drop-zone i {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  font-size: 1.2rem;
+}
+
+.dataset-drop-zone p {
+  font-size: 0.78rem;
+}
+
+.dataset-fps-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: 12px;
+}
+
+.dataset-fps-row input {
+  min-height: 32px;
+  text-align: center;
+}
+
+.dataset-video-fields {
+  grid-template-columns: minmax(0, 1fr) 96px;
+  align-items: center;
 }
 
 .dataset-classes-card,
@@ -14,17 +144,25 @@
   grid-column: 1 / -1;
 }
 
-.dataset-video-fields {
-  grid-template-columns: 120px minmax(180px, auto);
-  justify-content: start;
-  align-items: end;
+.dataset-classes-body {
+  gap: 12px;
+}
+
+.dataset-class-list {
+  min-height: 44px;
 }
 
 .dataset-browser-header {
-  align-items: flex-start;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 14px;
 }
 
 .dataset-browser-header h2 {
+  margin-bottom: 0;
+}
+
+.dataset-browser-header .section-help {
   margin-bottom: 0;
 }
 
@@ -33,18 +171,35 @@
   display: grid;
   grid-template-columns: minmax(180px, 1fr) 170px;
   gap: 8px;
+  align-items: center;
+  margin-left: auto;
 }
 
 .dataset-meta-row {
   justify-content: flex-start;
   gap: 16px;
   flex-wrap: wrap;
+  min-height: 36px;
   margin-bottom: 12px;
+  padding: 10px 0 12px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.dataset-meta-item {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-soft);
+}
+
+.dataset-meta-row .btn {
+  margin-left: 2px;
 }
 
 @media (max-width: 840px) {
   .dataset-manager-layout,
-  .dataset-video-fields,
   .dataset-browser-tools {
     grid-template-columns: 1fr;
   }
@@ -53,8 +208,33 @@
     display: grid;
   }
 
-  .dataset-video-fields,
   .dataset-browser-tools {
     min-width: 0;
+  }
+
+  .dataset-import-card {
+    min-height: 0;
+  }
+
+  .dataset-upload-header,
+  .dataset-action-row,
+  .dataset-fps-row {
+    grid-template-columns: 1fr;
+  }
+
+  .dataset-storage-status {
+    justify-content: flex-start;
+  }
+
+  .dataset-storage-status code {
+    max-width: 100%;
+  }
+
+  .dataset-browser-header {
+    display: grid;
+  }
+
+  .dataset-browser-tools {
+    margin-left: 0;
   }
 }

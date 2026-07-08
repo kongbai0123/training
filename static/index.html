@@ -79,23 +79,23 @@
             <button class="sidebar-item" data-page="labelme" data-cnn-nav="labelme"><i class="fa-solid fa-pen-nib"></i><span>LabelMe</span></button>
             <button class="sidebar-item" data-page="split" data-cnn-nav="split"><i class="fa-solid fa-code-branch"></i><span>資料分散</span></button>
             <button class="sidebar-item" data-page="augmentation" data-cnn-nav="augmentation"><i class="fa-solid fa-wand-magic-sparkles"></i><span>物理擴充</span></button>
-            <button class="sidebar-item" data-page="training" data-cnn-nav="training"><i class="fa-solid fa-microchip"></i><span>CNN 模型訓練</span></button>
-            <button class="sidebar-item" data-page="evaluation" data-cnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>CNN 評估</span></button>
+            <button class="sidebar-item" data-page="training" data-cnn-nav="training"><i class="fa-solid fa-microchip"></i><span>模型訓練</span></button>
+            <button class="sidebar-item" data-page="evaluation" data-cnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>評估</span></button>
             <button class="sidebar-item" data-page="inference" data-cnn-nav="inference"><i class="fa-solid fa-magnifying-glass-chart"></i><span>模型測試</span></button>
             <button class="sidebar-item" data-page="model-compare" data-cnn-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span>模型比較</span></button>
             <button class="sidebar-item" data-page="auto-labeling" data-cnn-nav="auto-labeling"><i class="fa-solid fa-wand-sparkles"></i><span>自動標註</span></button>
-            <button class="sidebar-item" data-page="export" data-cnn-nav="export"><i class="fa-solid fa-file-export"></i><span>CNN 匯出</span></button>
+            <button class="sidebar-item" data-page="export" data-cnn-nav="export"><i class="fa-solid fa-file-export"></i><span>匯出</span></button>
           </div>
 
           <div id="rnn-mode-nav" class="training-mode-nav hidden">
             <button class="sidebar-item active" data-rnn-nav="sequence-dataset"><i class="fa-solid fa-table-list"></i><span>序列資料集</span></button>
             <button class="sidebar-item" data-rnn-nav="features-labels"><i class="fa-solid fa-tag"></i><span>特徵與標籤</span></button>
             <button class="sidebar-item" data-rnn-nav="windowing"><i class="fa-solid fa-crop-simple"></i><span>序列切片</span></button>
-            <button class="sidebar-item" data-rnn-nav="training"><i class="fa-solid fa-sliders"></i><span>RNN 模型訓練</span></button>
-            <button class="sidebar-item" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>RNN 評估</span></button>
+            <button class="sidebar-item" data-rnn-nav="training"><i class="fa-solid fa-sliders"></i><span>模型訓練</span></button>
+            <button class="sidebar-item" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>評估</span></button>
             <button class="sidebar-item" data-rnn-nav="sequence-test"><i class="fa-regular fa-circle-play"></i><span>序列測試</span></button>
-            <button class="sidebar-item" data-rnn-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span>RNN 模型比較</span></button>
-            <button class="sidebar-item" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i><span>RNN 匯出</span></button>
+            <button class="sidebar-item" data-rnn-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span>模型比較</span></button>
+            <button class="sidebar-item" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i><span>匯出</span></button>
           </div>
         </nav>
       </aside>
@@ -222,36 +222,36 @@
             </div>
           </div>
           <div class="dataset-manager-layout">
-            <section class="panel-section dataset-import-card" style="grid-row: span 2;">
+            <section class="panel-section dataset-import-card">
               <div class="section-title"><h2 data-i18n="dataset.importTitle">Dataset Import Center</h2></div>
               <p class="section-help" data-i18n="dataset.importHelp">Drop a folder or ZIP. The system filters image files and keeps packages separate from training data.</p>
 
-              <div class="form-stack" style="gap: 16px; margin-top: 12px;">
-                <div style="display: grid; gap: 8px;">
-                  <label for="input-local-folder" style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);" data-i18n="dataset.localFolderLabel">Scan local image folder</label>
-                  <div class="class-entry-row">
-                    <input type="text" id="input-local-folder" placeholder="D:\\datasets\\images" data-i18n-placeholder="dataset.localFolderPlaceholder" style="flex: 1;">
-                    <button class="btn btn-primary guarded" data-requires="project" id="btn-import-local" style="min-width: 100px;">
+              <div class="dataset-card-body">
+                <div class="dataset-field-group">
+                  <label class="dataset-field-label" for="input-local-folder" data-i18n="dataset.localFolderLabel">Scan local image folder</label>
+                  <div class="dataset-action-row">
+                    <input type="text" id="input-local-folder" placeholder="D:\\datasets\\images" data-i18n-placeholder="dataset.localFolderPlaceholder">
+                    <button class="btn btn-primary guarded dataset-action-button" data-requires="project" id="btn-import-local">
                       <i class="fa-solid fa-folder-open"></i> <span data-i18n="dataset.importButton">Import</span>
                     </button>
                   </div>
                 </div>
 
-                <div style="border-top: 1px solid var(--border); margin: 6px 0;"></div>
+                <div class="dataset-section-divider"></div>
 
-                <div style="display: grid; gap: 8px;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                    <span style="font-weight: 600; font-size: 0.84rem; color: var(--text-soft);" data-i18n="dataset.uploadTitle">Upload ZIP or folder</span>
-                    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--text-muted);">
-                      <span><span data-i18n="dataset.zipStorage">ZIP storage</span>: <code id="dataset-zip-storage-path" style="background: var(--bg-panel-soft); padding: 2px 6px; border-radius: 4px; font-family: monospace; word-break: break-all; white-space: normal;">Not loaded</code></span>
-                      <button class="icon-btn guarded" data-requires="project" id="btn-copy-zip-path" title="Copy" style="width: 22px; height: 22px; font-size: 0.7rem; display: inline-grid; place-items: center;"><i class="fa-regular fa-copy"></i></button>
+                <div class="dataset-field-group">
+                  <div class="dataset-upload-header">
+                    <span class="dataset-field-label" data-i18n="dataset.uploadTitle">Upload ZIP or folder</span>
+                    <div class="dataset-storage-status">
+                      <span><span data-i18n="dataset.zipStorage">ZIP storage</span>: <code id="dataset-zip-storage-path">Not loaded</code></span>
+                      <button class="icon-btn guarded dataset-copy-button" data-requires="project" id="btn-copy-zip-path" title="Copy"><i class="fa-regular fa-copy"></i></button>
                     </div>
                   </div>
-                  <div class="zip-drop-zone" id="zip-drop-zone" style="cursor: pointer; min-height: 96px; padding: 14px;">
-                    <i class="fa-solid fa-file-zipper" style="font-size: 1.2rem; width: 38px; height: 38px;"></i>
+                  <div class="zip-drop-zone dataset-drop-zone" id="zip-drop-zone">
+                    <i class="fa-solid fa-file-zipper"></i>
                     <div>
                       <strong data-i18n="dataset.dropTitle">Drop ZIP, images, or a folder</strong>
-                      <p style="font-size: 0.78rem;" data-i18n="dataset.dropHelp">Only image files are imported here. Videos and annotation files are filtered with a friendly notice.</p>
+                      <p data-i18n="dataset.dropHelp">Only image files are imported here. Videos and annotation files are filtered with a friendly notice.</p>
                     </div>
                   </div>
                   <input type="file" id="input-zip-file" accept=".zip" style="display: none;">
@@ -263,33 +263,33 @@
               <div class="section-title"><h2 data-i18n="dataset.videoTitle">Extract Video Frames</h2></div>
               <p class="section-help" data-i18n="dataset.videoHelp">Import video files and extract frames into the project image dataset.</p>
 
-              <div class="form-stack" style="gap: 12px; margin-top: 12px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.84rem; color: var(--text-soft); gap: 12px;">
-                  <span data-i18n="dataset.fpsLabel">Frames per second</span>
-                  <input type="number" id="input-video-fps" value="1" min="1" max="10" style="width: 80px; min-height: 32px; text-align: center;">
+              <div class="dataset-card-body">
+                <div class="dataset-fps-row dataset-video-fields">
+                  <label class="dataset-field-label" for="input-video-fps" data-i18n="dataset.fpsLabel">Frames per second</label>
+                  <input type="number" id="input-video-fps" value="1" min="1" max="10">
                 </div>
 
-                <div style="border-top: 1px solid var(--border); margin: 2px 0;"></div>
+                <div class="dataset-section-divider"></div>
 
-                <div style="display: grid; gap: 6px;">
-                  <label for="input-video-path" style="font-weight: 600; font-size: 0.82rem; color: var(--text-soft);" data-i18n="dataset.videoPathLabel">Scan local video file</label>
-                  <div class="class-entry-row">
-                    <input type="text" id="input-video-path" placeholder="D:\\videos\\route_1.mp4" data-i18n-placeholder="dataset.videoPathPlaceholder" style="flex: 1;">
-                    <button class="btn btn-primary guarded" data-requires="project" id="btn-import-video" style="min-width: 90px; min-height: 38px;">
+                <div class="dataset-field-group">
+                  <label class="dataset-field-label" for="input-video-path" data-i18n="dataset.videoPathLabel">Scan local video file</label>
+                  <div class="dataset-action-row">
+                    <input type="text" id="input-video-path" placeholder="D:\\videos\\route_1.mp4" data-i18n-placeholder="dataset.videoPathPlaceholder">
+                    <button class="btn btn-primary guarded dataset-action-button" data-requires="project" id="btn-import-video">
                       <i class="fa-solid fa-video"></i> <span data-i18n="dataset.extractButton">Extract</span>
                     </button>
                   </div>
                 </div>
 
-                <div style="border-top: 1px solid var(--border); margin: 2px 0;"></div>
+                <div class="dataset-section-divider"></div>
 
-                <div style="display: grid; gap: 6px;">
-                  <span style="font-weight: 600; font-size: 0.82rem; color: var(--text-soft);" data-i18n="dataset.videoUploadTitle">Upload video file</span>
-                  <div class="zip-drop-zone" id="video-drop-zone" style="cursor: pointer; min-height: 96px; padding: 14px;">
-                    <i class="fa-solid fa-file-video" style="font-size: 1.2rem; width: 38px; height: 38px; background: rgba(59, 130, 246, 0.16); color: var(--primary);"></i>
+                <div class="dataset-field-group">
+                  <span class="dataset-field-label" data-i18n="dataset.videoUploadTitle">Upload video file</span>
+                  <div class="zip-drop-zone dataset-drop-zone" id="video-drop-zone">
+                    <i class="fa-solid fa-file-video"></i>
                     <div>
                       <strong data-i18n="dataset.videoDropTitle">Drop video files</strong>
-                      <p style="font-size: 0.78rem;" data-i18n="dataset.videoDropHelp">Supported formats include MP4, AVI, MKV, MOV, WMV, FLV, and WEBM.</p>
+                      <p data-i18n="dataset.videoDropHelp">Supported formats include MP4, AVI, MKV, MOV, WMV, FLV, and WEBM.</p>
                     </div>
                   </div>
                   <input type="file" id="input-video-file" accept="video/*" style="display: none;">
@@ -300,13 +300,13 @@
             <section class="panel-section dataset-classes-card">
               <div class="section-title"><h2 data-i18n="dataset.classesTitle">Class Name Management</h2></div>
               <p class="section-help" data-i18n="dataset.classesHelp">Add or remove project classes used by LabelMe, conversion, split, and training.</p>
-              <div class="form-stack">
-                <div class="class-entry-row">
+              <div class="dataset-card-body dataset-classes-body">
+                <div class="dataset-action-row">
                   <input type="text" id="input-dataset-new-class" placeholder="Example: defect, scratch; stain" data-i18n-placeholder="dataset.classPlaceholder">
-                  <button class="btn btn-secondary" id="btn-dataset-add-class" style="min-width: 68px;"><i class="fa-solid fa-plus"></i> <span data-i18n="dataset.addClass">Add</span></button>
+                  <button class="btn btn-secondary dataset-action-button" id="btn-dataset-add-class"><i class="fa-solid fa-plus"></i> <span data-i18n="dataset.addClass">Add</span></button>
                 </div>
-                <div class="class-list-box" id="dataset-classes-list-box" style="margin-top: 8px;"></div>
-                <button class="btn btn-primary btn-block guarded" data-requires="project" id="btn-save-dataset-classes" style="margin-top: 8px;">
+                <div class="class-list-box dataset-class-list" id="dataset-classes-list-box"></div>
+                <button class="btn btn-primary btn-block guarded" data-requires="project" id="btn-save-dataset-classes">
                   <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="dataset.saveClasses">Save classes</span>
                 </button>
               </div>
@@ -330,8 +330,8 @@
                 </div>
               </div>
               <div class="dataset-meta-row">
-                <span><span data-i18n="dataset.images">Images</span>: <strong id="dataset-count-total">0</strong></span>
-                <span><span data-i18n="dataset.health">Health</span>: <strong id="health-score-val">--</strong></span>
+                <span class="dataset-meta-item"><span data-i18n="dataset.images">Images</span>: <strong id="dataset-count-total">0</strong></span>
+                <span class="dataset-meta-item"><span data-i18n="dataset.health">Health</span>: <strong id="health-score-val">--</strong></span>
                 <button class="btn btn-secondary btn-sm guarded" data-requires="dataset" id="btn-trigger-quality"><i class="fa-solid fa-circle-check"></i> <span data-i18n="dataset.qualityCheck">Run Quality Check</span></button>
               </div>
               <div id="dataset-thumbnails" class="thumbnail-grid"></div>
@@ -549,7 +549,7 @@
                     <button type="button" class="preset-item" data-aug-preset="night_road"><strong><i class="fa-solid fa-road"></i>夜間道路</strong><span>夜間低光與高雜訊。</span></button>
                     <button type="button" class="preset-item" data-aug-preset="suburban_mix"><strong><i class="fa-solid fa-house"></i>郊區混合</strong><span>郊區道路混合條件。</span></button>
                     <button type="button" class="preset-item" data-aug-preset="forest_road"><strong><i class="fa-solid fa-tree"></i>森林道路</strong><span>樹蔭與斑駁光影。</span></button>
-                    <button type="button" class="preset-item recommended" data-aug-preset="generalization"><strong><i class="fa-solid fa-shield-halved"></i>通用泛化 <em>推薦</em></strong><span>平衡各種環境變化。</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="generalization"><strong><i class="fa-solid fa-shield-halved"></i>通用泛化</strong><span>平衡各種環境變化。</span></button>
                   </div>
                   <div class="aug-preset-detail" id="aug-preset-detail">
                     <strong>策略說明</strong>
