@@ -14,6 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from src.config import APP_ENV, STATIC_DIR
 from src.local_session import validate_token
 from src.api.dependencies import build_error as _build_error
+from src.api.dependencies import normalize_error_response as _normalize_error_response
 from src.api.routes.diagnostics import router as diagnostics_router
 from src.api.routes.dataset_split import router as dataset_split_router
 from src.api.routes.datasets import router as datasets_router
@@ -68,14 +69,7 @@ if APP_IS_PRODUCTION:
 def http_exception_handler(request, exc):
     return JSONResponse(
         status_code=exc.status_code,
-        content={
-            "success": False,
-            "error": {
-                "code": "API_ERROR",
-                "message": exc.detail,
-                "details": {}
-            }
-        }
+        content=_normalize_error_response(exc.detail, status_code=exc.status_code),
     )
 
 
@@ -88,7 +82,12 @@ def validation_exception_handler(request, exc):
             "error": {
                 "code": "VALIDATION_ERROR",
                 "message": "Request validation failed",
-                "details": exc.errors()
+                "details": exc.errors(),
+                "suggestion": "Check the request payload fields and retry.",
+                "retryable": False,
+                "field_errors": {},
+                "severity": "error",
+                "status": 422,
             }
         }
     )

@@ -1,6 +1,9 @@
 import { eventBus } from "../event_bus.js";
 import { appState } from "../state.js";
 import { qs, setHTML, escapeHtml } from "../utils.js";
+import { getDirtyFormSummaries } from "../core/dirty_forms.js";
+import { getStaleResources } from "../core/resource_freshness.js";
+import { buildCnnGuidedWizard, renderCnnGuidedWizard } from "../core/cnn_guided_wizard.js";
 
 export function initDashboard() {
   qs("#btn-dashboard-refresh")?.addEventListener("click", () => {
@@ -9,14 +12,42 @@ export function initDashboard() {
 }
 
 export function renderDashboard(status) {
-  setHTML("#dashboard-alerts", "");
   setHTML("#dashboard-kpis", "");
+  renderDashboardAlerts();
   renderWorkflowMap(status);
   renderRecentProjects(appState.projects);
   renderActivity(status);
 }
 
+function renderDashboardAlerts() {
+  const dirtyForms = getDirtyFormSummaries();
+  const staleResources = getStaleResources();
+  const alerts = [];
+  if (dirtyForms.length) {
+    alerts.push(`
+      <div class="status-guard warning dashboard-operational-alert" data-ui-smoke="dirty-form-alert">
+        <strong>Unsaved changes</strong>
+        <span>${escapeHtml(dirtyForms.map((item) => item.label).join(", "))}</span>
+      </div>
+    `);
+  }
+  staleResources.forEach((item) => {
+    alerts.push(`
+      <div class="status-guard warning dashboard-operational-alert" data-ui-smoke="stale-resource-alert">
+        <strong>${escapeHtml(item.label)}</strong>
+        <span>${escapeHtml(item.message)}</span>
+        <button type="button" class="btn btn-secondary btn-sm" data-refresh-project>${escapeHtml(item.action)}</button>
+      </div>
+    `);
+  });
+  setHTML("#dashboard-alerts", alerts.join(""));
+  qs("#dashboard-alerts")?.querySelectorAll("[data-refresh-project]").forEach((button) => {
+    button.addEventListener("click", () => eventBus.emit("refresh-project"));
+  });
+}
+
 function renderWorkflowMap(status) {
+  const wizard = buildCnnGuidedWizard(status, appState);
   const workflow = [
     {
       step: 1,
@@ -129,6 +160,7 @@ function renderWorkflowMap(status) {
   ];
 
   setHTML("#control-cards", `
+    ${renderCnnGuidedWizard(wizard)}
     <section class="workflow-map-panel">
       <div class="section-title workflow-map-title">
         <div>

@@ -103,6 +103,19 @@ body[data-theme="light"] .btn:disabled {
   color: var(--success);
 }
 
+.toast-error,
+.toast-warning,
+.toast-info {
+  display: grid;
+  gap: 4px;
+  line-height: 1.35;
+}
+
+.toast small {
+  color: var(--text-soft);
+  font-size: 0.78rem;
+}
+
 .icon-btn {
   width: 34px;
   height: 34px;

@@ -10,6 +10,7 @@ ROOT = Path(SPECPATH).resolve().parent
 datas = [
     (str(ROOT / "static"), "static"),
     (str(ROOT / "data"), "data"),
+    (str(ROOT / "docs" / "UI_DESIGN_SYSTEM.md"), "docs"),
     (str(ROOT / "version.json"), "."),
     (str(ROOT / "requirements.txt"), "."),
 ]

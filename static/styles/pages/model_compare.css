@@ -127,8 +127,75 @@
 
 .compare-decision-summary {
   display: grid;
-  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(260px, 0.8fr) minmax(260px, 0.8fr) minmax(0, 1.2fr);
   gap: 14px;
+}
+
+.deployment-decision-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.deployment-decision-head,
+.deployment-decision-target {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.deployment-decision-head span,
+.deployment-decision-target span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.deployment-decision-head strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.deployment-decision-target code {
+  color: var(--primary);
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.decision-list {
+  display: grid;
+  gap: 6px;
+}
+
+.decision-list strong {
+  color: var(--text);
+}
+
+.decision-list ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-soft);
+}
+
+.decision-list.warning li::marker {
+  color: var(--warning);
+}
+
+.decision-list.danger li::marker {
+  color: var(--danger);
+}
+
+.decision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .compare-recommendation {

@@ -2,12 +2,92 @@
   display: none;
 }
 
+#dashboard-alerts {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.dashboard-operational-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.dashboard-operational-alert span {
+  color: var(--text-soft);
+  overflow-wrap: anywhere;
+}
+
 .workflow-map-panel {
+  grid-column: 1 / -1;
   padding: 16px;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+}
+
+.cnn-guided-wizard {
+  grid-column: 1 / -1;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.guided-step-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.guided-step {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.guided-step > span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-weight: 800;
+}
+
+.guided-step strong,
+.guided-step small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.guided-step small {
+  margin-top: 2px;
+  color: var(--text-muted);
+}
+
+.guided-step.is-complete > span {
+  background: rgba(22, 163, 74, 0.18);
+  color: var(--success);
+}
+
+.guided-step.is-next {
+  border-color: rgba(59, 130, 246, 0.7);
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 .workflow-map-title {
@@ -144,10 +224,24 @@ body[data-theme="light"] .workflow-card {
   .workflow-card::after {
     display: none;
   }
+
+  .guided-step-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1180px) {
   .workflow-grid {
     grid-template-columns: 1fr;
+  }
+
+  .guided-step-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-step,
+  .dashboard-operational-alert {
+    grid-template-columns: 1fr;
+    display: grid;
   }
 }

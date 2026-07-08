@@ -11,6 +11,8 @@ import { renderHeaderStatus as renderHeaderStatusCore } from "./header_status.js
 import { renderPageGuards as renderPageGuardsCore } from "./page_guards.js";
 import { updateActionAvailability as updateActionAvailabilityCore } from "./action_availability.js";
 import { showToast as showToastCore } from "./toast.js";
+import { initDirtyFormTracking } from "./dirty_forms.js";
+import { initResourceFreshnessTracking } from "./resource_freshness.js";
 import { setActivePage } from "./router.js";
 import { renderRightPanel as renderRightPanelCore } from "./right_panel.js";
 import { initInfoTooltips } from "./tooltip.js";
@@ -35,6 +37,8 @@ const {
 export async function bootstrapApp() {
   initPreferences();
   initGlobalProgressHud();
+  initDirtyFormTracking();
+  initResourceFreshnessTracking();
   bindGlobalNavigation();
   initInfoTooltips();
 

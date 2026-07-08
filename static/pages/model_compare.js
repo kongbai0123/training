@@ -2,6 +2,7 @@ import { appState, t } from "../state.js";
 import { eventBus } from "../event_bus.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, escapeHtml, setText } from "../utils.js";
+import { buildDeploymentDecision, renderDeploymentDecisionCard } from "../core/deployment_decision.js";
 
 const compareState = {
   architecture: "cnn",
@@ -414,8 +415,10 @@ function renderDecisionSummary() {
       <td>${item.value == null ? "--" : Number(item.value).toFixed(4)}</td>
     </tr>
   `).join("");
+  const decision = buildDeploymentDecision(compareState.result);
 
   host.innerHTML = `
+    ${renderDeploymentDecisionCard(decision)}
     <div class="compare-recommendation">
       <span>${escapeHtml(t("compare.bestOverall"))}</span>
       <strong>${escapeHtml(recommendation.best_overall || "--")}</strong>
