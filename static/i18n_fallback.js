@@ -613,6 +613,13 @@ let translateI18nKey = null;
 const originalTextNodes = new WeakMap();
 const originalAttributes = new WeakMap();
 
+function isSafeTranslationText(value) {
+  if (value == null) return false;
+  const text = String(value);
+  if (!text.trim()) return false;
+  return !/[\uFFFD\uE000-\uF8FF]/.test(text);
+}
+
 export function configureI18nFallback(translator) {
   translateI18nKey = typeof translator === "function" ? translator : null;
 }
@@ -621,7 +628,7 @@ function translateByKey(key) {
   if (!translateI18nKey) return "";
   const value = translateI18nKey(key);
   if (value == null || value === key) return "";
-  return String(value);
+  return isSafeTranslationText(value) ? String(value) : "";
 }
 
 function translateFallbackToken(token) {
@@ -630,7 +637,8 @@ function translateFallbackToken(token) {
     const translated = translateByKey(key);
     if (translated) return translated;
   }
-  return ZH_TEXT.get(token) || "";
+  const staticValue = ZH_TEXT.get(token);
+  return isSafeTranslationText(staticValue) ? staticValue : "";
 }
 
 export function localizeUiText(value) {
@@ -647,7 +655,7 @@ export function localizeUiText(value) {
     if (to && translated.includes(from)) translated = translated.split(from).join(to);
   }
   for (const [from, to] of STATIC_REPLACEMENTS) {
-    if (translated.includes(from)) translated = translated.split(from).join(to);
+    if (isSafeTranslationText(to) && translated.includes(from)) translated = translated.split(from).join(to);
   }
   return translated;
 }

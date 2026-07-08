@@ -5,6 +5,19 @@ import { en } from "./i18n/en.js";
 let zhFallbackObserver = null;
 let zhFallbackScheduled = false;
 let activeLanguage = "zh-TW";
+
+function isSafeTranslationText(value) {
+  if (value == null) return false;
+  const text = String(value);
+  if (!text.trim()) return false;
+  return !/[\uFFFD\uE000-\uF8FF]/.test(text);
+}
+
+function safeCatalogValue(dict, key, fallback) {
+  const value = dict?.[key];
+  return isSafeTranslationText(value) ? value : fallback;
+}
+
 function scheduleZhFallbackTranslations() {
   if (activeLanguage !== "zh-TW") return;
   if (zhFallbackScheduled) return;
@@ -39,7 +52,7 @@ export const i18n = {
 export function translate(key, language = "zh-TW", params = {}) {
   const lang = language === "en" ? "en" : "zh-TW";
   const fallback = i18n.en?.[key] ?? key;
-  const template = i18n[lang]?.[key] ?? fallback;
+  const template = safeCatalogValue(i18n[lang], key, fallback);
   return String(template).replace(/\{(\w+)\}/g, (_, name) => params[name] ?? "");
 }
 
@@ -54,18 +67,21 @@ export function applyLanguageToDocument({ language, theme, translate }) {
   const dict = i18n[nextLanguage];
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     const key = el.dataset.i18n;
-    if (!dict[key]) return;
-    el.textContent = dict[key];
+    const value = safeCatalogValue(dict, key, i18n.en?.[key]);
+    if (!value) return;
+    el.textContent = value;
   });
   document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
     const key = el.dataset.i18nPlaceholder;
-    if (!dict[key]) return;
-    el.setAttribute("placeholder", dict[key]);
+    const value = safeCatalogValue(dict, key, i18n.en?.[key]);
+    if (!value) return;
+    el.setAttribute("placeholder", value);
   });
   document.querySelectorAll("[data-i18n-tooltip]").forEach((el) => {
     const key = el.dataset.i18nTooltip;
-    if (!dict[key]) return;
-    el.dataset.tooltip = dict[key];
+    const value = safeCatalogValue(dict, key, i18n.en?.[key]);
+    if (!value) return;
+    el.dataset.tooltip = value;
   });
 
   const themeLabel = document.querySelector("[data-i18n='themeToggle']");

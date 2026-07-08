@@ -96,6 +96,7 @@ export function initTrainingModeSidebar() {
 
   qsa("[data-rnn-nav]").forEach((button) => {
     button.addEventListener("click", () => {
+      if (isHiddenModeNavButton(button)) return;
       trainingModeState.activeMode = "rnn";
       trainingModeState.activeRnnPanel = button.dataset.rnnNav;
       if (trainingModeState.activeRnnPanel === "model-compare") {
@@ -120,6 +121,7 @@ export function initTrainingModeSidebar() {
       const nav = button.dataset.cnnNav;
       const page = button.dataset.page || nav || "dashboard";
       trainingModeState.activeMode = "cnn";
+      if (isHiddenModeNavButton(button)) return;
       trainingModeState.activeCnnPanel = nav === "training" ? "training" : "overview";
       if (nav === "model-compare") eventBus.emit("set-compare-architecture", "cnn");
       eventBus.emit("navigate", page);
@@ -160,6 +162,10 @@ export function initTrainingModeSidebar() {
 export function setTrainingMode(mode) {
   if (!["cnn", "rnn"].includes(mode) || trainingModeState.activeMode === mode) return;
   trainingModeState.activeMode = mode;
+function isHiddenModeNavButton(button) {
+  return Boolean(button.closest(".training-mode-nav.hidden"));
+}
+
   if (mode === "cnn") trainingModeState.activeCnnPanel = "overview";
   if (mode === "rnn") trainingModeState.activeRnnPanel = "overview";
   eventBus.emit("navigate", mode === "cnn" ? "dashboard" : "training");

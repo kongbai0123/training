@@ -58,6 +58,7 @@ export async function bootstrapApp() {
 function bindGlobalNavigation() {
   qsa("[data-page]").forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (btn.closest(".training-mode-nav.hidden")) return;
       if (btn.dataset.modeNav) return;
       if (btn.dataset.page === "projects") {
         eventBus.emit("open-create-project-modal");
