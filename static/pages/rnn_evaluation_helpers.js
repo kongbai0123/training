@@ -8,6 +8,7 @@ import {
   resolveRunComparisonMetric,
   sequenceBackendDisplayLabel
 } from "./rnn_metric_helpers.js";
+import { t } from "../state.js";
 
 export function isSequenceEvaluationRun(run) {
   const architecture = String(run?.architecture || "").toLowerCase();
@@ -126,16 +127,48 @@ function buildRnnTaskDiagnostic({ metrics = null, latest = {}, isRegression = fa
   const residuals = metrics?.residuals || metrics?.residual_samples || null;
   const predictionActual = metrics?.prediction_actual_samples || metrics?.predictionActualSamples || [];
   if (isRegression) {
+    const residualValues = Array.isArray(residuals)
+      ? residuals.map((value) => Number(value)).filter(Number.isFinite)
+      : [];
+    const predictionActualRows = Array.isArray(predictionActual)
+      ? predictionActual.map((row) => ({
+          prediction: Number(row?.prediction),
+          actual: Number(row?.actual),
+          residual: Number(row?.residual)
+        })).filter((row) => (
+          Number.isFinite(row.prediction)
+          && Number.isFinite(row.actual)
+          && Number.isFinite(row.residual)
+        ))
+      : [];
+    const absResiduals = residualValues.map((value) => Math.abs(value)).sort((a, b) => a - b);
+    const meanResidual = residualValues.length
+      ? residualValues.reduce((total, value) => total + value, 0) / residualValues.length
+      : null;
+    const maxAbsResidual = absResiduals.length ? absResiduals[absResiduals.length - 1] : null;
+    const p95Index = absResiduals.length ? Math.min(absResiduals.length - 1, Math.ceil(absResiduals.length * 0.95) - 1) : -1;
+    const p95AbsResidual = p95Index >= 0 ? absResiduals[p95Index] : null;
     return {
       type: "residual",
-      title: "Residual Diagnostic",
+      title: t("rnn.evaluation.residualDiagnostic"),
       badge: residuals?.length ? "residuals" : "schema-ready",
-      residuals: Array.isArray(residuals) ? residuals.slice(0, 24).map((value) => Number(value)).filter(Number.isFinite) : [],
-      predictionActual: Array.isArray(predictionActual) ? predictionActual.slice(0, 12) : [],
-      cards: [
-        ["MAE", formatSequenceMetric(latest["val/mae"])],
-        ["RMSE", formatSequenceMetric(latest["val/rmse"])],
-        ["Residual source", residuals?.length ? "Loaded from metrics payload" : "Raw prediction residuals are not persisted yet."]
+      residuals: residualValues.slice(0, 48),
+      predictionActual: predictionActualRows.slice(0, 12),
+      outliers: predictionActualRows
+        .map((row, index) => ({ ...row, sample: index + 1, absResidual: Math.abs(row.residual) }))
+        .sort((a, b) => b.absResidual - a.absResidual)
+        .slice(0, 8),
+      summaryMeta: [
+        `MAE ${formatSequenceMetric(latest["val/mae"])}`,
+        `RMSE ${formatSequenceMetric(latest["val/rmse"])}`,
+        residualValues.length
+          ? t("rnn.evaluation.residualSampleCount", { count: residualValues.length })
+          : t("rnn.evaluation.noResidualSamples")
+      ],
+      stats: [
+        [t("rnn.evaluation.meanResidual"), formatSequenceMetric(meanResidual)],
+        [t("rnn.evaluation.maxAbsResidual"), formatSequenceMetric(maxAbsResidual)],
+        [t("rnn.evaluation.p95AbsResidual"), formatSequenceMetric(p95AbsResidual)]
       ]
     };
   }
@@ -350,24 +383,28 @@ export function buildRnnEvaluationSidebarSections({
       text: activeRun ? activeRun.status || "loaded" : "No run"
     },
     runRows: [
-      ["Run ID", activeRun?.run_id || "--", true],
-      ["Model", modelLabel || "--"],
-      ["Backend", backendLabel || "--", true],
-      ["Status", activeRun?.status || "--"],
-      ["Task", activeRun?.task_type || metrics?.task_type || taskLabel]
+      [t("rnn.evaluation.runId"), activeRun?.run_id || "--", true],
+      [t("training.model"), modelLabel || "--"],
+      [t("training.modelRegistry.backend"), backendLabel || "--", true],
+      [t("common.status"), activeRun?.status || "--"],
+      [t("training.modelRegistry.task"), activeRun?.task_type || metrics?.task_type || taskLabel]
     ],
     datasetRows: [
-      ["CSV files", String((dataset.csv_files || []).length || readiness.csv_files || 0)],
-      ["Sequences", String(dataset.sequence_count ?? readiness.sequence_count ?? "--")],
-      ["Feature dim", String(dataset.feature_dim ?? readiness.feature_dim ?? "--")],
-      ["Split", splitText],
-      ["Window", `length ${dataset.sequence_length ?? config.sequence_length ?? "--"} / stride ${dataset.stride ?? config.stride ?? "--"} / horizon ${config.horizon ?? "--"}`]
+      [t("rnn.evaluation.csvFiles"), String((dataset.csv_files || []).length || readiness.csv_files || 0)],
+      [t("rnn.inference.sequences"), String(dataset.sequence_count ?? readiness.sequence_count ?? "--")],
+      [t("rnn.features.dim"), String(dataset.feature_dim ?? readiness.feature_dim ?? "--")],
+      [t("split.titleShort"), splitText],
+      [t("rnn.window.config"), t("rnn.window.summary", {
+        length: dataset.sequence_length ?? config.sequence_length ?? "--",
+        stride: dataset.stride ?? config.stride ?? "--",
+        horizon: config.horizon ?? "--"
+      })]
     ],
     metricRows: [
       [primary.label, formatSequenceMetric(primary.value)],
       [secondary.label, formatSequenceMetric(secondary.value)],
       ["Val Loss", formatSequenceMetric(metricSource?.["val/loss"])],
-      ["Best epoch", String(metrics?.best_epoch ?? activeRun?.best_epoch ?? "--")]
+      [t("rnn.evaluation.bestEpoch"), String(metrics?.best_epoch ?? activeRun?.best_epoch ?? "--")]
     ]
   };
 }

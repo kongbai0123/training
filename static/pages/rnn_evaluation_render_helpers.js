@@ -1,4 +1,5 @@
 import { escapeHtml } from "../utils.js";
+import { t } from "../state.js";
 import { formatSequenceMetric } from "./rnn_metric_helpers.js";
 
 export function resolveRnnEvaluationRunBadge({ hasMetrics = false, loading = false, activeRun = null, backend = "" } = {}) {
@@ -143,7 +144,7 @@ export function renderRnnBaselineComparisonChart(comparison = {}) {
 
 export function renderRnnTaskDiagnostic(diagnostic = {}) {
   if (!diagnostic.type) {
-    return `<div class="rnn-eval-chart-empty">No task diagnostic loaded.</div>`;
+    return `<div class="rnn-eval-chart-empty">${escapeHtml(t("rnn.evaluation.noTaskDiagnostic"))}</div>`;
   }
   const cards = (diagnostic.cards || []).map(([label, value]) => `
     <div class="rnn-diagnostic-card">
@@ -155,16 +156,26 @@ export function renderRnnTaskDiagnostic(diagnostic = {}) {
   if (diagnostic.type === "residual") {
     const residuals = diagnostic.residuals || [];
     const max = Math.max(...residuals.map((value) => Math.abs(value)), 0.000001);
+    const statsCards = (diagnostic.stats || []).map(([label, value]) => `
+      <div class="rnn-diagnostic-stat">
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(value ?? "--")}</strong>
+      </div>
+    `).join("");
+    const metadata = (diagnostic.summaryMeta || []).length
+      ? `<div class="rnn-diagnostic-meta">${diagnostic.summaryMeta.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>`
+      : "";
     const bars = residuals.length
       ? residuals.map((value) => {
           const height = Math.max(8, (Math.abs(value) / max) * 72);
-          return `<span class="rnn-residual-bar" title="${escapeHtml(formatSequenceMetric(value))}" style="height: ${escapeHtml(height.toFixed(1))}px"></span>`;
+          const directionClass = value < 0 ? "is-negative" : "is-positive";
+          return `<span class="rnn-residual-bar ${directionClass}" title="${escapeHtml(formatSequenceMetric(value))}" style="height: ${escapeHtml(height.toFixed(1))}px"></span>`;
         }).join("")
-      : `<div class="rnn-eval-chart-empty">Residual samples are not available in this run yet.</div>`;
+      : `<div class="rnn-eval-chart-empty">${escapeHtml(t("rnn.evaluation.noResidualSamples"))}</div>`;
     const sampleRows = (diagnostic.predictionActual || []).length
       ? `<div class="rnn-result-table-wrap">
           <table class="rnn-result-table rnn-diagnostic-table">
-            <thead><tr><th>#</th><th>Prediction</th><th>Actual</th><th>Residual</th></tr></thead>
+            <thead><tr><th>#</th><th>${escapeHtml(t("rnn.inference.prediction"))}</th><th>${escapeHtml(t("rnn.evaluation.actual"))}</th><th>${escapeHtml(t("rnn.evaluation.residual"))}</th></tr></thead>
             <tbody>${diagnostic.predictionActual.map((row, index) => `
               <tr>
                 <td>${index + 1}</td>
@@ -175,16 +186,41 @@ export function renderRnnTaskDiagnostic(diagnostic = {}) {
             `).join("")}</tbody>
           </table>
         </div>`
-      : `<div class="rnn-eval-chart-empty">Prediction vs actual samples are not available yet.</div>`;
+      : `<div class="rnn-eval-chart-empty">${escapeHtml(t("rnn.evaluation.noPredictionActual"))}</div>`;
+    const outlierRows = (diagnostic.outliers || []).length
+      ? `<div class="rnn-result-table-wrap">
+          <table class="rnn-result-table rnn-diagnostic-table">
+            <thead><tr><th>${escapeHtml(t("rnn.evaluation.sample"))}</th><th>${escapeHtml(t("rnn.inference.prediction"))}</th><th>${escapeHtml(t("rnn.evaluation.actual"))}</th><th>${escapeHtml(t("rnn.evaluation.residual"))}</th><th>|Residual|</th></tr></thead>
+            <tbody>${diagnostic.outliers.map((row) => `
+              <tr>
+                <td>${escapeHtml(row.sample)}</td>
+                <td><code>${escapeHtml(formatSequenceMetric(row.prediction))}</code></td>
+                <td><code>${escapeHtml(formatSequenceMetric(row.actual))}</code></td>
+                <td><code>${escapeHtml(formatSequenceMetric(row.residual))}</code></td>
+                <td><code>${escapeHtml(formatSequenceMetric(row.absResidual))}</code></td>
+              </tr>
+            `).join("")}</tbody>
+          </table>
+        </div>`
+      : `<div class="rnn-eval-chart-empty">${escapeHtml(t("rnn.evaluation.noOutliers"))}</div>`;
     return `
-      <div class="rnn-diagnostic-grid">${cards}</div>
-      <div class="rnn-diagnostic-card">
-        <strong>Residual Plot</strong>
+      ${metadata}
+      <div class="rnn-diagnostic-stats">${statsCards}</div>
+      <div class="rnn-diagnostic-card rnn-diagnostic-wide">
+        <div class="rnn-diagnostic-card-head">
+          <strong>${escapeHtml(t("rnn.evaluation.residualPlot"))}</strong>
+          <span>Magnitude and direction of sample errors</span>
+        </div>
         <div class="rnn-residual-preview">${bars}</div>
       </div>
-      <div class="rnn-diagnostic-card">
-        <strong>Prediction vs Actual</strong>
+      <div class="rnn-diagnostic-card rnn-diagnostic-wide">
+        <strong>${escapeHtml(t("rnn.evaluation.predictionActual"))}</strong>
         ${sampleRows}
+      </div>
+      <div class="rnn-diagnostic-card rnn-diagnostic-wide">
+        <strong>${escapeHtml(t("rnn.evaluation.outliers"))}</strong>
+        <p>${escapeHtml(t("rnn.evaluation.outliersHelp"))}</p>
+        ${outlierRows}
       </div>
     `;
   }
@@ -196,7 +232,10 @@ export function renderRnnTaskDiagnostic(diagnostic = {}) {
     ? matrix.flat().slice(0, 64).map((value, index) => {
         const row = Math.floor(index / matrix.length);
         const col = index % matrix.length;
-        const title = `Actual ${labels[row] ?? row} / Pred ${labels[col] ?? col}`;
+        const title = t("rnn.evaluation.confusionCellTitle", {
+          actual: labels[row] ?? row,
+          prediction: labels[col] ?? col
+        });
         return `<span class="rnn-confusion-cell" title="${escapeHtml(title)}">${escapeHtml(value)}</span>`;
       }).join("")
     : `

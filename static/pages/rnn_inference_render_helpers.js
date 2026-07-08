@@ -1,13 +1,14 @@
 import { escapeHtml } from "../utils.js";
+import { t } from "../state.js";
 import {
   formatRnnPredictionConfidence,
   rnnInferenceModelLabel
 } from "./rnn_inference_helpers.js";
 
 export function renderRnnInferenceModelOptions({ loading = false, models = [] } = {}) {
-  if (loading) return `<option value="">Loading RNN models...</option>`;
-  if (!models.length) return `<option value="">No RNN model found</option>`;
-  return `<option value="">Select RNN model</option>${models.map((model) => {
+  if (loading) return `<option value="">${escapeHtml(t("rnn.inference.loadingModels"))}</option>`;
+  if (!models.length) return `<option value="">${escapeHtml(t("rnn.inference.noModelFound"))}</option>`;
+  return `<option value="">${escapeHtml(t("rnn.inference.selectModel"))}</option>${models.map((model) => {
     const label = rnnInferenceModelLabel(model);
     return `<option value="${escapeHtml(model.model_id)}">${escapeHtml(label)}</option>`;
   }).join("")}`;
@@ -19,7 +20,7 @@ export function resolveRnnInferenceControlRender(message = "") {
     disabled: !canRun,
     primaryActive: canRun,
     disabledActive: !canRun,
-    reasonText: message || "Ready to run CSV sequence inference."
+    reasonText: message || t("rnn.inference.readyToRun")
   };
 }
 
@@ -27,9 +28,10 @@ export function renderRnnInferencePredictionRows(predictions = []) {
   return predictions.map((item) => {
     const confidence = formatRnnPredictionConfidence(item.confidence);
     const target = item.target !== undefined ? item.target : "--";
-    const matched = item.target === undefined ? "--" : (String(item.prediction) === String(item.target) ? "Match" : "Mismatch");
-    const rowClass = matched === "Mismatch" ? "is-mismatch" : "";
-    const statusClass = matched === "Mismatch" ? "danger" : matched === "Match" ? "success" : "neutral";
+    const matchState = item.target === undefined ? "--" : (String(item.prediction) === String(item.target) ? "match" : "mismatch");
+    const matched = matchState === "match" ? t("rnn.inference.match") : matchState === "mismatch" ? t("rnn.inference.mismatch") : "--";
+    const rowClass = matchState === "mismatch" ? "is-mismatch" : "";
+    const statusClass = matchState === "mismatch" ? "danger" : matchState === "match" ? "success" : "neutral";
     return `
       <tr class="${rowClass}">
         <td><code>${escapeHtml(item.sequence_id || "--")}</code></td>
@@ -39,7 +41,7 @@ export function renderRnnInferencePredictionRows(predictions = []) {
         <td><span class="rnn-inference-status ${statusClass}">${escapeHtml(matched)}</span></td>
       </tr>
     `;
-  }).join("") || `<tr><td colspan="5">No predictions returned.</td></tr>`;
+  }).join("") || `<tr><td colspan="5">${escapeHtml(t("rnn.inference.noPredictions"))}</td></tr>`;
 }
 
 export function renderRnnInferenceResultPanel(result = {}) {
@@ -54,47 +56,47 @@ export function renderRnnInferenceResultPanel(result = {}) {
     <div class="rnn-inference-result-panel">
       <div class="rnn-inference-overview">
         <div>
-          <span class="rnn-inference-eyebrow">Latest sequence inference</span>
+          <span class="rnn-inference-eyebrow">${escapeHtml(t("rnn.inference.latestSequenceInference"))}</span>
           <strong>${escapeHtml(stats.matchLabel)}</strong>
-          <small>${escapeHtml(summary.sequence_count ?? predictions.length)} sequences processed</small>
+          <small>${escapeHtml(t("rnn.inference.sequencesProcessed", { count: summary.sequence_count ?? predictions.length }))}</small>
         </div>
         <div class="rnn-inference-meta">
-          <div><span>Job</span><code title="${escapeHtml(jobId)}">${escapeHtml(shortRnnInferenceId(jobId))}</code></div>
-          <div><span>Run</span><code title="${escapeHtml(runId)}">${escapeHtml(shortRnnInferenceId(runId))}</code></div>
+          <div><span>${escapeHtml(t("rnn.inference.job"))}</span><code title="${escapeHtml(jobId)}">${escapeHtml(shortRnnInferenceId(jobId))}</code></div>
+          <div><span>${escapeHtml(t("rnn.inference.run"))}</span><code title="${escapeHtml(runId)}">${escapeHtml(shortRnnInferenceId(runId))}</code></div>
         </div>
       </div>
       <div class="rnn-inference-summary-grid">
-        <div><span>Sequences</span><strong>${escapeHtml(summary.sequence_count ?? predictions.length)}</strong></div>
-        <div><span>Latency</span><strong>${escapeHtml(summary.inference_time_ms ?? "--")} ms</strong></div>
-        <div><span>Labels</span><strong>${escapeHtml(labels)}</strong></div>
-        <div><span>Matched</span><strong>${escapeHtml(stats.matchLabel)}</strong></div>
+        <div><span>${escapeHtml(t("rnn.inference.sequences"))}</span><strong>${escapeHtml(summary.sequence_count ?? predictions.length)}</strong></div>
+        <div><span>${escapeHtml(t("rnn.inference.latency"))}</span><strong>${escapeHtml(summary.inference_time_ms ?? "--")} ms</strong></div>
+        <div><span>${escapeHtml(t("rnn.inference.labels"))}</span><strong>${escapeHtml(labels)}</strong></div>
+        <div><span>${escapeHtml(t("rnn.inference.matched"))}</span><strong>${escapeHtml(stats.matchLabel)}</strong></div>
       </div>
       <div class="rnn-inference-result-grid">
         <section>
-          <div class="rnn-inference-result-heading">Prediction distribution</div>
+          <div class="rnn-inference-result-heading">${escapeHtml(t("rnn.inference.predictionDistribution"))}</div>
           <div class="rnn-inference-distribution">${renderRnnInferenceDistribution(stats.predictionCounts)}</div>
         </section>
         <section>
-          <div class="rnn-inference-result-heading">Target distribution</div>
+          <div class="rnn-inference-result-heading">${escapeHtml(t("rnn.inference.targetDistribution"))}</div>
           <div class="rnn-inference-distribution">${renderRnnInferenceDistribution(stats.targetCounts)}</div>
         </section>
         <section>
-          <div class="rnn-inference-result-heading">Output files</div>
+          <div class="rnn-inference-result-heading">${escapeHtml(t("rnn.inference.outputFiles"))}</div>
           <div class="rnn-inference-file-actions">${outputFiles}</div>
         </section>
       </div>
       <section class="rnn-inference-table-section">
         <div class="rnn-inference-section-header">
           <div>
-            <div class="rnn-inference-result-heading">Prediction table</div>
-            <p>Per-sequence prediction, confidence, target, and match status.</p>
+            <div class="rnn-inference-result-heading">${escapeHtml(t("rnn.inference.predictionTable"))}</div>
+            <p>${escapeHtml(t("rnn.inference.predictionTableHelp"))}</p>
           </div>
-          <span>${escapeHtml(predictions.length)} rows</span>
+          <span>${escapeHtml(t("rnn.inference.rowCount", { count: predictions.length }))}</span>
         </div>
         <div class="rnn-inference-table-wrap rnn-inference-list">
           <table class="rnn-inference-table">
             <thead>
-              <tr><th>Sequence</th><th>Prediction</th><th>Confidence</th><th>Target</th><th>Status</th></tr>
+              <tr><th>${escapeHtml(t("rnn.inference.sequence"))}</th><th>${escapeHtml(t("rnn.inference.prediction"))}</th><th>${escapeHtml(t("rnn.inference.confidence"))}</th><th>${escapeHtml(t("common.target"))}</th><th>${escapeHtml(t("common.status"))}</th></tr>
             </thead>
             <tbody>${renderRnnInferencePredictionRows(predictions)}</tbody>
           </table>
@@ -128,7 +130,7 @@ function buildRnnInferenceStats(predictions = []) {
 
 function renderRnnInferenceDistribution(counts = {}) {
   const entries = Object.entries(counts);
-  if (!entries.length) return `<span class="rnn-inference-chip muted">No labels</span>`;
+  if (!entries.length) return `<span class="rnn-inference-chip muted">${escapeHtml(t("rnn.inference.noLabels"))}</span>`;
   return entries
     .sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])))
     .map(([label, count]) => `
@@ -146,7 +148,7 @@ function renderRnnInferenceOutputFiles(urls = {}) {
     ["predictions.csv", urls.prediction_csv],
     ["summary.json", urls.summary_json]
   ].filter(([, url]) => url);
-  if (!links.length) return `<span class="rnn-inference-chip muted">No output files</span>`;
+  if (!links.length) return `<span class="rnn-inference-chip muted">${escapeHtml(t("rnn.inference.noOutputFiles"))}</span>`;
   return links
     .map(([label, url]) => `<a class="btn btn-secondary btn-sm" target="_blank" href="${escapeHtml(url)}">${escapeHtml(label)}</a>`)
     .join("");

@@ -1,8 +1,10 @@
+import { t } from "../state.js";
+
 export function buildRnnDatasetBadge({ files = [], datasetImporting = false } = {}) {
   const count = Array.isArray(files) ? files.length : 0;
   return {
     badgeClass: count ? "badge-success" : "badge-warning",
-    label: datasetImporting ? "Importing" : count ? `${count} CSV` : "CSV required"
+    label: datasetImporting ? t("common.importing") : count ? `${count} CSV` : t("rnn.csvRequired")
   };
 }
 
@@ -11,7 +13,9 @@ export function resolveRnnFeatureDimension({ config = {}, inspection = {} } = {}
 }
 
 export function formatRnnFeatureConfigHash(config = {}) {
-  return config.feature_config_hash ? `hash ${String(config.feature_config_hash).slice(0, 8)}` : "No config";
+  return config.feature_config_hash
+    ? t("rnn.features.hash", { hash: String(config.feature_config_hash).slice(0, 8) })
+    : t("rnn.features.noConfig");
 }
 
 export function buildRnnPreviewTableModel({ headers = [], rows = [] } = {}) {
@@ -49,11 +53,11 @@ export function resolveRnnWindowSummary({
 export function buildRnnWindowSummaryRows(windowSummary = {}) {
   const status = windowSummary.status || "warning";
   const badgeClass = status === "ok" ? "badge-success" : status === "error" ? "badge-danger" : "badge-warning";
-  const badgeLabel = status === "ok" ? "Ready" : status === "error" ? "Invalid" : "Needs CSV";
+  const badgeLabel = status === "ok" ? t("common.ready") : status === "error" ? t("common.invalid") : t("rnn.csvRequired");
   const rows = [
-    ["Estimated windows", windowSummary.estimated_windows ?? "--"],
-    ["Sequence count", windowSummary.sequence_count ?? "--"],
-    ["Min / Max length", `${windowSummary.min_sequence_length || "--"} / ${windowSummary.max_sequence_length || "--"}`]
+    [t("rnn.window.estimatedWindows"), windowSummary.estimated_windows ?? "--"],
+    [t("rnn.sequenceCount"), windowSummary.sequence_count ?? "--"],
+    [t("rnn.window.minMaxLength"), `${windowSummary.min_sequence_length || "--"} / ${windowSummary.max_sequence_length || "--"}`]
   ];
   const messages = [...(windowSummary.errors || []), ...(windowSummary.warnings || [])];
 
@@ -71,7 +75,7 @@ export function buildRnnMismatchSummary(mismatches = []) {
   return {
     count,
     visible: count > 0,
-    title: "Feature config mismatch",
-    message: `${count} previous RNN run(s) use different feature config. Existing runs are kept, but direct comparison may be inconsistent.`
+    title: t("rnn.features.mismatchTitle"),
+    message: t("rnn.features.mismatchMessage", { count })
   };
 }

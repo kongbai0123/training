@@ -1,4 +1,4 @@
-import { appState } from "../state.js";
+import { appState, t } from "../state.js";
 import { qs, setText } from "../utils.js";
 
 export function renderHeaderStatus() {
@@ -8,14 +8,14 @@ export function renderHeaderStatus() {
   const hasGpu = device.has_gpu === true;
   const isHealthy = health.status === "healthy";
 
-  setText("#header-gpu-value", hasGpu ? (device.device_name || "GPU ready") : "CPU mode");
+  setText("#header-gpu-value", hasGpu ? (device.device_name || t("header.gpuReady")) : t("header.cpuMode"));
   if (memory.status === "available" && memory.available_gb !== null && memory.available_gb !== undefined) {
-    setText("#header-ram-value", `${memory.available_gb} GB free`);
+    setText("#header-ram-value", t("header.ramFree", { value: memory.available_gb }));
   } else {
-    setText("#header-ram-value", "Unavailable");
+    setText("#header-ram-value", t("common.unavailable"));
   }
-  setText("#header-health-label", isHealthy ? "Healthy" : "Offline");
-  setText("#header-project-title", appState.currentProject?.project_name || "No project opened");
+  setText("#header-health-label", isHealthy ? t("common.healthy") : t("common.offline"));
+  setText("#header-project-title", appState.currentProject?.project_name || t("common.noProjectOpened"));
 
   const dot = qs("#api-status-dot");
   if (dot) {

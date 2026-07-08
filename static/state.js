@@ -1,4 +1,4 @@
-import { eventBus } from "./event_bus.js";
+﻿import { eventBus } from "./event_bus.js";
 import { translate as translateI18n, applyLanguageToDocument } from "./state/i18n.js";
 
 export const appState = {
@@ -196,7 +196,7 @@ export function applyTheme(theme) {
   applyLanguage(appState.settings.language);
 }
 
-export function applyLanguage(language) {
+export function applyLanguage(language, options = {}) {
   const nextLanguage = language === "en" ? "en" : "zh-TW";
   appState.settings.language = nextLanguage;
   localStorage.setItem("vts-language", nextLanguage);
@@ -205,7 +205,9 @@ export function applyLanguage(language) {
     theme: appState.settings.theme,
     translate: t,
   });
-  eventBus.emit("language-changed", nextLanguage);
+  if (options.emit !== false) {
+    eventBus.emit("language-changed", nextLanguage);
+  }
 }
 
 export function updateLabelMeState() {
@@ -251,15 +253,15 @@ export function getProjectStatus(project) {
   const bestModelExists = Boolean(training.best_model || project?.best_model);
   const labelme = appState.labelme;
   const blockers = [];
-  if (!project) blockers.push("尚未載入專案");
-  if (project && rawImages.length === 0) blockers.push("尚未匯入資料集");
-  if (project && !labelme.synced) blockers.push("尚未同步 LabelMe 標註");
-  if (project && !splitComplete) blockers.push("尚未建立 Train / Val / Test");
+  if (!project) blockers.push(t("status.blocker.noProject"));
+  if (project && rawImages.length === 0) blockers.push(t("status.blocker.noImages"));
+  if (project && !labelme.synced) blockers.push(t("status.blocker.labelmeNotSynced"));
+  if (project && !splitComplete) blockers.push(t("status.blocker.splitIncomplete"));
   const trainReady = Boolean(project && rawImages.length > 0 && labelme.synced && splitComplete);
 
   return {
     hasProject: Boolean(project),
-    projectName: project?.project_name || "尚未載入專案",
+    projectName: project?.project_name || t("common.noProjectOpened"),
     taskType: project?.task_type || "--",
     classNames: project?.class_names || [],
     datasetPath: project?.dataset_path || "",

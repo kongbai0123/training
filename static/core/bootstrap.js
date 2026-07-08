@@ -92,6 +92,10 @@ function bindGlobalNavigation() {
     renderAll();
   });
 
+  eventBus.on("language-changed", () => {
+    renderAll();
+  });
+
   eventBus.on("toast", (message) => {
     showToastCore(message);
   });
@@ -142,5 +146,5 @@ function renderAll() {
   renderSecondaryPageModules(status);
 
   updateActionAvailabilityCore(status);
-  applyLanguage(appState.settings.language);
+  applyLanguage(appState.settings.language, { emit: false });
 }
