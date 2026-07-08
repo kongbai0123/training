@@ -1,6 +1,6 @@
 import { appState } from "../state.js";
 import { qs, setHTML, escapeHtml } from "../utils.js";
-import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260706-rnn-pc-catalog";
+import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260708-rnn-feature-wizard";
 
 function contextCardFor(selector) {
   return qs(selector)?.closest(".workspace-context-card, .summary-section") || null;

@@ -8,20 +8,20 @@ import {
 import { qs, qsa } from "../utils.js";
 import { initGlobalProgressHud } from "../ui/progress_hud.js";
 import { renderHeaderStatus as renderHeaderStatusCore } from "./header_status.js";
-import { renderPageGuards as renderPageGuardsCore } from "./page_guards.js";
+import { renderPageGuards as renderPageGuardsCore } from "./page_guards.js?v=20260708-rnn-feature-wizard";
 import { updateActionAvailability as updateActionAvailabilityCore } from "./action_availability.js";
 import { showToast as showToastCore } from "./toast.js";
 import { initDirtyFormTracking } from "./dirty_forms.js";
 import { initResourceFreshnessTracking } from "./resource_freshness.js";
 import { setActivePage } from "./router.js";
-import { initWorkspaceContextPanel, renderRightPanel as renderRightPanelCore } from "./right_panel.js";
+import { initWorkspaceContextPanel, renderRightPanel as renderRightPanelCore } from "./right_panel.js?v=20260708-rnn-feature-wizard";
 import { initInfoTooltips } from "./tooltip.js";
 import { createProjectLifecycle } from "./project_lifecycle.js";
 import {
   initPageModules,
   renderPrimaryPageModules,
   renderSecondaryPageModules,
-} from "./page_registry.js";
+} from "./page_registry.js?v=20260708-rnn-feature-wizard";
 
 const {
   bootstrapSession,

@@ -1,5 +1,5 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260708-rnn-feature-wizard";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

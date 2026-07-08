@@ -351,6 +351,42 @@ export function initRnnPreviewEvents() {
   });
   qs("#rnn-import-dataset")?.addEventListener("click", importRnnDataset);
   qs("#rnn-feature-columns")?.addEventListener("input", renderRnnFeatureChips);
+  qs("#rnn-feature-checkbox-list")?.addEventListener("change", (event) => {
+    if (!event.target.matches("input[type='checkbox'][data-rnn-feature-column]")) return;
+    syncRnnFeatureInputFromCheckboxes();
+    renderRnnFeatureChips();
+    updateRnnFeatureWizardSummary();
+  });
+  qs("#rnn-feature-task-head")?.addEventListener("change", () => {
+    const taskHead = qs("#rnn-feature-task-head")?.value || "classification";
+    const trainingTaskHead = qs("#rnn-task-head");
+    if (trainingTaskHead) trainingTaskHead.value = taskHead;
+    renderRnnModelSelector();
+    syncRnnModelSelection();
+    renderRnnModelGuide();
+    updateRnnFeatureWizardSummary();
+    renderRnnFeatureRecommendation();
+  });
+  ["#rnn-target-column", "#rnn-time-column", "#rnn-sequence-column"].forEach((selector) => {
+    qs(selector)?.addEventListener("change", () => {
+      reconcileRnnFeatureColumns();
+      renderRnnFeatureChips();
+      updateRnnFeatureWizardSummary();
+      renderRnnFeatureRecommendation();
+    });
+  });
+  qs("#rnn-select-numeric-features")?.addEventListener("click", selectRnnNumericFeatures);
+  qs("#rnn-exclude-target-features")?.addEventListener("click", () => {
+    reconcileRnnFeatureColumns();
+    renderRnnFeatureChips();
+    updateRnnFeatureWizardSummary();
+  });
+  qs("#rnn-clear-features")?.addEventListener("click", () => {
+    setRnnSelectedFeatureColumns([]);
+    renderRnnFeatureChips();
+    updateRnnFeatureWizardSummary();
+  });
+  qs("#rnn-apply-feature-recommendation")?.addEventListener("click", applyRnnFeatureRecommendation);
   qs("#rnn-save-feature-config")?.addEventListener("click", () => saveRnnFeatureConfig());
   qs("#rnn-model-family")?.addEventListener("change", () => {
     syncRnnModelSelection();
@@ -364,9 +400,13 @@ export function initRnnPreviewEvents() {
     });
   });
   qs("#rnn-task-head")?.addEventListener("change", () => {
+    const featureTaskHead = qs("#rnn-feature-task-head");
+    if (featureTaskHead) featureTaskHead.value = qs("#rnn-task-head")?.value || "classification";
     renderRnnModelSelector();
     syncRnnModelSelection();
     renderRnnModelGuide();
+    updateRnnFeatureWizardSummary();
+    renderRnnFeatureRecommendation();
     saveRnnFeatureConfig({ silent: true });
   });
   ["#rnn-start-disabled"].forEach((selector) => {
@@ -439,6 +479,7 @@ async function loadRnnConfig(options = {}) {
     const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/rnn/config`);
     trainingModeState.rnn.config = payload.config || null;
     trainingModeState.rnn.configInspection = payload.inspection || null;
+    trainingModeState.rnn.configRecommendation = payload.recommendation || payload.inspection?.suggested_config || null;
     trainingModeState.rnn.configValidation = payload.validation || null;
     trainingModeState.rnn.windowSummary = payload.window || payload.validation?.window || null;
     trainingModeState.rnn.configMismatches = payload.mismatches || [];
@@ -459,6 +500,7 @@ function applyRnnConfigToForm() {
     const el = qs(selector);
     if (el && value !== undefined && value !== null) el.value = value;
   };
+  renderRnnFeatureControls();
   setValue("#rnn-feature-columns", (config.feature_columns || []).join(", "));
   setValue("#rnn-target-column", config.target_column || "");
   setValue("#rnn-sequence-column", config.sequence_column || "");
@@ -467,6 +509,10 @@ function applyRnnConfigToForm() {
   setValue("#rnn-stride", config.stride || 8);
   setValue("#rnn-horizon", config.horizon || 1);
   setValue("#rnn-task-head", config.task_head || "classification");
+  setValue("#rnn-feature-task-head", config.task_head || "classification");
+  renderRnnFeatureCheckboxes();
+  updateRnnFeatureWizardSummary();
+  renderRnnFeatureRecommendation();
   renderRnnFeatureChips();
   syncRnnModelSelection();
   renderRnnModelGuide();
@@ -474,6 +520,209 @@ function applyRnnConfigToForm() {
 
 function parseRnnFeatureInput() {
   return parseRnnFeatureColumns(qs("#rnn-feature-columns")?.value || "");
+}
+
+function rnnInspectionHeaders() {
+  return trainingModeState.rnn.configInspection?.headers || [];
+}
+
+function rnnPreviewRows() {
+  return trainingModeState.rnn.configInspection?.preview_rows || [];
+}
+
+function selectedRnnFeatureColumns() {
+  return parseRnnFeatureInput();
+}
+
+function isRnnColumnNumeric(name) {
+  const rows = rnnPreviewRows();
+  if (!rows.length) return !isRnnTimeColumn(name);
+  const samples = rows.map((row) => row?.[name]).filter((value) => value !== undefined && value !== null && String(value).trim() !== "");
+  if (!samples.length) return !isRnnTimeColumn(name);
+  return samples.every((value) => Number.isFinite(Number(String(value).trim())));
+}
+
+function isRnnTimeColumn(name = "") {
+  return /(^|[_\s-])(date|time|timestamp|timestep)([_\s-]|$)/i.test(name);
+}
+
+function isRnnSequenceColumn(name = "") {
+  return /(sequence|seq|series|machine|batch|asset|unit).*id|id.*(sequence|seq|series|machine|batch|asset|unit)/i.test(name);
+}
+
+function isRnnLabelColumn(name = "") {
+  return /(^|[_\s-])(label|class|category|target|y|fault|state|status)([_\s-]|$)/i.test(name);
+}
+
+function detectRnnRecommendedConfig() {
+  const backendRecommendation = trainingModeState.rnn.configRecommendation || trainingModeState.rnn.configInspection?.suggested_config;
+  if (backendRecommendation) {
+    return {
+      taskHead: backendRecommendation.task_head || "regression",
+      targetColumn: backendRecommendation.target_column || "",
+      timeColumn: backendRecommendation.time_column || "",
+      sequenceColumn: backendRecommendation.sequence_column || "",
+      featureColumns: Array.isArray(backendRecommendation.feature_columns) ? backendRecommendation.feature_columns : [],
+      confidence: backendRecommendation.recommendation_confidence || "unknown",
+      reason: backendRecommendation.recommendation_reason || "",
+      source: "backend"
+    };
+  }
+  const headers = rnnInspectionHeaders();
+  const numericColumns = headers.filter((name) => isRnnColumnNumeric(name));
+  const timeColumn = headers.find(isRnnTimeColumn) || "";
+  const sequenceColumn = headers.find(isRnnSequenceColumn) || "";
+  const labelColumn = headers.find((name) => isRnnLabelColumn(name) && !isRnnColumnNumeric(name)) || "";
+  const targetColumn = labelColumn || headers.find((name) => isRnnLabelColumn(name) && isRnnColumnNumeric(name)) || "";
+  const taskHead = labelColumn ? "classification" : "regression";
+  const excluded = new Set([targetColumn, timeColumn, sequenceColumn].filter(Boolean));
+  const featureColumns = numericColumns.filter((name) => !excluded.has(name));
+  return {
+    taskHead,
+    targetColumn,
+    timeColumn,
+    sequenceColumn,
+    featureColumns,
+    labelColumn,
+    numericColumns,
+    confidence: targetColumn ? "fallback" : "needs_user",
+    reason: targetColumn ? "Target inferred from common label/target/y column names." : "No explicit target column detected. Select the prediction target manually.",
+    source: "fallback"
+  };
+}
+
+function renderRnnFeatureControls() {
+  const headers = rnnInspectionHeaders();
+  renderRnnColumnSelect("#rnn-target-column", headers, "Select target / label / y");
+  renderRnnColumnSelect("#rnn-time-column", headers, "No time column");
+  renderRnnColumnSelect("#rnn-sequence-column", headers, "None / single continuous series");
+  renderRnnFeatureCheckboxes();
+}
+
+function renderRnnColumnSelect(selector, headers = [], emptyLabel = "None") {
+  const select = qs(selector);
+  if (!select) return;
+  const current = select.value;
+  const options = [`<option value="">${escapeHtml(emptyLabel)}</option>`]
+    .concat(headers.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`));
+  select.innerHTML = options.join("");
+  if (current && headers.includes(current)) select.value = current;
+}
+
+function renderRnnFeatureCheckboxes() {
+  const container = qs("#rnn-feature-checkbox-list");
+  if (!container) return;
+  const headers = rnnInspectionHeaders();
+  const selected = new Set(selectedRnnFeatureColumns());
+  const target = qs("#rnn-target-column")?.value || "";
+  const time = qs("#rnn-time-column")?.value || "";
+  const sequence = qs("#rnn-sequence-column")?.value || "";
+  if (!headers.length) {
+    container.innerHTML = `<div class="rnn-empty-feature-list">Import a CSV to select feature columns.</div>`;
+    return;
+  }
+  container.innerHTML = headers.map((name) => {
+    const reserved = name === target || name === time || name === sequence;
+    const numeric = isRnnColumnNumeric(name);
+    const checked = selected.has(name) && !reserved;
+    return `<label class="rnn-feature-check ${reserved ? "reserved" : ""}">
+      <input type="checkbox" data-rnn-feature-column="${escapeHtml(name)}" value="${escapeHtml(name)}" ${checked ? "checked" : ""} ${reserved ? "disabled" : ""}>
+      <span>
+        <strong>${escapeHtml(name)}</strong>
+        <em>${reserved ? "reserved" : numeric ? "numeric" : "text"}</em>
+      </span>
+    </label>`;
+  }).join("");
+}
+
+function syncRnnFeatureInputFromCheckboxes() {
+  const features = qsa("[data-rnn-feature-column]:checked").map((input) => input.value);
+  setRnnSelectedFeatureColumns(features);
+}
+
+function setRnnSelectedFeatureColumns(features = []) {
+  const input = qs("#rnn-feature-columns");
+  const normalized = [...new Set((features || []).filter(Boolean))];
+  if (input) input.value = normalized.join(", ");
+  qsa("[data-rnn-feature-column]").forEach((checkbox) => {
+    checkbox.checked = normalized.includes(checkbox.value) && !checkbox.disabled;
+  });
+}
+
+function reconcileRnnFeatureColumns() {
+  const reserved = new Set([
+    qs("#rnn-target-column")?.value || "",
+    qs("#rnn-time-column")?.value || "",
+    qs("#rnn-sequence-column")?.value || ""
+  ].filter(Boolean));
+  const features = selectedRnnFeatureColumns().filter((name) => !reserved.has(name));
+  setRnnSelectedFeatureColumns(features);
+  renderRnnFeatureCheckboxes();
+}
+
+function selectRnnNumericFeatures() {
+  const reserved = new Set([
+    qs("#rnn-target-column")?.value || "",
+    qs("#rnn-time-column")?.value || "",
+    qs("#rnn-sequence-column")?.value || ""
+  ].filter(Boolean));
+  const features = rnnInspectionHeaders().filter((name) => isRnnColumnNumeric(name) && !reserved.has(name));
+  setRnnSelectedFeatureColumns(features);
+  renderRnnFeatureChips();
+  updateRnnFeatureWizardSummary();
+}
+
+function applyRnnFeatureRecommendation() {
+  const recommendation = detectRnnRecommendedConfig();
+  const featureTaskHead = qs("#rnn-feature-task-head");
+  const trainingTaskHead = qs("#rnn-task-head");
+  if (featureTaskHead) featureTaskHead.value = recommendation.taskHead;
+  if (trainingTaskHead) trainingTaskHead.value = recommendation.taskHead;
+  if (qs("#rnn-target-column")) qs("#rnn-target-column").value = recommendation.targetColumn || "";
+  if (qs("#rnn-time-column")) qs("#rnn-time-column").value = recommendation.timeColumn || "";
+  if (qs("#rnn-sequence-column")) qs("#rnn-sequence-column").value = recommendation.sequenceColumn || "";
+  setRnnSelectedFeatureColumns(recommendation.featureColumns);
+  renderRnnFeatureCheckboxes();
+  renderRnnFeatureChips();
+  updateRnnFeatureWizardSummary();
+  renderRnnFeatureRecommendation();
+  renderRnnModelSelector();
+  syncRnnModelSelection();
+  renderRnnModelGuide();
+}
+
+function updateRnnFeatureWizardSummary() {
+  const inspection = trainingModeState.rnn.configInspection || {};
+  const recommendation = detectRnnRecommendedConfig();
+  const taskHead = qs("#rnn-feature-task-head")?.value || qs("#rnn-task-head")?.value || recommendation.taskHead;
+  const target = qs("#rnn-target-column")?.value || "";
+  const featureCount = selectedRnnFeatureColumns().length;
+  setText("#rnn-feature-summary-rows", inspection.row_count ? String(inspection.row_count) : "--");
+  setText("#rnn-feature-summary-task", taskHead === "regression" ? "Regression" : "Classification");
+  setText("#rnn-feature-summary-x", `${featureCount} features`);
+  setText("#rnn-feature-summary-y", target || "Not set");
+}
+
+function renderRnnFeatureRecommendation() {
+  const text = qs("#rnn-feature-recommendation-text");
+  const button = qs("#rnn-apply-feature-recommendation");
+  if (!text) return;
+  const headers = rnnInspectionHeaders();
+  if (!headers.length) {
+    text.textContent = "Import a CSV to get task recommendations.";
+    if (button) button.disabled = true;
+    return;
+  }
+  const recommendation = detectRnnRecommendedConfig();
+  const message = recommendation.taskHead === "regression"
+    ? (
+        recommendation.targetColumn
+          ? `Recommended: Regression, target ${recommendation.targetColumn}, time ${recommendation.timeColumn || "none"}.`
+          : `Recommended: Regression setup, but target must be selected manually. ${recommendation.featureColumns.length} numeric feature(s) detected.`
+      )
+    : `Categorical label detected. Recommended: Classification, label ${recommendation.targetColumn}.`;
+  text.textContent = recommendation.reason ? `${message} ${recommendation.reason}` : message;
+  if (button) button.disabled = !recommendation.targetColumn && !recommendation.featureColumns.length;
 }
 
 async function saveRnnFeatureConfig(options = {}) {
@@ -489,7 +738,7 @@ async function saveRnnFeatureConfig(options = {}) {
     sequence_length: Number(qs("#rnn-sequence-length")?.value || 16),
     stride: Number(qs("#rnn-stride")?.value || 8),
     horizon: Number(qs("#rnn-horizon")?.value || 1),
-    task_head: qs("#rnn-task-head")?.value || "classification"
+    task_head: qs("#rnn-feature-task-head")?.value || qs("#rnn-task-head")?.value || "classification"
   };
   try {
     const result = await apiFetch(`/api/projects/${appState.currentProjectId}/rnn/config`, {
@@ -499,6 +748,7 @@ async function saveRnnFeatureConfig(options = {}) {
     });
     trainingModeState.rnn.config = result.config || payload;
     trainingModeState.rnn.configInspection = result.inspection || trainingModeState.rnn.configInspection;
+    trainingModeState.rnn.configRecommendation = result.recommendation || result.inspection?.suggested_config || trainingModeState.rnn.configRecommendation;
     trainingModeState.rnn.configValidation = result.validation || null;
     trainingModeState.rnn.windowSummary = result.window || result.validation?.window || null;
     trainingModeState.rnn.configMismatches = result.mismatches || [];
@@ -545,6 +795,7 @@ async function importRnnDataset() {
     });
     trainingModeState.rnn.config = result.config || null;
     trainingModeState.rnn.configInspection = result.dataset?.inspection || result.inspection || null;
+    trainingModeState.rnn.configRecommendation = result.recommendation || result.dataset?.suggested_config || result.dataset?.inspection?.suggested_config || null;
     trainingModeState.rnn.configValidation = result.validation || null;
     trainingModeState.rnn.windowSummary = result.window || result.validation?.window || null;
     trainingModeState.rnn.configMismatches = result.mismatches || [];
@@ -584,6 +835,9 @@ function renderRnnConfig(validation = null) {
     });
     preview.innerHTML = renderRnnPreviewContent(previewModel);
   }
+  renderRnnFeatureControls();
+  updateRnnFeatureWizardSummary();
+  renderRnnFeatureRecommendation();
   renderRnnFeatureChips(validation);
   renderRnnWindowSummary(validation);
   renderRnnConfigMismatch();
@@ -1433,10 +1687,12 @@ function syncRnnModelSelection() {
   const entry = getSelectedRnnModelEntry();
   const model = getSelectedRnnModel();
   const taskHead = qs("#rnn-task-head");
+  const featureTaskHead = qs("#rnn-feature-task-head");
   const backend = qs("#rnn-backend");
   const infoIcon = qs("#rnn-model-info-icon");
   if (model === "xgboost_classifier" && taskHead) taskHead.value = "classification";
   if (model === "xgboost_regressor" && taskHead) taskHead.value = "regression";
+  if (featureTaskHead && taskHead) featureTaskHead.value = taskHead.value || featureTaskHead.value;
   if (backend) {
     backend.value = selectedRnnBackendDisplay(entry, model);
   }

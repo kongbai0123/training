@@ -1051,20 +1051,69 @@
                 <div id="rnn-features-labels-panel" class="rnn-panel" data-rnn-panel="features-labels">
                   <section class="rnn-preview-card">
                     <div class="section-title">
-                      <h2>特徵與標籤 <span class="info-icon" data-tooltip="設定 CSV 中哪些欄位要作為 X，哪一個欄位作為 y。Feature columns 可用逗號或分號一次輸入多個欄位。">i</span></h2>
+                      <h2>RNN CSV 設定 <span class="info-icon" data-tooltip="先決定任務與預測目標，再選擇輸入特徵 X，最後設定時間序列切窗欄位。">i</span></h2>
                       <span class="summary-badge badge-neutral" id="rnn-config-hash-badge">No config</span>
                     </div>
-                    <div class="rnn-schema-grid">
-                      <label><span>Feature columns <span class="info-icon" data-tooltip="輸入要作為模型輸入 X 的欄位，例如 speed,rpm,temp。系統會自動切成 chips 並比對 CSV header。">i</span></span><input id="rnn-feature-columns" type="text" placeholder="speed,rpm,temp 或 speed;rpm;temp"></label>
-                      <label><span>Target column <span class="info-icon" data-tooltip="輸入要預測的 y 欄位。分類任務通常是 label；回歸任務通常是 target 或數值欄位。">i</span></span><input id="rnn-target-column" type="text" placeholder="target / label / y"></label>
-                      <label><span>Sequence ID column <span class="info-icon" data-tooltip="用來區分不同序列的欄位，例如 sequence_id、machine_id 或 batch_id。相同 ID 會被視為同一段時間序列。">i</span></span><input id="rnn-sequence-column" type="text" placeholder="sequence_id"></label>
-                      <label><span>Time column <span class="info-icon" data-tooltip="用來排序序列內 time steps 的欄位，例如 timestep 或 timestamp。若缺少時間欄位，資料順序容易影響訓練結果。">i</span></span><input id="rnn-time-column" type="text" placeholder="timestep / timestamp"></label>
-                      <label><span>Feature dim <span class="info-icon" data-tooltip="目前有效 feature 欄位數。此欄位由 Feature columns 與 CSV header 自動計算，不需要手動編輯。">i</span></span><input id="rnn-feature-dim" type="number" value="0" disabled></label>
+                    <div class="rnn-feature-wizard-summary" id="rnn-feature-wizard-summary">
+                      <div><span>Dataset rows</span><strong id="rnn-feature-summary-rows">--</strong></div>
+                      <div><span>Recommended task</span><strong id="rnn-feature-summary-task">--</strong></div>
+                      <div><span>Selected X</span><strong id="rnn-feature-summary-x">0 features</strong></div>
+                      <div><span>Target / Y</span><strong id="rnn-feature-summary-y">Not set</strong></div>
+                    </div>
+                    <div class="rnn-feature-wizard">
+                      <section class="rnn-feature-step">
+                        <div class="rnn-feature-step-header">
+                          <span class="rnn-step-index">1</span>
+                          <div>
+                            <h3>預測目標 / Y</h3>
+                            <p>先決定模型要預測數值還是類別，再選擇目標欄位。</p>
+                          </div>
+                        </div>
+                        <div class="rnn-schema-grid two-col">
+                          <label><span>Task type <span class="info-icon" data-tooltip="Regression 用於預測連續數值；Classification 用於預測離散類別 Label。">i</span></span><select id="rnn-feature-task-head"><option value="classification">Classification / Label</option><option value="regression">Regression / Numeric target</option></select></label>
+                          <label><span>Target column <span class="info-icon" data-tooltip="要預測的 y 欄位。Regression 通常選數值欄位；Classification 必須選類別 Label 欄位。">i</span></span><select id="rnn-target-column"><option value="">Select target / label / y</option></select></label>
+                        </div>
+                        <div class="rnn-config-recommendation" id="rnn-feature-recommendation">
+                          <i class="fa-solid fa-wand-magic-sparkles"></i>
+                          <span id="rnn-feature-recommendation-text">Import a CSV to get task recommendations.</span>
+                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-apply-feature-recommendation">套用建議</button>
+                        </div>
+                      </section>
+                      <section class="rnn-feature-step">
+                        <div class="rnn-feature-step-header">
+                          <span class="rnn-step-index">2</span>
+                          <div>
+                            <h3>輸入特徵 / X</h3>
+                            <p>選擇模型可用的輸入欄位；Target 與時間欄位會自動排除，避免資料洩漏。</p>
+                          </div>
+                        </div>
+                        <input id="rnn-feature-columns" type="hidden" value="">
+                        <input id="rnn-feature-dim" type="hidden" value="0">
+                        <div class="inline-actions rnn-feature-actions">
+                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-select-numeric-features">全選數值欄位</button>
+                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-exclude-target-features">排除 Target / Time</button>
+                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-clear-features">清除</button>
+                        </div>
+                        <div class="rnn-feature-checkbox-list" id="rnn-feature-checkbox-list"></div>
+                      </section>
+                      <section class="rnn-feature-step">
+                        <div class="rnn-feature-step-header">
+                          <span class="rnn-step-index">3</span>
+                          <div>
+                            <h3>時間序列設定</h3>
+                            <p>指定排序欄位與序列分組欄位；若沒有 Sequence ID，先以單一連續序列方式理解資料。</p>
+                          </div>
+                        </div>
+                        <div class="rnn-schema-grid two-col">
+                          <label><span>Time column <span class="info-icon" data-tooltip="用來排序序列內 time steps 的欄位，例如 timestep、timestamp 或 Date Time。">i</span></span><select id="rnn-time-column"><option value="">No time column</option></select></label>
+                          <label><span>Sequence ID column <span class="info-icon" data-tooltip="用來區分不同序列的欄位，例如 sequence_id、machine_id 或 batch_id。沒有此欄位時代表單一連續序列。">i</span></span><select id="rnn-sequence-column"><option value="">None / single continuous series</option></select></label>
+                        </div>
+                      </section>
                     </div>
                     <div class="rnn-chip-list" id="rnn-feature-chip-list"></div>
                     <div class="rnn-config-warning hidden" id="rnn-config-mismatch-warning"></div>
                     <div class="inline-actions">
-                      <button type="button" class="btn btn-primary" id="rnn-save-feature-config"><i class="fa-solid fa-floppy-disk"></i> 儲存 Feature Config</button>
+                      <button type="button" class="btn btn-primary" id="rnn-save-feature-config"><i class="fa-solid fa-floppy-disk"></i> 儲存 RNN CSV 設定</button>
                     </div>
                   </section>
                 </div>
@@ -2132,7 +2181,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260702-empty-startup-history-compact2"></script>
+  <script type="module" src="/static/app.js?v=20260708-rnn-feature-wizard"></script>
 </body>
 </html>
 

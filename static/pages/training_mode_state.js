@@ -12,6 +12,7 @@ export const trainingModeState = {
     readiness: null,
     config: null,
     configInspection: null,
+    configRecommendation: null,
     configValidation: null,
     windowSummary: null,
     configMismatches: [],
