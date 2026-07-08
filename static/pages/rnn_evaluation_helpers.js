@@ -27,22 +27,28 @@ export function resolveRnnEvaluationViewModel({ runs = [], metrics = null, selec
   const safeRuns = Array.isArray(runs) ? runs : [];
   const activeRun = safeRuns.find((run) => run.run_id === selectedRunId) || safeRuns[0] || null;
   const summary = activeRun || {};
+  const taskType = String(metrics?.task_type || summary.task_type || "").toLowerCase();
+  const metricSchema = resolveRnnMetricSchema(metrics, summary);
   const bestMetrics = metrics?.best_metrics || summary.best_metrics || {};
   const history = Array.isArray(metrics?.history) ? metrics.history : [];
   const latestMetrics = history.length ? history[history.length - 1] : {};
   const metricSource = { ...latestMetrics, ...bestMetrics };
-  const isRegression = String(metrics?.task_type || summary.task_type || "").toLowerCase().includes("regression") ||
+  const isRegression = taskType.includes("regression") ||
     metricSource["val/mae"] !== undefined || metricSource["val/rmse"] !== undefined;
+  const primaryConfig = metricSchema.primary_metric || {};
+  const qualityKeys = metricSchema.groups?.quality || [];
   const primary = isRegression
-    ? { label: "MAE", value: metricSource["val/mae"] ?? summary.primary_metric_value }
-    : { label: "Accuracy", value: metricSource["val/accuracy"] ?? summary.best_accuracy };
+    ? { label: primaryConfig.display_name || "MAE", value: metricSource[primaryConfig.key || "val/mae"] ?? summary.primary_metric_value }
+    : { label: primaryConfig.display_name || "Macro-F1", value: metricSource[primaryConfig.key || "val/macro_f1"] ?? summary.primary_metric_value };
   const secondary = isRegression
     ? { label: "RMSE", value: metricSource["val/rmse"] }
-    : { label: "Macro-F1", value: metricSource["val/macro_f1"] ?? summary.primary_metric_value };
+    : { label: qualityKeys.includes("val/accuracy") ? "Accuracy" : "Precision", value: metricSource[qualityKeys.includes("val/accuracy") ? "val/accuracy" : "val/precision"] ?? summary.best_accuracy };
 
   return {
     activeRun,
     summary,
+    taskType,
+    metricSchema,
     bestMetrics,
     history,
     latestMetrics,
@@ -50,6 +56,100 @@ export function resolveRnnEvaluationViewModel({ runs = [], metrics = null, selec
     isRegression,
     primary,
     secondary
+  };
+}
+
+export function resolveRnnMetricSchema(metrics = {}, summary = {}) {
+  const taskType = String(metrics?.task_type || summary?.task_type || "sequence_classification").toLowerCase();
+  const suppliedSchema = metrics?.metric_schema || summary?.metric_schema;
+  if (suppliedSchema?.primary_metric?.key && suppliedSchema?.groups) return suppliedSchema;
+  const isRegression = taskType.includes("regression") || metrics?.best_metrics?.["val/mae"] !== undefined;
+  if (isRegression) {
+    return {
+      primary_metric: { key: "val/mae", display_name: "MAE", goal: "minimize" },
+      groups: { loss: ["train/loss", "val/loss"], quality: ["val/mae", "val/rmse"] }
+    };
+  }
+  return {
+    primary_metric: { key: "val/macro_f1", display_name: "Macro-F1", goal: "maximize" },
+    groups: { loss: ["train/loss", "val/loss"], quality: ["val/accuracy", "val/macro_f1", "val/precision", "val/recall"] }
+  };
+}
+
+export function buildRnnTaskAwareDashboard({ metrics = null, summary = {}, history = [], runs = [], metricsByRun = {}, comparisonMetric = "macro_f1" } = {}) {
+  const metricSchema = resolveRnnMetricSchema(metrics, summary);
+  const taskType = String(metrics?.task_type || summary?.task_type || "sequence_classification").toLowerCase();
+  const isRegression = taskType.includes("regression") || metricSchema.primary_metric?.goal === "minimize";
+  const qualityKeys = (metricSchema.groups?.quality || []).filter((key) => extractMetricSeries(history, key).length);
+  const lossKeys = (metricSchema.groups?.loss || ["train/loss", "val/loss"]).filter((key) => extractMetricSeries(history, key).length);
+  const labels = Array.isArray(history) ? history.map((row, index) => row.epoch ?? index + 1) : [];
+  const latest = history?.length ? history[history.length - 1] : {};
+  return {
+    taskType,
+    mode: isRegression ? "regression" : "classification",
+    metricSchema,
+    primaryMetric: metricSchema.primary_metric || {},
+    chartCount: qualityKeys.length + lossKeys.length,
+    scoreChart: {
+      title: isRegression ? "Regression Error Curve" : "Classification Score Curve",
+      note: `Schema quality: ${qualityKeys.length ? qualityKeys.join(", ") : "none"}`,
+      labels,
+      series: qualityKeys.map((key) => ({ key, label: metricLabel(key), values: extractMetricSeries(history, key) }))
+    },
+    lossChart: {
+      title: "Loss Curve",
+      note: `Schema loss: ${lossKeys.length ? lossKeys.join(", ") : "none"}`,
+      labels,
+      series: lossKeys.map((key) => ({ key, label: metricLabel(key), values: extractMetricSeries(history, key) }))
+    },
+    comparison: buildRnnBaselineComparisonViewModel({ runs, metricsByRun, metricKey: comparisonMetric }),
+    diagnostic: buildRnnTaskDiagnostic({ metrics, latest, isRegression })
+  };
+}
+
+function metricLabel(key = "") {
+  const labels = {
+    "val/accuracy": "Accuracy",
+    "val/macro_f1": "Macro-F1",
+    "val/precision": "Precision",
+    "val/recall": "Recall",
+    "val/mae": "MAE",
+    "val/rmse": "RMSE",
+    "train/loss": "Train Loss",
+    "val/loss": "Val Loss"
+  };
+  return labels[key] || key;
+}
+
+function buildRnnTaskDiagnostic({ metrics = null, latest = {}, isRegression = false } = {}) {
+  const confusion = metrics?.confusion_matrix || metrics?.confusionMatrix || null;
+  const residuals = metrics?.residuals || metrics?.residual_samples || null;
+  const predictionActual = metrics?.prediction_actual_samples || metrics?.predictionActualSamples || [];
+  if (isRegression) {
+    return {
+      type: "residual",
+      title: "Residual Diagnostic",
+      badge: residuals?.length ? "residuals" : "schema-ready",
+      residuals: Array.isArray(residuals) ? residuals.slice(0, 24).map((value) => Number(value)).filter(Number.isFinite) : [],
+      predictionActual: Array.isArray(predictionActual) ? predictionActual.slice(0, 12) : [],
+      cards: [
+        ["MAE", formatSequenceMetric(latest["val/mae"])],
+        ["RMSE", formatSequenceMetric(latest["val/rmse"])],
+        ["Residual source", residuals?.length ? "Loaded from metrics payload" : "Raw prediction residuals are not persisted yet."]
+      ]
+    };
+  }
+  return {
+    type: "confusion",
+    title: "Confusion Matrix Diagnostic",
+    badge: confusion?.length ? "matrix" : "schema-ready",
+    matrix: Array.isArray(confusion) ? confusion : [],
+    labels: metrics?.confusion_labels || metrics?.confusionLabels || [],
+    cards: [
+      ["Accuracy", formatSequenceMetric(latest["val/accuracy"])],
+      ["Precision / Recall", `${formatSequenceMetric(latest["val/precision"])} / ${formatSequenceMetric(latest["val/recall"])}`],
+      ["Matrix source", confusion?.length ? "Loaded from metrics payload" : "Confusion matrix is schema-ready; raw class counts are not persisted yet."]
+    ]
   };
 }
 
@@ -149,8 +249,12 @@ export function buildRnnEvaluationRunHistoryRows(runs = []) {
     hasRows: true,
     emptyMessage: "",
     rows: runs.map((run) => {
-      const primaryLabel = run.primary_metric_name || (String(run.task_type || "").includes("regression") ? "MAE" : "Macro-F1");
-      const primaryValue = run.primary_metric_value ?? run.platform_score ?? run.best_macro_f1 ?? run.best_mae;
+      const isRegression = String(run.task_type || "").includes("regression");
+      const bestMetrics = run.best_metrics || {};
+      const primaryLabel = run.primary_metric_name || (isRegression ? "MAE" : "Macro-F1");
+      const primaryValue = run.primary_metric_value
+        ?? (isRegression ? bestMetrics["val/mae"] ?? run.best_mae : bestMetrics["val/macro_f1"] ?? run.best_macro_f1)
+        ?? run.platform_score;
       return {
         runId: run.run_id || "--",
         model: run.model || "--",
@@ -178,8 +282,10 @@ export function buildRnnBaselineComparisonRows({ runs = [], metricsByRun = {}, m
     if (better) grouped.set(key, { label: key, value, run, metricConfig });
   });
 
-  const order = ["LSTM", "GRU", "BiLSTM", "XGBoost"];
-  const rows = order.map((label) => grouped.get(label) || { label, value: null, metricConfig });
+  const rows = Array.from(grouped.values()).sort((a, b) => {
+    if (metricConfig.lowerBetter) return a.value - b.value;
+    return b.value - a.value;
+  });
   const availableRows = rows.filter((row) => Number.isFinite(row.value));
   const values = availableRows.map((row) => row.value);
   const max = Math.max(...values, 0.000001);

@@ -8,6 +8,9 @@ ROOT = Path(__file__).resolve().parents[1]
 class RNNTrainingPageStaticTests(unittest.TestCase):
     def test_rnn_training_controls_expose_p1_hardening_fields(self):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        rnn_training_css = (
+            ROOT / "static" / "styles" / "pages" / "rnn_training.css"
+        ).read_text(encoding="utf-8")
         training_modes_js = (ROOT / "static" / "pages" / "training_modes.js").read_text(encoding="utf-8")
         rnn_metric_helpers_js = (
             ROOT / "static" / "pages" / "rnn_metric_helpers.js"
@@ -210,6 +213,8 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn("export function buildRnnEvaluationEpochRows", rnn_evaluation_helpers_js)
         self.assertIn("export function buildRnnEvaluationRunHistoryRows", rnn_evaluation_helpers_js)
         self.assertIn("export function buildRnnMetricTrendRows", rnn_evaluation_helpers_js)
+        self.assertIn("export function buildRnnTaskAwareDashboard", rnn_evaluation_helpers_js)
+        self.assertIn("export function resolveRnnMetricSchema", rnn_evaluation_helpers_js)
         self.assertIn("export function buildRnnEvaluationSidebarSections", rnn_evaluation_helpers_js)
         self.assertIn("export function buildRnnEvaluationSidebarViewModel", rnn_evaluation_helpers_js)
         self.assertIn("buildSparklinePoints(values)", rnn_evaluation_helpers_js)
@@ -217,8 +222,18 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn("buildRnnEvaluationRunHistoryRows(runs)", training_modes_js)
         self.assertIn("buildRnnMetricTrendRows({ history, isRegression, metricContext })", training_modes_js)
         self.assertIn("renderRnnMetricTrendChartStack(trendRows)", training_modes_js)
+        self.assertIn("renderRnnTaskAwareDashboard(dashboard", training_modes_js)
+        self.assertIn("new Chart(canvas", training_modes_js)
+        self.assertIn("rnn-eval-score-chart", index_html)
+        self.assertIn("rnn-eval-loss-chart", index_html)
+        self.assertIn("rnn-eval-run-comparison-chart", index_html)
+        self.assertIn("rnn-eval-task-diagnostic", index_html)
+        self.assertIn(".rnn-chart-shell.compact", rnn_training_css)
+        self.assertIn("min-height: 132px", rnn_training_css)
+        self.assertIn("height: 104px !important", rnn_training_css)
         self.assertIn("buildRnnBaselineComparisonViewModel({", training_modes_js)
         self.assertIn("renderRnnBaselineComparisonChart(comparison)", training_modes_js)
+        self.assertIn("export function renderRnnTaskDiagnostic", rnn_evaluation_render_helpers_js)
         self.assertIn("buildRnnEvaluationSidebarViewModel({", training_modes_js)
         self.assertIn("resolveRnnEvaluationOverviewRender({", training_modes_js)
         self.assertIn("resolveRnnEvaluationSidebarStatusRender(sidebar)", training_modes_js)

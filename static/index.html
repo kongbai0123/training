@@ -1154,24 +1154,43 @@
                     </div>
                     <div id="rnn-eval-message" class="rnn-placeholder-box">No RNN or XGBoost run has been loaded yet.</div>
                     <div class="rnn-eval-flow">
-                      <div class="rnn-result-panel">
-                        <div class="section-title"><h3>Metric Trend</h3><span class="summary-badge badge-neutral">4 rows</span></div>
+                      <div class="rnn-result-panel rnn-chart-panel">
+                        <div class="section-title"><h3>Task-aware Trends</h3><span class="summary-badge badge-neutral" id="rnn-eval-chart-count">0 metrics</span></div>
                         <div class="rnn-baseline-note hidden" id="rnn-eval-baseline-note">Single-point baseline metrics are shown as flat reference lines.</div>
-                        <div class="rnn-eval-chart-stack" id="rnn-eval-chart-stack">
-                          <div class="rnn-eval-chart-empty">No metric trend loaded.</div>
+                        <div class="rnn-eval-chart-grid" id="rnn-eval-chart-stack">
+                          <div class="rnn-chart-shell">
+                            <div class="rnn-chart-heading"><strong id="rnn-eval-score-chart-title">Score curve</strong><span id="rnn-eval-score-chart-note">Driven by task metric schema.</span></div>
+                            <canvas id="rnn-eval-score-chart"></canvas>
+                            <div class="rnn-eval-chart-empty hidden" id="rnn-eval-score-empty">No score metrics loaded.</div>
+                          </div>
+                          <div class="rnn-chart-shell">
+                            <div class="rnn-chart-heading"><strong id="rnn-eval-loss-chart-title">Loss curve</strong><span id="rnn-eval-loss-chart-note">Train / validation loss.</span></div>
+                            <canvas id="rnn-eval-loss-chart"></canvas>
+                            <div class="rnn-eval-chart-empty hidden" id="rnn-eval-loss-empty">No loss metrics loaded.</div>
+                          </div>
                         </div>
                       </div>
-                      <div class="rnn-result-panel">
+                      <div class="rnn-result-panel rnn-chart-panel">
                         <div class="section-title">
-                          <h3>Baseline Comparison</h3>
+                          <h3>Run Comparison</h3>
                           <div class="rnn-compare-metric-toggle" role="group" aria-label="RNN comparison metric">
                             <button type="button" class="active" data-rnn-compare-metric="accuracy">Accuracy</button>
                             <button type="button" data-rnn-compare-metric="macro_f1">Macro-F1</button>
                             <button type="button" data-rnn-compare-metric="val_loss">Val Loss</button>
                           </div>
                         </div>
+                        <div class="rnn-chart-shell compact">
+                          <canvas id="rnn-eval-run-comparison-chart"></canvas>
+                          <div class="rnn-eval-chart-empty hidden" id="rnn-eval-run-comparison-empty">No comparable runs loaded.</div>
+                        </div>
                         <div class="rnn-compare-mini-chart" id="rnn-eval-compare-chart">
                           <div class="rnn-eval-chart-empty">No comparable runs loaded.</div>
+                        </div>
+                      </div>
+                      <div class="rnn-result-panel">
+                        <div class="section-title"><h3 id="rnn-eval-diagnostic-title">Task Diagnostic</h3><span class="summary-badge badge-neutral" id="rnn-eval-diagnostic-badge">schema</span></div>
+                        <div id="rnn-eval-task-diagnostic" class="rnn-task-diagnostic">
+                          <div class="rnn-eval-chart-empty">No task diagnostic loaded.</div>
                         </div>
                       </div>
                       <div class="rnn-result-panel">

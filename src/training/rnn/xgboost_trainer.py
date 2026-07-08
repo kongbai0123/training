@@ -83,6 +83,7 @@ def train_xgboost_from_dataset(
 
     history = _history_from_evals(evals_result)
     final_metrics = _evaluate_final(model, dval, y_val, is_regression, int(dataset["num_outputs"]))
+    diagnostics = final_metrics.pop("diagnostics", {})
     if history:
         history[-1].update(final_metrics)
     else:
@@ -107,6 +108,7 @@ def train_xgboost_from_dataset(
         "best_metrics": history[-1],
         "dataset_summary": dataset["summary"],
     }
+    metrics_payload.update(diagnostics)
     (run_dir / "metrics.json").write_text(json.dumps(metrics_payload, indent=2, ensure_ascii=False), encoding="utf-8")
     _write_results_csv(run_dir / "results.csv", history)
     return metrics_payload
@@ -134,16 +136,24 @@ def _history_from_evals(result: Dict[str, Dict[str, List[float]]]) -> List[Dict[
 def _evaluate_final(model: Any, dval: Any, y_val: np.ndarray, is_regression: bool, num_outputs: int) -> Dict[str, Any]:
     raw_predictions = model.predict(dval)
     if is_regression:
-        errors = np.asarray(raw_predictions, dtype=float).reshape(-1) - np.asarray(y_val, dtype=float).reshape(-1)
+        predictions = np.asarray(raw_predictions, dtype=float).reshape(-1).tolist()
+        targets = np.asarray(y_val, dtype=float).reshape(-1).tolist()
+        errors = np.asarray(predictions, dtype=float) - np.asarray(targets, dtype=float)
         return {
             "val/mae": round(float(np.mean(np.abs(errors))), 6),
             "val/rmse": round(float(math.sqrt(np.mean(errors ** 2))), 6),
+            "diagnostics": _diagnostics(predictions, targets, True),
         }
     if num_outputs > 2:
         predictions = np.asarray(raw_predictions).argmax(axis=1)
     else:
         predictions = (np.asarray(raw_predictions).reshape(-1) >= 0.5).astype(int)
-    return _classification_metrics(predictions.reshape(-1).tolist(), np.asarray(y_val).reshape(-1).tolist())
+    prediction_list = predictions.reshape(-1).tolist()
+    target_list = np.asarray(y_val).reshape(-1).tolist()
+    return {
+        **_classification_metrics(prediction_list, target_list),
+        "diagnostics": _diagnostics(prediction_list, target_list, False),
+    }
 
 
 def _classification_metrics(predictions: List[Any], targets: List[Any]) -> Dict[str, float]:
@@ -168,6 +178,34 @@ def _classification_metrics(predictions: List[Any], targets: List[Any]) -> Dict[
         "val/precision": round(float(np.mean(precisions)) if precisions else 0.0, 6),
         "val/recall": round(float(np.mean(recalls)) if recalls else 0.0, 6),
         "val/macro_f1": round(float(np.mean(f1s)) if f1s else 0.0, 6),
+    }
+
+
+def _diagnostics(predictions: List[Any], targets: List[Any], is_regression: bool, limit: int = 200) -> Dict[str, Any]:
+    if is_regression:
+        pairs = []
+        residuals = []
+        for pred, target in list(zip(predictions, targets))[:limit]:
+            prediction = round(float(pred), 6)
+            actual = round(float(target), 6)
+            residual = round(prediction - actual, 6)
+            pairs.append({"prediction": prediction, "actual": actual, "residual": residual})
+            residuals.append(residual)
+        return {
+            "residuals": residuals,
+            "prediction_actual_samples": pairs,
+            "diagnostic_sample_limit": limit,
+        }
+
+    labels = sorted(set(predictions) | set(targets))
+    label_index = {label: index for index, label in enumerate(labels)}
+    matrix = [[0 for _ in labels] for _ in labels]
+    for pred, target in zip(predictions, targets):
+        if target in label_index and pred in label_index:
+            matrix[label_index[target]][label_index[pred]] += 1
+    return {
+        "confusion_labels": [str(label) for label in labels],
+        "confusion_matrix": matrix,
     }
 
 

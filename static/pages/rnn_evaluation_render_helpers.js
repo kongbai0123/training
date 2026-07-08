@@ -140,3 +140,77 @@ export function renderRnnBaselineComparisonChart(comparison = {}) {
     </div>`;
   }).join("");
 }
+
+export function renderRnnTaskDiagnostic(diagnostic = {}) {
+  if (!diagnostic.type) {
+    return `<div class="rnn-eval-chart-empty">No task diagnostic loaded.</div>`;
+  }
+  const cards = (diagnostic.cards || []).map(([label, value]) => `
+    <div class="rnn-diagnostic-card">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(value ?? "--")}</span>
+    </div>
+  `).join("");
+
+  if (diagnostic.type === "residual") {
+    const residuals = diagnostic.residuals || [];
+    const max = Math.max(...residuals.map((value) => Math.abs(value)), 0.000001);
+    const bars = residuals.length
+      ? residuals.map((value) => {
+          const height = Math.max(8, (Math.abs(value) / max) * 72);
+          return `<span class="rnn-residual-bar" title="${escapeHtml(formatSequenceMetric(value))}" style="height: ${escapeHtml(height.toFixed(1))}px"></span>`;
+        }).join("")
+      : `<div class="rnn-eval-chart-empty">Residual samples are not available in this run yet.</div>`;
+    const sampleRows = (diagnostic.predictionActual || []).length
+      ? `<div class="rnn-result-table-wrap">
+          <table class="rnn-result-table rnn-diagnostic-table">
+            <thead><tr><th>#</th><th>Prediction</th><th>Actual</th><th>Residual</th></tr></thead>
+            <tbody>${diagnostic.predictionActual.map((row, index) => `
+              <tr>
+                <td>${index + 1}</td>
+                <td><code>${escapeHtml(formatSequenceMetric(row.prediction))}</code></td>
+                <td><code>${escapeHtml(formatSequenceMetric(row.actual))}</code></td>
+                <td><code>${escapeHtml(formatSequenceMetric(row.residual))}</code></td>
+              </tr>
+            `).join("")}</tbody>
+          </table>
+        </div>`
+      : `<div class="rnn-eval-chart-empty">Prediction vs actual samples are not available yet.</div>`;
+    return `
+      <div class="rnn-diagnostic-grid">${cards}</div>
+      <div class="rnn-diagnostic-card">
+        <strong>Residual Plot</strong>
+        <div class="rnn-residual-preview">${bars}</div>
+      </div>
+      <div class="rnn-diagnostic-card">
+        <strong>Prediction vs Actual</strong>
+        ${sampleRows}
+      </div>
+    `;
+  }
+
+  const matrix = diagnostic.matrix || [];
+  const labels = diagnostic.labels || [];
+  const gridStyle = matrix.length ? ` style="grid-template-columns: repeat(${Math.max(1, Math.min(matrix.length, 8))}, minmax(0, 1fr));"` : "";
+  const cells = matrix.length
+    ? matrix.flat().slice(0, 64).map((value, index) => {
+        const row = Math.floor(index / matrix.length);
+        const col = index % matrix.length;
+        const title = `Actual ${labels[row] ?? row} / Pred ${labels[col] ?? col}`;
+        return `<span class="rnn-confusion-cell" title="${escapeHtml(title)}">${escapeHtml(value)}</span>`;
+      }).join("")
+    : `
+      <span class="rnn-confusion-cell">TP</span>
+      <span class="rnn-confusion-cell">FP</span>
+      <span class="rnn-confusion-cell">FN</span>
+      <span class="rnn-confusion-cell">TN</span>
+    `;
+  return `
+    <div class="rnn-diagnostic-grid">${cards}</div>
+    <div class="rnn-diagnostic-card">
+      <strong>Confusion Matrix</strong>
+      <p>${escapeHtml(matrix.length ? "Loaded class-count matrix." : "Matrix placeholder shown until class-count data is persisted.")}</p>
+      <div class="rnn-confusion-preview"${gridStyle}>${cells}</div>
+    </div>
+  `;
+}

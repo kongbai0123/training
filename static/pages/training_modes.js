@@ -10,6 +10,7 @@ import {
   buildRnnEvaluationEpochRows,
   buildRnnEvaluationRunHistoryRows,
   buildRnnMetricTrendRows,
+  buildRnnTaskAwareDashboard,
   buildRnnEvaluationSidebarViewModel,
   buildRnnBaselineComparisonViewModel,
   isSequenceEvaluationRun,
@@ -22,6 +23,7 @@ import {
   renderRnnEvaluationSidebarRows,
   renderRnnBaselineComparisonChart,
   renderRnnMetricTrendChartStack,
+  renderRnnTaskDiagnostic,
   resolveRnnEvaluationOverviewRender,
   resolveRnnEvaluationSidebarStatusRender
 } from "./rnn_evaluation_render_helpers.js";
@@ -88,6 +90,10 @@ import { buildRnnTrainingPayload } from "./rnn_training_payload_helpers.js";
 import { trainingModeState } from "./training_mode_state.js";
 
 export { trainingModeState } from "./training_mode_state.js";
+
+let rnnScoreChart = null;
+let rnnLossChart = null;
+let rnnRunComparisonChart = null;
 
 export function initTrainingModeSidebar() {
   qsa("[data-training-mode]").forEach((button) => {
@@ -803,6 +809,8 @@ function renderRnnEvaluation() {
     activeRun,
     summary,
     history,
+    taskType,
+    metricSchema,
     metricSource,
     isRegression,
     primary,
@@ -843,8 +851,15 @@ function renderRnnEvaluation() {
   }
 
   renderRnnEvaluationEpochRows(history);
-  renderRnnMetricTrendRows(history, isRegression, metrics || summary);
-  renderRnnBaselineComparison(runs);
+  const dashboard = buildRnnTaskAwareDashboard({
+    metrics,
+    summary,
+    history,
+    runs,
+    metricsByRun: trainingModeState.rnn.evaluationRunMetrics || {},
+    comparisonMetric: trainingModeState.rnn.comparisonMetric || "macro_f1"
+  });
+  renderRnnTaskAwareDashboard(dashboard, { history, isRegression, metricContext: metrics || summary });
   renderRnnEvaluationArtifacts(artifacts, activeRun?.run_id || "");
   renderRnnEvaluationRunHistory(runs);
   renderRnnEvaluationSidebar({
@@ -852,6 +867,8 @@ function renderRnnEvaluation() {
     metrics,
     artifacts,
     history,
+    taskType,
+    metricSchema,
     metricSource,
     isRegression,
     primary,
@@ -886,6 +903,88 @@ function renderRnnMetricTrendRows(history, isRegression, metricContext = {}) {
   container.innerHTML = renderRnnMetricTrendChartStack(trendRows);
 }
 
+function renderRnnTaskAwareDashboard(dashboard, fallback = {}) {
+  syncRnnComparisonMetricToggle(dashboard.metricSchema);
+  if (!isRnnComparisonMetricAvailable(trainingModeState.rnn.comparisonMetric, dashboard.metricSchema)) {
+    trainingModeState.rnn.comparisonMetric = metricKeyFromSchemaKey(dashboard.metricSchema?.primary_metric?.key) || "macro_f1";
+    dashboard.comparison = buildRnnBaselineComparisonViewModel({
+      runs: trainingModeState.rnn.evaluationRuns || [],
+      metricsByRun: trainingModeState.rnn.evaluationRunMetrics || {},
+      metricKey: trainingModeState.rnn.comparisonMetric
+    });
+  }
+  setText("#rnn-eval-chart-count", `${dashboard.chartCount || 0} metrics`);
+  setText("#rnn-eval-score-chart-title", dashboard.scoreChart?.title || "Score curve");
+  setText("#rnn-eval-score-chart-note", dashboard.scoreChart?.note || "Driven by task metric schema.");
+  setText("#rnn-eval-loss-chart-title", dashboard.lossChart?.title || "Loss curve");
+  setText("#rnn-eval-loss-chart-note", dashboard.lossChart?.note || "Train / validation loss.");
+  setText("#rnn-eval-diagnostic-title", dashboard.diagnostic?.title || "Task Diagnostic");
+  setText("#rnn-eval-diagnostic-badge", dashboard.diagnostic?.badge || "schema");
+
+  const baselineNote = qs("#rnn-eval-baseline-note");
+  const trendRows = buildRnnMetricTrendRows(fallback);
+  baselineNote?.classList.toggle("hidden", !trendRows.isSinglePointBaseline);
+
+  if (typeof Chart === "undefined") {
+    renderRnnMetricTrendRows(fallback.history, fallback.isRegression, fallback.metricContext);
+  } else {
+    renderRnnLineChart("rnn-eval-score-chart", "rnn-eval-score-empty", dashboard.scoreChart, "score");
+    renderRnnLineChart("rnn-eval-loss-chart", "rnn-eval-loss-empty", dashboard.lossChart, "loss");
+  }
+
+  renderRnnBaselineComparison(dashboard.comparison);
+  const diagnosticHost = qs("#rnn-eval-task-diagnostic");
+  if (diagnosticHost) diagnosticHost.innerHTML = renderRnnTaskDiagnostic(dashboard.diagnostic);
+}
+
+function syncRnnComparisonMetricToggle(metricSchema = {}) {
+  const toggle = qs(".rnn-compare-metric-toggle");
+  if (!toggle) return;
+  const metricKeys = [
+    ...(metricSchema.groups?.quality || []).map(metricKeyFromSchemaKey),
+    "val_loss"
+  ].filter(Boolean);
+  const uniqueKeys = [...new Set(metricKeys)];
+  toggle.innerHTML = uniqueKeys.map((key) => {
+    const labels = {
+      accuracy: "Accuracy",
+      macro_f1: "Macro-F1",
+      precision: "Precision",
+      recall: "Recall",
+      mae: "MAE",
+      rmse: "RMSE",
+      val_loss: "Val Loss"
+    };
+    return `<button type="button" data-rnn-compare-metric="${escapeHtml(key)}">${escapeHtml(labels[key] || key)}</button>`;
+  }).join("");
+  qsa("[data-rnn-compare-metric]").forEach((button) => {
+    button.addEventListener("click", () => {
+      trainingModeState.rnn.comparisonMetric = button.dataset.rnnCompareMetric;
+      renderRnnEvaluation();
+    });
+  });
+}
+
+function isRnnComparisonMetricAvailable(metricKey, metricSchema = {}) {
+  return [
+    ...(metricSchema.groups?.quality || []).map(metricKeyFromSchemaKey),
+    "val_loss"
+  ].includes(metricKey);
+}
+
+function metricKeyFromSchemaKey(schemaKey = "") {
+  const mapping = {
+    "val/accuracy": "accuracy",
+    "val/macro_f1": "macro_f1",
+    "val/precision": "precision",
+    "val/recall": "recall",
+    "val/mae": "mae",
+    "val/rmse": "rmse",
+    "val/loss": "val_loss"
+  };
+  return mapping[schemaKey] || "";
+}
+
 function renderRnnBaselineComparison(runs) {
   const container = qs("#rnn-eval-compare-chart");
   if (!container) return;
@@ -893,13 +992,102 @@ function renderRnnBaselineComparison(runs) {
   qsa("[data-rnn-compare-metric]").forEach((button) => {
     button.classList.toggle("active", button.dataset.rnnCompareMetric === metricKey);
   });
-  const metricsByRun = trainingModeState.rnn.evaluationRunMetrics || {};
-  const comparison = buildRnnBaselineComparisonViewModel({
+  const comparison = runs?.rows ? runs : buildRnnBaselineComparisonViewModel({
     runs,
-    metricsByRun,
+    metricsByRun: trainingModeState.rnn.evaluationRunMetrics || {},
     metricKey
   });
+  renderRnnRunComparisonChart(comparison);
   container.innerHTML = renderRnnBaselineComparisonChart(comparison);
+}
+
+function renderRnnLineChart(canvasId, emptyId, chartModel = {}, variant = "score") {
+  const canvas = qs(`#${canvasId}`);
+  const empty = qs(`#${emptyId}`);
+  if (!canvas) return;
+  const hasSeries = Array.isArray(chartModel.series) && chartModel.series.some((item) => item.values?.length);
+  empty?.classList.toggle("hidden", hasSeries);
+  canvas.classList.toggle("hidden", !hasSeries);
+  const chartRef = canvasId === "rnn-eval-score-chart" ? rnnScoreChart : rnnLossChart;
+  if (chartRef) chartRef.destroy();
+  if (!hasSeries || typeof Chart === "undefined") {
+    if (canvasId === "rnn-eval-score-chart") rnnScoreChart = null;
+    if (canvasId === "rnn-eval-loss-chart") rnnLossChart = null;
+    return;
+  }
+  const palette = variant === "loss"
+    ? ["#ef4444", "#f59e0b", "#a855f7", "#14b8a6"]
+    : ["#3b82f6", "#22c55e", "#a855f7", "#f59e0b"];
+  const datasets = chartModel.series.map((series, index) => ({
+    label: series.label,
+    data: series.values,
+    borderColor: palette[index % palette.length],
+    backgroundColor: palette[index % palette.length],
+    tension: 0.28,
+    pointRadius: 2,
+    borderWidth: 2.2
+  }));
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels: chartModel.labels || [], datasets },
+    options: buildRnnChartOptions(variant === "loss" ? "Loss" : "Epoch Score")
+  });
+  if (canvasId === "rnn-eval-score-chart") rnnScoreChart = chart;
+  if (canvasId === "rnn-eval-loss-chart") rnnLossChart = chart;
+}
+
+function renderRnnRunComparisonChart(comparison = {}) {
+  const canvas = qs("#rnn-eval-run-comparison-chart");
+  const empty = qs("#rnn-eval-run-comparison-empty");
+  if (!canvas) return;
+  const rows = (comparison.rows || []).filter((row) => row.hasValue);
+  const hasRows = rows.length > 0;
+  empty?.classList.toggle("hidden", hasRows);
+  canvas.classList.toggle("hidden", !hasRows);
+  if (rnnRunComparisonChart) {
+    rnnRunComparisonChart.destroy();
+    rnnRunComparisonChart = null;
+  }
+  if (!hasRows || typeof Chart === "undefined") return;
+  rnnRunComparisonChart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: rows.map((row) => row.label),
+      datasets: [{
+        label: comparison.metricConfig?.label || "Metric",
+        data: rows.map((row) => row.value),
+        backgroundColor: rows.map((_, index) => ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7"][index % 4]),
+        borderWidth: 0
+      }]
+    },
+    options: buildRnnChartOptions(comparison.metricConfig?.label || "Metric")
+  });
+}
+
+function buildRnnChartOptions(yTitle) {
+  const isLight = document.body.dataset.theme === "light";
+  const gridColor = isLight ? "#e2e8f0" : "rgba(148, 163, 184, 0.16)";
+  const textColor = isLight ? "#475569" : "#cbd5e1";
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: textColor, font: { family: "Inter", size: 11 } } },
+      tooltip: { mode: "index", intersect: false }
+    },
+    scales: {
+      x: {
+        grid: { color: gridColor },
+        ticks: { color: textColor, font: { family: "Inter" } },
+        title: { display: true, text: "Epoch / Run", color: textColor }
+      },
+      y: {
+        grid: { color: gridColor },
+        ticks: { color: textColor, font: { family: "Inter" } },
+        title: { display: true, text: yTitle, color: textColor }
+      }
+    }
+  };
 }
 
 function renderRnnEvaluationSidebar({ activeRun, metrics, artifacts, history, metricSource, isRegression, primary, secondary }) {

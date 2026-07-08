@@ -111,6 +111,7 @@ def train_rnn_from_dataset(
         "early_stopping_patience": early_stopping_patience,
         "gradient_clip_norm": gradient_clip_norm,
     }
+    metrics_payload.update(_diagnostics(predictions, targets, is_regression))
     (run_dir / "metrics.json").write_text(json.dumps(metrics_payload, indent=2, ensure_ascii=False), encoding="utf-8")
     _write_results_csv(run_dir / "results.csv", history)
     return metrics_payload
@@ -243,6 +244,34 @@ def _classification_metrics(predictions: List[Any], targets: List[Any]) -> Dict[
         "val/precision": round(float(np.mean(precisions)) if precisions else 0.0, 6),
         "val/recall": round(float(np.mean(recalls)) if recalls else 0.0, 6),
         "val/macro_f1": round(float(np.mean(f1s)) if f1s else 0.0, 6),
+    }
+
+
+def _diagnostics(predictions: List[Any], targets: List[Any], is_regression: bool, limit: int = 200) -> Dict[str, Any]:
+    if is_regression:
+        pairs = []
+        residuals = []
+        for pred, target in list(zip(predictions, targets))[:limit]:
+            prediction = round(float(pred), 6)
+            actual = round(float(target), 6)
+            residual = round(prediction - actual, 6)
+            pairs.append({"prediction": prediction, "actual": actual, "residual": residual})
+            residuals.append(residual)
+        return {
+            "residuals": residuals,
+            "prediction_actual_samples": pairs,
+            "diagnostic_sample_limit": limit,
+        }
+
+    labels = sorted(set(predictions) | set(targets))
+    label_index = {label: index for index, label in enumerate(labels)}
+    matrix = [[0 for _ in labels] for _ in labels]
+    for pred, target in zip(predictions, targets):
+        if target in label_index and pred in label_index:
+            matrix[label_index[target]][label_index[pred]] += 1
+    return {
+        "confusion_labels": [str(label) for label in labels],
+        "confusion_matrix": matrix,
     }
 
 

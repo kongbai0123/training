@@ -2,6 +2,10 @@ export function resolveComparisonMetricConfig(metricKey) {
   const configs = {
     accuracy: { key: "val/accuracy", label: "Accuracy", hint: "higher better", lowerBetter: false, runFields: ["best_accuracy", "accuracy"] },
     macro_f1: { key: "val/macro_f1", label: "Macro-F1", hint: "higher better", lowerBetter: false, runFields: ["best_macro_f1", "macro_f1", "primary_metric_value"] },
+    precision: { key: "val/precision", label: "Precision", hint: "higher better", lowerBetter: false, runFields: ["best_precision", "precision"] },
+    recall: { key: "val/recall", label: "Recall", hint: "higher better", lowerBetter: false, runFields: ["best_recall", "recall"] },
+    mae: { key: "val/mae", label: "MAE", hint: "lower better", lowerBetter: true, runFields: ["best_mae", "mae", "primary_metric_value"] },
+    rmse: { key: "val/rmse", label: "RMSE", hint: "lower better", lowerBetter: true, runFields: ["best_rmse", "rmse"] },
     val_loss: { key: "val/loss", label: "Val Loss", hint: "lower better", lowerBetter: true, runFields: ["best_val_loss", "val_loss"] }
   };
   return configs[metricKey] || configs.macro_f1;

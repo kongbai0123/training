@@ -202,7 +202,12 @@ def get_run_metrics(project_id: str, run_id: str):
 
     try:
         with open(metrics_file, "r", encoding="utf-8") as f:
-            return json.load(f)
+            payload = json.load(f)
+        schema_file = layout.training_run_dir(run_id) / "metric_schema.json"
+        if schema_file.exists() and isinstance(payload, dict):
+            with open(schema_file, "r", encoding="utf-8") as f:
+                payload.setdefault("metric_schema", json.load(f))
+        return payload
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
