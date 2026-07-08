@@ -1045,8 +1045,8 @@ function updateAutoReviewToolbar() {
   if (editButton) {
     editButton.disabled = !hasDraftJson;
     editButton.title = hasDraftJson
-      ? "Open selected draft LabelMe JSON."
-      : "Select a draft item with a LabelMe JSON first.";
+      ? t("autoLabel.editDraftTitle")
+      : t("autoLabel.selectDraftJsonTitle");
   }
 }
 

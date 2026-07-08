@@ -139,7 +139,8 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         self.assertIn("new URL(url, window.location.origin).toString()", auto_labeling_js)
         self.assertIn("const hasDraftJson = Boolean(selectedAutoReviewItem?.draft_labelme_url)", auto_labeling_js)
         self.assertIn('editButton.disabled = !hasDraftJson', auto_labeling_js)
-        self.assertIn("Open selected draft LabelMe JSON.", auto_labeling_js)
+        self.assertIn('t("autoLabel.editDraftTitle")', auto_labeling_js)
+        self.assertIn('t("autoLabel.selectDraftJsonTitle")', auto_labeling_js)
 
 
 if __name__ == "__main__":

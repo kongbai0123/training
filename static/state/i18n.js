@@ -77,6 +77,24 @@ export function applyLanguageToDocument({ language, theme, translate }) {
     if (!value) return;
     el.setAttribute("placeholder", value);
   });
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    const key = el.dataset.i18nTitle;
+    const value = safeCatalogValue(dict, key, i18n.en?.[key]);
+    if (!value) return;
+    el.setAttribute("title", value);
+  });
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((el) => {
+    const key = el.dataset.i18nAriaLabel;
+    const value = safeCatalogValue(dict, key, i18n.en?.[key]);
+    if (!value) return;
+    el.setAttribute("aria-label", value);
+  });
+  document.querySelectorAll("[data-i18n-alt]").forEach((el) => {
+    const key = el.dataset.i18nAlt;
+    const value = safeCatalogValue(dict, key, i18n.en?.[key]);
+    if (!value) return;
+    el.setAttribute("alt", value);
+  });
   document.querySelectorAll("[data-i18n-tooltip]").forEach((el) => {
     const key = el.dataset.i18nTooltip;
     const value = safeCatalogValue(dict, key, i18n.en?.[key]);

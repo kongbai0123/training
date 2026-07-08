@@ -1732,7 +1732,7 @@ function updateRnnStartControls() {
     button.disabled = !canStart;
     button.classList.toggle("btn-primary", canStart);
     button.classList.toggle("btn-disabled", !canStart);
-    button.title = canStart ? "Start RNN training" : message;
+    button.title = canStart ? t("rnn.training.startTitle") : message;
   });
 
   const bannerBtn = qs("#rnn-start-disabled");
