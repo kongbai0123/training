@@ -15,7 +15,7 @@ import {
   buildRnnBaselineComparisonViewModel,
   isSequenceEvaluationRun,
   resolveRnnEvaluationViewModel
-} from "./rnn_evaluation_helpers.js";
+} from "./rnn_evaluation_helpers.js?v=20260708-rnn-epoch-axis";
 import {
   renderRnnEvaluationArtifactList,
   renderRnnEvaluationEpochTableRows,
@@ -1219,7 +1219,8 @@ function renderRnnLineChart(canvasId, emptyId, chartModel = {}, variant = "score
   const canvas = qs(`#${canvasId}`);
   const empty = qs(`#${emptyId}`);
   if (!canvas) return;
-  const hasSeries = Array.isArray(chartModel.series) && chartModel.series.some((item) => item.values?.length);
+  const hasSeries = Array.isArray(chartModel.series)
+    && chartModel.series.some((item) => (item.values || []).some((value) => typeof value === "number" && Number.isFinite(value)));
   empty?.classList.toggle("hidden", hasSeries);
   canvas.classList.toggle("hidden", !hasSeries);
   const chartRef = canvasId === "rnn-eval-score-chart" ? rnnScoreChart : rnnLossChart;
@@ -1242,6 +1243,7 @@ function renderRnnLineChart(canvasId, emptyId, chartModel = {}, variant = "score
     backgroundColor: palette[index % palette.length],
     tension: 0.28,
     pointRadius: 2,
+    spanGaps: false,
     borderWidth: 2.2
   }));
   const chart = new Chart(canvas, {

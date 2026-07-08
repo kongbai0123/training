@@ -81,9 +81,9 @@ export function buildRnnTaskAwareDashboard({ metrics = null, summary = {}, histo
   const metricSchema = resolveRnnMetricSchema(metrics, summary);
   const taskType = String(metrics?.task_type || summary?.task_type || "sequence_classification").toLowerCase();
   const isRegression = taskType.includes("regression") || metricSchema.primary_metric?.goal === "minimize";
-  const qualityKeys = (metricSchema.groups?.quality || []).filter((key) => extractMetricSeries(history, key).length);
-  const lossKeys = (metricSchema.groups?.loss || ["train/loss", "val/loss"]).filter((key) => extractMetricSeries(history, key).length);
   const labels = Array.isArray(history) ? history.map((row, index) => row.epoch ?? index + 1) : [];
+  const qualityKeys = (metricSchema.groups?.quality || []).filter((key) => hasMetricValue(history, key));
+  const lossKeys = (metricSchema.groups?.loss || ["train/loss", "val/loss"]).filter((key) => hasMetricValue(history, key));
   const latest = history?.length ? history[history.length - 1] : {};
   return {
     taskType,
@@ -95,16 +95,33 @@ export function buildRnnTaskAwareDashboard({ metrics = null, summary = {}, histo
       title: isRegression ? "Regression Error Curve" : "Classification Score Curve",
       note: `Schema quality: ${qualityKeys.length ? qualityKeys.join(", ") : "none"}`,
       labels,
-      series: qualityKeys.map((key) => ({ key, label: metricLabel(key), values: extractMetricSeries(history, key) }))
+      series: qualityKeys.map((key) => buildAlignedChartSeries(history, key))
     },
     lossChart: {
       title: "Loss Curve",
       note: `Schema loss: ${lossKeys.length ? lossKeys.join(", ") : "none"}`,
       labels,
-      series: lossKeys.map((key) => ({ key, label: metricLabel(key), values: extractMetricSeries(history, key) }))
+      series: lossKeys.map((key) => buildAlignedChartSeries(history, key))
     },
     comparison: buildRnnBaselineComparisonViewModel({ runs, metricsByRun, metricKey: comparisonMetric }),
     diagnostic: buildRnnTaskDiagnostic({ metrics, latest, isRegression })
+  };
+}
+
+function hasMetricValue(history = [], key = "") {
+  return Array.isArray(history) && history.some((row) => Number.isFinite(Number(row?.[key])));
+}
+
+function buildAlignedChartSeries(history = [], key = "") {
+  const values = (Array.isArray(history) ? history : []).map((row) => {
+    const value = Number(row?.[key]);
+    return Number.isFinite(value) ? value : null;
+  });
+  return {
+    key,
+    label: metricLabel(key),
+    values,
+    pointCount: values.filter((value) => typeof value === "number" && Number.isFinite(value)).length
   };
 }
 

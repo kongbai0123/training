@@ -10,7 +10,7 @@ import {
   renderTrainingModeSidebar,
   renderTrainingWorkspace,
   syncTrainingModeForProject,
-} from "../pages/training_modes.js?v=20260708-rnn-feature-wizard";
+} from "../pages/training_modes.js?v=20260708-rnn-epoch-axis";
 import { initEvaluation, renderEvaluationPage } from "../pages/evaluation.js?v=20260702-cnn-eval-polish2";
 import { initModelCompare, renderModelComparePage } from "../pages/model_compare.js?v=20260630-ui-init-fix";
 import { initInference, renderInferencePage } from "../pages/inference.js?v=20260702-model-scroll-bounds";

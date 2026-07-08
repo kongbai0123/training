@@ -40,8 +40,8 @@ class ProjectsPageStaticTests(unittest.TestCase):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("../pages/projects.js?v=20260708-rnn-history-family", page_registry_js)
-        self.assertIn("./core/bootstrap.js?v=20260708-rnn-history-family", app_js)
-        self.assertIn("/static/app.js?v=20260708-rnn-history-family", index_html)
+        self.assertIn("./core/bootstrap.js?v=20260708-rnn-epoch-axis", app_js)
+        self.assertIn("/static/app.js?v=20260708-rnn-epoch-axis", index_html)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js?v=20260708-rnn-history-family";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260708-rnn-epoch-axis";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
