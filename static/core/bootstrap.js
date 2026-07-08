@@ -21,7 +21,7 @@ import {
   initPageModules,
   renderPrimaryPageModules,
   renderSecondaryPageModules,
-} from "./page_registry.js?v=20260708-rnn-feature-wizard";
+} from "./page_registry.js?v=20260708-rnn-history-family";
 
 const {
   bootstrapSession,

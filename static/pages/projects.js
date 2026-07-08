@@ -168,36 +168,36 @@ function currentInferenceJobs() {
 function matchesHistoryMode(project, mode) {
   if (!mode || mode === "all") return true;
   const category = getProjectHistoryCategory(project);
-  if (category === "both") return mode === "cnn" || mode === "rnn";
   return category === mode;
 }
 
 function getProjectHistoryCategory(project) {
   const taskType = String(project?.task_type || "").toLowerCase();
+  const isRnnTask = ["sequence", "time_series", "timeseries", "rnn"].some((token) => taskType.includes(token));
+  if (isRnnTask) return "rnn";
+
+  const isCnnTask = ["detection", "segmentation", "classification", "pose", "obb"].some((token) => taskType.includes(token));
+  if (isCnnTask) return "cnn";
+
   const files = project?.file_summary || {};
   const hasRnnSources = Boolean(
     files.sequence_manifest ||
     Number(files.sequence_csv_files || 0) > 0 ||
     Number(files.sequence_files || 0) > 0
   );
-  const isRnnTask = ["sequence", "time_series", "timeseries", "rnn"].some((token) => taskType.includes(token));
   const hasCnnSources = Boolean(
     Number(files.images || 0) > 0 ||
     Number(files.labelme_json || 0) > 0 ||
-    Number(files.yolo_labels || 0) > 0 ||
-    Number(files.best_weights || 0) > 0 ||
-    Number(files.last_weights || 0) > 0 ||
-    ["detection", "segmentation", "classification", "pose", "obb"].some((token) => taskType.includes(token))
+    Number(files.yolo_labels || 0) > 0
   );
 
-  if ((hasRnnSources || isRnnTask) && hasCnnSources) return "both";
-  if (hasRnnSources || isRnnTask) return "rnn";
+  if (hasRnnSources && !hasCnnSources) return "rnn";
+  if (hasCnnSources) return "cnn";
   return "cnn";
 }
 
 function getProjectHistoryModeLabel(project) {
   const category = getProjectHistoryCategory(project);
-  if (category === "both") return "CNN/RNN";
   return category.toUpperCase();
 }
 

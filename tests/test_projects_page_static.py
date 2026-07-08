@@ -19,6 +19,10 @@ class ProjectsPageStaticTests(unittest.TestCase):
         projects_js = (ROOT / "static" / "pages" / "projects.js").read_text(encoding="utf-8")
 
         self.assertIn("function renderRnnProjectFileSummary", projects_js)
+        self.assertIn('if (isRnnTask) return "rnn";', projects_js)
+        self.assertNotIn('return "CNN/RNN"', projects_js)
+        self.assertNotIn("files.best_weights || 0) > 0 ||", projects_js)
+        self.assertNotIn("files.last_weights || 0) > 0 ||", projects_js)
         self.assertIn('fileMetric("Target / Y"', projects_js)
         self.assertIn('fileMetric("Features / X"', projects_js)
         self.assertIn('fileMetric("Runs"', projects_js)
@@ -29,6 +33,15 @@ class ProjectsPageStaticTests(unittest.TestCase):
 
         self.assertIn("const shouldShowJobSection = inferenceHistoryLoading", projects_js)
         self.assertIn("if (!shouldShowJobSection) return projectHtml;", projects_js)
+
+    def test_projects_module_cache_busts_history_family_fix(self):
+        page_registry_js = (ROOT / "static" / "core" / "page_registry.js").read_text(encoding="utf-8")
+        app_js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+
+        self.assertIn("../pages/projects.js?v=20260708-rnn-history-family", page_registry_js)
+        self.assertIn("./core/bootstrap.js?v=20260708-rnn-history-family", app_js)
+        self.assertIn("/static/app.js?v=20260708-rnn-history-family", index_html)
 
 
 if __name__ == "__main__":

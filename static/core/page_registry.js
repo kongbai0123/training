@@ -1,5 +1,5 @@
 import { initDashboard, renderDashboard } from "../pages/dashboard.js";
-import { initProjects, renderProjectsPage } from "../pages/projects.js?v=20260630-class-batch-infer";
+import { initProjects, renderProjectsPage } from "../pages/projects.js?v=20260708-rnn-history-family";
 import { initDataset, renderDatasetPage } from "../pages/dataset.js?v=20260630-progress-hud";
 import { initLabelMe, renderLabelMeManager } from "../pages/labelme.js";
 import { initSplit, renderSplitPage } from "../pages/split.js";

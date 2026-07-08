@@ -63,14 +63,18 @@ class ProjectManager:
                         with open(json_path, "r", encoding="utf-8") as f:
                             data = json.load(f)
                             project_root = str(d.resolve().as_posix())
+                            is_sequence = ProjectManager._is_sequence_task(data.get("task_type", ""))
                             projects.append({
                                 "project_id": data.get("project_id"),
                                 "project_name": data.get("project_name"),
                                 "task_type": data.get("task_type"),
                                 "created_at": data.get("created_at"),
                                 "updated_at": data.get("updated_at"),
-                                "class_names": data.get("class_names", []),
+                                "class_names": [] if is_sequence else data.get("class_names", []),
                                 "annotation_progress": data.get("annotation_progress", {"total": 0, "annotated": 0}),
+                                "current": data.get("current", {}),
+                                "rnn_config": data.get("rnn_config", {}) if is_sequence else {},
+                                "training_runs": data.get("training_runs", []) if is_sequence else [],
                                 "path": project_root,
                                 "full_path": project_root,
                                 "copy_path": project_root,

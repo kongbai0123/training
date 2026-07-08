@@ -76,6 +76,47 @@ class ProjectHistorySequenceSummaryTests(unittest.TestCase):
             self.assertEqual(record["path"], expected_path)
             self.assertEqual(record["file_summary"]["project_root"], expected_path)
 
+    def test_sequence_history_record_includes_rnn_schema_and_runs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            projects_root = Path(tmp)
+            project_dir = projects_root / "proj_sequence"
+            project_dir.mkdir(parents=True)
+            (project_dir / "project.json").write_text(
+                """
+                {
+                  "project_id": "proj_sequence",
+                  "project_name": "Sequence Project",
+                  "task_type": "sequence_regression",
+                  "created_at": "2026-01-01T00:00:00",
+                  "updated_at": "2026-01-02T00:00:00",
+                  "class_names": ["legacy", "csv", "columns"],
+                  "annotation_progress": {"total": 0, "annotated": 0},
+                  "layout": {"mode": "v3"},
+                  "rnn_config": {
+                    "task_head": "regression",
+                    "target_column": "T (degC)",
+                    "feature_columns": ["pressure", "humidity"],
+                    "sequence_column": "",
+                    "time_column": "Date Time"
+                  },
+                  "training_runs": [
+                    {"run_id": "run_rnn_001", "task_type": "sequence_regression", "architecture": "rnn"}
+                  ]
+                }
+                """,
+                encoding="utf-8",
+            )
+
+            with patch("src.project_manager.PROJECTS_DIR", projects_root):
+                projects = ProjectManager.get_all_projects()
+
+            self.assertEqual(len(projects), 1)
+            record = projects[0]
+            self.assertEqual(record["class_names"], [])
+            self.assertEqual(record["rnn_config"]["target_column"], "T (degC)")
+            self.assertEqual(record["rnn_config"]["feature_columns"], ["pressure", "humidity"])
+            self.assertEqual(record["training_runs"][0]["run_id"], "run_rnn_001")
+
 
 if __name__ == "__main__":
     unittest.main()
