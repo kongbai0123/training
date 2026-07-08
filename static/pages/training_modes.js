@@ -21,7 +21,6 @@ import {
   renderRnnEvaluationEpochTableRows,
   renderRnnEvaluationRunHistoryTableRows,
   renderRnnEvaluationSidebarRows,
-  renderRnnBaselineComparisonChart,
   renderRnnMetricTrendChartStack,
   renderRnnTaskDiagnostic,
   resolveRnnEvaluationOverviewRender,
@@ -93,7 +92,7 @@ export { trainingModeState } from "./training_mode_state.js";
 
 let rnnScoreChart = null;
 let rnnLossChart = null;
-let rnnRunComparisonChart = null;
+let rnnRunComparisonCharts = [];
 
 export function initTrainingModeSidebar() {
   qsa("[data-training-mode]").forEach((button) => {
@@ -377,12 +376,6 @@ export function initRnnPreviewEvents() {
   qs("#rnn-refresh-models")?.addEventListener("click", () => loadRnnInferenceModels({ force: true }));
   qs("#rnn-refresh-inference-result")?.addEventListener("click", () => loadLatestRnnInferenceResult({ force: true }));
   qs("#rnn-refresh-evaluation")?.addEventListener("click", () => loadRnnEvaluation({ force: true }));
-  qsa("[data-rnn-compare-metric]").forEach((button) => {
-    button.addEventListener("click", () => {
-      trainingModeState.rnn.comparisonMetric = button.dataset.rnnCompareMetric || "macro_f1";
-      renderRnnEvaluation();
-    });
-  });
   qs("#rnn-inference-model")?.addEventListener("change", updateRnnInferenceControls);
   qs("#rnn-inference-csv-file")?.addEventListener("change", () => {
     if (qs("#rnn-inference-csv-file")?.files?.[0]) {
@@ -904,15 +897,6 @@ function renderRnnMetricTrendRows(history, isRegression, metricContext = {}) {
 }
 
 function renderRnnTaskAwareDashboard(dashboard, fallback = {}) {
-  syncRnnComparisonMetricToggle(dashboard.metricSchema);
-  if (!isRnnComparisonMetricAvailable(trainingModeState.rnn.comparisonMetric, dashboard.metricSchema)) {
-    trainingModeState.rnn.comparisonMetric = metricKeyFromSchemaKey(dashboard.metricSchema?.primary_metric?.key) || "macro_f1";
-    dashboard.comparison = buildRnnBaselineComparisonViewModel({
-      runs: trainingModeState.rnn.evaluationRuns || [],
-      metricsByRun: trainingModeState.rnn.evaluationRunMetrics || {},
-      metricKey: trainingModeState.rnn.comparisonMetric
-    });
-  }
   setText("#rnn-eval-chart-count", `${dashboard.chartCount || 0} metrics`);
   setText("#rnn-eval-score-chart-title", dashboard.scoreChart?.title || "Score curve");
   setText("#rnn-eval-score-chart-note", dashboard.scoreChart?.note || "Driven by task metric schema.");
@@ -932,44 +916,22 @@ function renderRnnTaskAwareDashboard(dashboard, fallback = {}) {
     renderRnnLineChart("rnn-eval-loss-chart", "rnn-eval-loss-empty", dashboard.lossChart, "loss");
   }
 
-  renderRnnBaselineComparison(dashboard.comparison);
+  renderRnnBaselineComparison(dashboard.metricSchema);
   const diagnosticHost = qs("#rnn-eval-task-diagnostic");
   if (diagnosticHost) diagnosticHost.innerHTML = renderRnnTaskDiagnostic(dashboard.diagnostic);
 }
 
-function syncRnnComparisonMetricToggle(metricSchema = {}) {
-  const toggle = qs(".rnn-compare-metric-toggle");
-  if (!toggle) return;
+function resolveRnnComparisonMetricKeys(metricSchema = {}) {
   const metricKeys = [
     ...(metricSchema.groups?.quality || []).map(metricKeyFromSchemaKey),
     "val_loss"
   ].filter(Boolean);
   const uniqueKeys = [...new Set(metricKeys)];
-  toggle.innerHTML = uniqueKeys.map((key) => {
-    const labels = {
-      accuracy: "Accuracy",
-      macro_f1: "Macro-F1",
-      precision: "Precision",
-      recall: "Recall",
-      mae: "MAE",
-      rmse: "RMSE",
-      val_loss: "Val Loss"
-    };
-    return `<button type="button" data-rnn-compare-metric="${escapeHtml(key)}">${escapeHtml(labels[key] || key)}</button>`;
-  }).join("");
-  qsa("[data-rnn-compare-metric]").forEach((button) => {
-    button.addEventListener("click", () => {
-      trainingModeState.rnn.comparisonMetric = button.dataset.rnnCompareMetric;
-      renderRnnEvaluation();
-    });
-  });
-}
-
-function isRnnComparisonMetricAvailable(metricKey, metricSchema = {}) {
-  return [
-    ...(metricSchema.groups?.quality || []).map(metricKeyFromSchemaKey),
-    "val_loss"
-  ].includes(metricKey);
+  if (uniqueKeys.includes("mae")) {
+    return ["mae", "rmse", "val_loss"].filter((key) => uniqueKeys.includes(key));
+  }
+  const classificationDefaults = ["accuracy", "macro_f1", "val_loss"].filter((key) => uniqueKeys.includes(key));
+  return (classificationDefaults.length ? classificationDefaults : uniqueKeys).slice(0, 3);
 }
 
 function metricKeyFromSchemaKey(schemaKey = "") {
@@ -985,20 +947,19 @@ function metricKeyFromSchemaKey(schemaKey = "") {
   return mapping[schemaKey] || "";
 }
 
-function renderRnnBaselineComparison(runs) {
-  const container = qs("#rnn-eval-compare-chart");
+function renderRnnBaselineComparison(metricSchema = {}) {
+  const container = qs("#rnn-eval-run-comparison-chart-grid");
+  const countBadge = qs("#rnn-eval-run-comparison-count");
   if (!container) return;
-  const metricKey = trainingModeState.rnn.comparisonMetric || "macro_f1";
-  qsa("[data-rnn-compare-metric]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.rnnCompareMetric === metricKey);
-  });
-  const comparison = runs?.rows ? runs : buildRnnBaselineComparisonViewModel({
-    runs,
+  const metricKeys = resolveRnnComparisonMetricKeys(metricSchema);
+  const comparisons = metricKeys.map((metricKey) => buildRnnBaselineComparisonViewModel({
+    runs: trainingModeState.rnn.evaluationRuns || [],
     metricsByRun: trainingModeState.rnn.evaluationRunMetrics || {},
     metricKey
-  });
-  renderRnnRunComparisonChart(comparison);
-  container.innerHTML = renderRnnBaselineComparisonChart(comparison);
+  }));
+  setText("#rnn-eval-run-comparison-count", `${comparisons.length} metrics`);
+  countBadge?.classList.toggle("hidden", !comparisons.length);
+  renderRnnRunComparisonCharts(comparisons);
 }
 
 function renderRnnLineChart(canvasId, emptyId, chartModel = {}, variant = "score") {
@@ -1036,35 +997,56 @@ function renderRnnLineChart(canvasId, emptyId, chartModel = {}, variant = "score
   if (canvasId === "rnn-eval-loss-chart") rnnLossChart = chart;
 }
 
-function renderRnnRunComparisonChart(comparison = {}) {
-  const canvas = qs("#rnn-eval-run-comparison-chart");
-  const empty = qs("#rnn-eval-run-comparison-empty");
-  if (!canvas) return;
-  const rows = (comparison.rows || []).filter((row) => row.hasValue);
-  const hasRows = rows.length > 0;
-  empty?.classList.toggle("hidden", hasRows);
-  canvas.classList.toggle("hidden", !hasRows);
-  if (rnnRunComparisonChart) {
-    rnnRunComparisonChart.destroy();
-    rnnRunComparisonChart = null;
+function renderRnnRunComparisonCharts(comparisons = []) {
+  const host = qs("#rnn-eval-run-comparison-chart-grid");
+  if (!host) return;
+  rnnRunComparisonCharts.forEach((chart) => chart.destroy());
+  rnnRunComparisonCharts = [];
+
+  const available = comparisons.filter((comparison) => (comparison.rows || []).some((row) => row.hasValue));
+  if (!available.length) {
+    host.innerHTML = `<div class="rnn-eval-chart-empty">No comparable runs loaded.</div>`;
+    return;
   }
-  if (!hasRows || typeof Chart === "undefined") return;
-  rnnRunComparisonChart = new Chart(canvas, {
-    type: "bar",
-    data: {
-      labels: rows.map((row) => row.label),
-      datasets: [{
-        label: comparison.metricConfig?.label || "Metric",
-        data: rows.map((row) => row.value),
-        backgroundColor: rows.map((_, index) => ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7"][index % 4]),
-        borderWidth: 0
-      }]
-    },
-    options: buildRnnChartOptions(comparison.metricConfig?.label || "Metric")
+
+  host.innerHTML = available.map((comparison, index) => {
+    const label = comparison.metricConfig?.label || "Metric";
+    const hint = comparison.metricConfig?.hint || "";
+    return `
+      <div class="rnn-comparison-card">
+        <div class="rnn-comparison-card-head">
+          <strong>${escapeHtml(label)}</strong>
+          <span>${escapeHtml(hint)}</span>
+        </div>
+        <canvas id="rnn-eval-run-comparison-chart-${index}"></canvas>
+      </div>
+    `;
+  }).join("");
+
+  if (typeof Chart === "undefined") return;
+  available.forEach((comparison, index) => {
+    const canvas = qs(`#rnn-eval-run-comparison-chart-${index}`);
+    const rows = (comparison.rows || []).filter((row) => row.hasValue);
+    if (!canvas || !rows.length) return;
+    rnnRunComparisonCharts.push(new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: rows.map((row) => row.label),
+        datasets: [{
+          label: comparison.metricConfig?.label || "Metric",
+          data: rows.map((row) => row.value),
+          backgroundColor: rows.map((_, rowIndex) => ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7"][rowIndex % 4]),
+          borderWidth: 0,
+          borderRadius: 4,
+          maxBarThickness: 48
+        }]
+      },
+      options: buildRnnChartOptions(comparison.metricConfig?.label || "Metric", { compact: true })
+    }));
   });
 }
 
-function buildRnnChartOptions(yTitle) {
+function buildRnnChartOptions(yTitle, { compact = false } = {}) {
   const isLight = document.body.dataset.theme === "light";
   const gridColor = isLight ? "#e2e8f0" : "rgba(148, 163, 184, 0.16)";
   const textColor = isLight ? "#475569" : "#cbd5e1";
@@ -1072,19 +1054,19 @@ function buildRnnChartOptions(yTitle) {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { labels: { color: textColor, font: { family: "Inter", size: 11 } } },
+      legend: { display: !compact, labels: { color: textColor, font: { family: "Inter", size: 11 } } },
       tooltip: { mode: "index", intersect: false }
     },
     scales: {
       x: {
         grid: { color: gridColor },
-        ticks: { color: textColor, font: { family: "Inter" } },
-        title: { display: true, text: "Epoch / Run", color: textColor }
+        ticks: { color: textColor, font: { family: "Inter", size: compact ? 10 : 12 } },
+        title: { display: !compact, text: "Epoch / Run", color: textColor }
       },
       y: {
         grid: { color: gridColor },
-        ticks: { color: textColor, font: { family: "Inter" } },
-        title: { display: true, text: yTitle, color: textColor }
+        ticks: { color: textColor, font: { family: "Inter", size: compact ? 10 : 12 } },
+        title: { display: !compact, text: yTitle, color: textColor }
       }
     }
   };

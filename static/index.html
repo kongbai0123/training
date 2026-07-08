@@ -1173,17 +1173,9 @@
                       <div class="rnn-result-panel rnn-chart-panel">
                         <div class="section-title">
                           <h3>Run Comparison</h3>
-                          <div class="rnn-compare-metric-toggle" role="group" aria-label="RNN comparison metric">
-                            <button type="button" class="active" data-rnn-compare-metric="accuracy">Accuracy</button>
-                            <button type="button" data-rnn-compare-metric="macro_f1">Macro-F1</button>
-                            <button type="button" data-rnn-compare-metric="val_loss">Val Loss</button>
-                          </div>
+                          <span class="summary-badge badge-neutral" id="rnn-eval-run-comparison-count">0 metrics</span>
                         </div>
-                        <div class="rnn-chart-shell compact">
-                          <canvas id="rnn-eval-run-comparison-chart"></canvas>
-                          <div class="rnn-eval-chart-empty hidden" id="rnn-eval-run-comparison-empty">No comparable runs loaded.</div>
-                        </div>
-                        <div class="rnn-compare-mini-chart" id="rnn-eval-compare-chart">
+                        <div class="rnn-comparison-chart-grid" id="rnn-eval-run-comparison-chart-grid">
                           <div class="rnn-eval-chart-empty">No comparable runs loaded.</div>
                         </div>
                       </div>

@@ -198,9 +198,9 @@
   background: var(--bg-panel);
 }
 .rnn-chart-shell.compact {
-  min-height: 132px;
-  padding: 8px 12px;
-  margin-bottom: 8px;
+  min-height: 180px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
 }
 .rnn-chart-shell canvas {
   width: 100% !important;
@@ -208,7 +208,7 @@
   display: block;
 }
 .rnn-chart-shell.compact canvas {
-  height: 104px !important;
+  height: 140px !important;
 }
 .rnn-chart-heading {
   display: flex;
@@ -361,33 +361,37 @@
   border-radius: 4px 4px 0 0;
   background: linear-gradient(180deg, var(--primary), var(--accent));
 }
-.rnn-compare-mini-chart {
+.rnn-comparison-chart-grid {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
 }
-.rnn-compare-metric-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px;
+.rnn-comparison-card {
+  min-width: 0;
+  padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--bg-panel);
 }
-.rnn-compare-metric-toggle button {
-  min-height: 28px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-muted);
-  font-weight: 700;
-  font-size: 0.76rem;
-  cursor: pointer;
+.rnn-comparison-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
 }
-.rnn-compare-metric-toggle button.active {
-  background: var(--primary);
-  color: #ffffff;
+.rnn-comparison-card-head strong {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+.rnn-comparison-card-head span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+.rnn-comparison-card canvas {
+  width: 100% !important;
+  height: 150px !important;
+  display: block;
 }
 .rnn-compare-mini-row {
   display: grid;
