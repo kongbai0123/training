@@ -40,6 +40,14 @@ export function resolveRnnEvaluationOverviewRender({
   };
 }
 
+export function resolveRnnEvaluationSidebarStatusRender(sidebar = {}) {
+  return {
+    selector: sidebar.statusSelector,
+    className: sidebar.status?.className || "summary-badge badge-neutral",
+    text: sidebar.status?.text || "No run"
+  };
+}
+
 export function renderRnnEvaluationEpochTableRows(epochRows = {}) {
   if (!epochRows.hasRows) {
     return `<tr><td colspan="6">${escapeHtml(epochRows.emptyMessage)}</td></tr>`;

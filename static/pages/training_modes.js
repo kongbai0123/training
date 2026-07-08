@@ -22,7 +22,8 @@ import {
   renderRnnEvaluationSidebarRows,
   renderRnnBaselineComparisonChart,
   renderRnnMetricTrendChartStack,
-  resolveRnnEvaluationOverviewRender
+  resolveRnnEvaluationOverviewRender,
+  resolveRnnEvaluationSidebarStatusRender
 } from "./rnn_evaluation_render_helpers.js";
 import {
   renderRnnFeatureChipList,
@@ -881,10 +882,11 @@ function renderRnnEvaluationSidebar({ activeRun, metrics, artifacts, history, me
     primary,
     secondary
   });
-  const statusBadge = qs(sidebar.statusSelector);
+  const statusView = resolveRnnEvaluationSidebarStatusRender(sidebar);
+  const statusBadge = qs(statusView.selector);
   if (statusBadge) {
-    statusBadge.className = sidebar.status.className;
-    statusBadge.textContent = sidebar.status.text;
+    statusBadge.className = statusView.className;
+    statusBadge.textContent = statusView.text;
   }
 
   sidebar.rowSections.forEach((section) => renderRnnSidebarRows(section.selector, section.rows));
