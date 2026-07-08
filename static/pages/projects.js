@@ -226,9 +226,15 @@ function renderProjectCard(project, options = {}) {
   const updatedAt = formatDate(project.updated_at);
   const projectName = project.project_name || project.project_id || "--";
   const fullPath = project.full_path || project.copy_path || project.path || files.project_root || "";
-  const progressText = progress.total
-    ? t("history.imagesAnnotated", { annotated: progress.annotated || 0, total: progress.total || 0 })
-    : t("history.noImagesImported");
+  const isRnnProject = getProjectHistoryCategory(project) === "rnn";
+  const progressText = isRnnProject
+    ? buildRnnProjectHistoryStatus(project, files)
+    : progress.total
+      ? t("history.imagesAnnotated", { annotated: progress.annotated || 0, total: progress.total || 0 })
+      : t("history.noImagesImported");
+  const fileSummaryHtml = isRnnProject
+    ? renderRnnProjectFileSummary(project, files)
+    : renderCnnProjectFileSummary(project, files, progress);
 
   return `
     <article class="project-history-card ${options.compact ? "compact" : ""}">
@@ -248,14 +254,7 @@ function renderProjectCard(project, options = {}) {
       </div>
       ${options.showFiles ? `
         <div class="project-file-summary">
-          ${fileMetric(t("dataset.images"), files.images ?? progress.total ?? 0)}
-          ${fileMetric(t("history.labels"), `${progress.annotated ?? 0}/${progress.total ?? 0}`)}
-          ${fileMetric("Split", files.split_ready ? t("common.ready") : t("common.none"), files.split_ready ? "success" : "muted")}
-          ${fileMetric("best.pt", files.best_weights ?? 0)}
-          ${fileMetric("last.pt", files.last_weights ?? 0)}
-          ${fileMetric(t("history.inferenceJobs"), files.inference_jobs ?? 0)}
-          ${fileMetric(t("export.model"), files.exports ?? 0)}
-          ${fileMetric("Sequence CSV", files.sequence_csv_files ?? 0)}
+          ${fileSummaryHtml}
         </div>
         <div class="project-file-details">
           <div>
@@ -273,8 +272,51 @@ function renderProjectCard(project, options = {}) {
   `;
 }
 
+function buildRnnProjectHistoryStatus(project, files = {}) {
+  const config = project.rnn_config || {};
+  const csvCount = Number(files.sequence_csv_files || 0);
+  const runCount = Array.isArray(project.training_runs) ? project.training_runs.length : 0;
+  const target = config.target_column || "";
+  if (!csvCount) return "No sequence CSV imported";
+  const targetText = target ? `target ${target}` : "target not set";
+  return `${csvCount} sequence CSV, ${targetText}, ${runCount} run(s)`;
+}
+
+function renderCnnProjectFileSummary(project, files = {}, progress = {}) {
+  return [
+    fileMetric(t("dataset.images"), files.images ?? progress.total ?? 0),
+    fileMetric(t("history.labels"), `${progress.annotated ?? 0}/${progress.total ?? 0}`),
+    fileMetric("Split", files.split_ready ? t("common.ready") : t("common.none"), files.split_ready ? "success" : "muted"),
+    fileMetric("best.pt", files.best_weights ?? 0),
+    fileMetric("last.pt", files.last_weights ?? 0),
+    fileMetric(t("history.inferenceJobs"), files.inference_jobs ?? 0),
+    fileMetric(t("export.model"), files.exports ?? 0)
+  ].join("");
+}
+
+function renderRnnProjectFileSummary(project, files = {}) {
+  const config = project.rnn_config || {};
+  const runs = Array.isArray(project.training_runs) ? project.training_runs.filter((run) => {
+    const architecture = String(run.architecture || "").toLowerCase();
+    const backend = String(run.backend || "").toLowerCase();
+    return architecture === "rnn" || backend.includes("lstm") || backend.includes("xgboost") || String(run.task_type || "").includes("sequence");
+  }) : [];
+  return [
+    fileMetric("Sequence CSV", files.sequence_csv_files ?? 0),
+    fileMetric("Task", config.task_head || String(project.task_type || "").replace(/^sequence_/, "") || "--"),
+    fileMetric("Target / Y", config.target_column || "--"),
+    fileMetric("Features / X", Array.isArray(config.feature_columns) ? config.feature_columns.length : "--"),
+    fileMetric("Runs", runs.length),
+    fileMetric("best.pt", files.best_weights ?? 0),
+    fileMetric(t("history.inferenceJobs"), files.inference_jobs ?? 0),
+    fileMetric(t("export.model"), files.exports ?? 0)
+  ].join("");
+}
+
 function renderHistoryContent(projects, jobs, options = {}) {
   const projectHtml = renderProjectList(projects, options);
+  const shouldShowJobSection = inferenceHistoryLoading || (Array.isArray(jobs) && jobs.length > 0) || selectedInferenceJobIds.size > 0 || pendingDeleteInferenceJobIds.length > 0;
+  if (!shouldShowJobSection) return projectHtml;
   const jobsHtml = renderInferenceJobList(jobs);
   if (!jobsHtml) return projectHtml;
   return `
@@ -591,18 +633,27 @@ function syncCreateProjectMode() {
   qsa("[data-project-mode]").forEach((button) => {
     button.classList.toggle("active", button.dataset.projectMode === mode);
   });
-  setText("#new-project-class-label", isSequence ? "Target labels" : "Class list");
+  const classField = qs("#new-project-class-field");
+  const classList = qs("#new-project-class-list");
+  classField?.classList.toggle("hidden", isSequence);
+  classList?.classList.toggle("hidden", isSequence);
+  if (isSequence && appState.newProjectClasses.length) {
+    appState.newProjectClasses = [];
+    renderNewProjectClassList();
+  }
+  setText("#new-project-class-label", "Class list");
   setText(
     "#new-project-class-hint",
     isSequence
-      ? "Optional for RNN projects. CSV feature files must provide label or target columns later."
+      ? "RNN target / label is configured after CSV import."
       : "CNN projects use this list as detection / segmentation classes."
   );
   const input = qs("#new-project-class-input");
   if (input) {
     input.placeholder = isSequence
-      ? "Optional labels, e.g. normal, abnormal"
+      ? "Configured after CSV import"
       : "Class name, e.g. class_a; comma separated is supported";
+    input.disabled = isSequence;
   }
 }
 
@@ -610,7 +661,8 @@ async function createProject(event) {
   event.preventDefault();
   const name = qs("#new-project-name")?.value.trim();
   const type = qs("#new-project-type")?.value;
-  const classes = [...appState.newProjectClasses];
+  const isSequence = isSequenceProjectType(type);
+  const classes = isSequence ? [] : [...appState.newProjectClasses];
 
   if (!name || (!isSequenceProjectType(type) && classes.length === 0)) {
     eventBus.emit("toast", isSequenceProjectType(type) ? "請輸入專案名稱" : "請輸入專案名稱與至少一個類別");
@@ -631,7 +683,7 @@ async function createProject(event) {
 
     eventBus.emit("reload-projects", {
       openProjectId: project.project_id,
-      page: isSequenceProjectType(type) ? "training" : "dashboard"
+      page: isSequence ? "training" : "dashboard"
     });
     eventBus.emit("toast", "專案已建立");
   } catch (err) {
