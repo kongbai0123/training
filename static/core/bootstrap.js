@@ -14,7 +14,7 @@ import { showToast as showToastCore } from "./toast.js";
 import { initDirtyFormTracking } from "./dirty_forms.js";
 import { initResourceFreshnessTracking } from "./resource_freshness.js";
 import { setActivePage } from "./router.js";
-import { renderRightPanel as renderRightPanelCore } from "./right_panel.js";
+import { initWorkspaceContextPanel, renderRightPanel as renderRightPanelCore } from "./right_panel.js";
 import { initInfoTooltips } from "./tooltip.js";
 import { createProjectLifecycle } from "./project_lifecycle.js";
 import {
@@ -40,6 +40,7 @@ export async function bootstrapApp() {
   initDirtyFormTracking();
   initResourceFreshnessTracking();
   bindGlobalNavigation();
+  initWorkspaceContextPanel();
   initInfoTooltips();
 
   initPageModules();

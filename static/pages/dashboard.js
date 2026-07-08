@@ -161,17 +161,21 @@ function renderWorkflowMap(status) {
 
   setHTML("#control-cards", `
     ${renderCnnGuidedWizard(wizard)}
-    <section class="workflow-map-panel">
+    <details class="workflow-map-panel workflow-map-details">
+      <summary class="workflow-map-summary">
+        <span><i class="fa-solid fa-map"></i> Detailed Workflow Map</span>
+        <small>Open when you need stage-level metrics and direct page shortcuts.</small>
+      </summary>
       <div class="section-title workflow-map-title">
         <div>
-          <h2><i class="fa-solid fa-map"></i> Workflow Map</h2>
-          <p>依照專案狀態檢視資料、標註、分散、訓練與匯出進度；頁面可自由進入，危險操作會在執行前提醒。</p>
+          <h2><i class="fa-solid fa-map"></i> Workflow Details</h2>
+          <p>Detailed project progress by stage. Use Guided Wizard above for the primary next action.</p>
         </div>
       </div>
       <div class="workflow-grid">
         ${workflow.map(renderWorkflowCard).join("")}
       </div>
-    </section>
+    </details>
   `);
 }
 
@@ -206,15 +210,15 @@ function renderRecentProjects(projects) {
 function renderActivity(status) {
   const items = [];
   if (!status.hasProject) {
-    items.push("目前尚未開啟專案。可使用 New Project 建立專案，或從 Browse History 開啟既有專案。");
+    items.push("No active project. Create a new project or open one from Browse History.");
   } else if (!status.hasDataset) {
-    items.push("專案已開啟，但尚未匯入資料。下一步請前往 Dataset 匯入圖片或影片。");
+    items.push("Project is open, but no dataset has been imported yet. Start from Dataset.");
   } else if (!status.splitComplete) {
-    items.push("資料已匯入。請確認標註狀態，並建立 Train / Val / Test 資料分散。");
+    items.push("Dataset exists. Sync annotations and create a Train / Val / Test split before training.");
   } else if (!status.trainReady) {
-    items.push("Split 已建立，但訓練條件仍需檢查。請到 Training 查看阻擋原因。");
+    items.push("Split exists, but training readiness still has blockers. Review Training status.");
   } else {
-    items.push("專案已接近可訓練狀態。可前往 Training 設定模型並開始訓練。");
+    items.push("Project is ready for training. Open Training to review config and start a run.");
   }
 
   setHTML("#recent-activity-list", items.map((item) => `<div class="activity-item">${escapeHtml(item)}</div>`).join(""));

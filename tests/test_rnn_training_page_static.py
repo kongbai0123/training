@@ -321,6 +321,7 @@ class RNNTrainingPageStaticTests(unittest.TestCase):
         self.assertIn("Local CSV path disabled (Trusted Local Mode off)", training_modes_js)
         self.assertIn("Upload a CSV feature sequence file.", rnn_inference_helpers_js)
         self.assertIn('const hidePageGuards = visible || (appState.currentPage === "training" && trainingModeState.activeMode === "rnn");', training_modes_js)
+        self.assertIn('closest(".workspace-context-card, .summary-section")', training_modes_js)
         self.assertIn("buildRnnTrainingRightPanel", right_panel_js)
         self.assertIn("RNN Context", right_panel_js)
         self.assertIn("isRnnTrainingWorkspaceActive(pageId)", page_guards_js)

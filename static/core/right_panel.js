@@ -2,6 +2,56 @@ import { appState } from "../state.js";
 import { qs, setHTML, escapeHtml } from "../utils.js";
 import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260706-rnn-pc-catalog";
 
+function contextCardFor(selector) {
+  return qs(selector)?.closest(".workspace-context-card, .summary-section") || null;
+}
+
+function setContextCardVisible(selector, visible) {
+  const card = contextCardFor(selector);
+  if (card) card.style.display = visible ? "" : "none";
+}
+
+function setWorkspaceContextExpanded(expanded) {
+  const panel = qs("#workspace-context-panel");
+  const strip = qs("#workspace-context-strip");
+  const toggle = qs("#workspace-context-toggle");
+  if (!panel || !strip || !toggle) return;
+  panel.classList.toggle("is-collapsed", !expanded);
+  strip.hidden = !expanded;
+  toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+}
+
+export function initWorkspaceContextPanel() {
+  const toggle = qs("#workspace-context-toggle");
+  if (!toggle) return;
+  const stored = localStorage.getItem("vts.workspaceContextExpanded");
+  setWorkspaceContextExpanded(stored === "true");
+  toggle.addEventListener("click", () => {
+    const expanded = toggle.getAttribute("aria-expanded") !== "true";
+    localStorage.setItem("vts.workspaceContextExpanded", expanded ? "true" : "false");
+    setWorkspaceContextExpanded(expanded);
+  });
+}
+
+function updateWorkspaceContextSummary(pageId, status, config = {}) {
+  const projectLabel = status.hasProject ? status.projectName : "No project";
+  const pageLabel = config.title || getPageTitle(pageId);
+  const actionsCount = config.suppressActions ? 0 : (config.actions || []).length;
+  const warningCount = config.suppressWarnings ? 0 : ((config.warnings || []).length);
+  const notesCount = config.suppressWarnings ? 0 : ((config.notes || []).length);
+  const readiness = status.hasProject
+    ? (status.trainReady ? "Training ready" : status.hasDataset ? "Dataset active" : "Project open")
+    : "Workspace idle";
+  setHTML("#workspace-context-summary", `
+    <span class="summary-badge badge-neutral">${escapeHtml(projectLabel)}</span>
+    <span class="summary-badge badge-info">${escapeHtml(pageLabel)}</span>
+    <span class="summary-badge badge-${status.trainReady ? "success" : "neutral"}">${escapeHtml(readiness)}</span>
+    <span class="summary-badge badge-neutral">${actionsCount} actions</span>
+    <span class="summary-badge badge-${warningCount > 0 ? "warning" : "neutral"}">${warningCount} warnings</span>
+    ${notesCount > 0 ? `<span class="summary-badge badge-info">${notesCount} notes</span>` : ""}
+  `);
+}
+
 function renderProjectSummary(status, pageId = appState.currentPage) {
   const taskLabel = String(status.taskType || "--")
     .replace(/_/g, " ")
@@ -10,7 +60,11 @@ function renderProjectSummary(status, pageId = appState.currentPage) {
   if (titleEl) titleEl.textContent = pageId === "dashboard" ? "Current Project" : "Project Context";
 
   if (!status.hasProject) {
-    setHTML("#project-summary", "");
+    setHTML("#project-summary", `
+      <div class="summary-empty compact">
+        <p>No active project.</p>
+      </div>
+    `);
     return;
   }
 
@@ -63,12 +117,13 @@ export function renderRightPanel(pageId, status) {
   const container = qs("#page-context-container");
   const section = qs("#section-page-context");
   const titleEl = qs("#page-context-title");
-  const actionsSection = qs("#next-actions-list")?.closest(".summary-section");
-  const warningsSection = qs("#warning-list")?.closest(".summary-section");
+  const actionsSection = contextCardFor("#next-actions-list");
+  const warningsSection = contextCardFor("#warning-list");
 
   if (!container || !section) return;
   if (actionsSection) actionsSection.style.display = "";
   if (warningsSection) warningsSection.style.display = "";
+  setContextCardVisible("#project-summary", true);
 
   const bypassEmptyPages = ["dashboard", "projects", "settings"];
   const showEmpty = !status.hasProject && !bypassEmptyPages.includes(pageId);
@@ -84,6 +139,11 @@ export function renderRightPanel(pageId, status) {
     `;
     setHTML("#next-actions-list", `<li>Open Projects or Browse History to choose a project.</li>`);
     setHTML("#warning-list", `<div class="summary-warning-item">No project is open for this page.</div>`);
+    updateWorkspaceContextSummary(pageId, status, {
+      title: getPageTitle(pageId),
+      actions: ["Open Projects or Browse History to choose a project."],
+      warnings: ["No project is open for this page."]
+    });
     return;
   }
 
@@ -92,6 +152,11 @@ export function renderRightPanel(pageId, status) {
     container.innerHTML = "";
     setHTML("#next-actions-list", "<li>No suggested action for this page.</li>");
     setHTML("#warning-list", "");
+    updateWorkspaceContextSummary(pageId, status, {
+      title: "Page Context",
+      actions: ["No suggested action for this page."],
+      warnings: []
+    });
     return;
   }
 
@@ -134,7 +199,7 @@ export function renderRightPanel(pageId, status) {
 
   const warnings = config.warnings || [];
   const notes = config.notes || [];
-  const warningTitle = qs("#warning-list")?.closest(".summary-section")?.querySelector("h2");
+  const warningTitle = contextCardFor("#warning-list")?.querySelector("h2");
   if (warningTitle) warningTitle.textContent = warnings.length > 0 ? "Warnings" : (notes.length > 0 ? "Notes" : "Warnings");
   if (!config.suppressWarnings) {
     setHTML("#warning-list", warnings.length > 0
@@ -144,6 +209,7 @@ export function renderRightPanel(pageId, status) {
   } else {
     setHTML("#warning-list", "");
   }
+  updateWorkspaceContextSummary(pageId, status, config);
 }
 function getPageTitle(pageId) {
   const map = {

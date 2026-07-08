@@ -36,7 +36,7 @@ export function initInfoTooltips() {
     const rect = target.getBoundingClientRect();
     const margin = 12;
     const host = target.closest(".main-content")
-      || target.closest(".right-summary-panel, .modal-content")
+      || target.closest(".workspace-context-strip, .modal-content")
       || document.body;
     const hostRect = host === document.body
       ? { left: 0, right: window.innerWidth, top: 0, bottom: window.innerHeight }

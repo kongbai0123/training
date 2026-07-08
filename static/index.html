@@ -101,6 +101,68 @@
       </aside>
 
       <main class="main-content">
+        <section class="workspace-context-panel is-collapsed" id="workspace-context-panel" aria-label="Workspace status">
+          <div class="workspace-context-bar">
+            <button type="button" class="workspace-context-toggle" id="workspace-context-toggle" aria-expanded="false" aria-controls="workspace-context-strip">
+              <i class="fa-solid fa-chevron-down"></i>
+              <span>Workspace status</span>
+            </button>
+            <div class="workspace-context-summary" id="workspace-context-summary">No active project.</div>
+          </div>
+          <div class="workspace-context-strip" id="workspace-context-strip" hidden>
+            <section class="workspace-context-card" id="section-page-guards" style="display: none;">
+              <div class="section-title compact"><h2 id="page-guards-title">Page Status</h2></div>
+              <div id="page-guards-container" class="guard-stack compact"></div>
+            </section>
+            <section class="workspace-context-card rnn-sidebar-readiness hidden" id="section-rnn-readiness">
+              <div class="section-title compact"><h2>RNN 訓練</h2><span class="summary-badge badge-warning" id="rnn-readiness-badge">Not Ready</span></div>
+              <p id="rnn-readiness-message">RNN readiness summary for the active sequence dataset.</p>
+              <div class="summary-row"><span>Readiness</span><code id="rnn-readiness-status">Not Ready / Preview</code></div>
+              <div class="summary-row"><span>Mode</span><code id="rnn-readiness-mode-badge">CSV required</code></div>
+              <div class="rnn-readiness-compact-grid" id="rnn-readiness-compact-grid"></div>
+              <details class="rnn-readiness-details" id="rnn-readiness-details">
+                <summary>完整檢查</summary>
+                <ul class="rnn-readiness-list compact" id="rnn-readiness-checks"></ul>
+              </details>
+            </section>
+            <section class="workspace-context-card rnn-eval-sidebar hidden" id="section-rnn-eval-summary">
+              <div class="section-title compact"><h2>RNN 評估</h2><span class="summary-badge badge-neutral" id="rnn-eval-sidebar-status">No run</span></div>
+              <div class="rnn-eval-sidebar-block">
+                <h3>Current Run</h3>
+                <div id="rnn-eval-sidebar-run" class="path-list compact"></div>
+              </div>
+              <div class="rnn-eval-sidebar-block">
+                <h3>Dataset Context</h3>
+                <div id="rnn-eval-sidebar-dataset" class="path-list compact"></div>
+              </div>
+              <div class="rnn-eval-sidebar-block">
+                <h3>Best Metrics</h3>
+                <div id="rnn-eval-sidebar-metrics" class="path-list compact"></div>
+              </div>
+              <div class="rnn-eval-sidebar-block">
+                <h3>Artifacts</h3>
+                <div id="rnn-eval-sidebar-artifacts" class="rnn-result-list compact">No artifacts.</div>
+              </div>
+            </section>
+            <section class="workspace-context-card" id="section-project-context">
+              <div class="section-title compact"><h2 id="project-context-title">Project Context</h2></div>
+              <div id="project-summary"></div>
+            </section>
+            <section class="workspace-context-card" id="section-page-context" style="display: none;">
+              <div class="section-title compact"><h2 id="page-context-title">Page Status</h2></div>
+              <div id="page-context-container"></div>
+            </section>
+            <section class="workspace-context-card" id="section-next-actions">
+              <div class="section-title compact"><h2>Next Suggested Actions</h2></div>
+              <ol id="next-actions-list" class="next-actions compact"></ol>
+            </section>
+            <section class="workspace-context-card" id="section-warnings">
+              <div class="section-title compact"><h2>Warnings</h2></div>
+              <div id="warning-list" class="warning-list compact"></div>
+            </section>
+          </div>
+        </section>
+
         <section class="page active" id="page-dashboard">
           <div class="page-header">
             <div>
@@ -1669,35 +1731,6 @@
         </section>
       </main>
 
-      <aside class="right-summary-panel">
-        <section class="summary-section" id="section-page-guards" style="display: none;">
-          <div class="section-title"><h2 id="page-guards-title">Page Status</h2></div>
-          <div id="page-guards-container" class="guard-stack"></div>
-        </section>
-        <section class="summary-section rnn-sidebar-readiness hidden" id="section-rnn-readiness">
-          <div class="section-title"><h2>RNN 訓練</h2><span class="summary-badge badge-warning" id="rnn-readiness-badge">Not Ready</span></div>
-          <p id="rnn-readiness-message">RNN readiness checks only inspect sequence_manifest.json and CSV feature files.</p>
-          <div class="summary-row"><span>Readiness</span><code id="rnn-readiness-status">Not Ready / Preview</code></div>
-          <div class="summary-row"><span>Mode</span><code id="rnn-readiness-mode-badge">CSV required</code></div>
-          <ul class="rnn-readiness-list compact" id="rnn-readiness-checks"></ul>
-        </section>
-        <section class="summary-section" id="section-project-context">
-          <div class="section-title"><h2 id="project-context-title">Project Context</h2></div>
-          <div id="project-summary"></div>
-        </section>
-        <section class="summary-section" id="section-page-context" style="display: none;">
-          <div class="section-title"><h2 id="page-context-title">Page Status</h2></div>
-          <div id="page-context-container"></div>
-        </section>
-        <section class="summary-section">
-          <div class="section-title"><h2>Next Suggested Actions</h2></div>
-          <ol id="next-actions-list" class="next-actions"></ol>
-        </section>
-        <section class="summary-section">
-          <div class="section-title"><h2>Warnings</h2></div>
-          <div id="warning-list" class="warning-list"></div>
-        </section>
-      </aside>
     </div>
   </div>
 

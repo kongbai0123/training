@@ -30,6 +30,52 @@
   box-shadow: var(--shadow);
 }
 
+.workflow-map-details {
+  padding: 0;
+  overflow: hidden;
+}
+
+.workflow-map-summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.workflow-map-summary::-webkit-details-marker {
+  display: none;
+}
+
+.workflow-map-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.workflow-map-summary i {
+  color: var(--primary);
+}
+
+.workflow-map-summary small {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.workflow-map-details[open] {
+  padding: 0 16px 16px;
+}
+
+.workflow-map-details[open] .workflow-map-summary {
+  margin: 0 -16px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
 .cnn-guided-wizard {
   grid-column: 1 / -1;
   margin-bottom: 16px;
@@ -240,7 +286,8 @@ body[data-theme="light"] .workflow-card {
   }
 
   .guided-step,
-  .dashboard-operational-alert {
+  .dashboard-operational-alert,
+  .workflow-map-summary {
     grid-template-columns: 1fr;
     display: grid;
   }

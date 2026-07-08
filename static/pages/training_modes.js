@@ -278,7 +278,7 @@ function toggleRnnEvaluationRightPanel(visible) {
   });
   const pageGuards = qs("#section-page-guards");
   if (pageGuards) pageGuards.style.display = hidePageGuards ? "none" : "";
-  [qs("#next-actions-list")?.closest(".summary-section"), qs("#warning-list")?.closest(".summary-section")]
+  [qs("#next-actions-list")?.closest(".workspace-context-card, .summary-section"), qs("#warning-list")?.closest(".workspace-context-card, .summary-section")]
     .filter(Boolean)
     .forEach((section) => {
       section.style.display = visible ? "none" : "";
