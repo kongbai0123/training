@@ -57,6 +57,7 @@ class InferenceEngine:
         conf = float(settings.get("conf", 0.25))
         iou = float(settings.get("iou", 0.7))
         imgsz = int(settings.get("imgsz", 640))
+        max_det = int(settings.get("max_det", 300))
         raw_device = settings.get("device", "cpu")
         device = cls._normalize_device(raw_device)
         device_fallback = False
@@ -100,6 +101,7 @@ class InferenceEngine:
             conf=conf,
             iou=iou,
             imgsz=imgsz,
+            max_det=max_det,
             device=device,
             save=False,
             verbose=False
@@ -234,12 +236,14 @@ class InferenceEngine:
             xyxy = boxes.xyxy[idx].detach().cpu().numpy().tolist() if boxes.xyxy is not None else None
             color = InferenceEngine._color_for_label(label)
             mask_area = 0.0
+            polygon_points: List[List[float]] = []
 
             if masks is not None and masks.data is not None and idx < len(masks.data):
                 mask = masks.data[idx].detach().cpu().numpy()
                 mask = cv2.resize(mask, (original.shape[1], original.shape[0]), interpolation=cv2.INTER_NEAREST)
                 mask_bin = (mask > 0.5).astype(np.uint8)
                 mask_area = float(mask_bin.sum() / mask_bin.size) if mask_bin.size else 0.0
+                polygon_points = InferenceEngine._mask_to_polygon_points(mask_bin)
                 combined_mask = np.maximum(combined_mask, mask_bin)
                 if show_mask:
                     color_layer = np.zeros_like(overlay)
@@ -269,11 +273,33 @@ class InferenceEngine:
                 "class_name": label,
                 "confidence": round(conf, 6),
                 "bbox_xyxy": xyxy,
+                "polygon_points": polygon_points,
                 "mask_area_ratio": round(mask_area, 6),
             })
 
         combined_ratio = float(combined_mask.sum() / combined_mask.size) if combined_mask.size and combined_mask.any() else 0.0
         return predictions, overlay, round(combined_ratio, 6)
+
+    @staticmethod
+    def _mask_to_polygon_points(mask_bin: np.ndarray, epsilon_ratio: float = 0.002) -> List[List[float]]:
+        if mask_bin is None or mask_bin.size == 0:
+            return []
+
+        contours, _ = cv2.findContours(mask_bin.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not contours:
+            return []
+
+        contour = max(contours, key=cv2.contourArea)
+        if cv2.contourArea(contour) <= 0:
+            return []
+
+        perimeter = cv2.arcLength(contour, True)
+        epsilon = max(1.0, perimeter * epsilon_ratio)
+        approx = cv2.approxPolyDP(contour, epsilon, True)
+        points = approx.reshape(-1, 2).astype(float).tolist()
+        if len(points) < 3:
+            return []
+        return [[float(x), float(y)] for x, y in points]
 
     @staticmethod
     def _build_summary(

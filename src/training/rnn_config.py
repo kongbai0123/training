@@ -298,6 +298,99 @@ def build_window_summary(config: Dict[str, Any], inspection: Dict[str, Any]) -> 
     }
 
 
+def validate_rnn_config(config: Dict[str, Any], inspection: Dict[str, Any]) -> Dict[str, Any]:
+    headers = inspection.get("headers") or []
+    header_set = set(headers)
+    feature_columns = parse_feature_columns(config.get("feature_columns"))
+    missing_features = [name for name in feature_columns if name not in header_set]
+    target_column = str(config.get("target_column") or "").strip()
+    sequence_column = str(config.get("sequence_column") or "").strip()
+    time_column = str(config.get("time_column") or "").strip()
+    sequence_length = max(1, int(config.get("sequence_length") or 16))
+    stride = max(1, int(config.get("stride") or 8))
+    horizon = max(1, int(config.get("horizon") or 1))
+    window = build_window_summary(config, inspection)
+    warnings = []
+    errors = []
+
+    if not headers:
+        errors.append("CSV header was not detected. Import a CSV file with a header row first.")
+    if not feature_columns:
+        errors.append("Select at least one feature column from the CSV header.")
+    if missing_features:
+        errors.append(f"CSV is missing configured feature columns: {', '.join(missing_features)}")
+    if not target_column or target_column not in header_set:
+        errors.append("Select a target column that exists in the CSV header.")
+    if not sequence_column or sequence_column not in header_set:
+        errors.append("Select a sequence id column that exists in the CSV header.")
+    if time_column and time_column not in header_set:
+        warnings.append("The configured time column was not found; sequence rows will use CSV row order.")
+    if not inspection.get("headers_match", True):
+        warnings.append("Imported CSV files have different headers; use one consistent schema before training.")
+    if stride > sequence_length:
+        warnings.append("stride is greater than sequence_length; this can skip many possible training windows.")
+    if horizon > sequence_length:
+        warnings.append("horizon is greater than sequence_length; verify the expected prediction distance.")
+    if window["status"] == "error":
+        errors.extend(window["errors"])
+    elif window["warnings"]:
+        warnings.extend(window["warnings"])
+    return {
+        "valid": not errors,
+        "errors": errors,
+        "warnings": warnings,
+        "window": window,
+        "feature_status": [
+            {"name": name, "exists": name in header_set, "role": "feature"} for name in feature_columns
+        ],
+    }
+
+
+def build_window_summary(config: Dict[str, Any], inspection: Dict[str, Any]) -> Dict[str, Any]:
+    sequence_length = max(1, int(config.get("sequence_length") or 16))
+    stride = max(1, int(config.get("stride") or 8))
+    horizon = max(1, int(config.get("horizon") or 1))
+    raw_lengths = inspection.get("sequence_lengths") or {}
+    length_values: List[int] = []
+    if isinstance(raw_lengths, dict):
+        for value in raw_lengths.values():
+            try:
+                parsed = int(value)
+            except (TypeError, ValueError):
+                continue
+            if parsed > 0:
+                length_values.append(parsed)
+
+    min_length = min(length_values) if length_values else int(inspection.get("min_sequence_length") or 0)
+    max_length = max(length_values) if length_values else int(inspection.get("max_sequence_length") or 0)
+    estimated_windows = 0
+    for length in length_values:
+        usable_length = length - horizon + 1
+        if usable_length >= sequence_length:
+            estimated_windows += ((usable_length - sequence_length) // stride) + 1
+
+    errors: List[str] = []
+    warnings: List[str] = []
+    if length_values and estimated_windows <= 0:
+        errors.append("The current sequence_length / horizon settings produce zero training windows for the imported CSV data.")
+    elif not length_values:
+        warnings.append("No sequence lengths were detected. Import CSV data with a sequence id column before training.")
+
+    status = "error" if errors else "warning" if warnings else "ok"
+    return {
+        "status": status,
+        "sequence_length": sequence_length,
+        "stride": stride,
+        "horizon": horizon,
+        "sequence_count": len(length_values) or int(inspection.get("sequence_count") or 0),
+        "min_sequence_length": min_length,
+        "max_sequence_length": max_length,
+        "estimated_windows": estimated_windows,
+        "errors": errors,
+        "warnings": warnings,
+    }
+
+
 def find_config_mismatches(project: Dict[str, Any]) -> List[Dict[str, Any]]:
     current_hash = active_rnn_config(project).get("feature_config_hash")
     mismatches = []

@@ -34,6 +34,6 @@
 
 ## 後續行動
 
-- 將 `license_inventory.md` 與 `license_inventory.csv` 與 `requirements.txt` 版本一致凍結，作為商用前提文件之一。
-- `commercial_risk_report.md` 應補齊 Ultralytics / Torch / 權重檔授權核對結果。
-- 所有對外釋出前先輸出完整 `THIRD_PARTY_LICENSES.md`。
+- 將 `docs/compliance/license_inventory.md` 與 `docs/compliance/license_inventory.csv` 與 `requirements.txt` 版本一致凍結，作為商用前提文件之一。
+- `docs/reports/commercial_risk_report.md` 應補齊 Ultralytics / Torch / 權重檔授權核對結果。
+- 所有對外釋出前先輸出完整 `docs/compliance/THIRD_PARTY_LICENSES.md`。

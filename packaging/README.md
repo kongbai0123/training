@@ -1,19 +1,20 @@
 # Vision Training Studio Packaging
 
-Packaging 指令與 release checklist 已整合到：
+Release packaging checklist:
 
 ```text
 docs\DEPLOYMENT.md
+docs\PYINSTALLER_WARNING_AUDIT.md
 ```
 
-常用入口：
+Build and smoke test:
 
 ```bat
 scripts\package.bat
 scripts\smoke_dist.bat
 ```
 
-底層 PyInstaller spec 仍位於：
+PyInstaller spec:
 
 ```text
 packaging\vision_training_studio.spec

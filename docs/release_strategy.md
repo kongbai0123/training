@@ -115,8 +115,8 @@ Every commercial installer release should include:
 - `release_notes.md`
 - `build_manifest.json`
 - `checksum.txt`
-- `license_inventory.md`
-- `THIRD_PARTY_LICENSES.md`
+- `docs/compliance/license_inventory.md`
+- `docs/compliance/THIRD_PARTY_LICENSES.md`
 
 Example `build_manifest.json`:
 

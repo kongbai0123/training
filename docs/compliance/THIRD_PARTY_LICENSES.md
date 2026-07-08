@@ -22,4 +22,4 @@
 
 1. 新增 `licenses/` 或 `third_party/` 資料夾並存放各授權檔。
 2. 在安裝器提供「授權聲明」頁面連結。
-3. 在診斷報告中保留 `license_inventory` 與 `commercial_risk_report` 的快照。
+3. 在診斷報告中保留 `docs/compliance/license_inventory` 與 `docs/reports/commercial_risk_report` 的快照。

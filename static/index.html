@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260702-cnn-eval-polish2">
+  <link rel="stylesheet" href="/static/style.css?v=20260706-rnn-pc-catalog">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -1078,41 +1078,63 @@
                 </div>
 
                 <div id="rnn-training-panel" class="rnn-panel" data-rnn-panel="training">
-                  <section class="rnn-preview-card">
-                    <div class="section-title"><h2>RNN 模型訓練</h2><span class="summary-badge badge-warning" id="rnn-training-state-badge">Readiness required</span></div>
-                    <div class="rnn-schema-grid">
-                      <label><span>Model</span><select id="rnn-model-family"><option value="lstm">Loading model catalog...</option></select></label>
-                      <label><span>Task Head</span><select id="rnn-task-head"><option value="classification">Classification</option><option value="regression">Regression</option></select></label>
-                      <label><span>Backend</span><input id="rnn-backend" type="text" value="pytorch_lstm" disabled></label>
-                      <label><span>Epochs</span><input id="rnn-epochs" type="number" min="1" value="10"></label>
-                      <label><span>Batch Size</span><input id="rnn-batch-size" type="number" min="1" value="16"></label>
-                      <label><span>Device</span><select id="rnn-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
-                    </div>
-                    <details class="advanced-collapse">
-                      <summary>Advanced</summary>
+                  <div class="rnn-training-layout">
+                    <section class="rnn-preview-card rnn-training-config-section">
+                      <div class="section-title"><h2>訓練設定</h2><span class="summary-badge badge-warning" id="rnn-training-state-badge">Readiness required</span></div>
+                      <p class="rnn-section-note">選擇通用 RNN / XGBoost 模板並設定訓練參數；已訓練的 best.pt / last.pt 會在評估、測試與匯出頁使用。</p>
                       <div class="rnn-schema-grid">
-                        <label><span>Hidden Size</span><input id="rnn-hidden-size" type="number" min="1" value="128"></label>
-                        <label><span>Layers</span><input id="rnn-layers" type="number" min="1" value="2"></label>
-                        <label><span>Dropout</span><input id="rnn-dropout" type="number" min="0" max="0.9" step="0.1" value="0.2"></label>
+                        <label><span>Model <span class="info-icon" id="rnn-model-info-icon" data-tooltip="LSTM: balanced sequence baseline. GRU: fewer gates and often faster. BiLSTM: uses both directions for offline sequences. XGBoost: tabular baseline for CSV sequence features.">i</span></span><select id="rnn-model-family"><option value="lstm">LSTM Classifier</option></select></label>
+                        <label><span>Task Head</span><select id="rnn-task-head"><option value="classification">Classification</option><option value="regression">Regression</option></select></label>
+                        <label><span>Backend</span><input id="rnn-backend" type="text" value="pytorch_lstm" disabled></label>
+                        <label><span>Epochs</span><input id="rnn-epochs" type="number" min="1" value="10"></label>
+                        <label><span>Batch Size</span><input id="rnn-batch-size" type="number" min="1" value="16"></label>
+                        <label><span>Device</span><select id="rnn-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
                       </div>
-                    </details>
-                    <div class="rnn-model-guide" id="rnn-model-guide">
-                      <div class="section-title"><h3>Model Guide</h3><span class="summary-badge badge-neutral">Loading</span></div>
-                      <p>Loading model guide...</p>
-                    </div>
-                    <div class="rnn-custom-model-panel">
-                      <div>
-                        <strong>自訂 RNN 模型</strong>
-                        <span>支援 RNN package .zip 與 Custom package .zip 的驗證式匯入；不共用 CNN 模型 selector。</span>
+                      <details class="advanced-collapse">
+                        <summary>Advanced</summary>
+                        <div class="rnn-schema-grid">
+                          <label><span>Hidden Size</span><input id="rnn-hidden-size" type="number" min="1" value="128"></label>
+                          <label><span>Layers</span><input id="rnn-layers" type="number" min="1" value="2"></label>
+                          <label><span>Dropout</span><input id="rnn-dropout" type="number" min="0" max="0.9" step="0.1" value="0.2"></label>
+                          <label><span>Gradient Clip <span class="info-icon" data-tooltip="Clips RNN gradients by norm to reduce exploding gradients. Use 0 to disable.">i</span></span><input id="rnn-gradient-clip" type="number" min="0" step="0.1" value="1.0"></label>
+                          <label><span>Early Stop <span class="info-icon" data-tooltip="Stops after this many epochs without validation improvement. Use 0 to disable.">i</span></span><input id="rnn-early-stopping-patience" type="number" min="0" value="10"></label>
+                        </div>
+                      </details>
+                      <div class="rnn-model-guide" id="rnn-model-guide">
+                        <div class="section-title"><h3>模型選擇參考</h3><span class="summary-badge badge-neutral">Loading</span></div>
+                        <p>Loading model guide...</p>
                       </div>
-                      <button type="button" class="btn btn-secondary btn-sm" id="btn-rnn-import-model-package">
-                        <i class="fa-solid fa-file-arrow-up"></i> 匯入 RNN Package
-                      </button>
+                      <span class="rnn-disabled-action-hitbox">
+                        <button type="button" class="btn btn-disabled" id="rnn-training-disabled-action" disabled>RNN training requires ready CSV feature sequence</button>
+                      </span>
+                    </section>
+
+                    <div class="rnn-training-secondary-grid">
+                      <section class="rnn-preview-card rnn-custom-model-section">
+                        <div class="section-title"><h2>自訂 RNN 模型匯入</h2><span class="summary-badge badge-neutral">Optional</span></div>
+                        <p class="rnn-section-note">匯入 RNN package .zip 或 Custom package .zip 做驗證式登錄；這裡不混用 CNN selector，也不取代上方通用訓練模板。</p>
+                        <div class="rnn-custom-model-panel">
+                          <div>
+                            <strong>Package registry</strong>
+                            <span>適合放入外部訓練器、轉換器或自訂推論 adapter；啟用前需通過 package contract 檢查。</span>
+                          </div>
+                          <button type="button" class="btn btn-secondary btn-sm" id="btn-rnn-import-model-package">
+                            <i class="fa-solid fa-file-arrow-up"></i> 匯入 RNN Package
+                          </button>
+                        </div>
+                      </section>
+
+                      <section class="rnn-preview-card rnn-training-output-section">
+                        <div class="section-title"><h2>訓練結果 / 產物</h2><span class="summary-badge badge-neutral">After run</span></div>
+                        <p class="rnn-section-note">訓練完成後，metrics、history 與 artifact 不在本設定區展開；請到專門頁面檢視與操作。</p>
+                        <div class="rnn-output-handoff-grid">
+                          <button type="button" class="btn btn-secondary" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i> 開啟 RNN 評估</button>
+                          <button type="button" class="btn btn-secondary" data-rnn-nav="sequence-test"><i class="fa-regular fa-circle-play"></i> 開啟序列測試</button>
+                          <button type="button" class="btn btn-secondary" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i> 開啟 RNN 匯出</button>
+                        </div>
+                      </section>
                     </div>
-                    <span class="rnn-disabled-action-hitbox">
-                      <button type="button" class="btn btn-disabled" id="rnn-training-disabled-action" disabled>RNN training requires ready CSV feature sequence</button>
-                    </span>
-                  </section>
+                  </div>
                 </div>
 
                 <div id="rnn-evaluation-panel" class="rnn-panel" data-rnn-panel="evaluation">
@@ -1131,18 +1153,38 @@
                       <button type="button" class="btn btn-secondary" id="rnn-refresh-evaluation">Refresh Evaluation</button>
                     </div>
                     <div id="rnn-eval-message" class="rnn-placeholder-box">No RNN or XGBoost run has been loaded yet.</div>
-                    <div class="rnn-result-grid">
+                    <div class="rnn-eval-flow">
                       <div class="rnn-result-panel">
-                        <div class="section-title"><h3>Epoch History</h3><span class="summary-badge badge-neutral">metrics.json</span></div>
-                        <div class="rnn-result-table-wrap">
+                        <div class="section-title"><h3>Metric Trend</h3><span class="summary-badge badge-neutral">4 rows</span></div>
+                        <div class="rnn-baseline-note hidden" id="rnn-eval-baseline-note">Single-point baseline metrics are shown as flat reference lines.</div>
+                        <div class="rnn-eval-chart-stack" id="rnn-eval-chart-stack">
+                          <div class="rnn-eval-chart-empty">No metric trend loaded.</div>
+                        </div>
+                      </div>
+                      <div class="rnn-result-panel">
+                        <div class="section-title">
+                          <h3>Baseline Comparison</h3>
+                          <div class="rnn-compare-metric-toggle" role="group" aria-label="RNN comparison metric">
+                            <button type="button" class="active" data-rnn-compare-metric="accuracy">Accuracy</button>
+                            <button type="button" data-rnn-compare-metric="macro_f1">Macro-F1</button>
+                            <button type="button" data-rnn-compare-metric="val_loss">Val Loss</button>
+                          </div>
+                        </div>
+                        <div class="rnn-compare-mini-chart" id="rnn-eval-compare-chart">
+                          <div class="rnn-eval-chart-empty">No comparable runs loaded.</div>
+                        </div>
+                      </div>
+                      <div class="rnn-result-panel">
+                        <div class="section-title"><h3>Epoch History</h3><span class="summary-badge badge-neutral">scroll after 10</span></div>
+                        <div class="rnn-result-table-wrap rnn-table-scroll-10">
                           <table class="rnn-result-table">
                             <thead>
                               <tr>
                                 <th>Epoch</th>
                                 <th>Train Loss</th>
                                 <th>Val Loss</th>
-                                <th>Accuracy / MAE</th>
-                                <th>Macro-F1 / RMSE</th>
+                                <th id="rnn-eval-primary-history-label">Accuracy / MAE</th>
+                                <th id="rnn-eval-secondary-history-label">Macro-F1 / RMSE</th>
                                 <th>Status</th>
                               </tr>
                             </thead>
@@ -1153,28 +1195,24 @@
                         </div>
                       </div>
                       <div class="rnn-result-panel">
-                        <div class="section-title"><h3>Artifacts</h3><span class="summary-badge badge-neutral">manifest</span></div>
-                        <div id="rnn-eval-artifact-list" class="rnn-result-list">No artifacts.</div>
-                      </div>
-                    </div>
-                    <div class="rnn-result-panel">
-                      <div class="section-title"><h3>Run History</h3><span class="summary-badge badge-neutral">sequence</span></div>
-                      <div class="rnn-result-table-wrap">
-                        <table class="rnn-result-table">
-                          <thead>
-                            <tr>
-                              <th>Run</th>
-                              <th>Model</th>
-                              <th>Backend</th>
-                              <th>Primary Metric</th>
-                              <th>Status</th>
-                              <th>Completed</th>
-                            </tr>
-                          </thead>
-                          <tbody id="rnn-eval-run-history">
-                            <tr><td colspan="6">No sequence runs.</td></tr>
-                          </tbody>
-                        </table>
+                        <div class="section-title"><h3>Run History</h3><span class="summary-badge badge-neutral">sequence</span></div>
+                        <div class="rnn-result-table-wrap rnn-table-scroll-10">
+                          <table class="rnn-result-table">
+                            <thead>
+                              <tr>
+                                <th>Run</th>
+                                <th>Model</th>
+                                <th>Backend</th>
+                                <th>Primary Metric</th>
+                                <th>Status</th>
+                                <th>Completed</th>
+                              </tr>
+                            </thead>
+                            <tbody id="rnn-eval-run-history">
+                              <tr><td colspan="6">No sequence runs.</td></tr>
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
                   </section>
@@ -1547,7 +1585,7 @@
                   <button type="button" class="source-option" data-auto-source="invalid-json"><i class="fa-solid fa-triangle-exclamation"></i><strong data-i18n="autoLabel.source.invalid">Invalid annotations</strong><span data-i18n="autoLabel.source.invalidHelp">Missing JSON, empty annotations, or items that need review</span></button>
                   <button type="button" class="source-option disabled" disabled><i class="fa-solid fa-folder-open"></i><strong data-i18n="autoLabel.source.folder">Selected folder</strong><span>Phase 2</span></button>
                 </div>
-                <div class="drop-zone compact disabled-drop source-drop-preview"><i class="fa-solid fa-cloud-arrow-up"></i><strong data-i18n="autoLabel.dropSource">Drop images or folder here</strong><span data-i18n="autoLabel.dropSourceHelp">Source drag-and-drop will be enabled after upload / folder scan APIs are connected.</span></div>
+                <div class="drop-zone compact source-drop-preview" id="auto-source-drop-zone"><i class="fa-solid fa-cloud-arrow-up"></i><strong>拖入圖片或 ZIP</strong><span>拖曳圖片檔或資料集 ZIP 到此處，或點擊選擇檔案。</span></div>
               </div>
 
               <div class="auto-step-block">
@@ -1577,12 +1615,12 @@
               <div class="auto-step-block">
                 <div class="auto-step-heading"><span>3</span><strong data-i18n="autoLabel.step.rules">Draft Rules</strong></div>
                 <div class="auto-basic-settings expanded">
-                  <label><span>Confidence</span><input type="number" id="auto-confidence" value="0.35" min="0.01" max="1" step="0.01" disabled></label>
-                  <label><span>IoU</span><input type="number" id="auto-iou" value="0.50" min="0.01" max="1" step="0.01" disabled></label>
-                  <label><span data-i18n="autoLabel.classFilter">Class filter</span><input type="text" id="auto-class-filter" placeholder="class_a, class_b" disabled></label>
-                  <label><span data-i18n="autoLabel.minMaskArea">Minimum mask area</span><input type="number" value="400" min="0" disabled></label>
-                  <label><span data-i18n="autoLabel.maxDetections">Max detections</span><input type="number" value="20" min="1" disabled></label>
-                  <label><span data-i18n="autoLabel.outputMode">Output mode</span><select disabled><option>Mask / Polygon draft</option><option>BBox draft</option></select></label>
+                  <label><span>Confidence</span><input type="number" id="auto-confidence" value="0.35" min="0.01" max="1" step="0.01"></label>
+                  <label><span>IoU</span><input type="number" id="auto-iou" value="0.50" min="0.01" max="1" step="0.01"></label>
+                  <label><span data-i18n="autoLabel.maxDetections">Max detections</span><input type="number" id="auto-max-detections" value="20" min="1" max="300" step="1"></label>
+                  <label><span data-i18n="autoLabel.classFilter">Class filter</span><input type="text" id="auto-class-filter" placeholder="class_a, class_b"></label>
+                  <label><span data-i18n="autoLabel.minMaskArea">Minimum mask area</span><input type="number" id="auto-min-mask-area" value="400" min="0"></label>
+                  <label><span data-i18n="autoLabel.outputMode">Output mode</span><select id="auto-output-mode"><option value="mask_polygon">Mask / Polygon draft</option><option value="bbox">BBox draft</option></select></label>
                 </div>
                 <details class="advanced-collapse">
                   <summary data-i18n="autoLabel.reviewRules">Review priority rules</summary>
@@ -1599,35 +1637,59 @@
                 <div class="auto-step-heading"><span>4</span><strong data-i18n="autoLabel.step.target">Output Target</strong></div>
                 <div class="target-card safe-target"><i class="fa-solid fa-shield-halved"></i><div><strong data-i18n="autoLabel.draftOnly">Draft only</strong><span data-i18n="autoLabel.targetHelp">Save to annotations/drafts/auto_label/{job_id}. Do not write to current annotations.</span></div></div>
                 <button class="btn btn-primary btn-disabled" id="btn-start-auto-label" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="autoLabel.start">Start Auto-Label Job</span></button>
-                <p class="muted-note" id="auto-start-reason" data-i18n="autoLabel.startReason.apiPending">The backend auto-labeling API is not connected yet. The safe workflow UI is prepared first.</p>
+                <p class="muted-note" id="auto-start-reason" data-i18n="autoLabel.startReason.noProject">Open a project before creating an auto-label job.</p>
               </div>
             </section>
 
             <section class="panel-section auto-review-panel">
               <div class="section-title"><h2 data-i18n="autoLabel.previewTitle">Draft Preview / Review</h2><span class="info-icon" data-tooltip="Use this area to review whether draft annotations are acceptable." data-i18n-tooltip="autoLabel.previewTooltip">i</span></div>
-              <div class="review-preview-grid">
-                <div class="preview-tile"><h3 data-i18n="autoLabel.original">Original Image</h3><div class="preview-placeholder" data-i18n="autoLabel.noDraft">No draft annotations generated yet.</div></div>
-                <div class="preview-tile"><h3 data-i18n="autoLabel.overlay">Draft Overlay</h3><div class="preview-placeholder" data-i18n="autoLabel.overlayHelp">Mask / bbox / polygon overlay will appear here.</div></div>
-              </div>
-              <div class="draft-inspector">
-                <div class="summary-row"><span data-i18n="autoLabel.predictionClass">Prediction class</span><code>--</code></div>
-                <div class="summary-row"><span data-i18n="autoLabel.confidence">Confidence</span><code>--</code></div>
-                <div class="summary-row"><span data-i18n="autoLabel.warningReason">Warning reason</span><code>--</code></div>
-                <div class="summary-row"><span data-i18n="autoLabel.reviewState">Review state</span><code data-i18n="autoLabel.waiting">Waiting for job</code></div>
-              </div>
-              <div class="auto-review-toolbar compact-toolbar">
-                <button class="btn btn-secondary" disabled><i class="fa-solid fa-check"></i> <span data-i18n="autoLabel.accept">Accept</span></button>
-                <button class="btn btn-secondary" disabled><i class="fa-solid fa-xmark"></i> <span data-i18n="autoLabel.reject">Reject</span></button>
-                <button class="btn btn-secondary" disabled><i class="fa-solid fa-forward-step"></i> <span data-i18n="autoLabel.skip">Skip</span></button>
-                <button class="btn btn-secondary" disabled><i class="fa-solid fa-pen-nib"></i> <span data-i18n="autoLabel.editLabelMe">Edit in LabelMe</span></button>
-                <button class="btn btn-secondary" disabled><i class="fa-solid fa-flag"></i> <span data-i18n="autoLabel.hardCase">Hard Case</span></button>
+              <div class="auto-review-workstation">
+                <aside class="auto-review-queue-card">
+                  <div class="review-card-title"><strong data-i18n="autoLabel.reviewQueue">Draft Review Queue</strong><span id="auto-review-queue-count">0</span></div>
+                  <div class="data-table compact-table auto-review-queue-table"><table><thead><tr><th>Image</th><th>Class</th><th>Issue</th></tr></thead><tbody id="auto-review-queue-body"><tr><td colspan="3" data-i18n="autoLabel.emptyQueue">No drafts waiting for review. Draft jobs will list review items here.</td></tr></tbody></table></div>
+                </aside>
+                <div class="auto-review-preview-card">
+                  <div class="review-preview-toolbar">
+                    <span>Image review</span>
+                    <div><button class="btn-small secondary" type="button" disabled>100%</button><button class="btn-small secondary" type="button" disabled>Fit</button></div>
+                  </div>
+                  <div class="review-preview-grid">
+                    <div class="preview-tile"><h3 data-i18n="autoLabel.original">Original Image</h3><div class="preview-placeholder" id="auto-review-original" data-i18n="autoLabel.noDraft">No draft annotations generated yet.</div></div>
+                    <div class="preview-tile"><h3 data-i18n="autoLabel.overlay">Draft Overlay</h3><div class="preview-placeholder" id="auto-review-overlay" data-i18n="autoLabel.overlayHelp">Mask / bbox / polygon overlay will appear here.</div></div>
+                  </div>
+                  <div class="auto-shape-review-grid">
+                    <div class="data-table compact-table"><table><thead><tr><th>ID</th><th>Class</th><th>Type</th><th>Confidence</th><th>Issue</th></tr></thead><tbody id="auto-shape-table-body"><tr><td colspan="5">No selected draft.</td></tr></tbody></table></div>
+                    <div class="draft-inspector">
+                      <div class="summary-row"><span data-i18n="autoLabel.predictionClass">Prediction class</span><code id="auto-review-class">--</code></div>
+                      <div class="summary-row"><span data-i18n="autoLabel.confidence">Confidence</span><code id="auto-review-confidence">--</code></div>
+                      <div class="summary-row"><span data-i18n="autoLabel.warningReason">Warning reason</span><code id="auto-review-issue">--</code></div>
+                      <div class="summary-row"><span data-i18n="autoLabel.reviewState">Review state</span><code id="auto-review-state" data-i18n="autoLabel.waiting">Waiting for job</code></div>
+                    </div>
+                  </div>
+                </div>
+                <aside class="auto-review-action-card">
+                  <div class="review-card-title"><strong>Task info</strong><span id="auto-review-job-status">--</span></div>
+                  <div class="draft-inspector compact">
+                    <div class="summary-row"><span>Job ID</span><code id="auto-review-job-id">--</code></div>
+                    <div class="summary-row"><span>Source</span><code id="auto-review-source">--</code></div>
+                    <div class="summary-row"><span>Model</span><code id="auto-review-model">--</code></div>
+                    <div class="summary-row"><span>Draft path</span><code id="auto-review-draft-path">--</code></div>
+                    <div class="summary-row"><span>Protection</span><code>Draft first</code></div>
+                  </div>
+                  <div class="auto-review-toolbar compact-toolbar">
+                    <button class="btn btn-secondary success" id="btn-auto-review-accept" disabled><i class="fa-solid fa-check"></i> <span data-i18n="autoLabel.accept">Accept</span></button>
+                    <button class="btn btn-secondary danger" id="btn-auto-review-reject" disabled><i class="fa-solid fa-xmark"></i> <span data-i18n="autoLabel.reject">Reject</span></button>
+                    <button class="btn btn-secondary" id="btn-auto-review-skip" disabled><i class="fa-solid fa-forward-step"></i> <span data-i18n="autoLabel.skip">Skip</span></button>
+                    <button class="btn btn-secondary warning" id="btn-auto-review-hard-case" disabled><i class="fa-solid fa-flag"></i> <span data-i18n="autoLabel.hardCase">Hard Case</span></button>
+                    <button class="btn btn-secondary" id="btn-auto-review-edit" disabled><i class="fa-solid fa-pen-nib"></i> <span data-i18n="autoLabel.editLabelMe">Edit in LabelMe</span></button>
+                  </div>
+                </aside>
               </div>
             </section>
           </div>
 
           <div class="auto-label-bottom-grid redesigned">
             <section class="panel-section"><div class="section-title"><h2 data-i18n="autoLabel.jobHistory">Job History</h2></div><div class="data-table compact-table"><table><thead><tr><th>Job</th><th>Source</th><th>Model</th><th>Status</th><th>Drafts</th></tr></thead><tbody id="auto-job-history-body"><tr><td colspan="5" data-i18n="autoLabel.emptyJobs">No auto-label job yet. Connected functionality will show job_id, source, model, and draft count.</td></tr></tbody></table></div></section>
-            <section class="panel-section"><div class="section-title"><h2 data-i18n="autoLabel.reviewQueue">Draft Review Queue</h2></div><div class="data-table compact-table"><table><thead><tr><th>Image</th><th>Class</th><th>Confidence</th><th>Issue</th><th>Action</th></tr></thead><tbody id="auto-review-queue-body"><tr><td colspan="5" data-i18n="autoLabel.emptyQueue">No drafts waiting for review. Draft jobs will list review items here.</td></tr></tbody></table></div></section>
           </div>
         </section>
 

@@ -1,12 +1,17 @@
 import { appState, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { eventBus } from "../event_bus.js";
-import { qs, qsa, setHTML, setText, escapeHtml, showToast } from "../utils.js";
+import { qs, qsa, setHTML, setText, escapeHtml, showToast, collectDroppedFiles } from "../utils.js";
 
 let selectedAutoLabelModelId = "";
+let selectedAutoSource = "unlabeled";
 let selectedModelSource = "project";
 let loadedProjectId = null;
 let loadingModels = false;
+let autoLabelJobs = [];
+let selectedAutoReviewItem = null;
+let loadedAutoLabelStatusProjectId = null;
+let loadingAutoLabelStatus = false;
 let weightManagerFilter = "all";
 let weightManagerSort = "newest";
 let selectedWeightIds = new Set();
@@ -16,10 +21,46 @@ let cleanupRunCandidates = [];
 let selectedCleanupRunIds = new Set();
 let pendingCleanupRunIds = [];
 
+const AUTO_SOURCE_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".bmp"]);
+const AUTO_SOURCE_ZIP_EXTENSIONS = new Set([".zip"]);
+
+export function classifyAutoLabelSourceFiles(files) {
+  const result = {
+    images: [],
+    zips: [],
+    rejected: [],
+    extensionCounts: {},
+  };
+  [...(files || [])].forEach((file) => {
+    const rawName = String(file?.webkitRelativePath || file?.name || "");
+    const normalizedName = rawName.replaceAll("\\", "/");
+    const basename = normalizedName.split("/").filter(Boolean).pop() || normalizedName;
+    const match = basename.match(/(\.[^.]+)$/);
+    const extension = match ? match[1].toLowerCase() : "";
+    const normalizedExtension = extension || "(none)";
+    result.extensionCounts[normalizedExtension] = (result.extensionCounts[normalizedExtension] || 0) + 1;
+    if (AUTO_SOURCE_IMAGE_EXTENSIONS.has(extension)) {
+      result.images.push(file);
+    } else if (AUTO_SOURCE_ZIP_EXTENSIONS.has(extension)) {
+      result.zips.push(file);
+    } else {
+      result.rejected.push({ file, extension: normalizedExtension, path: normalizedName });
+    }
+  });
+  return result;
+}
+
 export function initAutoLabeling() {
   qs("#btn-refresh-auto-label-models")?.addEventListener("click", () => loadAutoLabelModels(true));
+  qs("#btn-start-auto-label")?.addEventListener("click", createAutoLabelJob);
+  qs("#btn-auto-review-accept")?.addEventListener("click", () => reviewSelectedAutoLabelItem("accept"));
+  qs("#btn-auto-review-reject")?.addEventListener("click", () => reviewSelectedAutoLabelItem("reject"));
+  qs("#btn-auto-review-skip")?.addEventListener("click", () => reviewSelectedAutoLabelItem("skip"));
+  qs("#btn-auto-review-hard-case")?.addEventListener("click", () => reviewSelectedAutoLabelItem("hard_case"));
+  qs("#btn-auto-review-edit")?.addEventListener("click", editSelectedAutoLabelItem);
   initWeightManager();
   initModelImportDropZone();
+  initSourceDropZone();
   initSourceOptions();
   initModelSourceTabs();
   eventBus.on("language-changed", () => renderAutoLabelingPage());
@@ -34,17 +75,68 @@ export function renderAutoLabelingPage(status) {
     loadAutoLabelModels(false);
   }
 
+  loadAutoLabelStatus(status);
   renderAutoLabelModelList(status);
   renderStartReason(status);
+  renderAutoLabelJobHistory();
+  renderAutoLabelReviewQueue();
 }
 
 function initSourceOptions() {
   qsa("[data-auto-source]").forEach((button) => {
     button.addEventListener("click", () => {
+      selectedAutoSource = button.dataset.autoSource || "unlabeled";
       qsa("[data-auto-source]").forEach((item) => item.classList.remove("active"));
       button.classList.add("active");
     });
   });
+}
+
+function initSourceDropZone() {
+  const dropZone = qs("#auto-source-drop-zone");
+  if (!dropZone) return;
+
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.multiple = true;
+  fileInput.accept = ".jpg,.jpeg,.png,.bmp,.zip";
+  fileInput.hidden = true;
+  fileInput.id = "auto-source-file-input";
+  dropZone.parentNode?.insertBefore(fileInput, dropZone.nextSibling);
+
+  dropZone.classList.remove("disabled-drop");
+  dropZone.setAttribute("role", "button");
+  dropZone.tabIndex = 0;
+  dropZone.addEventListener("click", () => fileInput.click());
+  dropZone.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      fileInput.click();
+    }
+  });
+
+  fileInput.addEventListener("change", async (event) => {
+    await uploadAutoLabelSourceFiles([...(event.target.files || [])]);
+    fileInput.value = "";
+  });
+
+  ["dragenter", "dragover"].forEach((name) => {
+    dropZone.addEventListener(name, (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      dropZone.classList.add("dz-drag-hover");
+    }, true);
+  });
+  ["dragleave", "drop"].forEach((name) => {
+    dropZone.addEventListener(name, (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      dropZone.classList.remove("dz-drag-hover");
+    }, true);
+  });
+  dropZone.addEventListener("drop", async (event) => {
+    await uploadAutoLabelSourceFiles(await collectDroppedFiles(event.dataTransfer));
+  }, true);
 }
 
 function initModelSourceTabs() {
@@ -398,6 +490,171 @@ async function loadWeightManagerModels() {
     showToast(err.message || "Failed to load model weights.");
   }
 }
+
+async function uploadAutoLabelSourceFiles(files) {
+  if (!appState.currentProjectId) {
+    showToast(t("autoLabel.startReason.noProject"));
+    return;
+  }
+
+  const allFiles = [...(files || [])];
+  if (!allFiles.length) {
+    showToast("請選擇圖片或 ZIP 檔。");
+    return;
+  }
+
+  const dropZone = qs("#auto-source-drop-zone");
+  const progressPanel = ensureAutoProgressPanel("auto-source-upload-progress", dropZone);
+  updateAutoProgress(progressPanel, "正在檢查資料來源", 0, "正在分析圖片與 ZIP 檔。");
+
+  const classified = classifyAutoLabelSourceFiles(allFiles);
+  const imageFiles = classified.images;
+  const zipFiles = classified.zips;
+  const rejected = classified.rejected.length;
+  if (rejected > 0) showToast(`已略過 ${rejected} 個非圖片/ZIP 檔。`);
+
+  if (!imageFiles.length && !zipFiles.length) {
+    progressPanel?.remove();
+    showToast("自動標註資料來源只接受圖片或 ZIP。");
+    return;
+  }
+
+  let importedImages = 0;
+  let duplicateSameHash = 0;
+  let renamedCount = 0;
+  try {
+    for (let idx = 0; idx < zipFiles.length; idx += 1) {
+      const file = zipFiles[idx];
+      updateAutoProgress(progressPanel, "正在匯入 ZIP", Math.round((idx / Math.max(1, zipFiles.length)) * 100), `正在處理 ${file.name}`);
+      const formData = new FormData();
+      formData.append("file", file, file.name);
+      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-zip`, { method: "POST", body: formData });
+      importedImages += Number(data.imported_images || 0);
+    }
+
+    const batchSize = 50;
+    const totalBatches = Math.ceil(imageFiles.length / batchSize);
+    for (let i = 0; i < imageFiles.length; i += batchSize) {
+      const batchIndex = Math.floor(i / batchSize) + 1;
+      const batch = imageFiles.slice(i, i + batchSize);
+      updateAutoProgress(progressPanel, "正在上傳圖片", Math.round((i / Math.max(1, imageFiles.length)) * 100), `正在上傳第 ${batchIndex}/${totalBatches} 批，共 ${batch.length} 張。`);
+      const formData = new FormData();
+      batch.forEach((file) => formData.append("files", file, file.name));
+      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/upload-images`, { method: "POST", body: formData });
+      importedImages += Number(data.uploaded_count || 0);
+      duplicateSameHash += Number(data.duplicate_same_hash || 0);
+      renamedCount += Number(data.renamed_same_name_diff_hash || 0);
+    }
+
+    updateAutoProgress(progressPanel, "正在同步 LabelMe 狀態", 95, "正在更新專案圖片與標註狀態。");
+    try { await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/sync`, { method: "POST" }); } catch (err) { console.warn("Auto-label source sync failed", err); }
+    updateAutoProgress(progressPanel, "匯入完成", 100, `已匯入 ${importedImages} 張，重複 ${duplicateSameHash} 張，重新命名 ${renamedCount} 張。`);
+    eventBus.emit("refresh-project");
+  } catch (err) {
+    showToast(`資料來源匯入失敗：${err.message}`);
+    updateAutoProgress(progressPanel, "匯入失敗", 100, `Error: ${err.message}`);
+  } finally {
+    setTimeout(() => progressPanel?.remove(), 5000);
+  }
+}
+
+async function loadAutoLabelStatus(status = null) {
+  if (!status?.hasProject || !appState.currentProjectId) {
+    autoLabelJobs = [];
+    selectedAutoReviewItem = null;
+    loadedAutoLabelStatusProjectId = null;
+    renderAutoLabelStats(status);
+    renderAutoLabelJobHistory();
+    renderAutoLabelReviewQueue();
+    return;
+  }
+  if (loadingAutoLabelStatus || loadedAutoLabelStatusProjectId === appState.currentProjectId) {
+    return;
+  }
+  loadingAutoLabelStatus = true;
+  try {
+    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/auto-labeling/status`, { suppressToast: true });
+    autoLabelJobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+    loadedAutoLabelStatusProjectId = appState.currentProjectId;
+  } catch (err) {
+    autoLabelJobs = [];
+    loadedAutoLabelStatusProjectId = null;
+  } finally {
+    loadingAutoLabelStatus = false;
+  }
+  renderAutoLabelStats(status);
+  renderAutoLabelJobHistory();
+  renderAutoLabelReviewQueue();
+}
+
+async function createAutoLabelJob() {
+  if (!appState.currentProjectId) return showToast(t("autoLabel.startReason.noProject"));
+  if (!selectedAutoLabelModelId) return showToast(t("autoLabel.startReason.noModel"));
+  const button = qs("#btn-start-auto-label");
+  const draftRules = readAutoDraftRules();
+  button?.setAttribute("disabled", "disabled");
+  try {
+    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/auto-labeling/jobs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model_id: selectedAutoLabelModelId,
+        source: selectedAutoSource,
+        mode: "draft",
+        ...draftRules,
+      }),
+    });
+    showToast(`已建立自動標註草稿任務：${payload.job_id || "--"}`);
+    loadedAutoLabelStatusProjectId = null;
+    await loadAutoLabelStatus({ hasProject: true });
+    renderAutoLabelReviewQueue();
+  } catch (err) {
+    showToast(`建立自動標註任務失敗：${err.message}`);
+  } finally {
+    button?.removeAttribute("disabled");
+    renderStartReason();
+  }
+}
+
+function readAutoDraftRules() {
+  const parseNumber = (selector, fallback) => {
+    const value = Number(qs(selector)?.value);
+    return Number.isFinite(value) ? value : fallback;
+  };
+  const classFilter = String(qs("#auto-class-filter")?.value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return {
+    conf: Math.max(0.01, Math.min(1, parseNumber("#auto-confidence", 0.35))),
+    iou: Math.max(0.01, Math.min(1, parseNumber("#auto-iou", 0.5))),
+    max_det: Math.max(1, Math.min(300, Math.round(parseNumber("#auto-max-detections", 20)))),
+    min_mask_area: Math.max(0, Math.round(parseNumber("#auto-min-mask-area", 400))),
+    output_mode: qs("#auto-output-mode")?.value || "mask_polygon",
+    class_filter: classFilter.length ? classFilter : null,
+  };
+}
+
+function ensureAutoProgressPanel(id, anchor) {
+  let panel = qs(`#${id}`);
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = id;
+    panel.className = "ingest-progress-container";
+    anchor?.parentNode?.insertBefore(panel, anchor.nextSibling);
+  }
+  return panel;
+}
+
+function updateAutoProgress(panel, statusText, percent, detailsText) {
+  if (!panel) return;
+  const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
+  panel.innerHTML = `
+    <div class="ingest-progress-header"><span class="ingest-progress-status">${escapeHtml(statusText)}</span><span class="ingest-progress-percent">${safePercent}%</span></div>
+    <div class="ingest-progress-bar-bg"><div class="ingest-progress-bar-fill" style="width: ${safePercent}%"></div></div>
+    <div class="ingest-progress-details">${escapeHtml(detailsText)}</div>
+  `;
+}
 function initModelImportDropZone() {
   const dropZone = qs("#auto-model-drop-zone");
   const fileInput = qs("#auto-model-file-input");
@@ -486,26 +743,35 @@ function renderAutoLabelStats(status = null) {
   }).length;
   setText("#auto-stat-unlabeled", appState.currentProjectId ? String(unlabeled) : "--");
   setText("#auto-stat-models", appState.currentProjectId ? String(visibleModelCount) : "--");
-  setText("#auto-stat-drafts", "0");
-  setText("#auto-stat-review", "0");
+  setText("#auto-stat-drafts", appState.currentProjectId ? String(autoLabelJobs.length) : "0");
+  setText("#auto-stat-review", appState.currentProjectId ? String(autoLabelJobs.filter((job) => String(job.status || "").toLowerCase() === "draft").length) : "0");
 }
 
 function renderStartReason(status = null) {
   const reason = qs("#auto-start-reason");
+  const button = qs("#btn-start-auto-label");
+  const hasProject = Boolean(status?.hasProject ?? appState.currentProjectId);
+  const hasDataset = Boolean(status?.hasDataset ?? (appState.currentProject?.images || []).length);
+  const hasModel = Boolean(selectedAutoLabelModelId || (appState.models || []).length);
+  const canStart = hasProject && hasDataset && hasModel;
+  if (button) {
+    button.disabled = !canStart;
+    button.classList.toggle("btn-disabled", !canStart);
+  }
   if (!reason) return;
-  if (!status?.hasProject) {
+  if (!hasProject) {
     reason.textContent = t("autoLabel.startReason.noProject");
     return;
   }
-  if (!status?.hasDataset) {
+  if (!hasDataset) {
     reason.textContent = t("autoLabel.startReason.noDataset");
     return;
   }
-  if (!(appState.models || []).length) {
+  if (!hasModel) {
     reason.textContent = t("autoLabel.startReason.noModel");
     return;
   }
-  reason.textContent = t("autoLabel.startReason.apiPending");
+  reason.textContent = "已可建立 draft annotation job。輸出只會寫入 drafts，不會覆蓋 current annotations。";
 }
 
 function renderAutoLabelModelList(status = null) {
@@ -565,8 +831,250 @@ function renderAutoLabelModelList(status = null) {
     button.addEventListener("click", () => {
       selectedAutoLabelModelId = button.dataset.autoModelId;
       renderAutoLabelModelList(status);
+      renderStartReason(status);
     });
   });
+}
+
+function renderAutoLabelJobHistory() {
+  const body = qs("#auto-job-history-body");
+  if (!body) return;
+  if (!autoLabelJobs.length) {
+    setHTML("#auto-job-history-body", `<tr><td colspan="5">No auto-label jobs yet.</td></tr>`);
+    return;
+    setHTML("#auto-job-history-body", `<tr><td colspan="5">尚無 auto-label job。建立任務後會顯示 job_id、來源、模型與草稿數。</td></tr>`);
+    return;
+  }
+  setHTML("#auto-job-history-body", autoLabelJobs.map((job) => `
+    <tr>
+      <td><code>${escapeHtml(job.job_id || "--")}</code></td>
+      <td>${escapeHtml(job.source || "--")}</td>
+      <td><code>${escapeHtml(job.model_id || "--")}</code></td>
+      <td><span class="status-badge success">${escapeHtml(job.status || "draft")}</span></td>
+      <td>${Number(job.draft_count || job.drafts || 0)}</td>
+    </tr>
+  `).join(""));
+}
+
+function getAutoLabelReviewItems() {
+  return (autoLabelJobs || []).flatMap((job) => {
+    const items = Array.isArray(job.items) ? job.items : [];
+    return items.map((item) => ({ ...item, job_id: job.job_id || item.job_id || "" }));
+  });
+}
+
+function renderAutoLabelReviewQueue() {
+  const body = qs("#auto-review-queue-body");
+  if (!body) return;
+
+  const items = getAutoLabelReviewItems();
+  setText("#auto-review-queue-count", String(items.length));
+  if (!items.length) {
+    setHTML("#auto-review-queue-body", `<tr><td colspan="3">No drafts waiting for review.</td></tr>`);
+    selectedAutoReviewItem = null;
+    clearAutoLabelPreview();
+    updateAutoReviewToolbar();
+    return;
+  }
+  const selectedKey = selectedAutoReviewItem ? autoReviewItemKey(selectedAutoReviewItem) : "";
+  const selectedItem = items.find((item) => autoReviewItemKey(item) === selectedKey) || items[0];
+  selectedAutoReviewItem = selectedItem;
+
+  setHTML("#auto-review-queue-body", items.map((item, index) => {
+    const summary = item.inference_summary || {};
+    const confidence = summary.average_confidence ?? item.confidence ?? "";
+    const label = firstDetectedClass(summary) || "--";
+    const reviewStatus = item.review_status || (item.shape_count ? "review" : "empty");
+    const statusClass = item.review_status ? "success" : (item.shape_count ? "warning" : "danger");
+    const selected = autoReviewItemKey(item) === autoReviewItemKey(selectedItem) ? "selected" : "";
+    return `
+      <tr class="${selected}">
+        <td>
+          <button type="button" class="btn-small secondary" data-auto-review-preview="${index}">${escapeHtml(item.filename || "--")}</button>
+          <div class="form-hint">${confidence === "" ? "--" : Number(confidence).toFixed(2)}</div>
+        </td>
+        <td>${escapeHtml(label)}</td>
+        <td><span class="status-badge ${statusClass}">${escapeHtml(reviewStatus)}</span></td>
+      </tr>
+    `;
+  }).join(""));
+
+  qsa("[data-auto-review-preview]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const item = items[Number(button.dataset.autoReviewPreview || 0)];
+      if (item) showAutoLabelPreview(item);
+    });
+  });
+
+  showAutoLabelPreview(selectedItem);
+}
+
+function showAutoLabelPreview(item) {
+  const original = qs("#auto-review-original");
+  const overlay = qs("#auto-review-overlay");
+  if (!original || !overlay) return;
+  selectedAutoReviewItem = item || null;
+  updateAutoReviewToolbar();
+
+  const filename = item?.filename || "";
+  const originalUrl = appState.currentProjectId && filename
+    ? `/api/projects/${encodeURIComponent(appState.currentProjectId)}/images/${encodeURIComponent(filename)}`
+    : "";
+  const previewUrl = item?.preview_url || "";
+
+  original.classList.remove("preview-placeholder");
+  overlay.classList.remove("preview-placeholder");
+  original.innerHTML = originalUrl
+    ? `<img src="${escapeHtml(originalUrl)}" alt="${escapeHtml(filename)}">`
+    : "No source image available.";
+  overlay.innerHTML = previewUrl
+    ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(filename)} draft overlay">`
+    : "No overlay preview available.";
+
+  const summary = item?.inference_summary || {};
+  setText("#auto-review-class", firstDetectedClass(summary) || "--");
+  setText("#auto-review-confidence", summary.average_confidence === undefined ? "--" : Number(summary.average_confidence).toFixed(2));
+  setText("#auto-review-issue", item?.review_status || (item?.shape_count ? "needs review" : "empty draft"));
+  setText("#auto-review-state", item?.draft_labelme_url ? `selected: ${item?.filename || "--"}` : "draft JSON missing");
+  renderAutoShapeTable(item);
+  renderAutoReviewTaskInfo(item);
+}
+
+function clearAutoLabelPreview() {
+  const original = qs("#auto-review-original");
+  const overlay = qs("#auto-review-overlay");
+  if (original) {
+    original.classList.add("preview-placeholder");
+    original.textContent = "No draft annotations generated yet.";
+  }
+  if (overlay) {
+    overlay.classList.add("preview-placeholder");
+    overlay.textContent = "Mask / bbox / polygon overlay will appear here.";
+  }
+  setText("#auto-review-class", "--");
+  setText("#auto-review-confidence", "--");
+  setText("#auto-review-issue", "--");
+  setText("#auto-review-state", "--");
+  setHTML("#auto-shape-table-body", `<tr><td colspan="5">No selected draft.</td></tr>`);
+  renderAutoReviewTaskInfo(null);
+  updateAutoReviewToolbar();
+}
+
+function renderAutoShapeTable(item) {
+  const predictions = item?.inference_summary?.predictions || item?.predictions || [];
+  const shapeCount = Number(item?.shape_count || 0);
+  if (!Array.isArray(predictions) || !predictions.length) {
+    setHTML("#auto-shape-table-body", `<tr><td colspan="5">${shapeCount ? `${shapeCount} shape(s)` : "No shape details available."}</td></tr>`);
+    return;
+  }
+  setHTML("#auto-shape-table-body", predictions.slice(0, 12).map((row, index) => {
+    const label = row.class_name || row.label || row.name || row.class_id || "--";
+    const confidence = row.confidence ?? row.score ?? "";
+    const shapeType = row.type || (row.polygon ? "polygon" : row.bbox ? "bbox" : "--");
+    const issue = row.issue || row.warning || "--";
+    return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(label)}</td>
+        <td>${escapeHtml(shapeType)}</td>
+        <td>${confidence === "" ? "--" : Number(confidence).toFixed(2)}</td>
+        <td>${escapeHtml(issue)}</td>
+      </tr>
+    `;
+  }).join(""));
+}
+
+function renderAutoReviewTaskInfo(item) {
+  const job = item ? (autoLabelJobs || []).find((candidate) => candidate.job_id === item.job_id) : null;
+  setText("#auto-review-job-id", job?.job_id || item?.job_id || "--");
+  setText("#auto-review-job-status", job?.status || "--");
+  setText("#auto-review-source", job?.source || "--");
+  setText("#auto-review-model", job?.model_id || "--");
+  setText("#auto-review-draft-path", job?.draft_dir || "--");
+}
+
+async function reviewSelectedAutoLabelItem(action) {
+  if (!appState.currentProjectId || !selectedAutoReviewItem) {
+    showToast("Select a draft review item first.");
+    return;
+  }
+  const jobId = selectedAutoReviewItem.job_id || "";
+  const filename = selectedAutoReviewItem.filename || "";
+  if (!jobId || !filename) {
+    showToast("Draft item is missing job_id or filename.");
+    return;
+  }
+
+  setAutoReviewToolbarDisabled(true);
+  try {
+    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/auto-labeling/jobs/${encodeURIComponent(jobId)}/review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, action }),
+    });
+    showToast(`Review updated: ${filename} -> ${result.review_status || action}`);
+    loadedAutoLabelStatusProjectId = null;
+    await loadAutoLabelStatus({ hasProject: true });
+    eventBus.emit("refresh-project");
+  } catch (err) {
+    showToast(`Review update failed: ${err.message}`);
+  } finally {
+    updateAutoReviewToolbar();
+  }
+}
+
+function editSelectedAutoLabelItem() {
+  if (!selectedAutoReviewItem?.draft_labelme_url) {
+    showToast("Selected item has no LabelMe draft JSON.");
+    return;
+  }
+  openAutoLabelReviewUrl(selectedAutoReviewItem.draft_labelme_url);
+}
+
+function openAutoLabelReviewUrl(url) {
+  if (!url) return;
+  const opened = window.open(new URL(url, window.location.origin).toString(), "_blank");
+  if (opened) opened.opener = null;
+}
+
+function updateAutoReviewToolbar() {
+  const hasItem = Boolean(selectedAutoReviewItem);
+  const hasDraftJson = Boolean(selectedAutoReviewItem?.draft_labelme_url);
+  setAutoReviewToolbarDisabled(!hasItem);
+  const editButton = qs("#btn-auto-review-edit");
+  if (editButton) {
+    editButton.disabled = !hasDraftJson;
+    editButton.title = hasDraftJson
+      ? "Open selected draft LabelMe JSON."
+      : "Select a draft item with a LabelMe JSON first.";
+  }
+}
+
+function setAutoReviewToolbarDisabled(disabled) {
+  [
+    "#btn-auto-review-accept",
+    "#btn-auto-review-reject",
+    "#btn-auto-review-skip",
+    "#btn-auto-review-hard-case",
+    "#btn-auto-review-edit",
+  ].forEach((selector) => {
+    const button = qs(selector);
+    if (button) button.disabled = disabled;
+  });
+}
+
+function autoReviewItemKey(item = {}) {
+  return `${item.job_id || ""}/${item.filename || ""}`;
+}
+
+function firstDetectedClass(summary = {}) {
+  const classes = summary.classes || summary.detected_classes || [];
+  if (Array.isArray(classes) && classes.length) {
+    const first = classes[0];
+    if (typeof first === "string") return first;
+    return first?.name || first?.class_name || String(first?.class_id ?? "");
+  }
+  return summary.class_name || "";
 }
 
 function renderModelButton(model, projectTask) {

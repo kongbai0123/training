@@ -37,6 +37,7 @@ EXPECTED_ROUTE_PATHS = {
     "/api/projects/{project_id}/annotations",
     "/api/projects/{project_id}/augment-preview",
     "/api/projects/{project_id}/auto-labeling/status",
+    "/api/projects/{project_id}/auto-labeling/jobs/{job_id}/review",
     "/api/projects/{project_id}/evaluation",
     "/api/projects/{project_id}/rnn/config",
     "/api/projects/{project_id}/train/start",

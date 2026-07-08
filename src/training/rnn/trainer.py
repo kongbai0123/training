@@ -42,6 +42,8 @@ def train_rnn_from_dataset(
     epochs = max(1, int(config.get("epochs") or 10))
     batch_size = max(1, int(config.get("batch_size") or 16))
     learning_rate = float(config.get("lr0") or 0.001)
+    gradient_clip_norm = max(0.0, float(config.get("gradient_clip_norm") or 0.0))
+    early_stopping_patience = max(0, int(config.get("early_stopping_patience") or 0))
 
     model = SequenceRNN(
         input_dim=dataset["input_dim"],
@@ -63,11 +65,15 @@ def train_rnn_from_dataset(
     best_epoch = 0
     history: List[Dict[str, Any]] = []
 
+    epochs_without_improvement = 0
+    stopped_reason = ""
+
     for epoch in range(1, epochs + 1):
         if stop_requested and stop_requested():
+            stopped_reason = "stop_requested"
             break
 
-        train_loss = _run_epoch(model, train_loader, criterion, optimizer, device, is_regression)
+        train_loss = _run_epoch(model, train_loader, criterion, optimizer, device, is_regression, gradient_clip_norm)
         val_loss, predictions, targets = _evaluate(model, val_loader, criterion, device, is_regression)
         metric_row = _metrics(epoch, train_loss, val_loss, predictions, targets, is_regression)
         history.append(metric_row)
@@ -77,11 +83,17 @@ def train_rnn_from_dataset(
         if is_better:
             best_score = score
             best_epoch = epoch
+            epochs_without_improvement = 0
             _save_checkpoint(weights_dir / "best.pt", model, dataset, config, metric_row)
+        else:
+            epochs_without_improvement += 1
 
         _save_checkpoint(weights_dir / "last.pt", model, dataset, config, metric_row)
         if progress_callback:
             progress_callback(metric_row)
+        if early_stopping_patience and epochs_without_improvement >= early_stopping_patience:
+            stopped_reason = "early_stopping"
+            break
 
     if not history:
         raise RNNTrainingError("RNN training stopped before the first epoch completed.")
@@ -95,6 +107,9 @@ def train_rnn_from_dataset(
         "best_epoch": best_epoch,
         "best_metrics": history[best_epoch - 1] if best_epoch else history[-1],
         "dataset_summary": dataset["summary"],
+        "stopped_reason": stopped_reason,
+        "early_stopping_patience": early_stopping_patience,
+        "gradient_clip_norm": gradient_clip_norm,
     }
     (run_dir / "metrics.json").write_text(json.dumps(metrics_payload, indent=2, ensure_ascii=False), encoding="utf-8")
     _write_results_csv(run_dir / "results.csv", history)
@@ -148,7 +163,9 @@ def _loader(split: Dict[str, Any], batch_size: int, torch, TensorDataset, DataLo
     return DataLoader(TensorDataset(x, y), batch_size=batch_size, shuffle=shuffle)
 
 
-def _run_epoch(model, loader, criterion, optimizer, device, is_regression: bool) -> float:
+def _run_epoch(model, loader, criterion, optimizer, device, is_regression: bool, gradient_clip_norm: float = 0.0) -> float:
+    import torch
+
     model.train()
     losses = []
     for x, y in loader:
@@ -158,6 +175,8 @@ def _run_epoch(model, loader, criterion, optimizer, device, is_regression: bool)
         output = model(x)
         loss = criterion(output, y)
         loss.backward()
+        if gradient_clip_norm > 0:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clip_norm)
         optimizer.step()
         losses.append(float(loss.detach().cpu().item()))
     return float(np.mean(losses)) if losses else 0.0
@@ -242,6 +261,8 @@ def _save_checkpoint(path: Path, model, dataset: Dict[str, Any], config: Dict[st
             "num_layers": int(config.get("num_layers") or 2),
             "dropout": float(config.get("dropout") or 0.0),
             "bidirectional": bool(config.get("bidirectional")) or str(config.get("model") or "").lower() == "bilstm",
+            "gradient_clip_norm": float(config.get("gradient_clip_norm") or 0.0),
+            "early_stopping_patience": int(config.get("early_stopping_patience") or 0),
         },
         "feature_columns": dataset["feature_columns"],
         "target_column": dataset["target_column"],

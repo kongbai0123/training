@@ -101,6 +101,57 @@
     "good_result": "預測曲線平滑且能捕捉局部變化。",
     "risk": "若部署時沒有未來資料，離線結果會高估實際表現。"
   },
+  "fastrnn_classification": {
+    "title": "FastRNN Classification",
+    "badge": "Planned",
+    "status": "planned",
+    "summary": "規劃中的輕量序列分類模型，目標是降低 recurrent baseline 的訓練與推論成本。",
+    "best_for": [
+      "需要比 LSTM / GRU 更輕量的序列分類 baseline",
+      "資料量較大但模型容量不需要太高",
+      "未來要做 CPU-friendly 或快速迭代的 RNN 實驗"
+    ],
+    "not_for": [
+      "目前需要立即訓練或交付的流程",
+      "需要長期記憶能力強於 LSTM 的任務"
+    ],
+    "good_result": "訓練時間低於 LSTM / GRU，Accuracy 或 Macro-F1 可接近主要 RNN baseline。",
+    "risk": "目前尚未接上 trainer，僅作為 roadmap catalog 項目。"
+  },
+  "fastrnn_regression": {
+    "title": "FastRNN Regression",
+    "badge": "Planned",
+    "status": "planned",
+    "summary": "規劃中的輕量序列回歸模型，目標是快速建立低成本連續值預測 baseline。",
+    "best_for": [
+      "需要快速比較 sequence_length / stride 的回歸任務",
+      "資料量較大且希望降低訓練時間",
+      "可接受較小模型容量的序列預測"
+    ],
+    "not_for": [
+      "目前需要立即訓練或交付的流程",
+      "需要高度非線性或長期依賴的回歸任務"
+    ],
+    "good_result": "MAE / RMSE 接近 GRU baseline，但訓練時間更短。",
+    "risk": "目前尚未接上 trainer，僅作為 roadmap catalog 項目。"
+  },
+  "isolation_forest_classification": {
+    "title": "Isolation Forest Baseline",
+    "badge": "Planned",
+    "status": "planned",
+    "summary": "規劃中的異常偵測 baseline，適合把 sequence window 攤平成特徵後做 outlier / anomaly scoring。",
+    "best_for": [
+      "標籤不足但想先找異常片段",
+      "normal 樣本多、abnormal 樣本少的場景",
+      "需要和 RNN classifier 做初步比較"
+    ],
+    "not_for": [
+      "需要多類別 supervised classification 的任務",
+      "需要直接輸出連續回歸值的任務"
+    ],
+    "good_result": "異常分數能把少數可疑 sequence window 排到前段，供人工複查。",
+    "risk": "Isolation Forest 不是 RNN，也不是多類別分類器；目前尚未接上 trainer。"
+  },
   "xgboost_classification": {
     "title": "XGBoost Classification",
     "badge": "Baseline",

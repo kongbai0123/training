@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document classifies PyInstaller warnings seen during package builds so release hardening can distinguish expected optional imports from actionable packaging risks.
+This document classifies PyInstaller warnings so release packaging can separate expected optional-import noise from actionable delivery risks.
 
 ## Current Build
 
@@ -12,6 +12,7 @@ Command:
 
 ```bat
 scripts\package.bat
+scripts\smoke_dist.bat
 ```
 
 Warning file:
@@ -26,61 +27,84 @@ Package output:
 dist\VisionTrainingStudio\VisionTrainingStudio.exe
 ```
 
-## Actions Taken
+## Cleanup Applied
 
-The PyInstaller spec now filters obvious non-runtime collection noise:
+The spec now filters optional submodules during collection instead of collecting everything and filtering afterward:
 
-- NumPy test modules
-- SciPy test modules
-- Torch testing modules
-- XGBoost testing modules
-- non-Windows pywebview platforms: Android, Cocoa, GTK, Qt, CEF
-- optional cloud/experiment integrations such as W&B, Ray, Neptune, MLflow, DVC Live, Comet, ClearML
-- optional model/export stacks not part of the current packaged runtime contract, such as TensorRT, OpenVINO, CoreML, TensorFlow.js, ONNX2TF
-
-## Expected Warning Classes
-
-These warnings are expected unless the corresponding optional feature becomes part of the supported runtime contract:
-
-```text
-Unix-only stdlib modules: pwd, grp, fcntl, termios, resource
-Jython/Java probes: java, org.python
-Optional PyInstaller runtime probes
-Optional FastAPI/Pydantic tooling: mypy, email_validator, fastapi_cli
-Optional Ultralytics integrations: wandb, ray, clearml, comet_ml, roboflow
-Optional Ultralytics export backends: TensorRT, OpenVINO, CoreML, TensorFlow.js, RKNN, NCNN, MNN, Paddle
-Optional pywebview platforms not used on Windows EdgeChromium
+```python
+collect_all(package_name, filter_submodules=keep_hidden_import)
+collect_submodules(package_name, filter=keep_hidden_import)
 ```
 
-## Actionable Warning Classes
+`bottle` is a single-file module, not a package, so it is kept as a direct hidden import and is no longer passed to `collect_all()`.
 
-Treat these as release blockers if they appear after spec filtering and smoke tests fail:
+## Warning Classification
+
+| Class | Examples | Decision | Reason |
+| --- | --- | --- | --- |
+| OS-specific stdlib probes | `pwd`, `grp`, `fcntl`, `termios`, `resource`, `_scproxy` | Ignore | Expected when Windows builds inspect cross-platform libraries. |
+| Python implementation probes | `org.python`, `java`, `vms_lib`, `_winreg` | Ignore | Jython / legacy compatibility paths, not used by this Windows build. |
+| Test-only modules | `pytest`, `_pytest`, `*.tests`, `numpy.*.tests`, `xgboost.testing`, `torch.testing` | Exclude | Test suites are not runtime dependencies. |
+| Type-checker tooling | `mypy.*`, `numpy.typing.mypy_plugin`, `pydantic.mypy` | Exclude / Ignore | Static-analysis tooling is not part of the packaged runtime. |
+| Optional webview platforms | Android, Cocoa, GTK, Qt, CEF, .NET bridge symbols (`System.*`, `Microsoft.*`) | Exclude | Runtime target is Windows desktop shell; pywebview hooks still inspect unavailable platform bridges. |
+| Optional experiment integrations | W&B, Ray, Neptune, MLflow, DVC Live, Comet, ClearML, Roboflow | Exclude | Not part of the commercial MVP runtime contract. |
+| Optional distributed data integrations | `xgboost.spark`, `xgboost.dask`, `pyspark`, `dask` | Exclude | Distributed execution is not part of the local Windows packaging contract. |
+| Optional export backends | TensorRT, OpenVINO, CoreML, TensorFlow.js, ONNX2TF, RKNN, NCNN, MNN, Paddle, Executorch | Exclude / Ignore | Current package supports the configured app flow; these backends remain phase-gated unless explicitly enabled. |
+| Optional cloud/auth helpers | `awscrt.*`, `rsa`, vendored `requests.packages.urllib3` | Ignore | Pulled by optional S3 / Google auth compatibility paths, not by local packaged startup. |
+| Optional FastAPI/Pydantic extras | `email_validator`, `fastapi_cli`, `orjson`, `toml`, `tomli` | Ignore | Required only for optional validation, CLI, or dev workflows not used by packaged app startup. |
+| Optional async/websocket stacks | `trio`, `curio`, `wsproto`, `gunicorn`, `werkzeug`, `python_socks` | Ignore unless smoke fails | Uvicorn auto-selection can probe unavailable transports; packaged smoke validates the selected runtime path. |
+| Optional Starlette session helpers | `itsdangerous` | Ignore unless session middleware is enabled | Current packaged app smoke path does not use signed cookie sessions. |
+| Conditional / delayed library probes | Lines marked `optional`, `conditional`, or `delayed` | Ignore unless smoke fails | PyInstaller records library compatibility branches even when the packaged runtime path does not use them. |
+| Vendor shim probes | `pkg_resources.extern.*`, `setuptools.extern.*`, `multiprocessing.*` pseudo symbols | Ignore unless smoke fails | These are generated by compatibility shims and PyInstaller module graph inspection. |
+| Scientific / ONNX stack probes | `scipy.special.*`, `scipy.linalg.*`, `torch.*`, `onnx_model`, `onnx_ir`, `ml_dtypes` | Ignore unless smoke fails | NumPy/SciPy/Torch/ONNX Runtime expose runtime symbols and optional tooling modules that PyInstaller may report as missing modules. |
+| Optional syntax / compatibility helpers | `pygments.lexers.PrologLexer`, `pydantic.PydanticUserError`, `outcome` | Ignore unless related feature fails | These are optional import probes from documentation, validation, or Trio-compatible paths. |
+| Optional storage / visualization backends | `smbclient`, `paramiko`, `libarchive`, `pygit2`, `panel`, `pyglet`, `pytorch_lightning` | Ignore | Not part of the packaged local runtime contract. |
+| PyInstaller hook cache artifacts | `pycparser.lextab`, `pycparser.yacctab`, `sip`, `scipy.special._cdflib` | Watch | Usually benign hook noise. Promote to action only if a related runtime feature fails. |
+| ctypes basename limitation | `/usr/lib64/libgomp.so.1` from Torch Inductor | Ignore | Linux path emitted by torch code path while building on Windows; not loaded by the Windows package smoke path. |
+
+## Release Blockers
+
+Treat these as blockers if they appear in `warn-vision_training_studio.txt` or in package logs:
 
 ```text
-Missing app modules under src.*
-Missing static files
+Missing src.* modules
+Missing launcher.py
+Missing static/
 Missing version.json
-Missing PyQt5 / WebView2 runtime files required by selected shell
-Missing torch / torchvision / ultralytics runtime modules used by inference or training
-Missing xgboost runtime modules if sklearn_xgboost is included in the release contract
+Missing PyQt5 / selected webview runtime files
+Missing torch / torchvision / ultralytics modules used by training or inference
+Missing xgboost runtime modules while sklearn_xgboost remains in the release contract
+Missing fastapi / starlette / uvicorn runtime modules
 ```
 
 ## Required Verification
 
-After any spec change, run:
+After any spec change:
 
 ```bat
+python -m unittest discover -s tests -p "test_scripts_contract.py" -v
+scripts\build.bat
 scripts\package.bat
+scripts\audit_pyinstaller_warnings.bat
 scripts\smoke_dist.bat
 ```
 
-For release candidates, also run:
+For release candidates:
 
 ```bat
 scripts\build_installer.bat
 scripts\validate_installed_app.bat "C:\Program Files\VisionTrainingStudio\VisionTrainingStudio.exe"
 ```
 
+## Current Status
+
+The remaining warning categories are expected optional-import probes. They are not release blockers while:
+
+- `scripts\package.bat` completes successfully.
+- `scripts\audit_pyinstaller_warnings.bat` reports no blocker or unclassified warning lines.
+- `scripts\smoke_dist.bat` returns healthy `/api/health` and valid `/api/version`.
+- No missing `src.*`, `static`, or selected runtime-shell modules appear.
+
 ## Current Limitation
 
-The local machine used for this audit does not have `ISCC.exe` available, so installer generation must be completed on a machine with Inno Setup installed.
+The local machine used for this audit may not have Inno Setup `ISCC.exe` available. Installer generation must be completed on a machine with Inno Setup installed.

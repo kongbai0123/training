@@ -802,5 +802,4 @@
     "compare.toast.exportFailed": "Export report failed: {message}",
     "compare.toast.maxRuns": "Compare supports at most 4 runs.",
     "compare.toast.downloadFailed": "Download report failed: {message}"
-  }
 };

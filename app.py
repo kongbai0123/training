@@ -128,6 +128,17 @@ async def protect_mutating_api(request: Request, call_next):
     return await call_next(request)
 
 
+@app.middleware("http")
+async def prevent_frontend_asset_cache(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path or ""
+    if path in {"/", "/index.html"} or path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 
 # Static frontend files.
 STATIC_DIR.mkdir(parents=True, exist_ok=True)

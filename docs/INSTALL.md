@@ -1,17 +1,17 @@
-# 安裝說明
+# 安裝指南
 
-本文件說明如何在 Windows 本地環境安裝與啟動 Vision Training Studio。
+本文說明 Vision Training Studio 的開發安裝、packaged runtime 執行與 installer 建置方式。
 
-## 1. 原始碼開發模式
+## 1. 開發模式安裝
 
 需求：
 
-- Windows 10 / 11
+- Windows 10 / 11 x64
 - Python 3.11
-- Node.js，僅用於 `node --check`
-- NVIDIA GPU optional
+- Node.js，僅用於 JavaScript syntax check
+- NVIDIA GPU 為選配
 
-建議流程：
+建立虛擬環境並安裝依賴：
 
 ```bat
 python -m venv .venv
@@ -19,30 +19,41 @@ python -m venv .venv
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install -r requirements-build.txt
+```
+
+啟動開發模式：
+
+```bat
 scripts\start_dev.bat
 ```
 
-預設啟動後會開啟本地服務，通常為：
+預設會啟動本機服務並開啟：
 
 ```text
 http://127.0.0.1:18080/
 ```
 
-## 2. 已打包 dist 版本
+## 2. Packaged Runtime
 
-打包後主程式位於：
+建立 PyInstaller onedir package：
+
+```bat
+scripts\package.bat
+```
+
+主要輸出：
 
 ```text
 dist\VisionTrainingStudio\VisionTrainingStudio.exe
 ```
 
-啟動：
+執行：
 
 ```bat
 dist\VisionTrainingStudio\VisionTrainingStudio.exe
 ```
 
-無桌面殼測試模式：
+不開 UI，只啟動 backend 供檢查：
 
 ```bat
 dist\VisionTrainingStudio\VisionTrainingStudio.exe --port 18105 --env production --shell none
@@ -57,21 +68,29 @@ http://127.0.0.1:18105/api/version
 
 ## 3. Installer
 
-若已安裝 Inno Setup，可用：
+installer 設定檔：
 
-```bat
-ISCC installer\VisionTrainingStudio.iss
+```text
+installer\VisionTrainingStudio.iss
 ```
 
-安裝器輸出位置：
+建置 installer：
+
+```bat
+scripts\build_installer.bat
+```
+
+如果系統找不到 `ISCC.exe`，請先安裝 Inno Setup，或將 Inno Setup 安裝路徑加入 `PATH`。
+
+installer 輸出預期位於：
 
 ```text
 installer\output\
 ```
 
-## 4. 使用者資料位置
+## 4. Runtime Data
 
-本 repo 開發模式會使用專案根目錄中的 runtime folders，例如：
+以下資料夾是使用者資料或執行期資料，不應提交到 Git：
 
 ```text
 projects/
@@ -79,13 +98,23 @@ models/
 logs/
 cache/
 tmp/
+config/
+licenses/
+exports/
 ```
 
-打包版本應保持「程式本體」與「使用者資料」分離。正式部署前請依 `docs/DEPLOYMENT.md` 的 release checklist 驗證資料路徑。
+清理開發環境暫存可使用：
+
+```bat
+scripts\clean_runtime.bat
+```
+
+清理前請確認腳本不會移除需要保留的使用者專案資料。
 
 ## 5. 常見安裝問題
 
-- `python` 找不到：確認 Python 3.11 已加入 PATH，或啟用 `.venv`。
+- `python` 找不到：確認 Python 3.11 已安裝並加入 PATH，或使用 `.venv\Scripts\python.exe`。
 - `PyInstaller` 找不到：執行 `python -m pip install -r requirements-build.txt`。
-- port 被占用：改用 `--port` 指定其他 port，或關閉舊的 `VisionTrainingStudio.exe`。
-- GPU 無法使用：先確認 NVIDIA driver / CUDA / PyTorch CUDA build 是否匹配；CPU fallback 不保證所有大型訓練都適合。
+- port 被占用：改用 `--port` 指定其他 port。
+- GPU 不可用：確認 NVIDIA driver、CUDA 與 PyTorch CUDA build；否則使用 CPU fallback。
+- packaged app 啟動失敗：查看 `logs\launcher.log` 或執行 `scripts\diagnostics.bat`。

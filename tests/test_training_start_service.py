@@ -60,6 +60,10 @@ class TrainingStartServiceTests(unittest.TestCase):
 
     def test_start_writes_training_config_and_dispatches_backend(self):
         fake = FakeStartBackend()
+        self.config.update({
+            "gradient_clip_norm": 1.0,
+            "early_stopping_patience": 7,
+        })
 
         with patch.object(TrainerDispatcher, "_backends", {"fake_start": fake}), \
              patch("src.training.start_service.ProjectManager.save_project", return_value=True) as save_project:
@@ -68,6 +72,8 @@ class TrainingStartServiceTests(unittest.TestCase):
         self.assertEqual(payload, {"status": "started", "message": "Training started.", "run_id": "run_a"})
         self.assertEqual(self.project["training_config"]["run_id"], "run_a")
         self.assertEqual(self.project["training_config"]["backend"], "fake_start")
+        self.assertEqual(self.project["training_config"]["gradient_clip_norm"], 1.0)
+        self.assertEqual(self.project["training_config"]["early_stopping_patience"], 7)
         fake.validate_readiness.assert_called_once()
         fake.start_training.assert_called_once_with(self.project)
         save_project.assert_called_once()

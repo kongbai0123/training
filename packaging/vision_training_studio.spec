@@ -18,6 +18,8 @@ datas = [
 EXCLUDED_MODULE_PREFIXES = (
     "numpy.tests",
     "numpy.typing.tests",
+    "numpy._pyinstaller.tests",
+    "numpy.distutils.tests",
     "numpy.f2py.tests",
     "numpy.fft.tests",
     "numpy.lib.tests",
@@ -29,7 +31,10 @@ EXCLUDED_MODULE_PREFIXES = (
     "numpy.testing.tests",
     "scipy.tests",
     "torch.testing",
+    "torch.utils.tensorboard",
     "xgboost.testing",
+    "xgboost.spark",
+    "xgboost.dask",
     "webview.platforms.android",
     "webview.platforms.cocoa",
     "webview.platforms.gtk",
@@ -65,6 +70,8 @@ EXCLUDES = [
 
 
 def keep_hidden_import(module_name):
+    if module_name.endswith(".tests") or ".tests." in module_name:
+        return False
     return not any(
         module_name == prefix or module_name.startswith(prefix + ".")
         for prefix in EXCLUDED_MODULE_PREFIXES
@@ -76,6 +83,7 @@ hiddenimports = [
     "uvicorn.protocols.http.auto",
     "uvicorn.protocols.websockets.auto",
     "uvicorn.lifespan.on",
+    "bottle",
     "multipart.multipart",
     "pydantic_core",
 ]
@@ -93,21 +101,23 @@ for package_name in [
     "pythonnet",
     "clr_loader",
     "proxy_tools",
-    "bottle",
     "xgboost",
 ]:
     try:
-        package_datas, package_binaries, package_hiddenimports = collect_all(package_name)
+        package_datas, package_binaries, package_hiddenimports = collect_all(
+            package_name,
+            filter_submodules=keep_hidden_import,
+        )
         datas += package_datas
         binaries += package_binaries
-        hiddenimports += [name for name in package_hiddenimports if keep_hidden_import(name)]
+        hiddenimports += package_hiddenimports
     except Exception:
         pass
 
 for package_name in ["cv2", "PIL", "numpy"]:
     try:
         datas += collect_data_files(package_name)
-        hiddenimports += [name for name in collect_submodules(package_name) if keep_hidden_import(name)]
+        hiddenimports += collect_submodules(package_name, filter=keep_hidden_import)
     except Exception:
         pass
 

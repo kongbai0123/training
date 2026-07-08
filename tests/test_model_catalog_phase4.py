@@ -58,6 +58,14 @@ class ModelCatalogPhase4Tests(unittest.TestCase):
             self.assertEqual(xgboost["backend"], "sklearn_xgboost")
             self.assertTrue(xgboost["trainable"])
             self.assertTrue(xgboost["training_enabled"])
+            fastrnn = next(item for item in all_models if item["model_id"] == "template.rnn.fastrnn-classifier")
+            self.assertEqual(fastrnn["backend"], "pytorch_fastrnn")
+            self.assertFalse(fastrnn["trainable"])
+            self.assertFalse(fastrnn["training_enabled"])
+            isolation_forest = next(item for item in all_models if item["model_id"] == "template.isolation_forest.classifier")
+            self.assertEqual(isolation_forest["backend"], "sklearn_isolation_forest")
+            self.assertFalse(isolation_forest["trainable"])
+            self.assertFalse(isolation_forest["training_enabled"])
 
     def test_import_yolo_pt_writes_project_manifest_and_report(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -30,6 +30,8 @@ class TrainingStartService:
         "num_layers",
         "dropout",
         "bidirectional",
+        "gradient_clip_norm",
+        "early_stopping_patience",
     )
 
     @classmethod

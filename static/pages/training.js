@@ -1164,6 +1164,12 @@ function labeledMetric(label, value, digits = 3) {
   return `<span class="metric-inline-label">${escapeHtml(label)}</span> ${metricValue(value, digits)}`;
 }
 
+function isRnnRegressionMetrics(data = {}) {
+  const raw = data.raw || {};
+  const taskType = String(data.task_type || "").toLowerCase();
+  return taskType.includes("regression") || "val/mae" in raw || "val/rmse" in raw;
+}
+
 function updateMonitorMetricLabels(isRnn, metrics = {}) {
   const isRegression = isRnn && (metrics["val/mae"] !== undefined || metrics["val/rmse"] !== undefined);
   setText("#monitor-primary-label", isRnn ? isRegression ? "MAE" : "Accuracy" : "mAP50(M)");
@@ -1395,12 +1401,16 @@ function updateChartVisualization() {
 
   if (currentChartData.architecture === "rnn") {
     if (activeChartTab === "primary") {
-      keysToRender = [
-        { key: "val/macro_f1", label: "Macro-F1", color: colors.primary1 },
-        { key: "val/accuracy", label: "Accuracy", color: colors.primary2 },
-        { key: "val/mae", label: "MAE", color: colors.loss2 },
-        { key: "val/rmse", label: "RMSE", color: colors.loss3 }
-      ].filter(k => k.key in raw);
+      const isRegression = isRnnRegressionMetrics(currentChartData);
+      keysToRender = (isRegression
+        ? [
+            { key: "val/mae", label: "MAE", color: colors.primary1 },
+            { key: "val/rmse", label: "RMSE", color: colors.primary2 }
+          ]
+        : [
+            { key: "val/macro_f1", label: "Macro-F1", color: colors.primary1 },
+            { key: "val/accuracy", label: "Accuracy", color: colors.primary2 }
+          ]).filter(k => k.key in raw);
     } else if (activeChartTab === "loss") {
       keysToRender = [
         { key: "train/loss", label: "Train Loss", color: colors.loss1 },
@@ -1543,15 +1553,18 @@ function renderEpochHistoryTable(data) {
   const epochs = data.epochs;
   const raw = data.raw || {};
   if (data.architecture === "rnn") {
+    const isRegression = isRnnRegressionMetrics(data);
     setText("#epoch-loss-header", "Val Loss");
-    setText("#epoch-primary-header", "Accuracy");
-    setText("#epoch-secondary-header", "Macro-F1");
-    setText("#epoch-tertiary-header", "MAE");
-    setText("#epoch-quaternary-header", "RMSE");
+    setText("#epoch-primary-header", isRegression ? "MAE" : "Accuracy");
+    setText("#epoch-secondary-header", isRegression ? "RMSE" : "Macro-F1");
+    setText("#epoch-tertiary-header", "Train Loss");
+    setText("#epoch-quaternary-header", "Task");
     const rows = [];
     for (let i = epochs.length - 1; i >= 0; i -= 1) {
       const ep = epochs[i];
-      rows.push(`<tr><td><strong>${ep}</strong></td><td><code>${metricValue(raw["val/loss"]?.[i], 4)}</code></td><td>${metricValue(raw["val/accuracy"]?.[i], 3)}</td><td>${metricValue(raw["val/macro_f1"]?.[i], 3)}</td><td>${metricValue(raw["val/mae"]?.[i], 4)}</td><td>${metricValue(raw["val/rmse"]?.[i], 4)}</td><td><span class="badge badge-success">Completed</span></td></tr>`);
+      const primary = isRegression ? raw["val/mae"]?.[i] : raw["val/accuracy"]?.[i];
+      const secondary = isRegression ? raw["val/rmse"]?.[i] : raw["val/macro_f1"]?.[i];
+      rows.push(`<tr><td><strong>${ep}</strong></td><td><code>${metricValue(raw["val/loss"]?.[i], 4)}</code></td><td>${metricValue(primary, isRegression ? 4 : 3)}</td><td>${metricValue(secondary, isRegression ? 4 : 3)}</td><td>${metricValue(raw["train/loss"]?.[i], 4)}</td><td>${isRegression ? "Regression" : "Classification"}</td><td><span class="badge badge-success">Completed</span></td></tr>`);
     }
     tbody.innerHTML = rows.join("");
     return;

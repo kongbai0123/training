@@ -1,20 +1,22 @@
-# 部署與打包指南
+# 部署與打包
+
+本文定義 Vision Training Studio 的打包、smoke test、installer 與 release validation 流程。
 
 ## 1. Package Build
 
-從專案根目錄執行 PyInstaller 打包：
+使用 PyInstaller 建立 onedir package：
 
 ```bat
 scripts\package.bat
 ```
 
-底層打包指令：
+等效核心指令：
 
 ```powershell
 python -m PyInstaller --noconfirm --clean --distpath dist --workpath build packaging\vision_training_studio.spec
 ```
 
-預期輸出入口：
+主要輸出：
 
 ```text
 dist\VisionTrainingStudio\VisionTrainingStudio.exe
@@ -22,58 +24,46 @@ dist\VisionTrainingStudio\VisionTrainingStudio.exe
 
 ## 2. Dist Smoke Test
 
-執行 packaged runtime 煙霧測試：
+打包後執行：
 
 ```bat
 scripts\smoke_dist.bat
 ```
 
-測試會檢查：
+至少驗證：
 
 ```text
 GET /api/health
 GET /api/version
 ```
 
-這只證明本機 packaged runtime 可以啟動，不等同於 installer 已在乾淨機器完成驗證。
+smoke test 通過只代表 packaged runtime 可啟動，不代表 installer 已通過乾淨機器驗證。
 
 ## 3. Installer Build
 
-Windows installer 定義檔：
+Windows installer 設定：
 
 ```text
 installer\VisionTrainingStudio.iss
 ```
 
-在 `scripts\package.bat` 成功後，用 Inno Setup 建置 installer：
+建置 installer：
 
-```powershell
+```bat
 scripts\build_installer.bat
 ```
 
-預期 installer 輸出：
+輸出預期位置：
 
 ```text
 installer\output\
 ```
 
-## 4. 版本同步
+如果 `ISCC.exe` 不存在，installer build 會被阻擋，需要先安裝 Inno Setup。
 
-release 前需確認以下檔案版本一致：
+## 4. Release Validation
 
-```text
-VERSION
-version.json
-installer\VisionTrainingStudio.iss
-packaging\vision_training_studio.spec
-README.md
-docs\RELEASE_NOTES_TEMPLATE.md
-CHANGELOG.md
-```
-
-## 5. Release 驗證指令
-
-產生 release candidate 前至少執行：
+release candidate 至少需要執行：
 
 ```bat
 scripts\test.bat
@@ -82,67 +72,53 @@ scripts\package.bat
 scripts\smoke_dist.bat
 ```
 
-最低驗收條件：
+檢查項目：
 
 ```text
-[ ] unittest pass
-[ ] JavaScript syntax check pass
+[ ] unit / integration tests pass
 [ ] Python compile checks pass
+[ ] JavaScript syntax checks pass
 [ ] PyInstaller package build pass
 [ ] dist smoke health endpoint pass
 [ ] dist smoke version endpoint pass
-[ ] README and docs updated
+[ ] README and docs are readable
 [ ] no projects/logs/cache/tmp/build/dist committed
 ```
 
-## 6. 乾淨機器驗證
+## 5. Clean Machine Validation
 
-package 與 installer 層級驗證紀錄固定放在：
+installer 或 portable package 對外發布前，需要依照：
 
 ```text
 docs\CLEAN_MACHINE_VALIDATION.md
 ```
 
-宣稱 release 可在其他電腦安裝前，必須完成該文件中的 Windows 乾淨 VM checklist。
+在乾淨 Windows VM 驗證：
 
-`scripts\smoke_dist.bat` 只能證明本機 packaged runtime 啟動成功，不能取代乾淨機器 installer 驗證。
+- 不依賴 repo working tree。
+- 不要求使用者自行安裝 Python / Node.js。
+- user data 不寫入 Program Files。
+- `/api/health` 與 `/api/version` 可用。
+- uninstall 不刪除使用者專案、模型與日誌。
 
-乾淨機器或 VM 安裝後，可用下列腳本驗證已安裝 app：
+## 6. Release Artifacts
 
-```bat
-scripts\validate_installed_app.bat "C:\Program Files\VisionTrainingStudio\VisionTrainingStudio.exe"
-```
-
-PyInstaller warning 分類紀錄：
-
-```text
-docs\PYINSTALLER_WARNING_AUDIT.md
-```
-
-## 7. Release Artifacts
-
-建議 release artifact 目錄：
+建議 release artifact：
 
 ```text
-release_artifacts\
+release_artifacts/
   build_manifest.json
   checksum.txt
   release_notes.md
-  license_inventory.md
-  THIRD_PARTY_LICENSES.md
+  docs/compliance/license_inventory.md
+  docs/compliance/THIRD_PARTY_LICENSES.md
 ```
 
-除非 release 流程明確要求，否則不要將產生物提交到 repo。
+`release_artifacts/` 是輸出資料，不應提交到 Git，除非 release 流程明確要求。
 
-## 8. Offline Asset Check
+## 7. Offline Asset Check
 
-前端 runtime asset 應 vendored 到：
-
-```text
-static\vendor\
-```
-
-release 前需檢查 `static\index.html` 與前端 bundle，避免非預期外部 CDN 依賴：
+正式 package 不應依賴 CDN。請確認 `static/index.html` 沒有引用下列外部來源：
 
 ```text
 https://fonts.googleapis.com
@@ -151,9 +127,13 @@ https://cdnjs.cloudflare.com
 https://cdn.jsdelivr.net
 ```
 
-若有刻意 vendor runtime asset，請同步更新 `static\vendor\README.md`。
+前端第三方資源應放在：
 
-## 9. Diagnostics Package
+```text
+static/vendor/
+```
+
+## 8. Diagnostics Package
 
 產生 diagnostics：
 
@@ -167,6 +147,14 @@ API endpoint：
 GET /api/diagnostics/report
 ```
 
-diagnostics package 應包含 app version、health payload、recent logs、project summary、system status 與 runtime paths。
+diagnostics package 可包含 app version、health payload、recent logs、project summary、system status 與 runtime paths。不得包含 raw images、private datasets、videos、model weights 或完整 project folders。
 
-不得包含 raw images、private datasets、model weights 或完整 project folders。
+## 9. 關於 exe 位置
+
+目前 PyInstaller 標準輸出為：
+
+```text
+dist\VisionTrainingStudio\VisionTrainingStudio.exe
+```
+
+對使用者交付時，可以再建立外層捷徑、installer shortcut 或 portable zip 根目錄 launcher。建議不要把 exe 直接搬離 onedir 目錄，除非同時調整 PyInstaller spec 與 runtime asset resolution，否則 `_internal`、`static`、依賴 DLL 與 resource path 可能失效。

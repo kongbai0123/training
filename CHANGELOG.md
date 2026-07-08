@@ -2,6 +2,11 @@
 
 All notable changes to Vision Training Studio are tracked here.
 
+## [Unreleased]
+
+### Changed
+- Documented packaged Auto-Labeling layout validation in `docs/CLEAN_MACHINE_VALIDATION.md`, including the packaged runtime command, viewport, CSS cache key, and stacked workbench assertions.
+
 ## [0.1.0] - 2026-06-24
 
 ### Added

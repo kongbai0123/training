@@ -2,21 +2,21 @@
 
 ## 1. 啟動失敗
 
-可能原因：
+常見原因：
 
-- Python 環境未安裝依賴
-- port 被占用
-- runtime folder 無法寫入
-- 舊的 exe 還在背景執行
+- Python 或 packaged dependency 缺失。
+- port 被占用。
+- runtime folder 無法建立或無寫入權限。
+- packaged exe 仍在執行，導致重新打包或覆蓋失敗。
 
-建議：
+先執行：
 
 ```bat
 scripts\build.bat
 scripts\start_dev.bat
 ```
 
-查看：
+查看日誌：
 
 ```text
 logs/
@@ -30,66 +30,63 @@ logs/
 Address already in use
 ```
 
-解法：
+改用其他 port：
 
 ```bat
 dist\VisionTrainingStudio\VisionTrainingStudio.exe --port 18105 --env production --shell none
 ```
 
-或關閉舊的 `VisionTrainingStudio.exe`。
+也可以關閉正在執行的 `VisionTrainingStudio.exe`。
 
-## 3. PyInstaller 打包失敗 WinError 5
+## 3. PyInstaller WinError 5
 
 症狀：
 
 ```text
-PermissionError: [WinError 5] 存取被拒
+PermissionError: [WinError 5] Access is denied
 dist\VisionTrainingStudio\VisionTrainingStudio.exe
 ```
 
-原因：舊的 exe 正在執行，Windows 鎖住檔案。
+通常代表 exe 仍在執行或被 Windows 鎖定。
 
-解法：
+處理方式：
 
 ```bat
 taskkill /F /IM VisionTrainingStudio.exe
 scripts\package.bat
 ```
 
-`scripts\package.bat` 會嘗試先關閉舊程序。
-
-## 4. 前端畫面樣式不完整
+## 4. 前端畫面異常或樣式沒更新
 
 可能原因：
 
-- 外部 CDN 被封鎖
-- browser cache 使用舊版資源
-- static 檔案未隨 dist 更新
+- browser cache。
+- package 未重新建立。
+- `static/vendor/` 沒有被打包。
+- `static/index.html` 仍引用外部 CDN。
 
-解法：
+處理方式：
 
-- 強制重新整理
-- 重新執行 `scripts\package.bat`
-- 檢查 browser console
-- 確認 `static/vendor/` 存在，且打包後位於 `dist/VisionTrainingStudio/_internal/static/vendor/`
+- 重新整理瀏覽器。
+- 重新執行 `scripts\package.bat`。
+- 檢查 browser console。
+- 確認 `dist\VisionTrainingStudio\_internal\static\vendor\` 存在。
 
 ## 5. RNN / XGBoost CSV 無法訓練
 
-檢查：
+請檢查：
 
-- CSV 是否有 header row
-- feature columns 是否存在於 CSV
-- target column 是否存在於 CSV
-- task type 與 target 類型是否一致
-- sequence window 設定是否合理
+- CSV 是否有 header row。
+- feature columns 是否存在於 CSV。
+- target column 是否存在於 CSV。
+- task type 與 target 型態是否一致。
+- sequence length、stride、horizon 是否合理。
 
-修改 feature / target 後，舊 run 可能顯示 config mismatch，這是正常提示。
+readiness check 失敗時，先依 UI 顯示修正資料或設定，不要直接啟動訓練。
 
-## 6. 模型導入後不能訓練
+## 6. 模型匯入後不能訓練
 
-目前只有符合 trainable contract 的模型會進入訓練 selector。custom package 通過 manifest validation 不代表可訓練。
-
-原則：
+模型匯入與訓練啟用是不同階段：
 
 ```text
 Import != Execute
@@ -97,36 +94,36 @@ Valid Manifest != Trainable
 Registered != Enabled
 ```
 
-## 7. 健康檢查失敗
+custom package 需要通過 manifest validation、dry-run policy、enablement 與 integration checks。
 
-檢查：
+## 7. 健康檢查
+
+服務啟動後檢查：
 
 ```text
 http://127.0.0.1:<port>/api/health
 http://127.0.0.1:<port>/api/version
 ```
 
-若無回應，先查看 exe 是否仍在啟動中，再看 `logs/`。
+如果 health 無回應，查看 `logs\launcher.log` 與 backend log。
 
-## 8. 不小心產生大量暫存檔
+## 8. 清理暫存
 
-使用：
+清理開發環境暫存：
 
 ```bat
 scripts\clean_runtime.bat
 ```
 
-此腳本只清理 build/cache/tmp 與 root smoke temp，不刪 `projects/`。
+清理前確認不會刪除需要保留的 `projects/`、`models/` 或使用者資料。
 
-## 9. 產生診斷包
-
-若需要排查啟動、資料夾、GPU、版本或近期錯誤，可產生 diagnostics zip：
+## 9. 產生診斷報告
 
 ```bat
 scripts\diagnostics.bat
 ```
 
-診斷包預設包含：
+診斷包預期包含：
 
 ```text
 diagnostics.json
@@ -138,7 +135,7 @@ requirements.txt
 version.json
 ```
 
-診斷包預設不包含：
+診斷包不得包含：
 
 ```text
 raw images

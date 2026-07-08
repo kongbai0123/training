@@ -43,6 +43,8 @@ class TrainConfigRequest(BaseModel):
     num_layers: Optional[int] = None
     dropout: Optional[float] = None
     bidirectional: Optional[bool] = None
+    gradient_clip_norm: Optional[float] = None
+    early_stopping_patience: Optional[int] = None
 
 
 
