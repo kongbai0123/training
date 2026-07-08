@@ -113,6 +113,12 @@ const RIGHT_PANEL_CONFIG = {
 export function renderRightPanel(pageId, status) {
   renderProjectSummary(status, pageId);
 
+  const evalSidebar = qs("#section-rnn-eval-summary");
+  const keepEvalSidebar = pageId === "training"
+    && trainingModeState.activeMode === "rnn"
+    && trainingModeState.activeRnnPanel === "evaluation";
+  if (evalSidebar && !keepEvalSidebar) evalSidebar.classList.add("hidden");
+
   const builder = RIGHT_PANEL_CONFIG[pageId];
   const container = qs("#page-context-container");
   const section = qs("#section-page-context");
@@ -174,7 +180,6 @@ export function renderRightPanel(pageId, status) {
       </div>
     `;
   } else {
-    section.style.display = "block";
     const rowsHtml = (config.rows || []).map(row => {
       const valEsc = escapeHtml(row.value);
       let valDom = row.isCode ? `<code>${valEsc}</code>` : valEsc;
@@ -183,9 +188,8 @@ export function renderRightPanel(pageId, status) {
       }
       return `<div class="summary-row"><span>${escapeHtml(row.label)}</span>${valDom}</div>`;
     }).join("");
-    container.innerHTML = rowsHtml
-      ? `<div class="path-list" style="gap: 0;">${rowsHtml}</div>`
-      : `<div class="summary-empty"><p>No page status available.</p></div>`;
+    section.style.display = rowsHtml ? "block" : "none";
+    container.innerHTML = rowsHtml ? `<div class="path-list" style="gap: 0;">${rowsHtml}</div>` : "";
   }
 
   const actions = config.actions || [];

@@ -81,7 +81,6 @@ import {
   resolveRnnReadinessBadge,
   resolveRnnReadinessEmptyView,
   resolveRnnReadinessSummaryView,
-  resolveRnnTrainingActionText,
   resolveRnnTrainingStateBadge
 } from "./rnn_readiness_render_helpers.js";
 import { buildRnnArtifactListViewModel } from "./rnn_artifact_helpers.js";
@@ -370,7 +369,7 @@ export function initRnnPreviewEvents() {
     renderRnnModelGuide();
     saveRnnFeatureConfig({ silent: true });
   });
-  ["#rnn-start-disabled", "#rnn-training-disabled-action"].forEach((selector) => {
+  ["#rnn-start-disabled"].forEach((selector) => {
     qs(selector)?.addEventListener("click", startRnnTraining);
   });
   qs("#rnn-refresh-models")?.addEventListener("click", () => loadRnnInferenceModels({ force: true }));
@@ -1467,7 +1466,7 @@ function canStartRnnTraining() {
 function updateRnnStartControls() {
   const canStart = canStartRnnTraining();
   const message = getRnnStartBlockerMessage();
-  const buttons = [qs("#rnn-start-disabled"), qs("#rnn-training-disabled-action")].filter(Boolean);
+  const buttons = [qs("#rnn-start-disabled")].filter(Boolean);
   buttons.forEach((button) => {
     button.disabled = !canStart;
     button.classList.toggle("btn-primary", canStart);
@@ -1478,10 +1477,6 @@ function updateRnnStartControls() {
   const bannerBtn = qs("#rnn-start-disabled");
   if (bannerBtn) {
     bannerBtn.innerHTML = renderRnnStartBannerButtonContent(canStart);
-  }
-  const trainingBtn = qs("#rnn-training-disabled-action");
-  if (trainingBtn) {
-    trainingBtn.textContent = resolveRnnTrainingActionText({ canStart, message });
   }
   const stateBadge = qs("#rnn-training-state-badge");
   if (stateBadge) {

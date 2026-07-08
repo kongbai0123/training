@@ -120,13 +120,95 @@
 .rnn-training-config-section {
   border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
 }
+.rnn-training-setup-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.32fr);
+  gap: 12px;
+  align-items: start;
+}
+.rnn-training-form-stack {
+  display: grid;
+  gap: 12px;
+}
+.rnn-form-group {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+.rnn-form-group h3,
+.rnn-training-start-panel strong {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+.rnn-schema-grid.two-col {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.rnn-schema-grid.three-col {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.rnn-schema-grid .span-2 {
+  grid-column: span 2;
+}
+.rnn-advanced-parameters {
+  margin-top: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+.rnn-advanced-parameters summary {
+  cursor: pointer;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+.rnn-advanced-parameters > .rnn-advanced-grid {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  align-items: start;
+}
+.rnn-advanced-grid label {
+  min-width: 0;
+}
+.rnn-training-start-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.38);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg-panel));
+}
+.rnn-training-start-panel p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.rnn-start-checklist {
+  display: grid;
+  gap: 6px;
+}
+.rnn-start-checklist span {
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  background: var(--bg-panel);
+}
 .rnn-training-secondary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 .rnn-custom-model-section,
-.rnn-training-output-section {
+.rnn-training-output-section,
+.rnn-model-guidance-section {
   min-width: 0;
 }
 .rnn-section-note {
@@ -317,6 +399,41 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
+.rnn-diagnostic-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+.rnn-diagnostic-meta span {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-panel-soft);
+}
+.rnn-diagnostic-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.rnn-diagnostic-stat {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+.rnn-diagnostic-stat span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  margin-bottom: 4px;
+}
+.rnn-diagnostic-stat strong {
+  color: var(--text);
+  font-size: 1rem;
+}
 .rnn-diagnostic-card {
   min-width: 0;
   padding: 12px;
@@ -328,6 +445,23 @@
   display: block;
   color: var(--text);
   margin-bottom: 4px;
+}
+.rnn-diagnostic-wide {
+  grid-column: 1 / -1;
+}
+.rnn-diagnostic-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.rnn-diagnostic-card-head strong {
+  margin-bottom: 0;
+}
+.rnn-diagnostic-card-head span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
 }
 .rnn-diagnostic-card span,
 .rnn-diagnostic-card p {
@@ -353,13 +487,18 @@
   display: flex;
   align-items: flex-end;
   gap: 5px;
-  height: 72px;
+  min-height: 112px;
+  padding: 10px 0 0;
+  border-bottom: 1px solid var(--border);
 }
 .rnn-residual-bar {
   flex: 1;
   min-width: 8px;
   border-radius: 4px 4px 0 0;
   background: linear-gradient(180deg, var(--primary), var(--accent));
+}
+.rnn-residual-bar.is-negative {
+  background: linear-gradient(180deg, #f59e0b, #ef4444);
 }
 .rnn-comparison-chart-grid {
   display: grid;
@@ -630,6 +769,42 @@
   border-color: var(--primary);
   background: color-mix(in srgb, var(--primary) 10%, var(--bg-panel-soft));
 }
+.rnn-sequence-dataset-card {
+  display: grid;
+  gap: 10px;
+}
+.rnn-dataset-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+.rnn-dataset-import-panel,
+.rnn-dataset-preview-panel {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.rnn-dataset-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.rnn-panel-subtitle {
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+.rnn-dataset-preview {
+  min-height: 220px;
+  display: block;
+  overflow: auto;
+  text-align: left;
+}
+.rnn-dataset-preview .rnn-preview-table-wrap {
+  min-width: max-content;
+}
 .rnn-chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -691,7 +866,7 @@
   font-size: 1rem;
 }
 .rnn-model-guide {
-  margin-top: 12px;
+  margin-top: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-panel-soft);
@@ -776,6 +951,11 @@
 .rnn-preview-table th {
   color: var(--text);
   background: var(--bg-panel-soft);
+}
+@media (max-width: 960px) {
+  .rnn-dataset-layout {
+    grid-template-columns: 1fr;
+  }
 }
 .rnn-artifact-list {
   display: flex;
@@ -1169,14 +1349,21 @@
 
 @media (max-width: 840px) {
   .rnn-training-secondary-grid,
-  .rnn-output-handoff-grid {
+  .rnn-output-handoff-grid,
+  .rnn-training-setup-grid,
+  .rnn-schema-grid.three-col,
+  .rnn-schema-grid.two-col {
     grid-template-columns: 1fr;
+  }
+  .rnn-schema-grid .span-2 {
+    grid-column: auto;
   }
 }
 
 @media (max-width: 980px) {
   .rnn-overview-rows .rnn-preview-card,
   .rnn-sequence-test-layout,
+  .rnn-training-setup-grid,
   .rnn-custom-model-panel {
     grid-template-columns: 1fr;
   }

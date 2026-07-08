@@ -23,27 +23,33 @@
       </div>
       <div class="header-project">
         <div class="header-resources" aria-label="System resources">
+          <div class="header-resource-item header-project-context">
+            <i class="fa-solid fa-folder-open"></i>
+            <div>
+              <span data-i18n="common.currentProject">Current Project</span>
+              <strong class="no-i18n" id="header-project-title">No project opened</strong>
+            </div>
+          </div>
           <div class="header-resource-item">
             <i class="fa-solid fa-desktop"></i>
             <div>
               <span>GPU</span>
-              <strong id="header-gpu-value">Checking</strong>
+              <strong id="header-gpu-value" data-i18n="common.checking">Checking</strong>
             </div>
           </div>
           <div class="header-resource-item">
             <i class="fa-solid fa-chart-pie"></i>
             <div>
               <span>RAM</span>
-              <strong id="header-ram-value">Checking</strong>
+              <strong id="header-ram-value" data-i18n="common.checking">Checking</strong>
             </div>
           </div>
         </div>
         <span class="status-dot" id="api-status-dot"></span>
         <div class="header-health">
-          <span>System Status</span>
-          <strong id="header-health-label">Checking</strong>
+          <span data-i18n="common.systemStatus">System Status</span>
+          <strong id="header-health-label" data-i18n="common.checking">Checking</strong>
         </div>
-        <span class="header-project-title no-i18n" id="header-project-title">No project opened</span>
         <button class="btn btn-primary btn-sm" id="btn-header-save-project" type="button">
           <i class="fa-solid fa-floppy-disk"></i>
           <span data-i18n="headerSave">Save</span>
@@ -1018,20 +1024,27 @@
                 </div>
 
                 <div id="rnn-sequence-dataset-panel" class="rnn-panel" data-rnn-panel="sequence-dataset">
-                  <section class="rnn-preview-card">
+                  <section class="rnn-preview-card rnn-sequence-dataset-card">
                     <div class="section-title"><h2>序列資料集</h2><span class="summary-badge badge-warning" id="rnn-dataset-badge">CSV required</span></div>
                     <p class="form-hint" id="rnn-sequence-dataset-message">匯入 CSV 或包含 CSV 的 ZIP。第一列必須是欄位名稱，建議包含 sequence_id、timestep、split、feature columns、target。</p>
-                    <div class="rnn-import-dropzone" id="rnn-dataset-dropzone" tabindex="0">
-                      <input id="rnn-dataset-file" type="file" accept=".csv,.zip,text/csv,application/zip" class="hidden">
-                      <i class="fa-solid fa-file-csv"></i>
-                      <strong>拖入 CSV / ZIP，或點擊選擇檔案</strong>
-                      <span>只支援 CSV feature sequence；不接 video、YOLO feature extraction 或 CNN-LSTM。</span>
+                    <div class="rnn-dataset-layout">
+                      <div class="rnn-dataset-import-panel">
+                        <div class="rnn-import-dropzone" id="rnn-dataset-dropzone" tabindex="0">
+                          <input id="rnn-dataset-file" type="file" accept=".csv,.zip,text/csv,application/zip" class="hidden">
+                          <i class="fa-solid fa-file-csv"></i>
+                          <strong>拖入 CSV / ZIP，或點擊選擇檔案</strong>
+                          <span>只支援 CSV feature sequence；不接 video、YOLO feature extraction 或 CNN-LSTM。</span>
+                        </div>
+                        <div class="inline-actions rnn-dataset-actions">
+                          <button type="button" class="btn btn-primary" id="rnn-import-dataset"><i class="fa-solid fa-upload"></i> 匯入序列資料</button>
+                          <button type="button" class="btn btn-secondary" id="rnn-refresh-config"><i class="fa-solid fa-rotate"></i> 重新讀取</button>
+                        </div>
+                      </div>
+                      <div class="rnn-dataset-preview-panel">
+                        <div class="rnn-panel-subtitle">CSV preview</div>
+                        <div class="rnn-placeholder-box rnn-dataset-preview" id="rnn-sequence-dataset-preview">sequence_id, timestep, feature_1, feature_2, target</div>
+                      </div>
                     </div>
-                    <div class="inline-actions">
-                      <button type="button" class="btn btn-primary" id="rnn-import-dataset"><i class="fa-solid fa-upload"></i> 匯入序列資料</button>
-                      <button type="button" class="btn btn-secondary" id="rnn-refresh-config"><i class="fa-solid fa-rotate"></i> 重新讀取</button>
-                    </div>
-                    <div class="rnn-placeholder-box" id="rnn-sequence-dataset-preview">sequence_id, timestep, feature_1, feature_2, target</div>
                   </section>
                 </div>
 
@@ -1080,39 +1093,61 @@
                 <div id="rnn-training-panel" class="rnn-panel" data-rnn-panel="training">
                   <div class="rnn-training-layout">
                     <section class="rnn-preview-card rnn-training-config-section">
-                      <div class="section-title"><h2>訓練設定</h2><span class="summary-badge badge-warning" id="rnn-training-state-badge">Readiness required</span></div>
-                      <p class="rnn-section-note">選擇通用 RNN / XGBoost 模板並設定訓練參數；已訓練的 best.pt / last.pt 會在評估、測試與匯出頁使用。</p>
-                      <div class="rnn-schema-grid">
-                        <label><span>Model <span class="info-icon" id="rnn-model-info-icon" data-tooltip="LSTM: balanced sequence baseline. GRU: fewer gates and often faster. BiLSTM: uses both directions for offline sequences. XGBoost: tabular baseline for CSV sequence features.">i</span></span><select id="rnn-model-family"><option value="lstm">LSTM Classifier</option></select></label>
-                        <label><span>Task Head</span><select id="rnn-task-head"><option value="classification">Classification</option><option value="regression">Regression</option></select></label>
-                        <label><span>Backend</span><input id="rnn-backend" type="text" value="pytorch_lstm" disabled></label>
-                        <label><span>Epochs</span><input id="rnn-epochs" type="number" min="1" value="10"></label>
-                        <label><span>Batch Size</span><input id="rnn-batch-size" type="number" min="1" value="16"></label>
-                        <label><span>Device</span><select id="rnn-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
-                      </div>
-                      <details class="advanced-collapse">
-                        <summary>Advanced</summary>
-                        <div class="rnn-schema-grid">
-                          <label><span>Hidden Size</span><input id="rnn-hidden-size" type="number" min="1" value="128"></label>
-                          <label><span>Layers</span><input id="rnn-layers" type="number" min="1" value="2"></label>
-                          <label><span>Dropout</span><input id="rnn-dropout" type="number" min="0" max="0.9" step="0.1" value="0.2"></label>
-                          <label><span>Gradient Clip <span class="info-icon" data-tooltip="Clips RNN gradients by norm to reduce exploding gradients. Use 0 to disable.">i</span></span><input id="rnn-gradient-clip" type="number" min="0" step="0.1" value="1.0"></label>
-                          <label><span>Early Stop <span class="info-icon" data-tooltip="Stops after this many epochs without validation improvement. Use 0 to disable.">i</span></span><input id="rnn-early-stopping-patience" type="number" min="0" value="10"></label>
+                      <div class="section-title"><h2 data-i18n="rnn.training.setupTitle">訓練設定</h2><span class="summary-badge badge-warning" id="rnn-training-state-badge">Readiness required</span></div>
+                      <p class="rnn-section-note" data-i18n="rnn.training.setupNote">選擇通用 RNN / XGBoost 模板並設定訓練參數；已訓練的 best.pt / last.pt 會在評估、測試與匯出頁使用。</p>
+                      <div class="rnn-training-setup-grid">
+                        <div class="rnn-training-form-stack">
+                          <div class="rnn-form-group">
+                            <h3 data-i18n="rnn.training.modelTask">Model & Task</h3>
+                            <div class="rnn-schema-grid two-col">
+                              <label><span><span data-i18n="training.model">Model</span> <span class="info-icon" id="rnn-model-info-icon" data-tooltip="LSTM: balanced sequence baseline. GRU: fewer gates and often faster. BiLSTM: uses both directions for offline sequences. XGBoost: tabular baseline for CSV sequence features.">i</span></span><select id="rnn-model-family"><option value="lstm">LSTM Classifier</option></select></label>
+                              <label><span data-i18n="rnn.training.taskHead">Task Head</span><select id="rnn-task-head"><option value="classification">Classification</option><option value="regression">Regression</option></select></label>
+                              <input id="rnn-backend" type="hidden" value="pytorch_lstm">
+                            </div>
+                          </div>
+                          <div class="rnn-form-group">
+                            <h3 data-i18n="rnn.training.coreParameters">Core Parameters</h3>
+                            <div class="rnn-schema-grid three-col">
+                              <label><span data-i18n="training.epochs">Epochs</span><input id="rnn-epochs" type="number" min="1" value="10"></label>
+                              <label><span data-i18n="training.batch">Batch Size</span><input id="rnn-batch-size" type="number" min="1" value="16"></label>
+                              <label><span data-i18n="training.device">Device</span><select id="rnn-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
+                            </div>
+                          </div>
+                          <details class="advanced-collapse rnn-advanced-parameters">
+                            <summary data-i18n="rnn.training.advancedParameters">Advanced Parameters</summary>
+                            <div class="rnn-schema-grid two-col rnn-advanced-grid">
+                              <label><span data-i18n="rnn.training.hiddenSize">Hidden Size</span><input id="rnn-hidden-size" type="number" min="1" value="128"></label>
+                              <label><span data-i18n="rnn.training.layers">Layers</span><input id="rnn-layers" type="number" min="1" value="2"></label>
+                              <label><span data-i18n="rnn.training.dropout">Dropout</span><input id="rnn-dropout" type="number" min="0" max="0.9" step="0.1" value="0.2"></label>
+                              <label><span><span data-i18n="rnn.training.gradientClip">Gradient Clip</span> <span class="info-icon" data-tooltip="Clips RNN gradients by norm to reduce exploding gradients. Use 0 to disable.">i</span></span><input id="rnn-gradient-clip" type="number" min="0" step="0.1" value="1.0"></label>
+                              <label><span><span data-i18n="rnn.training.earlyStop">Early Stop</span> <span class="info-icon" data-tooltip="Stops after this many epochs without validation improvement. Use 0 to disable.">i</span></span><input id="rnn-early-stopping-patience" type="number" min="0" value="10"></label>
+                            </div>
+                          </details>
                         </div>
-                      </details>
-                      <div class="rnn-model-guide" id="rnn-model-guide">
-                        <div class="section-title"><h3>模型選擇參考</h3><span class="summary-badge badge-neutral">Loading</span></div>
-                        <p>Loading model guide...</p>
+                        <aside class="rnn-training-start-panel">
+                          <strong data-i18n="rnn.training.readinessStart">Readiness / Start</strong>
+                          <p data-i18n="rnn.training.readinessStartHelp">先完成序列資料集、特徵欄位與切片設定；通過 readiness 後，使用右上角的 Start RNN 啟動訓練。</p>
+                          <div class="rnn-start-checklist">
+                            <span data-i18n="rnn.training.sequenceCsv">Sequence CSV</span>
+                            <span data-i18n="rnn.training.featureConfig">Feature config</span>
+                            <span data-i18n="rnn.training.windowing">Windowing</span>
+                          </div>
+                        </aside>
                       </div>
-                      <span class="rnn-disabled-action-hitbox">
-                        <button type="button" class="btn btn-disabled" id="rnn-training-disabled-action" disabled>RNN training requires ready CSV feature sequence</button>
-                      </span>
+                    </section>
+
+                    <section class="rnn-preview-card rnn-model-guidance-section">
+                      <div class="section-title"><h2 data-i18n="rnn.training.guidanceTitle">模型指引 / Decision Support</h2><span class="summary-badge badge-neutral" data-i18n="rnn.training.reference">Reference</span></div>
+                      <div class="rnn-model-guide" id="rnn-model-guide">
+                        <div class="section-title"><h3 data-i18n="modelGuide.title">模型選擇參考</h3><span class="summary-badge badge-neutral" data-i18n="common.loading">Loading</span></div>
+                        <p data-i18n="modelGuide.loading">Loading model guide...</p>
+                      </div>
                     </section>
 
                     <div class="rnn-training-secondary-grid">
                       <section class="rnn-preview-card rnn-custom-model-section">
-                        <div class="section-title"><h2>自訂 RNN 模型匯入</h2><span class="summary-badge badge-neutral">Optional</span></div>
-                        <p class="rnn-section-note">匯入 RNN package .zip 或 Custom package .zip 做驗證式登錄；這裡不混用 CNN selector，也不取代上方通用訓練模板。</p>
+                        <div class="section-title"><h2 data-i18n="rnn.training.customImport">自訂 RNN 模型匯入</h2><span class="summary-badge badge-neutral">Optional</span></div>
+                        <p class="rnn-section-note" data-i18n="rnn.training.customImportHelp">匯入 RNN package .zip 或 Custom package .zip 做驗證式登錄；這裡不混用 CNN selector，也不取代上方通用訓練模板。</p>
                         <div class="rnn-custom-model-panel">
                           <div>
                             <strong>Package registry</strong>
@@ -1125,12 +1160,12 @@
                       </section>
 
                       <section class="rnn-preview-card rnn-training-output-section">
-                        <div class="section-title"><h2>訓練結果 / 產物</h2><span class="summary-badge badge-neutral">After run</span></div>
-                        <p class="rnn-section-note">訓練完成後，metrics、history 與 artifact 不在本設定區展開；請到專門頁面檢視與操作。</p>
+                        <div class="section-title"><h2 data-i18n="rnn.training.outputTitle">訓練結果 / 產物</h2><span class="summary-badge badge-neutral">After run</span></div>
+                        <p class="rnn-section-note" data-i18n="rnn.training.outputHelp">訓練完成後，metrics、history 與 artifact 不在本設定區展開；請到專門頁面檢視與操作。</p>
                         <div class="rnn-output-handoff-grid">
-                          <button type="button" class="btn btn-secondary" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i> 開啟 RNN 評估</button>
-                          <button type="button" class="btn btn-secondary" data-rnn-nav="sequence-test"><i class="fa-regular fa-circle-play"></i> 開啟序列測試</button>
-                          <button type="button" class="btn btn-secondary" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i> 開啟 RNN 匯出</button>
+                          <button type="button" class="btn btn-secondary" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i> <span data-i18n="rnn.training.openEvaluation">開啟 RNN 評估</span></button>
+                          <button type="button" class="btn btn-secondary" data-rnn-nav="sequence-test"><i class="fa-regular fa-circle-play"></i> <span data-i18n="rnn.training.openSequenceTest">開啟序列測試</span></button>
+                          <button type="button" class="btn btn-secondary" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i> <span data-i18n="rnn.training.openExport">開啟 RNN 匯出</span></button>
                         </div>
                       </section>
                     </div>
