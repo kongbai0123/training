@@ -8,6 +8,7 @@ from src.project_manager import ProjectManager
 from src.training.rnn_readiness import build_rnn_readiness_report
 from src.training.rnn_config import (
     active_rnn_config,
+    build_suggested_config,
     build_window_summary,
     find_config_mismatches,
     import_sequence_dataset,
@@ -76,6 +77,7 @@ def get_rnn_config(project_id: str):
     return {
         "config": config,
         "inspection": inspection,
+        "recommendation": build_suggested_config(project, inspection),
         "validation": validation,
         "window": build_window_summary(config, inspection),
         "mismatches": find_config_mismatches(project),
@@ -107,6 +109,7 @@ def import_rnn_sequence_dataset(project_id: str, file: UploadFile = File(...)):
             "success": True,
             "dataset": result,
             "config": config_result.get("config"),
+            "recommendation": config_result.get("recommendation") or result.get("suggested_config"),
             "validation": config_result.get("validation"),
             "window": config_result.get("window"),
             "mismatches": config_result.get("mismatches", []),

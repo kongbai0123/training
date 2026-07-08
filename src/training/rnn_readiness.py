@@ -65,7 +65,7 @@ def build_rnn_readiness_report(
         )
 
     has_parseable_source = manifest_summary["valid"] or csv_summary["valid"]
-    has_train_val = _has_train_val(manifest_summary) or _has_train_val(csv_summary)
+    has_train_val = _has_train_val(manifest_summary) or _has_train_val(csv_summary) or _can_auto_split_unknown_csv(csv_summary)
     has_labels = bool(manifest_summary.get("label_count") or csv_summary.get("label_count"))
     has_feature_dim = bool(csv_summary.get("feature_dim")) or bool(manifest_summary.get("feature_dim"))
 
@@ -190,10 +190,11 @@ def _inspect_csv_files(paths: Iterable[Path], sequence_length: int, active_confi
                 if not headers:
                     _add_check(checks, f"csv_parse_{path.name}", f"CSV parse: {path.name}", "fail", "CSV has no header row.")
                     continue
-                sequence_col = configured_sequence or _first_present(headers, ID_COLUMNS) or "sequence_id"
+                detected_sequence_col = _first_present(headers, ID_COLUMNS) or ""
+                sequence_col = configured_sequence or detected_sequence_col
                 target_col = configured_target or _first_present(headers, TARGET_COLUMNS)
                 feature_cols = configured_features or [col for col in headers if col not in META_COLUMNS]
-                if sequence_col not in headers:
+                if sequence_col and sequence_col not in headers:
                     _add_check(checks, f"csv_sequence_id_{path.name}", f"CSV sequence id: {path.name}", "fail", f"CSV must include sequence id column: {sequence_col}.")
                     continue
                 missing_features = [col for col in feature_cols if col not in headers]
@@ -210,7 +211,7 @@ def _inspect_csv_files(paths: Iterable[Path], sequence_length: int, active_confi
                 feature_dims.add(len(feature_cols))
                 for row in reader:
                     row_count += 1
-                    sequence_id = str(row.get(sequence_col) or "").strip()
+                    sequence_id = str(row.get(sequence_col) or "").strip() if sequence_col else "single_sequence"
                     if not sequence_id:
                         continue
                     sequence_lengths[sequence_id] += 1
@@ -265,8 +266,8 @@ def _inspect_csv_files(paths: Iterable[Path], sequence_length: int, active_confi
         checks,
         "csv_split",
         "CSV train/val split",
-        "pass" if _has_train_val(summary) else "fail",
-        f"Split counts: {summary['split_counts']}.",
+        "pass" if _has_train_val(summary) or (summary["sequence_count"] and summary["split_counts"].get("unknown")) else "fail",
+        f"Split counts: {summary['split_counts']}. Unknown-only CSV will be auto-split during preprocessing.",
     )
     return summary, checks
 
@@ -321,6 +322,11 @@ def _has_label(sequence: Dict[str, Any]) -> bool:
 def _has_train_val(summary: Dict[str, Any]) -> bool:
     splits = {str(key).lower(): value for key, value in (summary.get("split_counts") or {}).items()}
     return bool(splits.get("train") and splits.get("val"))
+
+
+def _can_auto_split_unknown_csv(summary: Dict[str, Any]) -> bool:
+    splits = {str(key).lower(): value for key, value in (summary.get("split_counts") or {}).items()}
+    return bool(summary.get("valid") and summary.get("sequence_count") and splits.get("unknown"))
 
 
 def _first_present(headers: Iterable[str], candidates: Iterable[str]) -> Optional[str]:

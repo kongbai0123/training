@@ -54,6 +54,34 @@ class RNNSequenceReadinessPhase2BTests(unittest.TestCase):
             self.assertEqual(report["summary"]["csv"]["split_counts"]["train"], 1)
             self.assertEqual(report["summary"]["csv"]["split_counts"]["val"], 1)
 
+    def test_unknown_only_csv_is_ready_when_auto_split_can_be_used(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            project = self._project(root)
+            project["rnn_config"] = {
+                "feature_columns": ["pressure", "humidity"],
+                "target_column": "T (degC)",
+                "sequence_column": "",
+                "time_column": "Date Time",
+                "task_head": "regression",
+            }
+            sequences_dir = root / "sequences"
+            sequences_dir.mkdir()
+            rows = [
+                "Date Time,pressure,humidity,T (degC)",
+                "2026-01-01 00:00:00,990,60,20.0",
+                "2026-01-01 00:10:00,991,61,20.1",
+                "2026-01-01 00:20:00,992,62,20.2",
+                "2026-01-01 00:30:00,993,63,20.3",
+            ]
+            sequences_dir.joinpath("weather.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+            report = build_rnn_readiness_report(project, sequence_length=3)
+
+            self.assertTrue(report["ready"])
+            self.assertTrue(report["summary"]["ready_requirements"]["train_val_split"])
+            self.assertEqual(report["summary"]["csv"]["split_counts"]["unknown"], 1)
+
     def test_sequence_manifest_readiness(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

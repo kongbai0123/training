@@ -10,6 +10,7 @@ from src.training.rnn_config import (
     compute_feature_config_hash,
     find_config_mismatches,
     import_sequence_dataset,
+    inspect_sequence_csv_files,
     parse_feature_columns,
     update_project_rnn_config,
     validate_rnn_config,
@@ -45,6 +46,25 @@ def _write_csv(path: Path, rows: int = 8) -> None:
                 )
 
 
+def _write_single_series_csv(path: Path, rows: int = 20) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["Date Time", "pressure", "humidity", "T (degC)"],
+        )
+        writer.writeheader()
+        for step in range(rows):
+            writer.writerow(
+                {
+                    "Date Time": f"2026-01-01 00:{step:02d}:00",
+                    "pressure": 990 + step,
+                    "humidity": 60 + (step % 5),
+                    "T (degC)": 20 + (step * 0.1),
+                }
+            )
+
+
 class RNNConfigPhaseR1Tests(unittest.TestCase):
     def test_parse_feature_columns_supports_comma_semicolon_and_newline(self):
         self.assertEqual(
@@ -70,8 +90,46 @@ class RNNConfigPhaseR1Tests(unittest.TestCase):
 
             self.assertEqual(result["suggested_config"]["feature_columns"], ["speed", "rpm", "temp"])
             self.assertEqual(result["suggested_config"]["target_column"], "target")
+            self.assertEqual(result["suggested_config"]["task_head"], "classification")
             self.assertTrue((root / "sequences" / "sequence_manifest.json").exists())
             self.assertTrue((root / "sequences" / "sample.csv").exists())
+
+    def test_schema_recommendation_does_not_hardcode_numeric_weather_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "weather.csv"
+            _write_single_series_csv(source)
+
+            inspection = inspect_sequence_csv_files([source])
+            suggested = inspection["suggested_config"]
+
+            self.assertEqual(suggested["task_head"], "regression")
+            self.assertEqual(suggested["time_column"], "Date Time")
+            self.assertEqual(suggested["target_column"], "")
+            self.assertEqual(suggested["recommendation_confidence"], "needs_user")
+            self.assertIn("T (degC)", suggested["feature_columns"])
+
+    def test_schema_recommendation_detects_numeric_target_as_regression(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "numeric_target.csv"
+            source.parent.mkdir(parents=True, exist_ok=True)
+            with source.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=["sequence_id", "timestep", "sensor_a", "sensor_b", "target"])
+                writer.writeheader()
+                for seq_id in ["train_a", "val_b"]:
+                    for step in range(8):
+                        writer.writerow({
+                            "sequence_id": seq_id,
+                            "timestep": step,
+                            "sensor_a": step * 0.1,
+                            "sensor_b": step * 0.2,
+                            "target": step * 1.5,
+                        })
+
+            suggested = inspect_sequence_csv_files([source])["suggested_config"]
+
+            self.assertEqual(suggested["task_head"], "regression")
+            self.assertEqual(suggested["target_column"], "target")
+            self.assertEqual(suggested["feature_columns"], ["sensor_a", "sensor_b"])
 
     def test_update_config_generates_hash_and_detects_run_mismatch(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -118,6 +176,7 @@ class RNNConfigPhaseR1Tests(unittest.TestCase):
                     },
                 )
             self.assertTrue(result["validation"]["valid"])
+            self.assertEqual(project["task_type"], "sequence_classification")
             self.assertNotEqual(result["config"]["feature_config_hash"], old_hash)
             self.assertEqual(result["mismatches"][0]["run_id"], "run_rnn_old")
             self.assertEqual(find_config_mismatches(project)[0]["status"], "config_mismatch")
@@ -145,6 +204,53 @@ class RNNConfigPhaseR1Tests(unittest.TestCase):
             self.assertEqual(dataset["feature_columns"], ["speed", "rpm"])
             self.assertEqual(dataset["input_dim"], 2)
             self.assertTrue(dataset["feature_config_hash"])
+
+    def test_sequence_dataset_supports_single_continuous_series_without_sequence_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "proj_rnn"
+            _write_single_series_csv(root / "sequences" / "weather.csv")
+            project = {
+                "project_id": "proj_rnn",
+                "dataset_path": (root / "dataset").as_posix(),
+                "task_type": "sequence_regression",
+                "rnn_config": {
+                    "feature_columns": ["pressure", "humidity"],
+                    "target_column": "T (degC)",
+                    "sequence_column": "",
+                    "time_column": "Date Time",
+                    "sequence_length": 4,
+                    "stride": 2,
+                    "horizon": 1,
+                    "task_head": "regression",
+                },
+            }
+            dataset = load_csv_feature_sequences(project, sequence_length=4, stride=2, task_head="regression")
+            self.assertEqual(dataset["sequence_column"], "")
+            self.assertEqual(dataset["summary"]["sequence_count"], 1)
+            self.assertIn("train", dataset["tensors"])
+            self.assertIn("val", dataset["tensors"])
+
+    def test_validation_allows_empty_sequence_column_for_single_series_csv(self):
+        inspection = {
+            "headers": ["Date Time", "pressure", "humidity", "T (degC)"],
+            "headers_match": True,
+            "row_count": 20,
+            "sequence_lengths": {},
+            "sequence_count": 0,
+        }
+        config = {
+            "feature_columns": ["pressure", "humidity"],
+            "target_column": "T (degC)",
+            "sequence_column": "",
+            "time_column": "Date Time",
+            "sequence_length": 4,
+            "stride": 2,
+            "horizon": 1,
+        }
+        validation = validate_rnn_config(config, inspection)
+        self.assertTrue(validation["valid"])
+        self.assertEqual(validation["window"]["sequence_count"], 1)
+        self.assertGreater(validation["window"]["estimated_windows"], 0)
 
     def test_window_summary_estimates_training_windows(self):
         inspection = {

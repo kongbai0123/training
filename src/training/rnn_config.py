@@ -19,6 +19,20 @@ from src.training.rnn_readiness import ID_COLUMNS, META_COLUMNS, TARGET_COLUMNS,
 
 
 FEATURE_SPLIT_RE = re.compile(r"[,;，\n\r]+")
+SEQUENCE_COLUMN_RE = re.compile(r"(sequence|seq|series|session|source|video|sample|machine|batch|asset|unit).*id|id.*(sequence|seq|series|session|source|video|sample|machine|batch|asset|unit)", re.I)
+TIME_COLUMN_RE = re.compile(r"(^|[_\s-])(date|time|timestamp|timestep|time_step|frame|frame_idx|index)([_\s-]|$)", re.I)
+TARGET_COLUMN_PRIORITY = {
+    "label": 100,
+    "class": 95,
+    "category": 92,
+    "target": 90,
+    "targetvalue": 88,
+    "y": 86,
+    "fault": 84,
+    "state": 82,
+    "status": 80,
+}
+CLASSIFICATION_TARGET_NAMES = {"label", "class", "category", "fault", "state", "status"}
 
 
 def parse_feature_columns(value: Any) -> List[str]:
@@ -124,6 +138,8 @@ def update_project_rnn_config(project_id: str, project: Dict[str, Any], config: 
     normalized["feature_config_hash"] = compute_feature_config_hash(normalized)
     normalized["updated_at"] = datetime.now().isoformat()
     project["rnn_config"] = normalized
+    if normalized["task_head"] in {"classification", "regression"}:
+        project["task_type"] = f"sequence_{normalized['task_head']}"
     _write_sequence_manifest(layout, csv_files, normalized, inspection)
     ProjectManager.save_project(project_id, project)
     return {
@@ -132,6 +148,7 @@ def update_project_rnn_config(project_id: str, project: Dict[str, Any], config: 
         "window": build_window_summary(normalized, inspection),
         "mismatches": find_config_mismatches(project),
         "inspection": inspection,
+        "recommendation": build_suggested_config(project, inspection),
     }
 
 
@@ -143,6 +160,7 @@ def inspect_sequence_csv_files(paths: Iterable[Path]) -> Dict[str, Any]:
     sequence_counts: Counter[str] = Counter()
     split_counts: Counter[str] = Counter()
     samples: List[Dict[str, Any]] = []
+    column_stats: Dict[str, Dict[str, Any]] = {}
 
     for path in paths:
         if not path.exists() or path.suffix.lower() != ".csv":
@@ -153,12 +171,27 @@ def inspect_sequence_csv_files(paths: Iterable[Path]) -> Dict[str, Any]:
             header_sets.append(headers)
             if not all_headers:
                 all_headers = headers
+            for header in headers:
+                column_stats.setdefault(header, {"non_empty": 0, "numeric": 0, "distinct": set(), "examples": []})
             rows_in_file = 0
             for row in reader:
                 row_count += 1
                 rows_in_file += 1
                 if len(samples) < 20:
                     samples.append({key: row.get(key, "") for key in headers})
+                for header in headers:
+                    value = row.get(header)
+                    text = str(value or "").strip()
+                    if not text:
+                        continue
+                    stats = column_stats.setdefault(header, {"non_empty": 0, "numeric": 0, "distinct": set(), "examples": []})
+                    stats["non_empty"] += 1
+                    if _is_float_like(text):
+                        stats["numeric"] += 1
+                    if len(stats["distinct"]) < 200:
+                        stats["distinct"].add(text)
+                    if len(stats["examples"]) < 5:
+                        stats["examples"].append(text)
                 seq = str(row.get(_first_present(headers, ID_COLUMNS) or "") or "").strip()
                 if seq:
                     sequence_counts[seq] += 1
@@ -167,10 +200,12 @@ def inspect_sequence_csv_files(paths: Iterable[Path]) -> Dict[str, Any]:
             files.append({"name": path.name, "headers": headers, "rows": rows_in_file})
 
     headers_match = all(headers == all_headers for headers in header_sets) if header_sets else False
-    sequence_col = _first_present(all_headers, ID_COLUMNS) or ""
-    target_col = _first_present(all_headers, TARGET_COLUMNS) or ""
-    time_col = _first_present(all_headers, TIME_COLUMNS) or ""
-    feature_cols = [col for col in all_headers if col not in META_COLUMNS]
+    column_profiles = _build_column_profiles(column_stats, all_headers, row_count)
+    suggested = infer_rnn_config_from_inspection(all_headers, column_profiles, row_count)
+    sequence_col = suggested.get("sequence_column") or ""
+    target_col = suggested.get("target_column") or ""
+    time_col = suggested.get("time_column") or ""
+    feature_cols = suggested.get("feature_columns") or []
     lengths = list(sequence_counts.values())
     return {
         "files": files,
@@ -187,25 +222,58 @@ def inspect_sequence_csv_files(paths: Iterable[Path]) -> Dict[str, Any]:
         "time_column": time_col,
         "feature_columns": feature_cols,
         "feature_dim": len(feature_cols),
+        "column_profiles": column_profiles,
+        "suggested_config": suggested,
         "preview_rows": samples,
     }
 
 
 def build_suggested_config(project: Dict[str, Any], inspection: Dict[str, Any]) -> Dict[str, Any]:
     current = active_rnn_config(project)
-    feature_columns = current.get("feature_columns") or inspection.get("feature_columns") or []
+    inferred = dict(inspection.get("suggested_config") or {})
+    feature_columns = inferred.get("feature_columns") or inspection.get("feature_columns") or []
     config = {
         "feature_columns": feature_columns,
-        "target_column": current.get("target_column") or inspection.get("target_column") or "",
-        "sequence_column": current.get("sequence_column") or inspection.get("sequence_column") or "",
-        "time_column": current.get("time_column") or inspection.get("time_column") or "",
+        "target_column": inferred.get("target_column") or inspection.get("target_column") or "",
+        "sequence_column": inferred.get("sequence_column") or inspection.get("sequence_column") or "",
+        "time_column": inferred.get("time_column") or inspection.get("time_column") or "",
         "sequence_length": int(current.get("sequence_length") or 16),
         "stride": int(current.get("stride") or 8),
         "horizon": int(current.get("horizon") or 1),
-        "task_head": current.get("task_head") or "classification",
+        "task_head": inferred.get("task_head") or current.get("task_head") or "classification",
+        "recommendation_confidence": inferred.get("recommendation_confidence") or "unknown",
+        "recommendation_reason": inferred.get("recommendation_reason") or "",
     }
     config["feature_config_hash"] = compute_feature_config_hash(config)
     return config
+
+
+def infer_rnn_config_from_inspection(headers: List[str], column_profiles: Dict[str, Dict[str, Any]], row_count: int = 0) -> Dict[str, Any]:
+    sequence_column = _infer_sequence_column(headers)
+    time_column = _infer_time_column(headers, column_profiles, sequence_column)
+    target = _infer_target_column(headers, column_profiles, sequence_column, time_column, row_count)
+    target_column = target.get("name", "")
+    reserved = {value for value in (sequence_column, time_column, target_column, "split") if value}
+    feature_columns = [
+        name for name in headers
+        if name not in reserved and _is_numeric_profile(column_profiles.get(name, {}))
+    ]
+    return {
+        "feature_columns": feature_columns,
+        "target_column": target_column,
+        "sequence_column": sequence_column,
+        "time_column": time_column,
+        "sequence_length": 16,
+        "stride": 8,
+        "horizon": 1,
+        "task_head": target.get("task_head") or "regression",
+        "recommendation_confidence": target.get("confidence") or "needs_user",
+        "recommendation_reason": target.get("reason") or (
+            "No strong target column was detected. Select the prediction target manually."
+            if not target_column
+            else "Target column inferred from CSV schema."
+        ),
+    }
 
 
 def validate_rnn_config(config: Dict[str, Any], inspection: Dict[str, Any]) -> Dict[str, Any]:
@@ -321,8 +389,8 @@ def validate_rnn_config(config: Dict[str, Any], inspection: Dict[str, Any]) -> D
         errors.append(f"CSV is missing configured feature columns: {', '.join(missing_features)}")
     if not target_column or target_column not in header_set:
         errors.append("Select a target column that exists in the CSV header.")
-    if not sequence_column or sequence_column not in header_set:
-        errors.append("Select a sequence id column that exists in the CSV header.")
+    if sequence_column and sequence_column not in header_set:
+        errors.append("Select a sequence id column that exists in the CSV header, or leave it empty for one continuous sequence.")
     if time_column and time_column not in header_set:
         warnings.append("The configured time column was not found; sequence rows will use CSV row order.")
     if not inspection.get("headers_match", True):
@@ -374,7 +442,17 @@ def build_window_summary(config: Dict[str, Any], inspection: Dict[str, Any]) -> 
     if length_values and estimated_windows <= 0:
         errors.append("The current sequence_length / horizon settings produce zero training windows for the imported CSV data.")
     elif not length_values:
-        warnings.append("No sequence lengths were detected. Import CSV data with a sequence id column before training.")
+        row_count = int(inspection.get("row_count") or 0)
+        usable_length = row_count - horizon + 1
+        if row_count and usable_length >= sequence_length:
+            estimated_windows = ((usable_length - sequence_length) // stride) + 1
+            length_values = [row_count]
+            min_length = row_count
+            max_length = row_count
+        elif row_count:
+            errors.append("The current sequence_length / horizon settings produce zero training windows for the single continuous CSV sequence.")
+        else:
+            warnings.append("No sequence lengths were detected. Import CSV data before training.")
 
     status = "error" if errors else "warning" if warnings else "ok"
     return {
@@ -448,6 +526,128 @@ def _safe_extract_csv_zip(zip_path: Path, target_dir: Path) -> List[Path]:
                 shutil.copyfileobj(src, dst)
             extracted.append(target)
     return extracted
+
+
+def _build_column_profiles(stats_by_column: Dict[str, Dict[str, Any]], headers: List[str], row_count: int) -> Dict[str, Dict[str, Any]]:
+    profiles: Dict[str, Dict[str, Any]] = {}
+    for header in headers:
+        stats = stats_by_column.get(header) or {"non_empty": 0, "numeric": 0, "distinct": set(), "examples": []}
+        distinct_values = stats.get("distinct") or set()
+        non_empty = int(stats.get("non_empty") or 0)
+        numeric = int(stats.get("numeric") or 0)
+        numeric_ratio = (numeric / non_empty) if non_empty else 0.0
+        profiles[header] = {
+            "name": header,
+            "non_empty": non_empty,
+            "missing": max(0, row_count - non_empty),
+            "numeric_count": numeric,
+            "numeric_ratio": round(numeric_ratio, 4),
+            "is_numeric": bool(non_empty and numeric_ratio >= 0.95),
+            "distinct_count": len(distinct_values),
+            "examples": list(stats.get("examples") or []),
+            "role_hint": _role_hint(header),
+        }
+    return profiles
+
+
+def _infer_sequence_column(headers: List[str]) -> str:
+    exact = _first_present(headers, ID_COLUMNS)
+    if exact:
+        return exact
+    return next((name for name in headers if SEQUENCE_COLUMN_RE.search(name)), "")
+
+
+def _infer_time_column(headers: List[str], profiles: Dict[str, Dict[str, Any]], sequence_column: str = "") -> str:
+    exact = _first_present(headers, TIME_COLUMNS)
+    if exact:
+        return exact
+    for name in headers:
+        if name == sequence_column:
+            continue
+        if TIME_COLUMN_RE.search(name):
+            return name
+    return ""
+
+
+def _infer_target_column(
+    headers: List[str],
+    profiles: Dict[str, Dict[str, Any]],
+    sequence_column: str = "",
+    time_column: str = "",
+    row_count: int = 0,
+) -> Dict[str, Any]:
+    reserved = {value for value in (sequence_column, time_column, "split") if value}
+    candidates: List[Dict[str, Any]] = []
+    for name in headers:
+        if name in reserved:
+            continue
+        normalized = _normalized_column_name(name)
+        priority = TARGET_COLUMN_PRIORITY.get(normalized)
+        if priority is None:
+            continue
+        profile = profiles.get(name, {})
+        candidates.append({"name": name, "priority": priority, "profile": profile, "normalized": normalized})
+
+    if not candidates:
+        return {
+            "name": "",
+            "task_head": "regression" if any(_is_numeric_profile(profiles.get(name, {})) for name in headers if name not in reserved) else "classification",
+            "confidence": "needs_user",
+            "reason": "No explicit label/target/class/y column was found.",
+        }
+
+    selected = sorted(candidates, key=lambda item: (-item["priority"], headers.index(item["name"])))[0]
+    profile = selected["profile"]
+    normalized = selected["normalized"]
+    task_head = _target_task_head(normalized, profile, row_count)
+    confidence = "strong" if selected["priority"] >= 90 else "medium"
+    return {
+        "name": selected["name"],
+        "task_head": task_head,
+        "confidence": confidence,
+        "reason": f"Column '{selected['name']}' matched the common target role '{normalized}'.",
+    }
+
+
+def _target_task_head(normalized_name: str, profile: Dict[str, Any], row_count: int) -> str:
+    if normalized_name in CLASSIFICATION_TARGET_NAMES:
+        return "classification"
+    if not _is_numeric_profile(profile):
+        return "classification"
+    distinct = int(profile.get("distinct_count") or 0)
+    non_empty = int(profile.get("non_empty") or row_count or 0)
+    if normalized_name in {"y"} and distinct and distinct <= 20 and (not non_empty or distinct / max(non_empty, 1) <= 0.2):
+        return "classification"
+    return "regression"
+
+
+def _role_hint(name: str) -> str:
+    normalized = _normalized_column_name(name)
+    if normalized in TARGET_COLUMN_PRIORITY:
+        return "target"
+    if normalized in {_normalized_column_name(value) for value in ID_COLUMNS} or SEQUENCE_COLUMN_RE.search(name):
+        return "sequence"
+    if normalized in {_normalized_column_name(value) for value in TIME_COLUMNS} or TIME_COLUMN_RE.search(name):
+        return "time"
+    if normalized == "split":
+        return "split"
+    return "feature"
+
+
+def _normalized_column_name(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(name or "").strip().lower())
+
+
+def _is_numeric_profile(profile: Dict[str, Any]) -> bool:
+    return bool(profile.get("is_numeric"))
+
+
+def _is_float_like(value: Any) -> bool:
+    try:
+        float(value)
+        return True
+    except (TypeError, ValueError):
+        return False
 
 
 def _unique_path(path: Path) -> Path:

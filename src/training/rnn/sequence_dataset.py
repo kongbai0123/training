@@ -37,7 +37,8 @@ def load_csv_feature_sequences(
 
     grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
     for row in rows:
-        grouped[str(row[sequence_column]).strip()].append(row)
+        sequence_id = str(row.get(sequence_column) or "").strip() if sequence_column else "single_sequence"
+        grouped[sequence_id or "single_sequence"].append(row)
 
     windows: List[Dict[str, Any]] = []
     for sequence_id, sequence_rows in grouped.items():
@@ -172,13 +173,11 @@ def _read_csv_rows(paths: Iterable[Path], config: Dict[str, Any] | None = None) 
             headers = reader.fieldnames or []
             if not headers:
                 continue
-            current_sequence_col = configured_sequence or _first_present(headers, ID_COLUMNS)
+            current_sequence_col = configured_sequence or _first_present(headers, ID_COLUMNS) or ""
             current_target_col = configured_target or _first_present(headers, TARGET_COLUMNS)
             current_time_col = configured_time or _first_present(headers, TIME_COLUMNS)
             current_features = configured_features or [col for col in headers if col not in META_COLUMNS]
-            if not current_sequence_col:
-                raise RNNSequenceDatasetError(f"{path.name} must include sequence_id.")
-            if current_sequence_col not in headers:
+            if current_sequence_col and current_sequence_col not in headers:
                 raise RNNSequenceDatasetError(f"{path.name} is missing sequence column: {current_sequence_col}.")
             if not current_target_col:
                 raise RNNSequenceDatasetError(f"{path.name} must include label or target column.")
@@ -199,12 +198,12 @@ def _read_csv_rows(paths: Iterable[Path], config: Dict[str, Any] | None = None) 
             elif current_target_col != target_column or current_sequence_col != sequence_column:
                 raise RNNSequenceDatasetError("All CSV feature files must use the same sequence and target columns.")
             for row in reader:
-                if str(row.get(current_sequence_col) or "").strip():
+                if not current_sequence_col or str(row.get(current_sequence_col) or "").strip():
                     all_rows.append(row)
 
-    if feature_columns is None or not target_column or not sequence_column:
+    if feature_columns is None or not target_column:
         raise RNNSequenceDatasetError("No valid CSV feature files were found.")
-    return all_rows, feature_columns, target_column, sequence_column, time_column
+    return all_rows, feature_columns, target_column, sequence_column or "", time_column
 
 
 def _split_windows(windows: Sequence[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
@@ -215,6 +214,13 @@ def _split_windows(windows: Sequence[Dict[str, Any]]) -> Dict[str, List[Dict[str
             split = "val"
         if split in splits:
             splits[split].append(item)
+    if not splits["train"] and not splits["val"] and windows:
+        ordered = list(windows)
+        train_end = max(1, int(len(ordered) * 0.7))
+        val_end = max(train_end + 1, int(len(ordered) * 0.85)) if len(ordered) > 1 else train_end
+        splits["train"] = ordered[:train_end]
+        splits["val"] = ordered[train_end:val_end] or ordered[:1]
+        splits["test"] = ordered[val_end:]
     return splits
 
 
