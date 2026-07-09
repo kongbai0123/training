@@ -66,8 +66,10 @@ def _project_metadata(project_id: str = "", project_name: str = "") -> Dict[str,
 
 @router.get("/api/project-assistant/status")
 @router.get("/api/rag-workbench/status")
-def rag_workbench_status():
-    return ProjectAssistantService.status()
+def rag_workbench_status(
+    project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
+):
+    return ProjectAssistantService.status(project_id=project_id)
 
 
 @router.get("/api/project-assistant/settings")
@@ -87,8 +89,10 @@ def update_project_assistant_settings(request: ProjectAssistantSettingsRequest):
 
 @router.get("/api/project-assistant/knowledge-base")
 @router.get("/api/rag-workbench/knowledge-base")
-def rag_knowledge_base():
-    return ProjectAssistantService.list_documents()
+def rag_knowledge_base(
+    project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
+):
+    return ProjectAssistantService.list_documents(project_id=project_id)
 
 
 @router.post("/api/project-assistant/knowledge-base/documents")
@@ -122,14 +126,18 @@ async def rag_upload_document(
 
 @router.post("/api/project-assistant/knowledge-base/reindex")
 @router.post("/api/rag-workbench/knowledge-base/reindex")
-def rag_reindex():
-    return ProjectAssistantService.reindex()
+def rag_reindex(
+    project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
+):
+    return ProjectAssistantService.reindex(project_id=project_id)
 
 
 @router.delete("/api/project-assistant/knowledge-base")
 @router.delete("/api/rag-workbench/knowledge-base")
-def rag_clear_knowledge_base():
-    return ProjectAssistantService.clear_knowledge_base()
+def rag_clear_knowledge_base(
+    project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
+):
+    return ProjectAssistantService.clear_knowledge_base(project_id=project_id)
 
 
 @router.post("/api/project-assistant/retrieval/query")
@@ -139,8 +147,7 @@ def rag_retrieval_query(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
     filters = request.filters or {}
-    if project_id:
-        filters = {**filters, "project_id": project_id}
+    filters = {**filters, "project_id": project_id}
     return ProjectAssistantService.retrieve(
         query=request.query,
         top_k=request.top_k,
@@ -170,7 +177,7 @@ def rag_chat(
         message=request.message,
         conversation_state=request.conversation_state or [],
         profile_id=request.profile_id,
-        filters={"project_id": project_id} if project_id else None,
+        filters={"project_id": project_id},
     )
 
 
@@ -184,7 +191,7 @@ def rag_chat_stream(
         message=request.message,
         conversation_state=request.conversation_state or [],
         profile_id=request.profile_id,
-        filters={"project_id": project_id} if project_id else None,
+        filters={"project_id": project_id},
     )
 
     def iter_events():
@@ -197,8 +204,10 @@ def rag_chat_stream(
 
 @router.get("/api/project-assistant/agent-runs")
 @router.get("/api/rag-workbench/agent-runs")
-def rag_agent_runs():
-    return ProjectAssistantService.list_agent_runs()
+def rag_agent_runs(
+    project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
+):
+    return ProjectAssistantService.list_agent_runs(project_id=project_id)
 
 
 @router.get("/api/project-assistant/sandbox")

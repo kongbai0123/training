@@ -294,13 +294,14 @@ Verification evidence:
 - `scripts\build.bat` passes.
 - Browser DOM smoke confirms `?page=project-assistant` renders cleanly in `zh-TW` with no visible text, placeholder, title, aria-label, or tooltip issues.
 - API smoke confirms assistant settings can switch to `disabled`, block chat with `assistant_disabled`, then reset to `local_search_only`.
+- Runtime API smoke confirms unscoped Project Assistant requests return no documents / no sources, while scoped requests only see the active project documents.
 - Browser interaction smoke confirms document ingestion, retrieval results, grounded answer sources, and agent steps render in the UI.
 
 Implemented phase coverage:
 
 - Phase 0: repository fit documented; implementation stays isolated from CNN/RNN project flows.
 - Phase 1: Project Assistant page with header/context entry points, no primary sidebar navigation entry, and compatibility alias for legacy `rag-workbench` URLs.
-- Phase 2: text document ingestion with upload / parse / chunk / embed / index stages, document list, re-index, and clear KB.
+- Phase 2: project-scoped text document ingestion with upload / parse / chunk / embed / index stages, document list, re-index, and clear KB.
 - Phase 3: frontend keeps `conversationState`; backend sanitizes accepted roles and ignores UI-only state.
 - Phase 4: chat returns structured sources separately from answer text and renders source cards.
 - Phase 5: agent execution is rendered as parse / retrieve / validate / final steps; raw thought is not surfaced.

@@ -137,17 +137,57 @@ class RagWorkbenchService:
         sandbox["updated_at"] = _now()
         _write_json(cls.SANDBOX_PATH, sandbox)
 
+    @staticmethod
+    def _project_matches(metadata: Optional[Dict[str, Any]], project_id: Optional[str]) -> bool:
+        if project_id is None:
+            return True
+        normalized_project_id = str(project_id or "").strip()
+        if not normalized_project_id:
+            return False
+        return str((metadata or {}).get("project_id") or "").strip() == normalized_project_id
+
     @classmethod
-    def status(cls) -> Dict[str, Any]:
+    def _project_documents(cls, state: Dict[str, Any], project_id: Optional[str]) -> List[Dict[str, Any]]:
+        return [
+            document
+            for document in state.get("documents", [])
+            if cls._project_matches(document.get("metadata") or {}, project_id)
+        ]
+
+    @classmethod
+    def _project_chunks(cls, state: Dict[str, Any], project_id: Optional[str]) -> List[Dict[str, Any]]:
+        return [
+            chunk
+            for chunk in state.get("chunks", [])
+            if cls._project_matches(chunk.get("metadata") or {}, project_id)
+        ]
+
+    @classmethod
+    def _project_agent_runs(cls, state: Dict[str, Any], project_id: Optional[str]) -> List[Dict[str, Any]]:
+        if project_id is None:
+            return state.get("agent_runs", [])
+        normalized_project_id = str(project_id or "").strip()
+        if not normalized_project_id:
+            return []
+        return [
+            run
+            for run in state.get("agent_runs", [])
+            if str((run.get("retrieval_config") or {}).get("filters", {}).get("project_id") or "").strip() == normalized_project_id
+        ]
+
+    @classmethod
+    def status(cls, project_id: Optional[str] = None) -> Dict[str, Any]:
         state = cls._state()
-        docs = state.get("documents", [])
-        chunks = state.get("chunks", [])
+        docs = cls._project_documents(state, project_id)
+        chunks = cls._project_chunks(state, project_id)
+        agent_runs = cls._project_agent_runs(state, project_id)
         indexed_chunks = [chunk for chunk in chunks if chunk.get("index_state") == "indexed"]
         index_state = "ready" if indexed_chunks else "empty"
         if docs and len(indexed_chunks) < len(chunks):
             index_state = "partial"
-        state["workspace"]["index_state"] = index_state
-        cls._save_state(state)
+        if project_id is None:
+            state["workspace"]["index_state"] = index_state
+            cls._save_state(state)
         return {
             "workspace": state["workspace"],
             "navigation": ["chat", "knowledge-base", "retrieval", "agent-runs", "sandbox", "evaluation", "settings"],
@@ -158,7 +198,7 @@ class RagWorkbenchService:
                 "index_state": index_state,
             },
             "retrieval_profiles": state.get("retrieval_profiles", []),
-            "agent_run_count": len(state.get("agent_runs", [])),
+            "agent_run_count": len(agent_runs),
             "evaluation_report_count": len(state.get("evaluation_reports", [])),
             "assistant_settings": cls.get_settings(),
             "guardrails": {
@@ -238,7 +278,8 @@ class RagWorkbenchService:
         state.setdefault("chunks", []).extend(chunks)
         state["workspace"]["index_state"] = "ready" if chunks else state["workspace"].get("index_state", "empty")
         cls._save_state(state)
-        return {"document": document, "chunks": chunks, "status": cls.status()}
+        project_id = document_metadata.get("project_id") if document_metadata else None
+        return {"document": document, "chunks": chunks, "status": cls.status(project_id=project_id)}
 
     @classmethod
     def ingest_file_bytes(cls, filename: str, payload: bytes, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -295,43 +336,71 @@ class RagWorkbenchService:
         return chunks
 
     @classmethod
-    def list_documents(cls) -> Dict[str, Any]:
+    def list_documents(cls, project_id: Optional[str] = None) -> Dict[str, Any]:
         state = cls._state()
+        documents = cls._project_documents(state, project_id)
+        document_ids = {document.get("document_id") for document in documents}
+        chunks = [
+            chunk
+            for chunk in cls._project_chunks(state, project_id)
+            if chunk.get("document_id") in document_ids
+        ]
         return {
-            "documents": state.get("documents", []),
-            "chunks": state.get("chunks", []),
-            "status": cls.status(),
+            "documents": documents,
+            "chunks": chunks,
+            "status": cls.status(project_id=project_id),
         }
 
     @classmethod
-    def clear_knowledge_base(cls) -> Dict[str, Any]:
+    def clear_knowledge_base(cls, project_id: Optional[str] = None) -> Dict[str, Any]:
         state = cls._state()
-        state["documents"] = []
-        state["chunks"] = []
-        state["bad_retrieval_marks"] = []
-        state["workspace"]["index_state"] = "empty"
-        if cls.DOCS_DIR.exists():
+        if project_id is None:
+            removed_documents = state.get("documents", [])
+            state["documents"] = []
+            state["chunks"] = []
+            state["bad_retrieval_marks"] = []
+            state["workspace"]["index_state"] = "empty"
+        else:
+            removed_documents = cls._project_documents(state, project_id)
+            removed_ids = {document.get("document_id") for document in removed_documents}
+            state["documents"] = [
+                document
+                for document in state.get("documents", [])
+                if document.get("document_id") not in removed_ids
+            ]
+            state["chunks"] = [
+                chunk
+                for chunk in state.get("chunks", [])
+                if chunk.get("document_id") not in removed_ids
+            ]
+        if cls.DOCS_DIR.exists() and removed_documents:
+            removed_paths = {Path(str(document.get("path") or "")).name for document in removed_documents}
             for item in cls.DOCS_DIR.iterdir():
-                if item.is_file():
+                if item.is_file() and (project_id is None or item.name in removed_paths):
                     item.unlink()
         cls._save_state(state)
-        return cls.status()
+        return cls.status(project_id=project_id)
 
     @classmethod
-    def reindex(cls) -> Dict[str, Any]:
+    def reindex(cls, project_id: Optional[str] = None) -> Dict[str, Any]:
         state = cls._state()
         for chunk in state.get("chunks", []):
+            if not cls._project_matches(chunk.get("metadata") or {}, project_id):
+                continue
             chunk["token_index"] = dict(Counter(_tokens(chunk.get("content", ""))))
             chunk["index_state"] = "indexed"
-        state["workspace"]["index_state"] = "ready" if state.get("chunks") else "empty"
+        if project_id is None:
+            state["workspace"]["index_state"] = "ready" if state.get("chunks") else "empty"
         cls._save_state(state)
-        return cls.status()
+        return cls.status(project_id=project_id)
 
     @classmethod
     def retrieve(cls, query: str, top_k: int = 5, profile_id: str = "lexical_default", filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         state = cls._state()
         query_tokens = Counter(_tokens(query))
         filters = filters or {}
+        has_project_filter = "project_id" in filters
+        project_id_filter = str(filters.get("project_id") or "").strip()
         if not query_tokens:
             return {"query": query, "profile_id": profile_id, "results": [], "diagnostic": {"reason": "empty_query"}}
 
@@ -339,7 +408,7 @@ class RagWorkbenchService:
         for chunk in state.get("chunks", []):
             if filters.get("document_id") and chunk.get("document_id") != filters["document_id"]:
                 continue
-            if filters.get("project_id") and (chunk.get("metadata") or {}).get("project_id") != filters["project_id"]:
+            if has_project_filter and not cls._project_matches(chunk.get("metadata") or {}, project_id_filter):
                 continue
             token_index = chunk.get("token_index") or {}
             overlap = sum(min(query_tokens[token], int(token_index.get(token, 0))) for token in query_tokens)
@@ -516,9 +585,9 @@ class RagWorkbenchService:
         }
 
     @classmethod
-    def list_agent_runs(cls) -> Dict[str, Any]:
+    def list_agent_runs(cls, project_id: Optional[str] = None) -> Dict[str, Any]:
         state = cls._state()
-        return {"runs": state.get("agent_runs", [])}
+        return {"runs": cls._project_agent_runs(state, project_id)}
 
     @classmethod
     def get_sandbox(cls) -> Dict[str, Any]:

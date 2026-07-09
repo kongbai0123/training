@@ -105,6 +105,44 @@ class RagWorkbenchContractTests(unittest.TestCase):
         self.assertEqual(len(retrieval["results"]), 1)
         self.assertEqual(retrieval["results"][0]["source"], "project-a-report.md")
 
+    def test_project_assistant_api_requires_active_project_scope(self):
+        client = TestClient(app)
+        client.post(
+            "/api/project-assistant/knowledge-base/documents?project_id=project_a",
+            json={"filename": "project-a-report.md", "content": "Alpha project pressure drift diagnostics."},
+        )
+        client.post(
+            "/api/project-assistant/knowledge-base/documents?project_id=project_b",
+            json={"filename": "project-b-report.md", "content": "Beta project export contract diagnostics."},
+        )
+
+        unscoped = client.get("/api/project-assistant/knowledge-base")
+        self.assertEqual(unscoped.status_code, 200)
+        self.assertEqual(unscoped.json()["documents"], [])
+        self.assertEqual(unscoped.json()["chunks"], [])
+
+        project_a_docs = client.get("/api/project-assistant/knowledge-base?project_id=project_a").json()
+        project_b_docs = client.get("/api/project-assistant/knowledge-base?project_id=project_b").json()
+        self.assertEqual([item["filename"] for item in project_a_docs["documents"]], ["project-a-report.md"])
+        self.assertEqual([item["filename"] for item in project_b_docs["documents"]], ["project-b-report.md"])
+
+        no_project_chat = client.post("/api/project-assistant/chat", json={"message": "diagnostics"})
+        self.assertEqual(no_project_chat.status_code, 200)
+        self.assertEqual(no_project_chat.json()["failure_type"], "no_sources")
+        self.assertEqual(no_project_chat.json()["sources"], [])
+
+        project_a_chat = client.post(
+            "/api/project-assistant/chat?project_id=project_a",
+            json={"message": "pressure drift diagnostics"},
+        )
+        self.assertEqual(project_a_chat.status_code, 200)
+        self.assertEqual(project_a_chat.json()["sources"][0]["source"], "project-a-report.md")
+
+        project_a_runs = client.get("/api/project-assistant/agent-runs?project_id=project_a").json()["runs"]
+        project_b_runs = client.get("/api/project-assistant/agent-runs?project_id=project_b").json()["runs"]
+        self.assertEqual(len(project_a_runs), 1)
+        self.assertEqual(project_b_runs, [])
+
     def test_chat_uses_clean_conversation_state_and_saves_agent_run(self):
         RagWorkbenchService.ingest_document(
             "guide.txt",
