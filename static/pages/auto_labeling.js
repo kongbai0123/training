@@ -55,9 +55,13 @@ export function initAutoLabeling() {
   qs("#btn-start-auto-label")?.addEventListener("click", createAutoLabelJob);
   qs("#btn-auto-review-accept")?.addEventListener("click", () => reviewSelectedAutoLabelItem("accept"));
   qs("#btn-auto-review-reject")?.addEventListener("click", () => reviewSelectedAutoLabelItem("reject"));
+  qs("#btn-auto-review-accept-next")?.addEventListener("click", () => reviewSelectedAutoLabelItem("accept", { moveNext: true }));
+  qs("#btn-auto-review-reject-next")?.addEventListener("click", () => reviewSelectedAutoLabelItem("reject", { moveNext: true }));
   qs("#btn-auto-review-skip")?.addEventListener("click", () => reviewSelectedAutoLabelItem("skip"));
   qs("#btn-auto-review-hard-case")?.addEventListener("click", () => reviewSelectedAutoLabelItem("hard_case"));
   qs("#btn-auto-review-edit")?.addEventListener("click", editSelectedAutoLabelItem);
+  qs("#btn-auto-review-prev")?.addEventListener("click", () => navigateAutoReviewItem(-1));
+  qs("#btn-auto-review-next")?.addEventListener("click", () => navigateAutoReviewItem(1));
   initWeightManager();
   initModelImportDropZone();
   initSourceDropZone();
@@ -936,6 +940,7 @@ function showAutoLabelPreview(item) {
   setText("#auto-review-state", item?.draft_labelme_url ? t("autoLabel.reviewStatus.selected", { filename: item?.filename || "--" }) : t("autoLabel.reviewStatus.draftJsonMissing"));
   renderAutoShapeTable(item);
   renderAutoReviewTaskInfo(item);
+  renderAutoReviewPosition();
 }
 
 function clearAutoLabelPreview() {
@@ -955,6 +960,7 @@ function clearAutoLabelPreview() {
   setText("#auto-review-state", "--");
   setHTML("#auto-shape-table-body", `<tr><td colspan="5">${escapeHtml(t("autoLabel.noSelectedDraft"))}</td></tr>`);
   renderAutoReviewTaskInfo(null);
+  renderAutoReviewPosition();
   updateAutoReviewToolbar();
 }
 
@@ -991,11 +997,13 @@ function renderAutoReviewTaskInfo(item) {
   setText("#auto-review-draft-path", job?.draft_dir || "--");
 }
 
-async function reviewSelectedAutoLabelItem(action) {
+async function reviewSelectedAutoLabelItem(action, options = {}) {
   if (!appState.currentProjectId || !selectedAutoReviewItem) {
     showToast(t("autoLabel.toast.selectDraftFirst"));
     return;
   }
+  const previousItems = getAutoLabelReviewItems();
+  const previousIndex = getSelectedReviewIndex(previousItems);
   const jobId = selectedAutoReviewItem.job_id || "";
   const filename = selectedAutoReviewItem.filename || "";
   if (!jobId || !filename) {
@@ -1013,6 +1021,14 @@ async function reviewSelectedAutoLabelItem(action) {
     showToast(t("autoLabel.toast.reviewUpdated", { filename, status: result.review_status || action }));
     loadedAutoLabelStatusProjectId = null;
     await loadAutoLabelStatus({ hasProject: true });
+    if (options.moveNext) {
+      const refreshedItems = getAutoLabelReviewItems();
+      const nextIndex = Math.min(Math.max(previousIndex, 0) + 1, Math.max(refreshedItems.length - 1, 0));
+      if (refreshedItems[nextIndex]) {
+        selectedAutoReviewItem = refreshedItems[nextIndex];
+      }
+      renderAutoLabelReviewQueue();
+    }
     eventBus.emit("refresh-project");
   } catch (err) {
     showToast(t("autoLabel.toast.reviewFailed", { message: err.message }));
@@ -1046,12 +1062,15 @@ function updateAutoReviewToolbar() {
       ? t("autoLabel.editDraftTitle")
       : t("autoLabel.selectDraftJsonTitle");
   }
+  updateAutoReviewNavigation();
 }
 
 function setAutoReviewToolbarDisabled(disabled) {
   [
     "#btn-auto-review-accept",
     "#btn-auto-review-reject",
+    "#btn-auto-review-accept-next",
+    "#btn-auto-review-reject-next",
     "#btn-auto-review-skip",
     "#btn-auto-review-hard-case",
     "#btn-auto-review-edit",
@@ -1059,6 +1078,38 @@ function setAutoReviewToolbarDisabled(disabled) {
     const button = qs(selector);
     if (button) button.disabled = disabled;
   });
+}
+
+function navigateAutoReviewItem(offset) {
+  const items = getAutoLabelReviewItems();
+  if (!items.length) return;
+  const currentIndex = getSelectedReviewIndex(items);
+  const fallbackIndex = currentIndex < 0 ? 0 : currentIndex;
+  const nextIndex = Math.max(0, Math.min(items.length - 1, fallbackIndex + offset));
+  selectedAutoReviewItem = items[nextIndex];
+  renderAutoLabelReviewQueue();
+}
+
+function getSelectedReviewIndex(items = getAutoLabelReviewItems()) {
+  const selectedKey = selectedAutoReviewItem ? autoReviewItemKey(selectedAutoReviewItem) : "";
+  return items.findIndex((item) => autoReviewItemKey(item) === selectedKey);
+}
+
+function renderAutoReviewPosition() {
+  const items = getAutoLabelReviewItems();
+  const currentIndex = getSelectedReviewIndex(items);
+  const label = items.length && currentIndex >= 0 ? `${currentIndex + 1} / ${items.length}` : `0 / ${items.length}`;
+  setText("#auto-review-position", label);
+  updateAutoReviewNavigation();
+}
+
+function updateAutoReviewNavigation() {
+  const items = getAutoLabelReviewItems();
+  const currentIndex = getSelectedReviewIndex(items);
+  const prevButton = qs("#btn-auto-review-prev");
+  const nextButton = qs("#btn-auto-review-next");
+  if (prevButton) prevButton.disabled = currentIndex <= 0;
+  if (nextButton) nextButton.disabled = currentIndex < 0 || currentIndex >= items.length - 1;
 }
 
 function autoReviewItemKey(item = {}) {

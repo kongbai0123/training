@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260706-rnn-pc-catalog">
+  <link rel="stylesheet" href="/static/style.css?v=20260709-review-first-auto-label3">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -1705,24 +1705,24 @@
             <div class="metric-card"><span data-i18n="autoLabel.stat.target">Target</span><strong data-i18n="autoLabel.draftOnly">Draft only</strong></div>
           </div>
 
-          <div class="status-guard info compact-guard auto-label-safety-rail">
-            <div class="guard-title" data-i18n="autoLabel.principleTitle">Auto-Labeling workflow rules</div>
+          <details class="status-guard info compact-guard auto-label-safety-rail">
+            <summary class="guard-title" data-i18n="autoLabel.principleTitle">Auto-Labeling workflow rules</summary>
             <ul>
               <li data-i18n="autoLabel.principle1">This page creates draft annotation jobs. It is not a model test page or a LabelMe replacement.</li>
               <li data-i18n="autoLabel.principle2">In P0, all outputs are written to drafts and never overwrite annotations/current directly.</li>
               <li data-i18n="autoLabel.principle3">best.pt and last.pt remain in training/runs/*/weights; the UI only groups recommended weights and checkpoints.</li>
             </ul>
-          </div>
+          </details>
 
           <div class="auto-label-workbench">
-            <section class="panel-section auto-job-builder auto-task-setup-panel auto-execution-console-panel">
-              <div class="section-title">
+            <details class="panel-section auto-job-builder auto-task-setup-panel auto-execution-console-panel auto-setup-summary-panel">
+              <summary class="section-title auto-setup-summary">
                 <div>
                   <h2 data-i18n="autoLabel.executionConsole">Execution Console</h2>
                   <p class="section-subtitle" data-i18n="autoLabel.executionConsoleHelp">Choose input, model, and draft rules, then run a draft-only auto-label job.</p>
                 </div>
                 <span class="info-icon" data-tooltip="Create draft annotations from input source, model source, and draft rules." data-i18n-tooltip="autoLabel.executionTooltip">i</span>
-              </div>
+              </summary>
 
               <div class="auto-step-block active">
                 <div class="auto-step-heading"><span>1</span><strong data-i18n="autoLabel.step.input">Input Source</strong></div>
@@ -1785,9 +1785,9 @@
                 <button class="btn btn-primary btn-disabled" id="btn-start-auto-label" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="autoLabel.start">Start Auto-Label Job</span></button>
                 <p class="muted-note" id="auto-start-reason">Open a project before creating an auto-label job.</p>
               </div>
-            </section>
+            </details>
 
-            <section class="panel-section auto-review-panel auto-review-workspace-panel">
+            <section class="panel-section auto-review-panel auto-review-workspace-panel auto-review-first-panel">
               <div class="section-title">
                 <div>
                   <h2 data-i18n="autoLabel.reviewResults">Review Results</h2>
@@ -1803,11 +1803,16 @@
                 <div class="auto-review-preview-card">
                   <div class="review-preview-toolbar">
                     <span data-i18n="autoLabel.imageReview">Image review</span>
-                    <div><button class="btn-small secondary" type="button" disabled>100%</button><button class="btn-small secondary" type="button" disabled data-i18n="autoLabel.fit">Fit</button></div>
+                    <div><span class="status-badge" id="auto-review-position">0 / 0</span><button class="btn-small secondary" type="button" disabled>100%</button><button class="btn-small secondary" type="button" disabled data-i18n="autoLabel.fit">Fit</button></div>
                   </div>
                   <div class="review-preview-grid">
-                    <div class="preview-tile"><h3 data-i18n="autoLabel.original">Original Image</h3><div class="preview-placeholder" id="auto-review-original">No draft annotations generated yet.</div></div>
-                    <div class="preview-tile"><h3 data-i18n="autoLabel.overlay">Draft Overlay</h3><div class="preview-placeholder" id="auto-review-overlay">Mask / bbox / polygon overlay will appear here.</div></div>
+                    <div class="preview-tile original-reference-tile"><h3 data-i18n="autoLabel.original">Original Image</h3><div class="preview-placeholder" id="auto-review-original">No draft annotations generated yet.</div></div>
+                    <div class="preview-tile result-overlay-tile">
+                      <h3 data-i18n="autoLabel.overlay">Draft Overlay</h3>
+                      <button class="review-nav-button review-nav-prev" id="btn-auto-review-prev" type="button" disabled title="Previous draft" data-i18n-title="autoLabel.previousDraft"><i class="fa-solid fa-chevron-left"></i></button>
+                      <div class="preview-placeholder" id="auto-review-overlay">Mask / bbox / polygon overlay will appear here.</div>
+                      <button class="review-nav-button review-nav-next" id="btn-auto-review-next" type="button" disabled title="Next draft" data-i18n-title="autoLabel.nextDraft"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
                   </div>
                   <div class="auto-shape-review-grid">
                     <div class="data-table compact-table"><table><thead><tr><th>ID</th><th data-i18n="autoLabel.table.class">Class</th><th data-i18n="autoLabel.table.type">Type</th><th data-i18n="autoLabel.confidence">Confidence</th><th data-i18n="autoLabel.table.issue">Issue</th></tr></thead><tbody id="auto-shape-table-body"><tr><td colspan="5" data-i18n="autoLabel.noSelectedDraft">No selected draft.</td></tr></tbody></table></div>
@@ -1820,21 +1825,26 @@
                   </div>
                 </div>
                 <aside class="auto-review-action-card">
-                  <div class="review-card-title"><strong data-i18n="autoLabel.taskInfo">Task info</strong><span id="auto-review-job-status">--</span></div>
-                  <div class="draft-inspector compact">
-                    <div class="summary-row"><span data-i18n="autoLabel.jobId">Job ID</span><code id="auto-review-job-id">--</code></div>
-                    <div class="summary-row"><span data-i18n="autoLabel.source">Source</span><code id="auto-review-source">--</code></div>
-                    <div class="summary-row"><span data-i18n="autoLabel.model">Model</span><code id="auto-review-model">--</code></div>
-                    <div class="summary-row"><span data-i18n="autoLabel.draftPath">Draft path</span><code id="auto-review-draft-path">--</code></div>
-                    <div class="summary-row"><span data-i18n="autoLabel.protection">Protection</span><code data-i18n="autoLabel.draftFirst">Draft first</code></div>
-                  </div>
+                  <div class="review-card-title"><strong data-i18n="autoLabel.reviewDecision">Review decision</strong><span id="auto-review-job-status">--</span></div>
                   <div class="auto-review-toolbar compact-toolbar">
-                    <button class="btn btn-secondary success" id="btn-auto-review-accept" disabled><i class="fa-solid fa-check"></i> <span data-i18n="autoLabel.accept">Accept</span></button>
-                    <button class="btn btn-secondary danger" id="btn-auto-review-reject" disabled><i class="fa-solid fa-xmark"></i> <span data-i18n="autoLabel.reject">Reject</span></button>
+                    <button class="btn btn-secondary success" id="btn-auto-review-accept-next" disabled><i class="fa-solid fa-check"></i> <span data-i18n="autoLabel.acceptNext">Accept & Next</span></button>
+                    <button class="btn btn-secondary danger" id="btn-auto-review-reject-next" disabled><i class="fa-solid fa-xmark"></i> <span data-i18n="autoLabel.rejectNext">Reject & Next</span></button>
+                    <button class="btn btn-secondary success subtle" id="btn-auto-review-accept" disabled><i class="fa-solid fa-check"></i> <span data-i18n="autoLabel.accept">Accept</span></button>
+                    <button class="btn btn-secondary danger subtle" id="btn-auto-review-reject" disabled><i class="fa-solid fa-xmark"></i> <span data-i18n="autoLabel.reject">Reject</span></button>
                     <button class="btn btn-secondary" id="btn-auto-review-skip" disabled><i class="fa-solid fa-forward-step"></i> <span data-i18n="autoLabel.skip">Skip</span></button>
                     <button class="btn btn-secondary warning" id="btn-auto-review-hard-case" disabled><i class="fa-solid fa-flag"></i> <span data-i18n="autoLabel.hardCase">Hard Case</span></button>
                     <button class="btn btn-secondary" id="btn-auto-review-edit" disabled><i class="fa-solid fa-pen-nib"></i> <span data-i18n="autoLabel.editLabelMe">Edit in LabelMe</span></button>
                   </div>
+                  <details class="auto-review-metadata">
+                    <summary data-i18n="autoLabel.taskInfo">Task info</summary>
+                    <div class="draft-inspector compact">
+                      <div class="summary-row"><span data-i18n="autoLabel.jobId">Job ID</span><code id="auto-review-job-id">--</code></div>
+                      <div class="summary-row"><span data-i18n="autoLabel.source">Source</span><code id="auto-review-source">--</code></div>
+                      <div class="summary-row"><span data-i18n="autoLabel.model">Model</span><code id="auto-review-model">--</code></div>
+                      <div class="summary-row"><span data-i18n="autoLabel.draftPath">Draft path</span><code id="auto-review-draft-path">--</code></div>
+                      <div class="summary-row"><span data-i18n="autoLabel.protection">Protection</span><code data-i18n="autoLabel.draftFirst">Draft first</code></div>
+                    </div>
+                  </details>
                 </aside>
               </div>
             </section>
@@ -2222,7 +2232,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260709-auto-label-smoke"></script>
+  <script type="module" src="/static/app.js?v=20260709-review-first-auto-label"></script>
 </body>
 </html>
 

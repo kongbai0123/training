@@ -36,7 +36,7 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         page_registry_js = (ROOT / "static" / "core" / "page_registry.js").read_text(encoding="utf-8")
 
         self.assertIn(
-            "./pages/auto_labeling.js?v=20260709-execution-console",
+            "./pages/auto_labeling.js?v=20260709-review-first-auto-label",
             page_registry_js,
         )
 
@@ -51,7 +51,7 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
         auto_labeling_css = (ROOT / "static" / "styles" / "pages" / "auto_labeling.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/style.css?v=20260706-rnn-pc-catalog", index_html)
+        self.assertIn("/static/style.css?v=20260709-review-first-auto-label3", index_html)
         self.assertIn('data-i18n="autoLabel.executionConsole"', index_html)
         self.assertIn('data-i18n="autoLabel.executionConsoleHelp"', index_html)
         self.assertIn('data-i18n="autoLabel.reviewWorkspaceHelp"', index_html)
@@ -63,10 +63,15 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         self.assertIn("grid-template-columns: minmax(0, 1fr);", auto_labeling_css)
         self.assertIn(".auto-job-builder", auto_labeling_css)
         self.assertIn(".auto-execution-console-panel", auto_labeling_css)
+        self.assertIn(".auto-review-first-panel", auto_labeling_css)
+        self.assertIn(".auto-setup-summary-panel", auto_labeling_css)
         self.assertIn("grid-template-columns: minmax(260px, 0.9fr) minmax(340px, 1.25fr) minmax(300px, 1fr);", auto_labeling_css)
         self.assertIn(".output-target-block", auto_labeling_css)
         self.assertIn("grid-template-columns: minmax(170px, 0.34fr) minmax(0, 1fr) auto;", auto_labeling_css)
         self.assertIn(".review-preview-grid", auto_labeling_css)
+        self.assertIn(".result-overlay-tile", auto_labeling_css)
+        self.assertIn(".original-reference-tile", auto_labeling_css)
+        self.assertIn(".review-nav-button", auto_labeling_css)
         self.assertIn(".auto-review-workstation", auto_labeling_css)
         self.assertIn(".auto-review-workspace-panel", auto_labeling_css)
         self.assertIn(".auto-shape-review-grid", auto_labeling_css)
@@ -76,7 +81,8 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         self.assertIn("@media (max-width: 840px)", auto_labeling_css)
         self.assertIn("grid-column: 1 / -1", auto_labeling_css)
         self.assertIn(".review-preview-grid .preview-tile > div", auto_labeling_css)
-        self.assertIn("min-height: 360px", auto_labeling_css)
+        self.assertIn("min-height: 560px", auto_labeling_css)
+        self.assertIn("min-height: 260px", auto_labeling_css)
 
     def test_draft_rules_are_editable_and_sent_to_job_request(self):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
@@ -116,6 +122,9 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         self.assertIn('id="auto-review-queue-body"', index_html)
         self.assertIn('id="auto-review-original"', index_html)
         self.assertIn('id="auto-review-overlay"', index_html)
+        self.assertIn('id="btn-auto-review-prev"', index_html)
+        self.assertIn('id="btn-auto-review-next"', index_html)
+        self.assertIn('id="auto-review-position"', index_html)
         self.assertNotIn('id="auto-review-original" data-i18n=', index_html)
         self.assertNotIn('id="auto-review-overlay" data-i18n=', index_html)
         self.assertIn("renderAutoLabelReviewQueue", auto_labeling_js)
@@ -135,6 +144,8 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         for element_id in [
             "btn-auto-review-accept",
             "btn-auto-review-reject",
+            "btn-auto-review-accept-next",
+            "btn-auto-review-reject-next",
             "btn-auto-review-skip",
             "btn-auto-review-edit",
             "btn-auto-review-hard-case",
@@ -143,6 +154,9 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
 
         self.assertIn('reviewSelectedAutoLabelItem("accept")', auto_labeling_js)
         self.assertIn('reviewSelectedAutoLabelItem("reject")', auto_labeling_js)
+        self.assertIn('reviewSelectedAutoLabelItem("accept", { moveNext: true })', auto_labeling_js)
+        self.assertIn('reviewSelectedAutoLabelItem("reject", { moveNext: true })', auto_labeling_js)
+        self.assertIn("navigateAutoReviewItem", auto_labeling_js)
         self.assertIn('reviewSelectedAutoLabelItem("skip")', auto_labeling_js)
         self.assertIn('reviewSelectedAutoLabelItem("hard_case")', auto_labeling_js)
         self.assertIn("editSelectedAutoLabelItem", auto_labeling_js)

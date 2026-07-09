@@ -1,5 +1,5 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js?v=20260709-auto-label-smoke";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260709-review-first-auto-label";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

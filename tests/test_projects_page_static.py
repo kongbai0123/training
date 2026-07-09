@@ -40,8 +40,8 @@ class ProjectsPageStaticTests(unittest.TestCase):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("../pages/projects.js?v=20260709-project-open-delegation", page_registry_js)
-        self.assertIn("./core/bootstrap.js?v=20260709-auto-label-smoke", app_js)
-        self.assertIn("/static/app.js?v=20260709-auto-label-smoke", index_html)
+        self.assertIn("./core/bootstrap.js?v=20260709-review-first-auto-label", app_js)
+        self.assertIn("/static/app.js?v=20260709-review-first-auto-label", index_html)
 
 
 if __name__ == "__main__":
