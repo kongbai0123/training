@@ -65,6 +65,13 @@ def _project_metadata(project_id: str = "", project_name: str = "") -> Dict[str,
     return metadata
 
 
+def _require_project_scope(project_id: str) -> str:
+    normalized = str(project_id or "").strip()
+    if not normalized:
+        raise HTTPException(status_code=400, detail="Active project is required for project assistant knowledge operations.")
+    return normalized
+
+
 @router.get("/api/project-assistant/status")
 @router.get("/api/rag-workbench/status")
 def project_assistant_status(
@@ -103,6 +110,7 @@ def project_assistant_ingest_document(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
     project_name: str = Query("", description="Active project display name."),
 ):
+    project_id = _require_project_scope(project_id)
     return ProjectAssistantService.ingest_document(
         filename=request.filename,
         content=request.content,
@@ -117,6 +125,7 @@ async def project_assistant_upload_document(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
     project_name: str = Query("", description="Active project display name."),
 ):
+    project_id = _require_project_scope(project_id)
     payload = await file.read()
     return ProjectAssistantService.ingest_file_bytes(
         filename=file.filename or "document.txt",
@@ -130,6 +139,7 @@ async def project_assistant_upload_document(
 def project_assistant_reindex(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
+    project_id = _require_project_scope(project_id)
     return ProjectAssistantService.reindex(project_id=project_id)
 
 
@@ -138,6 +148,7 @@ def project_assistant_reindex(
 def project_assistant_clear_knowledge_base(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
+    project_id = _require_project_scope(project_id)
     return ProjectAssistantService.clear_knowledge_base(project_id=project_id)
 
 
@@ -159,6 +170,7 @@ def project_assistant_retrieval_query(
     request: ProjectAssistantRetrievalRequest,
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
+    project_id = _require_project_scope(project_id)
     filters = request.filters or {}
     filters = {**filters, "project_id": project_id}
     return ProjectAssistantService.retrieve(
@@ -186,6 +198,7 @@ def project_assistant_chat(
     request: ProjectAssistantChatRequest,
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
+    project_id = _require_project_scope(project_id)
     return ProjectAssistantService.chat(
         message=request.message,
         conversation_state=request.conversation_state or [],
@@ -200,6 +213,7 @@ def project_assistant_chat_stream(
     request: ProjectAssistantChatRequest,
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
+    project_id = _require_project_scope(project_id)
     events = ProjectAssistantService.chat_stream_events(
         message=request.message,
         conversation_state=request.conversation_state or [],

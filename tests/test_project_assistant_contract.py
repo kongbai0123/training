@@ -115,6 +115,12 @@ class ProjectAssistantContractTests(unittest.TestCase):
 
     def test_project_assistant_api_requires_active_project_scope(self):
         client = TestClient(app)
+        unscoped_ingest = client.post(
+            "/api/project-assistant/knowledge-base/documents",
+            json={"filename": "unscoped.md", "content": "This should not become global assistant knowledge."},
+        )
+        self.assertEqual(unscoped_ingest.status_code, 400)
+
         client.post(
             "/api/project-assistant/knowledge-base/documents?project_id=project_a",
             json={"filename": "project-a-report.md", "content": "Alpha project pressure drift diagnostics."},
@@ -129,15 +135,19 @@ class ProjectAssistantContractTests(unittest.TestCase):
         self.assertEqual(unscoped.json()["documents"], [])
         self.assertEqual(unscoped.json()["chunks"], [])
 
+        no_project_retrieval = client.post(
+            "/api/project-assistant/retrieval/query",
+            json={"query": "diagnostics"},
+        )
+        self.assertEqual(no_project_retrieval.status_code, 400)
+
         project_a_docs = client.get("/api/project-assistant/knowledge-base?project_id=project_a").json()
         project_b_docs = client.get("/api/project-assistant/knowledge-base?project_id=project_b").json()
         self.assertEqual([item["filename"] for item in project_a_docs["documents"]], ["project-a-report.md"])
         self.assertEqual([item["filename"] for item in project_b_docs["documents"]], ["project-b-report.md"])
 
         no_project_chat = client.post("/api/project-assistant/chat", json={"message": "diagnostics"})
-        self.assertEqual(no_project_chat.status_code, 200)
-        self.assertEqual(no_project_chat.json()["failure_type"], "no_sources")
-        self.assertEqual(no_project_chat.json()["sources"], [])
+        self.assertEqual(no_project_chat.status_code, 400)
 
         project_a_chat = client.post(
             "/api/project-assistant/chat?project_id=project_a",

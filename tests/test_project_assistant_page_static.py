@@ -50,6 +50,8 @@ class ProjectAssistantPageStaticTests(unittest.TestCase):
         self.assertIn('assistantApi("/settings")', module)
         self.assertIn("/sync-artifacts", module)
         self.assertNotIn("/api/rag-workbench", module)
+        self.assertIn("function requireActiveProject", module)
+        self.assertIn('t("rag.toast.noActiveProject")', module)
         self.assertIn("project_id", module)
         self.assertIn("conversation_state: assistantState.conversationState", module)
 
@@ -79,6 +81,8 @@ class ProjectAssistantPageStaticTests(unittest.TestCase):
         self.assertIn('"rag.uploadFile"', zh)
         self.assertIn('"rag.syncArtifacts"', en)
         self.assertIn('"rag.syncArtifacts"', zh)
+        self.assertIn("Open a project before using project assistant knowledge.", en)
+        self.assertIn("請先開啟專案再使用專案助理知識。", zh)
         self.assertNotIn('"rag.mode": "Mode"', en)
         self.assertNotIn("RAG answer", en)
         self.assertNotIn("RAG artifact", en)

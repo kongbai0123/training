@@ -53,6 +53,12 @@ export function renderProjectAssistantImplPage() {
   renderEvaluation();
 }
 
+function requireActiveProject() {
+  if (appState.currentProjectId) return true;
+  eventBus.emit("toast", t("rag.toast.noActiveProject"));
+  return false;
+}
+
 async function loadProjectAssistant({ force = false } = {}) {
   if (assistantState.loading && !force) return;
   assistantState.loading = true;
@@ -77,6 +83,7 @@ async function loadProjectAssistant({ force = false } = {}) {
 }
 
 async function ingestDocument() {
+  if (!requireActiveProject()) return;
   const filename = qs("#rag-doc-filename")?.value?.trim() || "rag-note.md";
   const content = qs("#rag-doc-content")?.value || "";
   if (!content.trim()) {
@@ -95,6 +102,7 @@ async function ingestDocument() {
 }
 
 async function uploadDocumentFile() {
+  if (!requireActiveProject()) return;
   const input = qs("#rag-upload-file");
   const file = input?.files?.[0];
   if (!file) {
@@ -114,10 +122,7 @@ async function uploadDocumentFile() {
 }
 
 async function syncProjectArtifacts() {
-  if (!appState.currentProjectId) {
-    eventBus.emit("toast", t("rag.toast.noActiveProject"));
-    return;
-  }
+  if (!requireActiveProject()) return;
   const result = await apiFetch(`/api/project-assistant/projects/${encodeURIComponent(appState.currentProjectId)}/sync-artifacts`, {
     method: "POST",
   });
@@ -130,12 +135,14 @@ async function syncProjectArtifacts() {
 }
 
 async function reindexKnowledgeBase() {
+  if (!requireActiveProject()) return;
   assistantState.status = await apiFetch(assistantApi("/knowledge-base/reindex"), { method: "POST" });
   await loadProjectAssistant({ force: true });
   eventBus.emit("toast", t("rag.toast.reindexed"));
 }
 
 async function clearKnowledgeBase() {
+  if (!requireActiveProject()) return;
   const confirmed = window.confirm(t("rag.confirmClearKb"));
   if (!confirmed) return;
   assistantState.status = await apiFetch(assistantApi("/knowledge-base"), { method: "DELETE" });
@@ -145,6 +152,7 @@ async function clearKnowledgeBase() {
 }
 
 async function runRetrieval() {
+  if (!requireActiveProject()) return;
   const query = qs("#rag-retrieval-query")?.value || "";
   if (!query.trim()) {
     eventBus.emit("toast", t("rag.toast.emptyQuery"));
@@ -163,6 +171,7 @@ async function runRetrieval() {
 }
 
 async function runProjectAssistantChat() {
+  if (!requireActiveProject()) return;
   const message = qs("#rag-chat-input")?.value || "";
   if (!message.trim()) {
     eventBus.emit("toast", t("rag.toast.emptyQuestion"));
