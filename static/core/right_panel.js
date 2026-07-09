@@ -290,6 +290,18 @@ function buildProjectAssistantContext(pageId, status) {
   const latestRunStatus = latestRun?.status || "--";
 
   const pageConfigs = {
+    dashboard: {
+      help: "Project Assistant can summarize the active project state, dataset readiness, runs, and likely next actions without replacing the training workflow.",
+      facts: [
+        { label: "Project", value: status.projectName || "--" },
+        { label: "Task", value: projectType },
+        { label: "Latest run", value: `${latestRunId} / ${latestRunStatus}` },
+      ],
+      prompts: [
+        { label: "Summary", text: `Summarize the current ${projectType} project status and cite project artifacts.` },
+        { label: "Next step", text: "What should I check next before training, evaluation, comparison, or export?" },
+      ],
+    },
     evaluation: {
       help: "Training Diagnostic Assistant can explain evaluation metrics using the active project's run records and reports. Metric decisions still come from deterministic evaluation.",
       facts: [

@@ -104,6 +104,7 @@ class ProjectAssistantPageStaticTests(unittest.TestCase):
 
         self.assertIn("renderProjectAssistantContext", right_panel)
         self.assertIn("buildProjectAssistantContext", right_panel)
+        self.assertIn("dashboard:", right_panel)
         self.assertIn("evaluation:", right_panel)
         self.assertIn('"model-compare":', right_panel)
         self.assertIn("export:", right_panel)
@@ -115,6 +116,7 @@ class ProjectAssistantPageStaticTests(unittest.TestCase):
         self.assertIn("Metric decisions still come from deterministic evaluation.", right_panel)
         self.assertIn("compare table remains the source of truth", right_panel)
         self.assertIn("Explain the export package", right_panel)
+        self.assertIn("Summarize the current", right_panel)
         self.assertIn(".assistant-context-group", layout_css)
 
 

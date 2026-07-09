@@ -95,7 +95,7 @@ These legacy names are compatibility shims only. User-facing copy should say Pro
 
 - Project Assistant is not present as a primary sidebar page.
 - Header and context panel can open the assistant.
-- Evaluation, Model Compare, Export, and History show context-aware assistant suggestions.
+- Project Summary, Evaluation, Model Compare, Export, and History show context-aware assistant suggestions.
 - Context panel can sync active project artifacts without opening a separate assistant page.
 - Active-project artifact sync indexes:
   - project summary

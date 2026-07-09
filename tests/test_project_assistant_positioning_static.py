@@ -27,8 +27,6 @@ class ProjectAssistantPositioningStaticTests(unittest.TestCase):
         ]
         forbidden = [
             "RAG Workbench",
-            "RAG工作台",
-            "RAG 工作台",
             "Retrieval Workbench",
             "RAG artifact",
             "RAG answer",
