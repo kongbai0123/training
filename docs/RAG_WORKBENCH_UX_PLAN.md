@@ -1,6 +1,6 @@
 # RAG Workbench UX Plan
 
-Status: planning specification  
+Status: MVP implemented in branch `codex/rag-workbench-ux-plan`  
 Branch: `codex/rag-workbench-ux-plan`  
 Source: user UX assessment for a Local RAG + Agent + Sandbox workbench
 
@@ -255,12 +255,45 @@ Acceptance evidence:
 
 ## Recommended First Execution Slice
 
-Start with Phase 0 and Phase 1 only.
+The branch now contains an offline-first MVP that implements the full major-phase surface without depending on external embedding providers or hosted LLM APIs.
 
-Expected deliverables:
+Implemented evidence:
 
-- Architecture note naming shared shell pieces and missing RAG modules.
-- Workbench navigation and status model.
-- Static UI shell or mock page if implementation begins.
-- No changes to CNN/RNN training behavior.
+- Backend service: `src/rag_workbench.py`
+- API route module: `src/api/routes/rag_workbench.py`
+- App route registration: `app.py`
+- Frontend page: `static/pages/rag_workbench.js`
+- Workbench shell: `static/index.html`
+- Page CSS: `static/styles/pages/rag_workbench.css`
+- i18n entries: `static/state/i18n/en.js`, `static/state/i18n/zh-TW.js`
+- Contract tests: `tests/test_rag_workbench_contract.py`
+- Static page tests: `tests/test_rag_workbench_page_static.py`
 
+Verification evidence:
+
+- `scripts\test.bat` passes: 268 tests.
+- `scripts\build.bat` passes.
+- Browser DOM smoke confirms `?page=rag-workbench` opens the active page with 5 status cards and 6 workbench panels.
+- Browser interaction smoke confirms document ingestion, retrieval results, grounded answer sources, and agent steps render in the UI.
+
+Implemented phase coverage:
+
+- Phase 0: repository fit documented; implementation stays isolated from CNN/RNN project flows.
+- Phase 1: dedicated workbench page, navigation entry, and RAG status strip.
+- Phase 2: text document ingestion with upload / parse / chunk / embed / index stages, document list, re-index, and clear KB.
+- Phase 3: frontend keeps `conversationState`; backend sanitizes accepted roles and ignores UI-only state.
+- Phase 4: chat returns structured sources separately from answer text and renders source cards.
+- Phase 5: agent execution is rendered as parse / retrieve / validate / final steps; raw thought is not surfaced.
+- Phase 6: retrieval workbench supports query, profile selection, scores, ranked chunks, and bad retrieval marks.
+- Phase 7: sandbox artifact workspace composes HTML, CSS, and JS into preview and exports a ZIP artifact.
+- Phase 8: evaluation registry summarizes run count, citation coverage, source hit rate, latency, and failure types.
+- Phase 9: RAG CSS is isolated under the page CSS module with responsive breakpoints.
+- Phase 10: new visible text, placeholders, title, and aria labels are represented in i18n catalogs.
+- Phase 11: route, service, page, i18n, CSS, build, unittest, API smoke, and browser smoke checks were executed.
+
+Known MVP limits:
+
+- Retrieval uses local lexical token scoring, not a production vector database.
+- Answer generation is deterministic and extractive, not connected to a hosted or local LLM.
+- Sandbox preview is browser iframe isolation only; it is explicitly not OS-level isolation.
+- File ingestion currently accepts text payloads through the API/UI. Binary PDF parsing is intentionally not claimed.

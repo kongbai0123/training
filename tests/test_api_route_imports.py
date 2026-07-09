@@ -18,6 +18,7 @@ ROUTE_MODULES = [
     "src.api.routes.monitor",
     "src.api.routes.project_layout",
     "src.api.routes.projects",
+    "src.api.routes.rag_workbench",
     "src.api.routes.rnn_config",
     "src.api.routes.system",
     "src.api.routes.training_orchestration",
@@ -44,6 +45,12 @@ EXPECTED_ROUTE_PATHS = {
     "/api/projects/{project_id}/train/recommend",
     "/api/projects/{project_id}/train/status",
     "/api/projects/{project_id}/monitor",
+    "/api/rag-workbench/status",
+    "/api/rag-workbench/knowledge-base",
+    "/api/rag-workbench/retrieval/query",
+    "/api/rag-workbench/chat",
+    "/api/rag-workbench/sandbox",
+    "/api/rag-workbench/evaluation/report",
 }
 
 

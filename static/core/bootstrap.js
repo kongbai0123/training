@@ -58,7 +58,7 @@ export async function bootstrapApp() {
     await openProject(openProjectId, { page: params.get("page") || "dashboard" });
     return;
   }
-  navigate("dashboard");
+  navigate(params.get("page") || "dashboard");
 }
 
 function bindGlobalNavigation() {

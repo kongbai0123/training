@@ -28,6 +28,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         inference_css = (ROOT / "static" / "styles" / "pages" / "inference.css").read_text(encoding="utf-8")
         auto_labeling_css = (ROOT / "static" / "styles" / "pages" / "auto_labeling.css").read_text(encoding="utf-8")
         evaluation_css = (ROOT / "static" / "styles" / "pages" / "evaluation.css").read_text(encoding="utf-8")
+        rag_workbench_css = (ROOT / "static" / "styles" / "pages" / "rag_workbench.css").read_text(encoding="utf-8")
         shared_css = (ROOT / "static" / "styles" / "shared.css").read_text(encoding="utf-8")
 
         self.assertTrue(
@@ -52,6 +53,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/inference.css";\n'
                 '@import "./styles/pages/auto_labeling.css";\n'
                 '@import "./styles/pages/evaluation.css";\n'
+                '@import "./styles/pages/rag_workbench.css";\n'
                 '@import "./styles/shared.css";'
             )
         )
@@ -417,6 +419,10 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(evaluation_css, r"(?m)^\.evaluation-plot-modal \{")
         self.assertRegex(evaluation_css, r"(?m)^\.evaluation-wide-empty \{")
         self.assertIn("@media (max-width: 1280px) {", evaluation_css)
+
+        self.assertRegex(rag_workbench_css, r"(?m)^\.rag-status-strip \{")
+        self.assertRegex(rag_workbench_css, r"(?m)^\.rag-workbench-grid \{")
+        self.assertIn("@media (max-width: 1200px) {", rag_workbench_css)
 
         self.assertIn(".dashboard-lower-grid,\n.two-column-layout", shared_css)
         self.assertRegex(shared_css, r"(?m)^\.compact-table \{")

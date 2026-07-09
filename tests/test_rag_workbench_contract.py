@@ -1,0 +1,134 @@
+import tempfile
+import unittest
+from pathlib import Path
+
+from fastapi.testclient import TestClient
+
+from app import app
+from src.rag_workbench import RagWorkbenchService
+
+
+class RagWorkbenchContractTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name) / "rag_workbench"
+        self.original_paths = {
+            "ROOT": RagWorkbenchService.ROOT,
+            "KB_DIR": RagWorkbenchService.KB_DIR,
+            "DOCS_DIR": RagWorkbenchService.DOCS_DIR,
+            "RUNS_DIR": RagWorkbenchService.RUNS_DIR,
+            "ARTIFACTS_DIR": RagWorkbenchService.ARTIFACTS_DIR,
+            "EXPORTS_DIR": RagWorkbenchService.EXPORTS_DIR,
+            "STATE_PATH": RagWorkbenchService.STATE_PATH,
+            "SANDBOX_PATH": RagWorkbenchService.SANDBOX_PATH,
+        }
+        RagWorkbenchService.ROOT = self.root
+        RagWorkbenchService.KB_DIR = self.root / "knowledge_base"
+        RagWorkbenchService.DOCS_DIR = RagWorkbenchService.KB_DIR / "documents"
+        RagWorkbenchService.RUNS_DIR = self.root / "runs"
+        RagWorkbenchService.ARTIFACTS_DIR = self.root / "artifacts"
+        RagWorkbenchService.EXPORTS_DIR = self.root / "exports"
+        RagWorkbenchService.STATE_PATH = self.root / "state.json"
+        RagWorkbenchService.SANDBOX_PATH = self.root / "sandbox.json"
+        RagWorkbenchService.ensure()
+
+    def tearDown(self):
+        for key, value in self.original_paths.items():
+            setattr(RagWorkbenchService, key, value)
+        self.tmp.cleanup()
+
+    def test_knowledge_base_ingestion_records_readiness_stages_and_chunks(self):
+        result = RagWorkbenchService.ingest_document(
+            "manual.md",
+            "Pump pressure diagnostics mention vibration and pressure drift. " * 20,
+        )
+
+        self.assertEqual(result["document"]["index_state"], "indexed")
+        self.assertEqual(
+            [stage["stage"] for stage in result["document"]["ingestion"]],
+            ["upload", "parse", "chunk", "embed", "index"],
+        )
+        self.assertGreater(result["document"]["chunk_count"], 0)
+        self.assertEqual(result["status"]["knowledge_base"]["index_state"], "ready")
+
+    def test_retrieval_returns_structured_sources_and_mark_feedback(self):
+        RagWorkbenchService.ingest_document(
+            "source.txt",
+            "The compressor failure is associated with pressure drift and load spikes.",
+        )
+
+        retrieval = RagWorkbenchService.retrieve("pressure drift failure", top_k=3)
+
+        self.assertEqual(retrieval["profile_id"], "lexical_default")
+        self.assertGreaterEqual(len(retrieval["results"]), 1)
+        source = retrieval["results"][0]
+        self.assertIn("chunk_id", source)
+        self.assertIn("score", source)
+        self.assertIn("content", source)
+
+        mark = RagWorkbenchService.mark_retrieval("pressure drift failure", source["chunk_id"], "bad", "not enough context")
+        self.assertEqual(mark["relevance"], "bad")
+
+    def test_chat_uses_clean_conversation_state_and_saves_agent_run(self):
+        RagWorkbenchService.ingest_document(
+            "guide.txt",
+            "Citation coverage means the answer links back to the source chunk.",
+        )
+        dirty_state = [
+            {"role": "assistant", "content": "Valid prior answer", "meta": {"button_text": "Copy"}},
+            {"role": "ui", "content": "Accept Reject Button"},
+            {"role": "assistant", "html": "<button>Reject</button>"},
+        ]
+
+        run = RagWorkbenchService.chat("What is citation coverage?", dirty_state)
+
+        self.assertTrue(run["sources"])
+        self.assertEqual(run["metrics"]["citation_coverage"], 1.0)
+        self.assertEqual([step["step"] for step in run["agent_trace"]], ["parse", "retrieve", "validate", "final"])
+        roles = [item["role"] for item in run["conversation_state"]]
+        self.assertNotIn("ui", roles)
+        serialized = str(run["conversation_state"])
+        self.assertNotIn("Accept Reject Button", serialized)
+        self.assertNotIn("<button>", serialized)
+
+        runs = RagWorkbenchService.list_agent_runs()["runs"]
+        self.assertEqual(runs[0]["run_id"], run["run_id"])
+
+    def test_sandbox_preview_composes_html_css_and_js_and_exports_artifact(self):
+        RagWorkbenchService.update_sandbox_file("index.html", "<html><head></head><body><div id=\"app\">Hi</div></body></html>")
+        RagWorkbenchService.update_sandbox_file("css/style.css", "#app { color: red; }")
+        sandbox = RagWorkbenchService.update_sandbox_file("js/app.js", "window.__ragPreview = true;")
+
+        preview = sandbox["preview_html"]
+        self.assertIn("#app { color: red; }", preview)
+        self.assertIn("window.__ragPreview = true;", preview)
+        self.assertFalse(sandbox["policy"]["os_isolation"])
+
+        artifact = RagWorkbenchService.export_sandbox()
+        self.assertTrue(Path(artifact["path"]).exists())
+        self.assertEqual(artifact["type"], "sandbox_project_zip")
+
+    def test_evaluation_report_summarizes_rag_runs(self):
+        RagWorkbenchService.ingest_document("eval.md", "RAG evaluation checks source hit rate and latency.")
+        RagWorkbenchService.chat("How do we evaluate RAG?")
+        RagWorkbenchService.chat("No matching phrase qwertyuiop")
+
+        report = RagWorkbenchService.evaluation_report()
+
+        self.assertEqual(report["run_count"], 2)
+        self.assertIn("source_hit_rate", report)
+        self.assertTrue(Path(report["report_path"]).exists())
+
+    def test_api_routes_expose_workbench_contract(self):
+        client = TestClient(app)
+        response = client.get("/api/rag-workbench/status")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("knowledge_base", payload)
+        self.assertIn("chat", payload["navigation"])
+
+
+if __name__ == "__main__":
+    unittest.main()
+

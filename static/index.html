@@ -74,6 +74,7 @@
         <nav class="sidebar-nav" aria-label="Main navigation" data-i18n-aria-label="shell.mainNavigation">
           <div class="training-shared-nav">
             <button class="sidebar-item active" data-mode-nav="overview"><i class="fa-solid fa-grid-2"></i><span>總覽</span></button>
+            <button class="sidebar-item" data-page="rag-workbench"><i class="fa-solid fa-book-open-reader"></i><span data-i18n="navRagWorkbench">RAG 工作台</span></button>
             <button class="sidebar-item" data-page="history" data-mode-nav="history"><i class="fa-solid fa-clock"></i><span>歷史紀錄</span></button>
             <button class="sidebar-item" data-page="settings" data-mode-nav="settings"><i class="fa-solid fa-gear"></i><span>設定</span></button>
           </div>
@@ -196,6 +197,116 @@
                 <h2>Recent Activity</h2>
               </div>
               <div id="recent-activity-list" class="activity-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="page" id="page-rag-workbench">
+          <div class="page-header">
+            <div>
+              <h1 data-i18n="rag.title">RAG Workbench</h1>
+              <p data-i18n="rag.subtitle">Manage knowledge, test retrieval, inspect grounded answers, and review agent artifacts.</p>
+            </div>
+            <div class="page-actions">
+              <button class="btn btn-secondary" id="btn-rag-refresh"><i class="fa-solid fa-rotate"></i> <span data-i18n="common.refresh">Refresh</span></button>
+            </div>
+          </div>
+
+          <section class="rag-status-strip" aria-label="RAG workspace status" data-i18n-aria-label="rag.statusAria">
+            <div><span data-i18n="rag.modelState">Model</span><strong id="rag-status-model">--</strong></div>
+            <div><span data-i18n="rag.mode">RAG</span><strong id="rag-status-mode">--</strong></div>
+            <div><span data-i18n="rag.documents">Documents</span><strong id="rag-status-documents">0</strong></div>
+            <div><span data-i18n="rag.chunks">Chunks</span><strong id="rag-status-chunks">0</strong></div>
+            <div><span data-i18n="rag.indexState">Index</span><strong id="rag-status-index">--</strong></div>
+          </section>
+
+          <div class="rag-workbench-grid">
+            <section class="panel-section rag-panel rag-kb-panel">
+              <div class="section-title">
+                <h2 data-i18n="rag.kbTitle">Knowledge Base</h2>
+                <span class="summary-badge" id="rag-kb-badge">0 docs</span>
+              </div>
+              <p class="section-help" data-i18n="rag.kbHelp">Import text content and track upload, parse, chunk, embed, and index readiness.</p>
+              <div class="rag-form-grid">
+                <label>
+                  <span data-i18n="rag.filename">Filename</span>
+                  <input id="rag-doc-filename" type="text" placeholder="manual.md" data-i18n-placeholder="rag.filenamePlaceholder">
+                </label>
+                <div class="rag-actions-inline">
+                  <button class="btn btn-secondary" id="btn-rag-reindex"><i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="rag.reindex">Re-index</span></button>
+                  <button class="btn btn-danger" id="btn-rag-clear-kb"><i class="fa-solid fa-trash"></i> <span data-i18n="rag.clearKb">Clear KB</span></button>
+                </div>
+              </div>
+              <textarea id="rag-doc-content" class="rag-textarea" rows="5" placeholder="Paste Markdown, TXT, or extracted document text here." data-i18n-placeholder="rag.contentPlaceholder"></textarea>
+              <button class="btn btn-primary" id="btn-rag-ingest"><i class="fa-solid fa-file-import"></i> <span data-i18n="rag.ingest">Ingest Document</span></button>
+              <div id="rag-ingestion-stages" class="rag-stage-list"></div>
+              <div id="rag-document-list" class="rag-document-list"></div>
+            </section>
+
+            <section class="panel-section rag-panel rag-retrieval-panel">
+              <div class="section-title">
+                <h2 data-i18n="rag.retrievalTitle">Retrieval Workbench</h2>
+                <span class="summary-badge" data-i18n="rag.profileBadge">profiles</span>
+              </div>
+              <p class="section-help" data-i18n="rag.retrievalHelp">Test queries before answer generation and inspect ranked chunks.</p>
+              <div class="rag-query-row">
+                <input id="rag-retrieval-query" type="text" placeholder="Ask a retrieval-only question" data-i18n-placeholder="rag.retrievalPlaceholder">
+                <select id="rag-retrieval-profile"></select>
+                <button class="btn btn-primary" id="btn-rag-query"><i class="fa-solid fa-magnifying-glass"></i> <span data-i18n="rag.runRetrieval">Run Retrieval</span></button>
+              </div>
+              <div id="rag-retrieval-results" class="rag-source-list"></div>
+            </section>
+
+            <section class="panel-section rag-panel rag-chat-panel">
+              <div class="section-title">
+                <h2 data-i18n="rag.chatTitle">Grounded Chat</h2>
+                <span class="summary-badge" data-i18n="rag.noRawThought">no raw thought</span>
+              </div>
+              <p class="section-help" data-i18n="rag.chatHelp">Answers use clean conversation state and render sources separately from model history.</p>
+              <div class="rag-query-row">
+                <input id="rag-chat-input" type="text" placeholder="Ask with knowledge base sources" data-i18n-placeholder="rag.chatPlaceholder">
+                <button class="btn btn-primary" id="btn-rag-chat"><i class="fa-solid fa-paper-plane"></i> <span data-i18n="rag.ask">Ask</span></button>
+              </div>
+              <article class="rag-answer-card">
+                <h3 data-i18n="rag.answer">Answer</h3>
+                <div id="rag-chat-answer" class="rag-answer-body" data-i18n="rag.noAnswer">No RAG answer yet.</div>
+                <h3 data-i18n="rag.sources">Sources</h3>
+                <div id="rag-chat-sources" class="rag-source-list"></div>
+              </article>
+            </section>
+
+            <section class="panel-section rag-panel rag-agent-panel">
+              <div class="section-title">
+                <h2 data-i18n="rag.agentTitle">Agent Execution</h2>
+                <span class="summary-badge" id="rag-agent-count">0 runs</span>
+              </div>
+              <div id="rag-agent-trace" class="rag-agent-trace"></div>
+              <div id="rag-agent-runs" class="rag-run-list"></div>
+            </section>
+
+            <section class="panel-section rag-panel rag-sandbox-panel">
+              <div class="section-title">
+                <h2 data-i18n="rag.sandboxTitle">Sandbox Artifacts</h2>
+                <span class="summary-badge" data-i18n="rag.sandboxPolicy">preview only</span>
+              </div>
+              <p class="section-help" data-i18n="rag.sandboxHelp">Edit virtual files; preview combines HTML, CSS, and JS. This is not OS-level isolation.</p>
+              <div class="rag-sandbox-editor">
+                <select id="rag-sandbox-file"></select>
+                <button class="btn btn-secondary" id="btn-rag-save-file"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="rag.saveFile">Save File</span></button>
+                <button class="btn btn-secondary" id="btn-rag-export-artifact"><i class="fa-solid fa-file-zipper"></i> <span data-i18n="rag.exportArtifact">Export Artifact</span></button>
+              </div>
+              <textarea id="rag-sandbox-content" class="rag-textarea rag-code-textarea" rows="8"></textarea>
+              <iframe id="rag-sandbox-preview" title="RAG artifact preview" data-i18n-title="rag.previewTitle" sandbox="allow-scripts"></iframe>
+            </section>
+
+            <section class="panel-section rag-panel rag-evaluation-panel">
+              <div class="section-title">
+                <h2 data-i18n="rag.evaluationTitle">Evaluation Registry</h2>
+                <span class="summary-badge" data-i18n="rag.reportBadge">report</span>
+              </div>
+              <p class="section-help" data-i18n="rag.evaluationHelp">Summarize source hit rate, citation coverage, latency, and failure types across RAG runs.</p>
+              <button class="btn btn-primary" id="btn-rag-eval-report"><i class="fa-solid fa-chart-simple"></i> <span data-i18n="rag.generateReport">Generate Report</span></button>
+              <div id="rag-evaluation-summary" class="rag-evaluation-summary"></div>
             </section>
           </div>
         </section>
