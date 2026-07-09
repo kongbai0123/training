@@ -44,9 +44,9 @@ def _write_json(path: Path, payload: Any) -> None:
 
 
 class RagWorkbenchService:
-    """Offline-first RAG Workbench MVP service.
+    """Offline-first project assistant service.
 
-    The service deliberately avoids external embedding providers so the workbench can run
+    The service deliberately avoids external embedding providers so the assistant can run
     in a clean local environment. Retrieval is lexical TF-style scoring; the API contract
     can later swap in vector embeddings without changing the UI workflow.
     """
@@ -61,10 +61,10 @@ class RagWorkbenchService:
     SANDBOX_PATH = ROOT / "sandbox.json"
 
     DEFAULT_SANDBOX_FILES = {
-        "index.html": "<!doctype html>\n<html>\n<head><title>RAG Artifact</title></head>\n<body>\n  <main id=\"app\">RAG Workbench artifact preview</main>\n</body>\n</html>\n",
+        "index.html": "<!doctype html>\n<html>\n<head><title>Project Assistant Artifact</title></head>\n<body>\n  <main id=\"app\">Project Assistant artifact preview</main>\n</body>\n</html>\n",
         "css/style.css": "body { font-family: system-ui, sans-serif; margin: 24px; }\n#app { padding: 16px; border: 1px solid #d0d7de; }\n",
         "js/app.js": "document.querySelector('#app')?.setAttribute('data-ready', 'true');\n",
-        "README.md": "# RAG Artifact\n\nGenerated inside the local RAG Workbench sandbox.\n",
+        "README.md": "# Project Assistant Artifact\n\nGenerated inside the local project assistant sandbox.\n",
     }
 
     @classmethod
@@ -79,10 +79,10 @@ class RagWorkbenchService:
     @classmethod
     def _empty_state(cls) -> Dict[str, Any]:
         return {
-            "schema_version": "rag-workbench.1",
+            "schema_version": "project-assistant.1",
             "workspace": {
-                "workspace_id": "local_rag_workspace",
-                "title": "Local RAG Workbench",
+                "workspace_id": "local_project_assistant",
+                "title": "Local Project Assistant",
                 "model_state": "local_stub",
                 "rag_enabled": True,
                 "index_state": "empty",
@@ -173,14 +173,15 @@ class RagWorkbenchService:
             {"stage": "embed", "state": "done", "message": "Local lexical token index prepared."},
             {"stage": "index", "state": "done", "message": "Chunks are searchable."},
         ]
-        chunks = cls._chunk_document(document_id, safe_name, content or "")
+        document_metadata = metadata or {}
+        chunks = cls._chunk_document(document_id, safe_name, content or "", document_metadata)
         document = {
             "document_id": document_id,
             "filename": safe_name,
             "path": document_path.as_posix(),
             "size_chars": len(content or ""),
             "chunk_count": len(chunks),
-            "metadata": metadata or {},
+            "metadata": document_metadata,
             "ingestion": stages,
             "index_state": "indexed" if chunks else "empty",
             "created_at": _now(),
@@ -207,7 +208,15 @@ class RagWorkbenchService:
         )
 
     @classmethod
-    def _chunk_document(cls, document_id: str, filename: str, content: str, chunk_size: int = 700, overlap: int = 120) -> List[Dict[str, Any]]:
+    def _chunk_document(
+        cls,
+        document_id: str,
+        filename: str,
+        content: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        chunk_size: int = 700,
+        overlap: int = 120,
+    ) -> List[Dict[str, Any]]:
         text = re.sub(r"\s+", " ", content or "").strip()
         if not text:
             return []
@@ -228,6 +237,7 @@ class RagWorkbenchService:
                 "content": chunk_text,
                 "token_count": sum(token_counts.values()),
                 "token_index": dict(token_counts),
+                "metadata": metadata or {},
                 "index_state": "indexed",
             })
             if end >= len(text):
@@ -281,6 +291,8 @@ class RagWorkbenchService:
         for chunk in state.get("chunks", []):
             if filters.get("document_id") and chunk.get("document_id") != filters["document_id"]:
                 continue
+            if filters.get("project_id") and (chunk.get("metadata") or {}).get("project_id") != filters["project_id"]:
+                continue
             token_index = chunk.get("token_index") or {}
             overlap = sum(min(query_tokens[token], int(token_index.get(token, 0))) for token in query_tokens)
             if not overlap:
@@ -333,10 +345,16 @@ class RagWorkbenchService:
         return mark
 
     @classmethod
-    def chat(cls, message: str, conversation_state: Optional[List[Dict[str, Any]]] = None, profile_id: str = "lexical_default") -> Dict[str, Any]:
+    def chat(
+        cls,
+        message: str,
+        conversation_state: Optional[List[Dict[str, Any]]] = None,
+        profile_id: str = "lexical_default",
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         start_time = time.perf_counter()
         conversation = cls._clean_conversation(conversation_state or [])
-        retrieval = cls.retrieve(message, top_k=5, profile_id=profile_id)
+        retrieval = cls.retrieve(message, top_k=5, profile_id=profile_id, filters=filters or {})
         sources = retrieval["results"]
         steps = [
             cls._agent_step("parse", "done", "Parsed user request."),
@@ -346,15 +364,15 @@ class RagWorkbenchService:
         ]
         if sources:
             source_lines = [f"- {item['source']} / {item['section']}: {item['content'][:220]}" for item in sources[:3]]
-            answer = "根據目前知識庫，最相關的內容如下：\n" + "\n".join(source_lines)
+            answer = "According to the active project knowledge base, the most relevant sources are:\n" + "\n".join(source_lines)
             failure_type = ""
         else:
-            answer = "目前知識庫沒有找到足夠相關的來源。請先匯入文件、重新索引，或調整查詢。"
+            answer = "No citable source was found in the active project knowledge base. Import project reports, run records, or error logs before asking again."
             failure_type = "no_sources"
 
         latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
         run = {
-            "run_id": _safe_id("rag_run"),
+            "run_id": _safe_id("assistant_run"),
             "query": message,
             "answer": answer,
             "sources": sources,
@@ -363,7 +381,7 @@ class RagWorkbenchService:
                 {"role": "user", "content": message, "meta": {"source": "clean_state"}},
                 {"role": "assistant", "content": answer, "meta": {"source_count": len(sources)}},
             ],
-            "retrieval_config": {"profile_id": profile_id, "top_k": 5},
+            "retrieval_config": {"profile_id": profile_id, "top_k": 5, "filters": filters or {}},
             "metrics": cls._run_metrics(sources, latency_ms, failure_type),
             "failure_type": failure_type,
             "created_at": _now(),
@@ -375,8 +393,19 @@ class RagWorkbenchService:
         return run
 
     @classmethod
-    def chat_stream_events(cls, message: str, conversation_state: Optional[List[Dict[str, Any]]] = None, profile_id: str = "lexical_default") -> List[Dict[str, Any]]:
-        run = cls.chat(message=message, conversation_state=conversation_state or [], profile_id=profile_id)
+    def chat_stream_events(
+        cls,
+        message: str,
+        conversation_state: Optional[List[Dict[str, Any]]] = None,
+        profile_id: str = "lexical_default",
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        run = cls.chat(
+            message=message,
+            conversation_state=conversation_state or [],
+            profile_id=profile_id,
+            filters=filters or {},
+        )
         return [
             {"event": "plan", "data": {"steps": run["agent_trace"]}},
             {"event": "sources", "data": {"sources": run["sources"]}},
@@ -514,7 +543,7 @@ class RagWorkbenchService:
             "created_at": _now(),
         }
         markdown = (
-            "# RAG Workbench Evaluation Report\n\n"
+            "# Project Assistant Evaluation Report\n\n"
             f"- Runs: {report['run_count']}\n"
             f"- Golden cases: {report['golden_case_count']}\n"
             f"- Golden source hits: {report['golden_source_hits']}\n"

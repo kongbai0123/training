@@ -112,6 +112,7 @@ const RIGHT_PANEL_CONFIG = {
 // Register global browser helpers. Keep rendering logic in modules.
 export function renderRightPanel(pageId, status) {
   renderProjectSummary(status, pageId);
+  renderProjectAssistantContext(pageId, status);
 
   const evalSidebar = qs("#section-rnn-eval-summary");
   const keepEvalSidebar = pageId === "training"
@@ -214,6 +215,64 @@ export function renderRightPanel(pageId, status) {
     setHTML("#warning-list", "");
   }
   updateWorkspaceContextSummary(pageId, status, config);
+}
+
+function renderProjectAssistantContext(pageId, status) {
+  const section = qs("#section-project-assistant-context");
+  const help = qs("#project-assistant-context-help");
+  const suggestions = qs("#project-assistant-context-suggestions");
+  if (!section || !help || !suggestions) return;
+
+  const config = buildProjectAssistantContext(pageId, status);
+  section.style.display = config ? "block" : "none";
+  if (!config) {
+    help.textContent = "";
+    suggestions.innerHTML = "";
+    return;
+  }
+
+  help.textContent = config.help;
+  setHTML("#project-assistant-context-suggestions", config.prompts.map((prompt) => `
+    <div class="path-row">
+      <span>${escapeHtml(prompt.label)}</span>
+      <code>${escapeHtml(prompt.text)}</code>
+    </div>
+  `).join(""));
+}
+
+function buildProjectAssistantContext(pageId, status) {
+  const pageConfigs = {
+    evaluation: {
+      help: "Use the assistant to explain metrics and cite the active project's reports or run records.",
+      prompts: [
+        { label: "Metric", text: "Explain the latest evaluation metrics and cite the source report." },
+        { label: "Risk", text: "What are the likely quality risks in this evaluation?" },
+      ],
+    },
+    "model-compare": {
+      help: "Use the assistant to summarize run differences without replacing deterministic comparison metrics.",
+      prompts: [
+        { label: "Best run", text: "Summarize why the selected run is better, using metric evidence." },
+        { label: "Tradeoff", text: "List the deployment tradeoffs between compared artifacts." },
+      ],
+    },
+    export: {
+      help: "Use the assistant to explain exported files, schema, scaler, reports, and inference contracts.",
+      prompts: [
+        { label: "Package", text: "Explain what each exported file is used for." },
+        { label: "Deploy", text: "What should be verified before deploying this export?" },
+      ],
+    },
+    history: {
+      help: "Use the assistant to search project runs, imports, exports, reports, and error logs.",
+      prompts: [
+        { label: "Recent", text: "Summarize the latest runs and warnings for this project." },
+        { label: "Errors", text: "Find recent errors and suggest the next diagnostic step." },
+      ],
+    },
+  };
+  if (!status.hasProject && pageId !== "history") return null;
+  return pageConfigs[pageId] || null;
 }
 function getPageTitle(pageId) {
   const map = {

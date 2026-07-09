@@ -1,12 +1,14 @@
-# RAG Workbench UX Plan
+# Project Assistant UX Plan
 
-Status: MVP implemented in branch `codex/rag-workbench-ux-plan`  
+Status: Repositioned from standalone RAG Workbench to project-scoped assistant  
 Branch: `codex/rag-workbench-ux-plan`  
-Source: user UX assessment for a Local RAG + Agent + Sandbox workbench
+Source: product decision to keep Vision Training Studio centered on general model training
 
 ## Objective
 
-Move the proposed product direction from a polished chat interface toward a mature RAG Workbench.
+Keep Vision Training Studio centered on a general training workflow. RAG-style retrieval is retained only as an assistant capability for explaining active-project data, runs, reports, exports, and logs.
+
+This is not a standalone RAG product or document Q&A system. It must not become a first-level training mode or primary navigation item.
 
 The plan is intentionally organized by major execution phases only. Do not split this into small item-by-item feature fixes such as Phase 1.1 or Phase 1.2 during planning. Each phase should be implemented as a coherent product slice with its own validation evidence.
 
@@ -20,51 +22,53 @@ Evidence from the current tree:
 - Experiment artifacts and run registry concepts exist in `src/training/artifact_manifest.py`, `src/training/run_registry.py`, and `src/training/export_service.py`.
 - Sandbox policy concepts exist for custom model packages in `docs/SANDBOX_DRY_RUN_POLICY.md`, `docs/SANDBOX_THREAT_MODEL_P7.md`, and `src/model_system/`.
 - i18n audit tooling exists in `scripts/i18n_dom_audit.mjs` and `docs/I18N_AUDIT.md`.
-- A real RAG knowledge base, retrieval workbench, citation source event stream, and RAG answer provenance workflow do not currently exist as first-class product flows.
+- A project-scoped assistant can reuse local search, source citation, run registry, and report concepts without changing the core CNN/RNN training workflow.
 
-Decision: treat this as a new RAG Workbench product/module plan, not as a direct cosmetic patch to the existing CNN/RNN training platform.
+Decision: treat this as Project Assistant / Training Diagnostic Assistant. It is a helper for the active project, not a direct peer of CNN/RNN training.
 
 ## Product Principles
 
 - Keep the visual direction; the problem is mostly information architecture and workflow clarity.
-- Make knowledge base state, retrieval evidence, answer sources, agent execution, and sandbox artifacts first-class.
+- Make project evidence, retrieval sources, assistant traces, and report references clear without hiding deterministic metrics.
 - Separate display state from model input state. UI text, buttons, tool logs, and source snippets must not leak into the next model prompt.
 - Prefer evidence-oriented UX. Users should know whether the answer came from RAG, which sources were used, whether indexing is complete, and what the agent actually executed.
-- Build toward a workbench, not just a chat surface.
+- Build toward a project assistant that supports the training platform, not a separate RAG workbench product.
 
 ## Phase 0: Discovery And Scope Lock
 
-Purpose: determine whether the RAG Workbench is a new module in this repo, a separate product, or a future workspace type that shares shell infrastructure.
+Purpose: keep the assistant subordinate to the general training platform.
 
 Required work:
 
 - Inventory existing pages, APIs, CSS, JS state patterns, and runtime services.
 - Confirm which existing concepts can be reused: workspace context, artifact registry, export patterns, i18n audit, sandbox policy.
-- Confirm which concepts are missing: knowledge base ingestion, embeddings, retrieval profiles, source citations, RAG run registry, answer evaluation.
-- Produce an implementation boundary that avoids breaking CNN/RNN workflows.
+- Confirm which concepts are missing: project-scoped ingestion, optional embeddings, retrieval profiles, source citations, assistant run registry, answer evaluation.
+- Produce an implementation boundary that avoids breaking CNN/RNN workflows and avoids adding RAG as a primary product mode.
 
 Acceptance evidence:
 
 - This document or a follow-up architecture document names reusable modules and missing modules.
-- The RAG Workbench scope is not conflated with the existing training platform.
+- The assistant scope is not conflated with the existing training platform.
+- The assistant does not appear as a first-level sidebar item.
 - No core training behavior is changed during this phase.
 
-## Phase 1: Workbench Information Architecture
+## Phase 1: Assistant Information Architecture
 
-Purpose: make the interface read as a professional workbench rather than a general chat UI.
+Purpose: make the feature read as project assistance inside the training platform rather than a general chat UI or standalone workbench.
 
 Required work:
 
-- Define primary navigation: Chat, Knowledge Base, Retrieval, Agent Runs, Sandbox, Evaluation, Settings.
-- Define a status header or workspace strip that exposes model state, RAG mode, knowledge base count, chunk count, index state, and current workspace/session.
-- Reorder sidebar priority so knowledge base and current mode are visible above history.
-- Define when a contextual inspector is useful and when it should collapse.
+- Remove first-level RAG navigation from the left sidebar.
+- Define a project-level assistant entry in the header and context panel.
+- Expose assistant context only where it helps: Evaluation, Model Compare, Export, History, and Reports.
+- Define a compact assistant status that exposes local-search mode, project document count, chunk count, and index state.
+- Define when the contextual assistant card is useful and when it should stay hidden.
 
 Acceptance evidence:
 
-- A user can immediately see whether the model is available, RAG is enabled, files are indexed, and the current session is RAG-backed.
-- Knowledge base management is a primary workflow, not a hidden secondary action.
-- The page shell is still responsive and does not regress existing navigation if integrated into this repo.
+- A user sees the assistant as an optional project helper, not as a training mode.
+- The left sidebar remains focused on training workflows.
+- The page shell is still responsive and does not regress existing navigation.
 
 ## Phase 2: Knowledge Base Workflow
 
@@ -232,25 +236,25 @@ Purpose: ensure changes are reliable, reviewable, and reversible.
 Required work:
 
 - Run unit and integration tests for new contracts.
-- Run UI smoke tests for major workbench flows.
+- Run UI smoke tests for major assistant flows.
 - Run DOM i18n audit.
 - Run screenshot checks for desktop and narrow layouts.
-- Split commits by product slice: information architecture, state model, knowledge base, sources, agent flow, retrieval workbench, sandbox, evaluation, CSS, i18n.
-- Avoid mixing unrelated training-platform changes into RAG commits.
+- Split commits by product slice: information architecture, state model, project knowledge, sources, assistant flow, source search, artifact drafts, evaluation, CSS, i18n.
+- Avoid mixing unrelated training-platform changes into assistant commits.
 
 Acceptance evidence:
 
 - Each phase has test or inspection evidence tied to its acceptance criteria.
 - Commits are focused and can be reverted independently.
-- Delivery notes identify incomplete or intentionally deferred RAG capabilities.
+- Delivery notes identify incomplete or intentionally deferred assistant capabilities.
 
 ## Implementation Guardrails
 
-- Do not claim the RAG Workbench is complete until all phases have current-state evidence.
+- Do not claim the Project Assistant is complete until all phases have current-state evidence.
 - Do not reuse the word sandbox to imply full OS isolation unless that is implemented and verified.
 - Do not surface raw chain-of-thought as a product feature.
 - Do not let rendered UI text become model conversation history.
-- Do not bury knowledge base state behind settings or secondary modals.
+- Do not bury project knowledge state behind settings or secondary modals.
 - Do not mix this work with CNN/RNN training UI fixes unless a shared shell change is explicitly required.
 
 ## Recommended First Execution Slice

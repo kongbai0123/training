@@ -2,7 +2,10 @@ import { appState } from "../state.js";
 import { qsa } from "../utils.js";
 
 export function setActivePage(pageId) {
-  appState.currentPage = pageId || "dashboard";
+  const aliases = {
+    "rag-workbench": "project-assistant",
+  };
+  appState.currentPage = aliases[pageId] || pageId || "dashboard";
 
   qsa(".sidebar-item").forEach((item) => {
     item.classList.toggle("active", item.dataset.page === appState.currentPage);

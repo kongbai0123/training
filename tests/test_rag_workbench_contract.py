@@ -69,6 +69,27 @@ class RagWorkbenchContractTests(unittest.TestCase):
         mark = RagWorkbenchService.mark_retrieval("pressure drift failure", source["chunk_id"], "bad", "not enough context")
         self.assertEqual(mark["relevance"], "bad")
 
+    def test_project_assistant_filters_sources_to_active_project(self):
+        RagWorkbenchService.ingest_document(
+            "project-a-report.md",
+            "Alpha project export contract requires schema and scaler.",
+            metadata={"project_id": "project_a"},
+        )
+        RagWorkbenchService.ingest_document(
+            "project-b-report.md",
+            "Beta project export contract requires a confusion matrix.",
+            metadata={"project_id": "project_b"},
+        )
+
+        retrieval = RagWorkbenchService.retrieve(
+            "export contract requires",
+            top_k=5,
+            filters={"project_id": "project_a"},
+        )
+
+        self.assertEqual(len(retrieval["results"]), 1)
+        self.assertEqual(retrieval["results"][0]["source"], "project-a-report.md")
+
     def test_chat_uses_clean_conversation_state_and_saves_agent_run(self):
         RagWorkbenchService.ingest_document(
             "guide.txt",
@@ -126,14 +147,14 @@ class RagWorkbenchContractTests(unittest.TestCase):
     def test_file_upload_and_sse_stream_contracts(self):
         client = TestClient(app)
         upload = client.post(
-            "/api/rag-workbench/knowledge-base/upload",
+            "/api/project-assistant/knowledge-base/upload?project_id=upload_project",
             files={"file": ("upload.md", b"Streamed RAG answers send sources events.", "text/markdown")},
         )
         self.assertEqual(upload.status_code, 200)
         self.assertGreaterEqual(upload.json()["document"]["chunk_count"], 1)
 
         stream = client.post(
-            "/api/rag-workbench/chat/stream",
+            "/api/project-assistant/chat/stream?project_id=upload_project",
             json={"message": "What does streamed RAG send?", "conversation_state": []},
         )
         self.assertEqual(stream.status_code, 200)
@@ -143,7 +164,7 @@ class RagWorkbenchContractTests(unittest.TestCase):
 
     def test_api_routes_expose_workbench_contract(self):
         client = TestClient(app)
-        response = client.get("/api/rag-workbench/status")
+        response = client.get("/api/project-assistant/status")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()

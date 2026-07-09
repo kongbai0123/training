@@ -50,6 +50,10 @@
           <span data-i18n="common.systemStatus">System Status</span>
           <strong id="header-health-label" data-i18n="common.checking">Checking</strong>
         </div>
+        <button class="btn btn-secondary btn-sm" id="btn-project-assistant" type="button" data-nav="project-assistant">
+          <i class="fa-solid fa-circle-question"></i>
+          <span data-i18n="projectAssistant.open">Assistant</span>
+        </button>
         <button class="btn btn-primary btn-sm" id="btn-header-save-project" type="button">
           <i class="fa-solid fa-floppy-disk"></i>
           <span data-i18n="headerSave">Save</span>
@@ -74,7 +78,6 @@
         <nav class="sidebar-nav" aria-label="Main navigation" data-i18n-aria-label="shell.mainNavigation">
           <div class="training-shared-nav">
             <button class="sidebar-item active" data-mode-nav="overview"><i class="fa-solid fa-grid-2"></i><span>總覽</span></button>
-            <button class="sidebar-item" data-page="rag-workbench"><i class="fa-solid fa-book-open-reader"></i><span data-i18n="navRagWorkbench">RAG 工作台</span></button>
             <button class="sidebar-item" data-page="history" data-mode-nav="history"><i class="fa-solid fa-clock"></i><span>歷史紀錄</span></button>
             <button class="sidebar-item" data-page="settings" data-mode-nav="settings"><i class="fa-solid fa-gear"></i><span>設定</span></button>
           </div>
@@ -159,6 +162,17 @@
               <div class="section-title compact"><h2 id="page-context-title">Page Status</h2></div>
               <div id="page-context-container"></div>
             </section>
+            <section class="workspace-context-card" id="section-project-assistant-context" style="display: none;">
+              <div class="section-title compact">
+                <h2 data-i18n="projectAssistant.contextTitle">Project Assistant</h2>
+                <button type="button" class="btn btn-secondary btn-sm" data-nav="project-assistant">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                  <span data-i18n="projectAssistant.open">Assistant</span>
+                </button>
+              </div>
+              <p class="section-help" id="project-assistant-context-help"></p>
+              <div class="path-list compact" id="project-assistant-context-suggestions"></div>
+            </section>
             <section class="workspace-context-card" id="section-next-actions">
               <div class="section-title compact"><h2>Next Suggested Actions</h2></div>
               <ol id="next-actions-list" class="next-actions compact"></ol>
@@ -201,18 +215,18 @@
           </div>
         </section>
 
-        <section class="page" id="page-rag-workbench">
+        <section class="page" id="page-project-assistant">
           <div class="page-header">
             <div>
-              <h1 data-i18n="rag.title">RAG Workbench</h1>
-              <p data-i18n="rag.subtitle">Manage knowledge, test retrieval, inspect grounded answers, and review agent artifacts.</p>
+              <h1 data-i18n="rag.title">Project Assistant</h1>
+              <p data-i18n="rag.subtitle">Search active project knowledge, inspect cited answers, and review diagnostic assistant runs.</p>
             </div>
             <div class="page-actions">
               <button class="btn btn-secondary" id="btn-rag-refresh"><i class="fa-solid fa-rotate"></i> <span data-i18n="common.refresh">Refresh</span></button>
             </div>
           </div>
 
-          <section class="rag-status-strip" aria-label="RAG workspace status" data-i18n-aria-label="rag.statusAria">
+          <section class="rag-status-strip" aria-label="Project assistant status" data-i18n-aria-label="rag.statusAria">
             <div><span data-i18n="rag.modelState">Model</span><strong id="rag-status-model">--</strong></div>
             <div><span data-i18n="rag.mode">RAG</span><strong id="rag-status-mode">--</strong></div>
             <div><span data-i18n="rag.documents">Documents</span><strong id="rag-status-documents">0</strong></div>

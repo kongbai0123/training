@@ -34,7 +34,7 @@ export function initRagWorkbench() {
 }
 
 export function renderRagWorkbenchPage() {
-  if (appState.currentPage !== "rag-workbench") return;
+  if (appState.currentPage !== "project-assistant") return;
   if (!ragState.status) {
     loadRagWorkbench();
     return;
@@ -54,10 +54,10 @@ async function loadRagWorkbench({ force = false } = {}) {
   ragState.loading = true;
   try {
     const [status, kb, sandbox, runs] = await Promise.all([
-      apiFetch("/api/rag-workbench/status"),
-      apiFetch("/api/rag-workbench/knowledge-base"),
-      apiFetch("/api/rag-workbench/sandbox"),
-      apiFetch("/api/rag-workbench/agent-runs"),
+      apiFetch(assistantApi("/status")),
+      apiFetch(assistantApi("/knowledge-base")),
+      apiFetch(assistantApi("/sandbox")),
+      apiFetch(assistantApi("/agent-runs")),
     ]);
     ragState.status = status;
     ragState.kb = kb;
@@ -77,7 +77,7 @@ async function ingestDocument() {
     eventBus.emit("toast", t("rag.toast.emptyDocument"));
     return;
   }
-  const result = await apiFetch("/api/rag-workbench/knowledge-base/documents", {
+  const result = await apiFetch(assistantApi("/knowledge-base/documents"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ filename, content }),
@@ -97,7 +97,7 @@ async function uploadDocumentFile() {
   }
   const formData = new FormData();
   formData.append("file", file);
-  const result = await apiFetch("/api/rag-workbench/knowledge-base/upload", {
+  const result = await apiFetch(assistantApi("/knowledge-base/upload"), {
     method: "POST",
     body: formData,
   });
@@ -108,7 +108,7 @@ async function uploadDocumentFile() {
 }
 
 async function reindexKnowledgeBase() {
-  ragState.status = await apiFetch("/api/rag-workbench/knowledge-base/reindex", { method: "POST" });
+  ragState.status = await apiFetch(assistantApi("/knowledge-base/reindex"), { method: "POST" });
   await loadRagWorkbench({ force: true });
   eventBus.emit("toast", t("rag.toast.reindexed"));
 }
@@ -116,7 +116,7 @@ async function reindexKnowledgeBase() {
 async function clearKnowledgeBase() {
   const confirmed = window.confirm(t("rag.confirmClearKb"));
   if (!confirmed) return;
-  ragState.status = await apiFetch("/api/rag-workbench/knowledge-base", { method: "DELETE" });
+  ragState.status = await apiFetch(assistantApi("/knowledge-base"), { method: "DELETE" });
   ragState.retrieval = null;
   ragState.lastRun = null;
   await loadRagWorkbench({ force: true });
@@ -128,7 +128,7 @@ async function runRetrieval() {
     eventBus.emit("toast", t("rag.toast.emptyQuery"));
     return;
   }
-  ragState.retrieval = await apiFetch("/api/rag-workbench/retrieval/query", {
+  ragState.retrieval = await apiFetch(assistantApi("/retrieval/query"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -146,7 +146,7 @@ async function runRagChat() {
     eventBus.emit("toast", t("rag.toast.emptyQuestion"));
     return;
   }
-  ragState.lastRun = await apiFetch("/api/rag-workbench/chat", {
+  ragState.lastRun = await apiFetch(assistantApi("/chat"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -164,7 +164,7 @@ async function runRagChat() {
 async function saveSandboxFile() {
   const path = qs("#rag-sandbox-file")?.value || ragState.activeSandboxFile;
   const content = qs("#rag-sandbox-content")?.value || "";
-  ragState.sandbox = await apiFetch("/api/rag-workbench/sandbox/files", {
+  ragState.sandbox = await apiFetch(assistantApi("/sandbox/files"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ path, content }),
@@ -174,12 +174,12 @@ async function saveSandboxFile() {
 }
 
 async function exportSandboxArtifact() {
-  const artifact = await apiFetch("/api/rag-workbench/sandbox/export", { method: "POST" });
+  const artifact = await apiFetch(assistantApi("/sandbox/export"), { method: "POST" });
   eventBus.emit("toast", t("rag.toast.artifactExported", { path: artifact.path || artifact.artifact_id }));
 }
 
 async function generateEvaluationReport() {
-  ragState.evaluation = await apiFetch("/api/rag-workbench/evaluation/report", { method: "POST" });
+  ragState.evaluation = await apiFetch(assistantApi("/evaluation/report"), { method: "POST" });
   renderEvaluation();
   eventBus.emit("toast", t("rag.toast.reportReady"));
 }
@@ -189,7 +189,7 @@ function renderStatus() {
   const workspace = status.workspace || {};
   const kb = status.knowledge_base || {};
   setText("#rag-status-model", workspace.model_state || "--");
-  setText("#rag-status-mode", workspace.rag_enabled ? "ON" : "OFF");
+  setText("#rag-status-mode", workspace.rag_enabled ? t("rag.mode.localSearch") : t("rag.mode.disabled"));
   setText("#rag-status-documents", kb.document_count ?? 0);
   setText("#rag-status-chunks", `${kb.indexed_chunk_count ?? 0}/${kb.chunk_count ?? 0}`);
   setText("#rag-status-index", formatIndexState(kb.index_state));
@@ -274,7 +274,7 @@ function renderSourceList(sources = [], { allowMark = false, query = "" } = {}) 
 function bindSourceMarkButtons() {
   document.querySelectorAll("[data-rag-mark-bad]").forEach((button) => {
     button.addEventListener("click", async () => {
-      await apiFetch("/api/rag-workbench/retrieval/marks", {
+      await apiFetch(assistantApi("/retrieval/marks"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -287,6 +287,14 @@ function bindSourceMarkButtons() {
       eventBus.emit("toast", t("rag.toast.marked"));
     }, { once: true });
   });
+}
+
+function assistantApi(path) {
+  const params = new URLSearchParams();
+  if (appState.currentProjectId) params.set("project_id", appState.currentProjectId);
+  if (appState.currentProject?.name) params.set("project_name", appState.currentProject.name);
+  const query = params.toString();
+  return `/api/project-assistant${path}${query ? `?${query}` : ""}`;
 }
 
 function renderAgentTrace(steps = []) {
