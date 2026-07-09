@@ -46,6 +46,8 @@ class ExportServiceTests(unittest.TestCase):
             payload = ExportService.export_project_model("proj_export", self.project, run_id="run_a", export_format="onnx")
 
         self.assertTrue(payload["success"])
+        self.assertEqual(payload["run_id"], "run_a")
+        self.assertIn("created_at", payload)
         self.assertTrue(Path(payload["pt_path"]).exists())
         self.assertTrue(Path(payload["onnx_path"]).exists())
         self.assertEqual(Path(payload["onnx_path"]).read_bytes(), b"fake-onnx")
@@ -58,6 +60,8 @@ class ExportServiceTests(unittest.TestCase):
 
         self.assertTrue(payload["success"])
         self.assertEqual(payload["export_type"], "cnn_pt_copy")
+        self.assertEqual(payload["run_id"], "run_a")
+        self.assertIn("created_at", payload)
         self.assertTrue(Path(payload["pt_path"]).exists())
         self.assertEqual(Path(payload["pt_path"]).read_bytes(), b"fake-pt")
         self.assertTrue(Path(payload["summary_path"]).exists())

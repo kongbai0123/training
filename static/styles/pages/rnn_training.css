@@ -1355,6 +1355,37 @@
   padding: 12px;
   text-align: left;
 }
+.rnn-export-action-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 14px 0;
+}
+.rnn-export-action-grid .control-card {
+  min-height: 168px;
+}
+#rnn-export-panel .form-grid.two-column {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+#rnn-export-panel .field-actions.align-end {
+  display: flex;
+  justify-content: flex-end;
+}
+#rnn-export-result.rnn-placeholder-box {
+  display: block;
+  min-height: 0;
+  text-align: left;
+}
+.rnn-export-result-card {
+  display: grid;
+  gap: 6px;
+}
+.rnn-export-result-card .summary-row code {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .compact-actions {
   gap: 8px;
   justify-content: flex-end;
@@ -1639,8 +1670,13 @@
   .rnn-inference-result-grid,
   .rnn-inference-summary-grid,
   .rnn-config-recommendation,
+  .rnn-export-action-grid,
+  #rnn-export-panel .form-grid.two-column,
   .rnn-sequence-test-config .rnn-schema-grid.two-col {
     grid-template-columns: 1fr;
+  }
+  #rnn-export-panel .field-actions.align-end {
+    justify-content: stretch;
   }
   .rnn-schema-grid.two-col {
     grid-template-columns: 1fr;

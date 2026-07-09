@@ -121,6 +121,7 @@ export function initTrainingModeSidebar() {
         loadLatestRnnInferenceResult();
       }
       if (trainingModeState.activeRnnPanel === "evaluation") loadRnnEvaluation({ force: true });
+      if (trainingModeState.activeRnnPanel === "export") loadRnnExportModels({ force: true });
     });
   });
 
@@ -277,6 +278,12 @@ export function renderTrainingWorkspace() {
   if (isRnnEvaluation) {
     loadRnnEvaluation();
   }
+  if (!isCnn && appState.currentPage === "training" && trainingModeState.activeRnnPanel === "export") {
+    renderRnnExportPanel();
+    if (appState.currentProjectId && trainingModeState.rnn.exportProjectId !== appState.currentProjectId) {
+      loadRnnExportModels({ force: true });
+    }
+  }
 }
 
 export function isRnnTrainingWorkspaceActive(pageId = appState.currentPage) {
@@ -425,6 +432,11 @@ export function initRnnPreviewEvents() {
   qs("#rnn-refresh-inference-result")?.addEventListener("click", () => loadLatestRnnInferenceResult({ force: true }));
   qs("#rnn-refresh-evaluation")?.addEventListener("click", () => loadRnnEvaluation({ force: true }));
   qs("#rnn-eval-run-select")?.addEventListener("change", (event) => selectRnnEvaluationRun(event.target.value));
+  qs("#rnn-refresh-export-models")?.addEventListener("click", () => loadRnnExportModels({ force: true }));
+  qs("#rnn-export-model")?.addEventListener("change", updateRnnExportControls);
+  qsa("[data-rnn-export-format]").forEach((button) => {
+    button.addEventListener("click", () => exportRnnArtifact(button.dataset.rnnExportFormat || "rnn_package"));
+  });
   qs("#rnn-inference-model")?.addEventListener("change", updateRnnInferenceControls);
   qs("#rnn-inference-csv-file")?.addEventListener("change", () => {
     if (qs("#rnn-inference-csv-file")?.files?.[0]) {
@@ -1531,6 +1543,163 @@ function sequenceBackendLabel(run = {}) {
 
 function formatRnnMetric(value, digits = 3) {
   return formatSequenceMetric(value, digits);
+}
+
+async function loadRnnExportModels(options = {}) {
+  if (!appState.currentProjectId) {
+    trainingModeState.rnn.exportModels = [];
+    trainingModeState.rnn.exportProjectId = "";
+    renderRnnExportPanel();
+    return;
+  }
+  if (trainingModeState.rnn.exportLoading && !options.force) {
+    renderRnnExportPanel();
+    return;
+  }
+  if (!options.force
+    && trainingModeState.rnn.exportProjectId === appState.currentProjectId
+    && trainingModeState.rnn.exportModels.length) {
+    renderRnnExportPanel();
+    return;
+  }
+
+  trainingModeState.rnn.exportLoading = true;
+  trainingModeState.rnn.exportProjectId = appState.currentProjectId;
+  renderRnnExportPanel();
+  try {
+    const models = await apiFetch(`/api/projects/${appState.currentProjectId}/models?scope=all`);
+    trainingModeState.rnn.exportModels = filterRnnInferenceModels(models, trainingModeState.rnn.backend);
+  } catch (err) {
+    trainingModeState.rnn.exportModels = [];
+    eventBus.emit("toast", t("export.toast.failed", { message: err.message }));
+  } finally {
+    trainingModeState.rnn.exportLoading = false;
+    renderRnnExportPanel();
+  }
+}
+
+function renderRnnExportPanel() {
+  const select = qs("#rnn-export-model");
+  const badge = qs("#rnn-export-status-badge");
+  const result = qs("#rnn-export-result");
+  const models = trainingModeState.rnn.exportModels || [];
+
+  if (select) {
+    const current = select.value;
+    select.innerHTML = renderRnnExportModelOptions(models);
+    if (!trainingModeState.rnn.exportLoading && models.length) {
+      const values = models.map((model) => model.model_id);
+      select.value = values.includes(current) ? current : values[0];
+    }
+  }
+
+  if (badge) {
+    const ready = Boolean(appState.currentProjectId && models.length && !trainingModeState.rnn.exportLoading);
+    badge.className = `summary-badge ${ready ? "badge-success" : "badge-neutral"}`;
+    badge.textContent = trainingModeState.rnn.exportLoading
+      ? t("common.loading")
+      : (ready ? t("rnn.export.ready") : t("rnn.export.waiting"));
+  }
+
+  if (result) {
+    const last = trainingModeState.rnn.exportLastResult;
+    result.innerHTML = last
+      ? renderRnnExportResult(last)
+      : escapeHtml(t("rnn.export.noResult"));
+  }
+
+  updateRnnExportControls();
+}
+
+function renderRnnExportModelOptions(models = []) {
+  if (!appState.currentProjectId) {
+    return `<option value="">${escapeHtml(t("rnn.export.selectProjectFirst"))}</option>`;
+  }
+  if (trainingModeState.rnn.exportLoading) {
+    return `<option value="">${escapeHtml(t("common.loading"))}</option>`;
+  }
+  if (!models.length) {
+    return `<option value="">${escapeHtml(t("rnn.export.noModels"))}</option>`;
+  }
+  return models.map((model) => {
+    const runId = model.run_id || model.model_id || "run";
+    const weightType = model.weight_type || "best";
+    const backend = model.backend || model.task_type || "rnn";
+    return `<option value="${escapeHtml(model.model_id)}">${escapeHtml(`${runId} / ${weightType} / ${backend}`)}</option>`;
+  }).join("");
+}
+
+function updateRnnExportControls() {
+  const select = qs("#rnn-export-model");
+  const hasProject = Boolean(appState.currentProjectId);
+  const hasModel = Boolean(select?.value || trainingModeState.rnn.exportModels?.length);
+  const disabled = !hasProject || !hasModel || trainingModeState.rnn.exportLoading || trainingModeState.rnn.exportRunning;
+  qsa("[data-rnn-export-format]").forEach((button) => {
+    button.disabled = disabled;
+    button.closest(".control-card")?.classList.toggle("muted", disabled);
+  });
+  const refresh = qs("#rnn-refresh-export-models");
+  if (refresh) refresh.disabled = !hasProject || trainingModeState.rnn.exportLoading;
+}
+
+async function exportRnnArtifact(format = "rnn_package") {
+  if (!appState.currentProjectId) {
+    eventBus.emit("toast", t("export.selectProjectFirst"));
+    return;
+  }
+  const selectedModelId = qs("#rnn-export-model")?.value || "";
+  if (!selectedModelId && !(trainingModeState.rnn.exportModels || []).length) {
+    eventBus.emit("toast", t("rnn.export.noModels"));
+    return;
+  }
+
+  const params = new URLSearchParams({ format });
+  if (selectedModelId) params.set("model_id", selectedModelId);
+  trainingModeState.rnn.exportRunning = true;
+  renderRnnExportPanel();
+  try {
+    eventBus.emit("toast", t("export.toast.running"));
+    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/export?${params.toString()}`);
+    trainingModeState.rnn.exportLastResult = data;
+    renderRnnExportPanel();
+    eventBus.emit("toast", t("export.toast.done", { path: resolveExportPath(data) }));
+  } catch (err) {
+    eventBus.emit("toast", t("export.toast.failed", { message: err.message }));
+  } finally {
+    trainingModeState.rnn.exportRunning = false;
+    renderRnnExportPanel();
+  }
+}
+
+function renderRnnExportResult(result = {}) {
+  const rows = [
+    [t("rnn.export.resultType"), result.export_type || "rnn_export"],
+    [t("rnn.export.resultRun"), result.run_id || "--"],
+    [t("rnn.export.resultPath"), resolveExportPath(result)],
+    [t("rnn.export.resultCreated"), result.created_at || "--"]
+  ];
+  return `
+    <div class="rnn-export-result-card">
+      ${rows.map(([label, value]) => `
+        <div class="summary-row">
+          <span>${escapeHtml(label)}</span>
+          <code>${escapeHtml(String(value || "--"))}</code>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function resolveExportPath(data = {}) {
+  return data.package_abs_path
+    || data.contract_abs_path
+    || data.onnx_abs_path
+    || data.pt_abs_path
+    || data.package_path
+    || data.contract_path
+    || data.onnx_path
+    || data.pt_path
+    || "exported";
 }
 
 async function loadRnnInferenceModels(options = {}) {

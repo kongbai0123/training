@@ -1366,14 +1366,42 @@
 
                 <div id="rnn-export-panel" class="rnn-panel" data-rnn-panel="export">
                   <section class="rnn-preview-card">
-                    <div class="section-title"><h2 data-i18n="rnn.export.title">RNN 匯出</h2><span class="summary-badge badge-neutral" data-i18n="rnn.export.futureArtifacts">Future artifacts</span></div>
-                    <div class="rnn-artifact-list">
-                      <code>model.pt</code>
-                      <code>model.onnx</code>
-                      <code>feature_schema.json</code>
-                      <code>label_encoder.json</code>
-                      <code>normalization_stats.json</code>
+                    <div class="section-title">
+                      <div>
+                        <h2 data-i18n="rnn.export.title">RNN 匯出</h2>
+                        <p class="section-subtitle" data-i18n="rnn.export.subtitle">匯出序列模型封裝、推論 contract、schema 與 scaler，供部署與下游推論使用。</p>
+                      </div>
+                      <span class="summary-badge badge-neutral" id="rnn-export-status-badge" data-i18n="rnn.export.waiting">等待模型</span>
                     </div>
+                    <div class="form-grid two-column">
+                      <label>
+                        <span data-i18n="rnn.export.modelLabel">匯出模型</span>
+                        <select id="rnn-export-model" class="form-control">
+                          <option value="" data-i18n="rnn.export.selectProjectFirst">請先開啟 RNN project</option>
+                        </select>
+                      </label>
+                      <div class="field-actions align-end">
+                        <button type="button" class="btn btn-secondary" id="rnn-refresh-export-models"><i class="fa-solid fa-rotate"></i> <span data-i18n="export.refresh">重新整理</span></button>
+                      </div>
+                    </div>
+                    <div class="control-card-grid compact rnn-export-action-grid">
+                      <article class="control-card">
+                        <div class="card-heading"><i class="fa-solid fa-box-archive"></i><h3 data-i18n="export.rnnPackageTitle">模型封裝 ZIP</h3></div>
+                        <p data-i18n="export.rnnPackageHelp">匯出模型權重、schema、scaler、metrics、diagnostics 與推論 contract。</p>
+                        <button type="button" class="btn btn-primary" id="rnn-export-package" data-rnn-export-format="rnn_package" data-i18n="export.rnnPackageAction">匯出封裝 ZIP</button>
+                      </article>
+                      <article class="control-card">
+                        <div class="card-heading"><i class="fa-solid fa-file-contract"></i><h3 data-i18n="export.rnnContractTitle">推論 Contract</h3></div>
+                        <p data-i18n="export.rnnContractHelp">匯出下游序列推論所需的 JSON contract。</p>
+                        <button type="button" class="btn btn-secondary" id="rnn-export-contract" data-rnn-export-format="rnn_contract" data-i18n="export.rnnContractAction">匯出 Contract</button>
+                      </article>
+                      <article class="control-card">
+                        <div class="card-heading"><i class="fa-solid fa-sliders"></i><h3 data-i18n="export.rnnSchemaTitle">Schema + Scaler</h3></div>
+                        <p data-i18n="export.rnnSchemaHelp">匯出 feature schema、normalization statistics 與可用的 label encoder。</p>
+                        <button type="button" class="btn btn-secondary" id="rnn-export-schema" data-rnn-export-format="rnn_schema_scaler" data-i18n="export.rnnSchemaAction">匯出 Schema + Scaler</button>
+                      </article>
+                    </div>
+                    <div class="rnn-placeholder-box" id="rnn-export-result" data-i18n="rnn.export.noResult">尚未匯出 RNN 產物。</div>
                   </section>
                 </div>
               </section>
@@ -2238,7 +2266,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260709-task-aware-export2"></script>
+  <script type="module" src="/static/app.js?v=20260709-rnn-export-workbench"></script>
 </body>
 </html>
 

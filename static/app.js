@@ -1,5 +1,5 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js?v=20260709-task-aware-export2";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260709-rnn-export-workbench";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

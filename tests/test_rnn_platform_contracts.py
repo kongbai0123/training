@@ -120,6 +120,8 @@ class RNNPlatformContractTests(unittest.TestCase):
                 result = ExportService.export_project_model("proj", project, run_id=run_id)
 
             self.assertEqual(result["export_type"], "rnn_model_package")
+            self.assertEqual(result["run_id"], run_id)
+            self.assertIn("created_at", result)
             package_path = Path(result["package_path"])
             self.assertTrue(package_path.exists())
             summary = json.loads((root / "exports" / result["export_id"] / "summary.json").read_text(encoding="utf-8"))
@@ -142,6 +144,8 @@ class RNNPlatformContractTests(unittest.TestCase):
                 result = ExportService.export_project_model("proj", project, run_id=run_id, export_format="rnn_contract")
 
             self.assertEqual(result["export_type"], "rnn_inference_contract")
+            self.assertEqual(result["run_id"], run_id)
+            self.assertIn("created_at", result)
             contract_path = Path(result["contract_path"])
             self.assertTrue(contract_path.exists())
             contract = json.loads(contract_path.read_text(encoding="utf-8"))
@@ -164,6 +168,8 @@ class RNNPlatformContractTests(unittest.TestCase):
                 result = ExportService.export_project_model("proj", project, run_id=run_id, export_format="rnn_schema_scaler")
 
             self.assertEqual(result["export_type"], "rnn_schema_scaler_package")
+            self.assertEqual(result["run_id"], run_id)
+            self.assertIn("created_at", result)
             package_path = Path(result["package_path"])
             self.assertTrue(package_path.exists())
             summary = json.loads((root / "exports" / result["export_id"] / "summary.json").read_text(encoding="utf-8"))

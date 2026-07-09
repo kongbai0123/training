@@ -44,6 +44,8 @@ class ExportService:
                 return {
                     "success": True,
                     "export_id": summary["export_id"],
+                    "run_id": summary.get("run_id"),
+                    "created_at": summary.get("created_at"),
                     "package_path": summary["package_abs_path"],
                     "summary_path": summary["summary_abs_path"],
                     "export_type": "rnn_model_package",
@@ -53,6 +55,8 @@ class ExportService:
                 return {
                     "success": True,
                     "export_id": summary["export_id"],
+                    "run_id": summary.get("run_id"),
+                    "created_at": summary.get("created_at"),
                     "contract_path": summary["contract_abs_path"],
                     "summary_path": summary["summary_abs_path"],
                     "export_type": "rnn_inference_contract",
@@ -62,6 +66,8 @@ class ExportService:
                 return {
                     "success": True,
                     "export_id": summary["export_id"],
+                    "run_id": summary.get("run_id"),
+                    "created_at": summary.get("created_at"),
                     "package_path": summary["package_abs_path"],
                     "summary_path": summary["summary_abs_path"],
                     "export_type": "rnn_schema_scaler_package",
@@ -74,6 +80,8 @@ class ExportService:
             return {
                 "success": True,
                 "export_id": summary["export_id"],
+                "run_id": summary.get("run_id"),
+                "created_at": summary.get("created_at"),
                 "pt_path": summary["pt_abs_path"],
                 "onnx_path": summary["onnx_abs_path"],
                 "export_type": "cnn_onnx",
@@ -84,6 +92,8 @@ class ExportService:
             return {
                 "success": True,
                 "export_id": summary["export_id"],
+                "run_id": summary.get("run_id"),
+                "created_at": summary.get("created_at"),
                 "pt_path": summary["pt_abs_path"],
                 "summary_path": summary["summary_abs_path"],
                 "export_type": "cnn_pt_copy",

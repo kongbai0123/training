@@ -21,7 +21,7 @@ import {
   initPageModules,
   renderPrimaryPageModules,
   renderSecondaryPageModules,
-} from "./page_registry.js?v=20260709-task-aware-export2";
+} from "./page_registry.js?v=20260709-rnn-export-workbench";
 
 const {
   bootstrapSession,

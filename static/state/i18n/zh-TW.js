@@ -1136,3 +1136,28 @@ export const zhTW = {
   "export.rnnSchemaHelp": "匯出 feature schema、normalization statistics 與可用的 label encoder。",
   "export.rnnSchemaAction": "匯出 Schema + Scaler"
 };
+
+Object.assign(zhTW, {
+  "rnn.export.title": "RNN 匯出",
+  "rnn.export.subtitle": "匯出序列模型封裝、推論 contract、schema 與 scaler，供部署與下游推論使用。",
+  "rnn.export.futureArtifacts": "後續產物",
+  "rnn.export.waiting": "等待模型",
+  "rnn.export.ready": "可匯出",
+  "rnn.export.modelLabel": "匯出模型",
+  "rnn.export.selectProjectFirst": "請先開啟 RNN 專案",
+  "rnn.export.noModels": "目前沒有可匯出的已完成 RNN 模型。",
+  "rnn.export.noResult": "尚未匯出 RNN 產物。",
+  "rnn.export.resultType": "類型",
+  "rnn.export.resultRun": "Run",
+  "rnn.export.resultPath": "路徑",
+  "rnn.export.resultCreated": "建立時間",
+  "export.rnnPackageTitle": "模型封裝 ZIP",
+  "export.rnnPackageHelp": "匯出模型權重、schema、scaler、metrics、diagnostics 與推論 contract。",
+  "export.rnnPackageAction": "匯出封裝 ZIP",
+  "export.rnnContractTitle": "推論 Contract",
+  "export.rnnContractHelp": "匯出下游序列推論所需的 JSON contract。",
+  "export.rnnContractAction": "匯出 Contract",
+  "export.rnnSchemaTitle": "Schema + Scaler",
+  "export.rnnSchemaHelp": "匯出 feature schema、normalization statistics 與可用的 label encoder。",
+  "export.rnnSchemaAction": "匯出 Schema + Scaler"
+});
