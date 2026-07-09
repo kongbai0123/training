@@ -33,6 +33,7 @@ import {
   resolveRnnConfigMismatchRender,
   resolveRnnWindowSummaryRender
 } from "./rnn_config_render_helpers.js";
+import { renderExportArtifactList } from "./export.js";
 import {
   RNN_MODEL_TOOLTIPS,
   fallbackRnnModelCatalog,
@@ -1548,6 +1549,7 @@ function formatRnnMetric(value, digits = 3) {
 async function loadRnnExportModels(options = {}) {
   if (!appState.currentProjectId) {
     trainingModeState.rnn.exportModels = [];
+    trainingModeState.rnn.exportArtifacts = [];
     trainingModeState.rnn.exportProjectId = "";
     renderRnnExportPanel();
     return;
@@ -1569,8 +1571,10 @@ async function loadRnnExportModels(options = {}) {
   try {
     const models = await apiFetch(`/api/projects/${appState.currentProjectId}/models?scope=all`);
     trainingModeState.rnn.exportModels = filterRnnInferenceModels(models, trainingModeState.rnn.backend);
+    await loadRnnExportArtifacts();
   } catch (err) {
     trainingModeState.rnn.exportModels = [];
+    trainingModeState.rnn.exportArtifacts = [];
     eventBus.emit("toast", t("export.toast.failed", { message: err.message }));
   } finally {
     trainingModeState.rnn.exportLoading = false;
@@ -1578,10 +1582,25 @@ async function loadRnnExportModels(options = {}) {
   }
 }
 
+async function loadRnnExportArtifacts() {
+  if (!appState.currentProjectId) {
+    trainingModeState.rnn.exportArtifacts = [];
+    return;
+  }
+  try {
+    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/exports?limit=8`);
+    trainingModeState.rnn.exportArtifacts = Array.isArray(payload?.exports) ? payload.exports : [];
+  } catch (err) {
+    console.error("Failed to load RNN export artifacts", err);
+    trainingModeState.rnn.exportArtifacts = [];
+  }
+}
+
 function renderRnnExportPanel() {
   const select = qs("#rnn-export-model");
   const badge = qs("#rnn-export-status-badge");
   const result = qs("#rnn-export-result");
+  const artifactList = qs("#rnn-export-artifact-list");
   const models = trainingModeState.rnn.exportModels || [];
 
   if (select) {
@@ -1602,10 +1621,13 @@ function renderRnnExportPanel() {
   }
 
   if (result) {
-    const last = trainingModeState.rnn.exportLastResult;
+    const last = trainingModeState.rnn.exportLastResult || trainingModeState.rnn.exportArtifacts?.[0];
     result.innerHTML = last
       ? renderRnnExportResult(last)
       : escapeHtml(t("rnn.export.noResult"));
+  }
+  if (artifactList) {
+    artifactList.innerHTML = renderExportArtifactList(trainingModeState.rnn.exportArtifacts || []);
   }
 
   updateRnnExportControls();
@@ -1661,6 +1683,7 @@ async function exportRnnArtifact(format = "rnn_package") {
     eventBus.emit("toast", t("export.toast.running"));
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/export?${params.toString()}`);
     trainingModeState.rnn.exportLastResult = data;
+    await loadRnnExportArtifacts();
     renderRnnExportPanel();
     eventBus.emit("toast", t("export.toast.done", { path: resolveExportPath(data) }));
   } catch (err) {

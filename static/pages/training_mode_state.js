@@ -36,6 +36,7 @@ export const trainingModeState = {
     exportRunning: false,
     exportProjectId: "",
     exportLastResult: null,
+    exportArtifacts: [],
     evaluationLoading: false,
     evaluationProjectId: "",
     evaluationRuns: [],

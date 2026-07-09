@@ -211,6 +211,15 @@ async def compare_project_image_outputs(
 
 
 # Export API.
+@router.get("/api/projects/{project_id}/exports")
+def list_exports(project_id: str, limit: int = 12):
+    require_feature("export_onnx")()
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return ExportService.list_project_exports(project, limit=limit)
+
+
 @router.get("/api/projects/{project_id}/export")
 def export_model(
     project_id: str,

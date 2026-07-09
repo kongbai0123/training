@@ -21,11 +21,15 @@ class ExportPageStaticTests(unittest.TestCase):
         self.assertIn('data-export-format="rnn_package"', index_html)
         self.assertIn('data-export-format="rnn_contract"', index_html)
         self.assertIn('data-export-format="rnn_schema_scaler"', index_html)
-        self.assertIn('import { initExport, renderExportPage } from "../pages/export.js?v=20260709-task-aware-export2";', page_registry_js)
+        self.assertIn('id="export-result-panel"', index_html)
+        self.assertIn('id="export-artifact-list"', index_html)
+        self.assertIn('import { initExport, renderExportPage } from "../pages/export.js?v=20260709-export-artifacts";', page_registry_js)
         self.assertIn("function isRnnProject(project)", export_js)
         self.assertIn("cnnActions.hidden = isRnn", export_js)
         self.assertIn("rnnActions.hidden = !isRnn", export_js)
         self.assertIn('params.set("format", format)', export_js)
+        self.assertIn("loadExportArtifacts", export_js)
+        self.assertIn("renderExportArtifactList", export_js)
 
     def test_export_layout_hides_inactive_action_group_and_bottom_aligns_buttons(self):
         base_css = (ROOT / "static" / "styles" / "base.css").read_text(encoding="utf-8")
@@ -36,6 +40,8 @@ class ExportPageStaticTests(unittest.TestCase):
         self.assertIn("#page-export .export-model-selector-card", components_css)
         self.assertIn("#page-export .export-model-toolbar", components_css)
         self.assertIn("#page-export #export-cnn-actions", components_css)
+        self.assertIn(".export-result-panel", components_css)
+        self.assertIn(".export-artifact-row", components_css)
         self.assertIn("margin-top: auto;", components_css)
         self.assertIn("justify-content: center;", components_css)
 
@@ -50,11 +56,13 @@ class ExportPageStaticTests(unittest.TestCase):
         self.assertIn('data-rnn-export-format="rnn_contract"', index_html)
         self.assertIn('data-rnn-export-format="rnn_schema_scaler"', index_html)
         self.assertIn('id="rnn-export-result"', index_html)
+        self.assertIn('id="rnn-export-artifact-list"', index_html)
         self.assertIn("loadRnnExportModels({ force: true })", training_modes_js)
+        self.assertIn("loadRnnExportArtifacts", training_modes_js)
         self.assertIn("async function exportRnnArtifact", training_modes_js)
         self.assertIn("params.set(\"model_id\", selectedModelId)", training_modes_js)
         self.assertIn("resolveExportPath(data)", training_modes_js)
-        self.assertIn("../pages/training_modes.js?v=20260709-rnn-export-workbench", page_registry_js)
+        self.assertIn("../pages/training_modes.js?v=20260709-export-artifacts", page_registry_js)
 
 
 if __name__ == "__main__":

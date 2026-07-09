@@ -66,6 +66,19 @@ class ExportServiceTests(unittest.TestCase):
         self.assertEqual(Path(payload["pt_path"]).read_bytes(), b"fake-pt")
         self.assertTrue(Path(payload["summary_path"]).exists())
 
+    def test_list_project_exports_returns_recent_normalized_artifacts(self):
+        with patch("src.training.export_service.ProjectManager.save_project", return_value=True):
+            payload = ExportService.export_project_model("proj_export", self.project, run_id="run_a", export_format="pt")
+
+        artifacts = ExportService.list_project_exports(self.project)["exports"]
+
+        self.assertEqual(len(artifacts), 1)
+        self.assertEqual(artifacts[0]["export_id"], payload["export_id"])
+        self.assertEqual(artifacts[0]["export_type"], "cnn_pt_copy")
+        self.assertEqual(artifacts[0]["run_id"], "run_a")
+        self.assertIn("exports/", artifacts[0]["summary_path"])
+        self.assertTrue(artifacts[0]["primary_abs_path"].endswith("best.pt"))
+
     def test_export_run_onnx_requires_best_weight(self):
         self.best_pt.unlink()
 

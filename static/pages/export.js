@@ -1,10 +1,12 @@
 import { eventBus } from "../event_bus.js";
 import { appState, getProjectStatus, t } from "../state.js";
 import { apiFetch } from "../api.js";
-import { qs, qsa } from "../utils.js";
+import { escapeHtml, qs, qsa } from "../utils.js";
 
 let loadedProjectId = null;
 let exportModels = [];
+let exportArtifacts = [];
+let lastExportResult = null;
 
 export function initExport() {
   qsa("[data-export-format]").forEach((button) => {
@@ -20,6 +22,9 @@ export function initExport() {
   eventBus.on("language-changed", () => {
     loadedProjectId = null;
     loadExportModels();
+    loadExportArtifacts();
+    renderExportResult();
+    renderExportArtifacts();
     updateButtonStates();
   });
 }
@@ -30,9 +35,15 @@ export function renderExportPage() {
   updateButtonStates();
 
   if (appState.currentProjectId && loadedProjectId !== appState.currentProjectId) {
-    loadExportModels().then(() => {
+    lastExportResult = null;
+    Promise.all([loadExportModels(), loadExportArtifacts()]).then(() => {
       loadedProjectId = appState.currentProjectId;
     });
+  } else if (!appState.currentProjectId) {
+    exportArtifacts = [];
+    lastExportResult = null;
+    renderExportResult();
+    renderExportArtifacts();
   }
 }
 
@@ -69,6 +80,7 @@ async function loadExportModels() {
   if (!appState.currentProjectId) {
     exportModels = [];
     select.innerHTML = `<option value="">${t("export.selectProjectFirst")}</option>`;
+    updateButtonStates();
     return;
   }
 
@@ -92,6 +104,25 @@ async function loadExportModels() {
   updateButtonStates();
 }
 
+async function loadExportArtifacts() {
+  if (!appState.currentProjectId) {
+    exportArtifacts = [];
+    renderExportResult();
+    renderExportArtifacts();
+    return;
+  }
+
+  try {
+    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/exports?limit=12`);
+    exportArtifacts = Array.isArray(payload?.exports) ? payload.exports : [];
+  } catch (err) {
+    console.error("Failed to load export artifacts", err);
+    exportArtifacts = [];
+  }
+  renderExportResult();
+  renderExportArtifacts();
+}
+
 async function exportModel(format = "auto") {
   const selectedModelId = qs("#export-model-select")?.value || "";
   const params = new URLSearchParams();
@@ -103,12 +134,111 @@ async function exportModel(format = "auto") {
   try {
     eventBus.emit("toast", t("export.toast.running"));
     const data = await apiFetch(url);
+    lastExportResult = data;
+    renderExportResult();
+    await loadExportArtifacts();
     eventBus.emit("toast", t("export.toast.done", {
-      path: data.package_path || data.contract_path || data.onnx_path || data.pt_path || "exported"
+      path: resolveExportPath(data)
     }));
   } catch (err) {
     eventBus.emit("toast", t("export.toast.failed", { message: err.message }));
   }
+}
+
+function renderExportResult() {
+  const panel = qs("#export-result-panel");
+  const badge = qs("#export-result-badge");
+  if (!panel) return;
+
+  const result = lastExportResult || exportArtifacts[0] || null;
+  if (!result) {
+    panel.className = "export-result-panel empty";
+    panel.textContent = t("export.noResult");
+    if (badge) {
+      badge.className = "summary-badge badge-neutral";
+      badge.textContent = t("export.noExportBadge");
+    }
+    return;
+  }
+
+  panel.className = "export-result-panel";
+  panel.innerHTML = `
+    <div class="export-result-primary">
+      <span class="summary-badge badge-success">${escapeHtml(formatExportType(result.export_type))}</span>
+      <strong>${escapeHtml(result.export_id || t("export.lastExport"))}</strong>
+      <code>${escapeHtml(resolveExportPath(result))}</code>
+    </div>
+    <div class="export-result-meta">
+      <span>${escapeHtml(t("rnn.export.resultRun"))}: <strong>${escapeHtml(result.run_id || "--")}</strong></span>
+      <span>${escapeHtml(t("rnn.export.resultCreated"))}: <strong>${escapeHtml(formatDateTime(result.created_at))}</strong></span>
+      <span>${escapeHtml(t("export.summaryFile"))}: <code>${escapeHtml(result.summary_path || result.summary_abs_path || "--")}</code></span>
+    </div>
+  `;
+  if (badge) {
+    badge.className = "summary-badge badge-success";
+    badge.textContent = t("export.exportedBadge");
+  }
+}
+
+function renderExportArtifacts() {
+  const list = qs("#export-artifact-list");
+  const count = qs("#export-artifact-count");
+  if (count) count.textContent = String(exportArtifacts.length);
+  if (!list) return;
+  list.innerHTML = renderExportArtifactList(exportArtifacts);
+}
+
+export function renderExportArtifactList(artifacts = []) {
+  if (!artifacts.length) {
+    return `<div class="summary-empty">${escapeHtml(t("export.noArtifacts"))}</div>`;
+  }
+  return artifacts.map((artifact) => `
+    <article class="export-artifact-row">
+      <div class="export-artifact-main">
+        <span class="summary-badge badge-info">${escapeHtml(formatExportType(artifact.export_type))}</span>
+        <strong>${escapeHtml(artifact.export_id || "--")}</strong>
+        <code>${escapeHtml(resolveExportPath(artifact))}</code>
+      </div>
+      <div class="export-artifact-meta">
+        <span>${escapeHtml(t("rnn.export.resultRun"))}: <strong>${escapeHtml(artifact.run_id || "--")}</strong></span>
+        <span>${escapeHtml(t("rnn.export.resultCreated"))}: <strong>${escapeHtml(formatDateTime(artifact.created_at))}</strong></span>
+        <span>${escapeHtml(t("export.files"))}: <strong>${escapeHtml(String(artifact.file_count ?? 0))}</strong></span>
+      </div>
+    </article>
+  `).join("");
+}
+
+function resolveExportPath(data = {}) {
+  return data.primary_abs_path
+    || data.primary_path
+    || data.package_abs_path
+    || data.contract_abs_path
+    || data.onnx_abs_path
+    || data.pt_abs_path
+    || data.package_path
+    || data.contract_path
+    || data.onnx_path
+    || data.pt_path
+    || "exported";
+}
+
+function formatExportType(type = "") {
+  const labels = {
+    cnn_onnx: "ONNX",
+    cnn_pt_copy: "PT",
+    rnn_model_package: t("export.rnnPackageTitle"),
+    rnn_inference_contract: t("export.rnnContractTitle"),
+    rnn_schema_scaler_package: t("export.rnnSchemaTitle"),
+    export_artifact: t("export.artifact")
+  };
+  return labels[type] || String(type || t("export.artifact")).replaceAll("_", " ");
+}
+
+function formatDateTime(value) {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
 }
 
 function generateReport() {

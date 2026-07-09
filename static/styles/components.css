@@ -335,10 +335,102 @@ body[data-theme="light"] .card-heading i {
   justify-content: center;
 }
 
+#page-export .export-output-panel,
+#page-export .export-artifacts-panel {
+  margin-top: 16px;
+}
+
+.export-result-panel {
+  display: grid;
+  gap: 10px;
+  min-height: 86px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-soft);
+}
+
+.export-result-panel.empty {
+  place-items: center;
+  color: var(--text-muted);
+  border-style: dashed;
+}
+
+.export-result-primary {
+  display: grid;
+  grid-template-columns: auto minmax(160px, 240px) minmax(280px, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.export-result-primary strong,
+.export-artifact-main strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.export-result-primary code,
+.export-artifact-main code,
+.export-result-meta code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--accent-light);
+}
+
+.export-result-meta,
+.export-artifact-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.export-artifact-list {
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.export-artifact-list.compact {
+  margin-top: 10px;
+  max-height: 320px;
+}
+
+.export-artifact-row {
+  display: grid;
+  gap: 8px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-soft);
+}
+
+.export-artifact-main {
+  display: grid;
+  grid-template-columns: auto minmax(150px, 230px) minmax(240px, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
 @media (max-width: 1100px) {
   #page-export #export-cnn-actions,
   #page-export #export-rnn-actions {
     grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+  .export-result-primary,
+  .export-artifact-main {
+    grid-template-columns: auto minmax(140px, 1fr);
+  }
+  .export-result-primary code,
+  .export-artifact-main code {
+    grid-column: 1 / -1;
   }
 }
 
@@ -346,6 +438,10 @@ body[data-theme="light"] .card-heading i {
   #page-export .export-model-toolbar,
   #page-export #export-cnn-actions,
   #page-export #export-rnn-actions {
+    grid-template-columns: 1fr;
+  }
+  .export-result-primary,
+  .export-artifact-main {
     grid-template-columns: 1fr;
   }
 }

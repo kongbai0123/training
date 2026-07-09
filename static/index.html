@@ -1402,6 +1402,15 @@
                       </article>
                     </div>
                     <div class="rnn-placeholder-box" id="rnn-export-result" data-i18n="rnn.export.noResult">尚未匯出 RNN 產物。</div>
+                    <div class="rnn-export-history">
+                      <div class="section-title compact">
+                        <div>
+                          <h3 data-i18n="export.recentArtifactsTitle">最近產物</h3>
+                          <p class="section-subtitle" data-i18n="export.recentArtifactsHelp">顯示此專案最近產出的部署檔案與 summary。</p>
+                        </div>
+                      </div>
+                      <div id="rnn-export-artifact-list" class="export-artifact-list compact"></div>
+                    </div>
                   </section>
                 </div>
               </section>
@@ -1913,6 +1922,26 @@
             <article class="control-card"><div class="card-heading"><i class="fa-solid fa-sliders"></i><h3 data-i18n="export.rnnSchemaTitle">Schema + Scaler</h3></div><p data-i18n="export.rnnSchemaHelp">Export feature schema, normalization statistics, and label encoder when available.</p><button class="btn btn-secondary guarded" data-requires="project" id="btn-export-rnn-schema" data-export-format="rnn_schema_scaler" data-i18n="export.rnnSchemaAction">Export Schema + Scaler</button></article>
             <article class="control-card"><div class="card-heading"><i class="fa-solid fa-file-lines"></i><h3 data-i18n="export.reportTitle">Report</h3></div><p data-i18n="export.reportHelp">Generate a Markdown project and training report.</p><button class="btn btn-secondary guarded" data-requires="project" id="btn-export-report-rnn" data-export-report data-i18n="export.report">Generate Report</button></article>
           </div>
+          <section class="panel-section export-output-panel">
+            <div class="section-title">
+              <div>
+                <h2 data-i18n="export.resultTitle">Export Result</h2>
+                <p class="section-subtitle" data-i18n="export.resultHelp">Latest operation result and deployable file path.</p>
+              </div>
+              <span class="summary-badge badge-neutral" id="export-result-badge" data-i18n="export.noExportBadge">No export</span>
+            </div>
+            <div id="export-result-panel" class="export-result-panel empty" data-i18n="export.noResult">No export result yet.</div>
+          </section>
+          <section class="panel-section export-artifacts-panel">
+            <div class="section-title">
+              <div>
+                <h2 data-i18n="export.recentArtifactsTitle">Recent Artifacts</h2>
+                <p class="section-subtitle" data-i18n="export.recentArtifactsHelp">Recent deployment outputs saved under this project.</p>
+              </div>
+              <span class="summary-badge badge-neutral" id="export-artifact-count">0</span>
+            </div>
+            <div id="export-artifact-list" class="export-artifact-list"></div>
+          </section>
         </section>
 
         <section class="page" id="page-history">

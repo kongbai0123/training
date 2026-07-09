@@ -25,6 +25,24 @@ class ExportableModelNotFound(ExportServiceError):
 
 class ExportService:
     @classmethod
+    def list_project_exports(cls, project: Dict[str, Any], *, limit: int = 12) -> Dict[str, Any]:
+        layout = ProjectLayout.from_project(project)
+        exports_root = layout.project_dir / "exports"
+        if not exports_root.exists() or not exports_root.is_dir():
+            return {"exports": []}
+
+        artifacts = []
+        for summary_path in exports_root.glob("*/summary.json"):
+            summary = _read_json(summary_path)
+            if not summary:
+                continue
+            artifacts.append(cls._normalize_export_summary(layout, summary_path, summary))
+
+        artifacts.sort(key=lambda item: item.get("created_at") or item.get("modified_at") or "", reverse=True)
+        safe_limit = max(1, int(limit or 12))
+        return {"exports": artifacts[:safe_limit]}
+
+    @classmethod
     def export_project_model(
         cls,
         project_id: str,
@@ -84,6 +102,7 @@ class ExportService:
                 "created_at": summary.get("created_at"),
                 "pt_path": summary["pt_abs_path"],
                 "onnx_path": summary["onnx_abs_path"],
+                "summary_path": summary["summary_abs_path"],
                 "export_type": "cnn_onnx",
             }
         if normalized_format == "pt":
@@ -262,12 +281,14 @@ class ExportService:
 
         summary = {
             "export_id": export_id,
+            "export_type": "cnn_onnx",
             "created_at": datetime.now().isoformat(),
             "source_weight": str(best_pt.resolve().as_posix()),
             "pt_path": export_pt.relative_to(layout.project_dir).as_posix(),
             "onnx_path": export_onnx.relative_to(layout.project_dir).as_posix(),
             "pt_abs_path": str(export_pt.resolve().as_posix()),
             "onnx_abs_path": str(export_onnx.resolve().as_posix()),
+            "summary_abs_path": str((export_dir / "summary.json").resolve().as_posix()),
         }
         if run_id:
             summary["run_id"] = run_id
@@ -562,6 +583,25 @@ class ExportService:
             "model_artifacts": [path for path in ("weights/best.pt", "weights/best.json", "weights/last.pt", "weights/last.json") if (run_dir / path).exists()],
         }
 
+    @staticmethod
+    def _normalize_export_summary(layout: ProjectLayout, summary_path: Path, summary: Dict[str, Any]) -> Dict[str, Any]:
+        export_dir = summary_path.parent
+        modified_at = datetime.fromtimestamp(summary_path.stat().st_mtime).isoformat()
+        files = summary.get("files") if isinstance(summary.get("files"), list) else []
+        return {
+            "export_id": str(summary.get("export_id") or export_dir.name),
+            "export_type": summary.get("export_type") or _infer_export_type(summary),
+            "run_id": summary.get("run_id") or "",
+            "created_at": summary.get("created_at") or modified_at,
+            "modified_at": modified_at,
+            "primary_path": _primary_export_path(summary),
+            "primary_abs_path": _primary_export_abs_path(summary),
+            "summary_path": _relative_to_project(layout, summary_path),
+            "summary_abs_path": summary.get("summary_abs_path") or summary_path.resolve().as_posix(),
+            "file_count": len(files),
+            "files": files[:8],
+        }
+
 
 def _read_json(path: Path) -> Dict[str, Any]:
     if not path.exists() or not path.is_file():
@@ -571,3 +611,43 @@ def _read_json(path: Path) -> Dict[str, Any]:
         return payload if isinstance(payload, dict) else {}
     except Exception:
         return {}
+
+
+def _infer_export_type(summary: Dict[str, Any]) -> str:
+    if summary.get("onnx_path") or summary.get("onnx_abs_path"):
+        return "cnn_onnx"
+    if summary.get("pt_path") or summary.get("pt_abs_path"):
+        return "cnn_pt_copy"
+    if summary.get("contract_path") or summary.get("contract_abs_path"):
+        return "rnn_inference_contract"
+    if summary.get("package_path") or summary.get("package_abs_path"):
+        package_path = str(summary.get("package_path") or "").lower()
+        return "rnn_schema_scaler_package" if "schema" in package_path else "rnn_model_package"
+    return "export_artifact"
+
+
+def _primary_export_path(summary: Dict[str, Any]) -> str:
+    for key in ("package_path", "contract_path", "onnx_path", "pt_path", "summary_path"):
+        value = summary.get(key)
+        if value:
+            return str(value)
+    for key in ("package_abs_path", "contract_abs_path", "onnx_abs_path", "pt_abs_path", "summary_abs_path"):
+        value = summary.get(key)
+        if value:
+            return str(value)
+    return ""
+
+
+def _primary_export_abs_path(summary: Dict[str, Any]) -> str:
+    for key in ("package_abs_path", "contract_abs_path", "onnx_abs_path", "pt_abs_path", "summary_abs_path"):
+        value = summary.get(key)
+        if value:
+            return str(value)
+    return ""
+
+
+def _relative_to_project(layout: ProjectLayout, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(layout.project_dir).as_posix()
+    except ValueError:
+        return path.resolve().as_posix()
