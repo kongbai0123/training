@@ -232,7 +232,7 @@
 
           <section class="rag-status-strip" aria-label="Project assistant status" data-i18n-aria-label="rag.statusAria">
             <div><span data-i18n="rag.modelState">Model</span><strong id="rag-status-model">--</strong></div>
-            <div><span data-i18n="rag.mode">RAG</span><strong id="rag-status-mode">--</strong></div>
+            <div><span data-i18n="rag.mode">Assistant</span><strong id="rag-status-mode">--</strong></div>
             <div><span data-i18n="rag.documents">Documents</span><strong id="rag-status-documents">0</strong></div>
             <div><span data-i18n="rag.chunks">Chunks</span><strong id="rag-status-chunks">0</strong></div>
             <div><span data-i18n="rag.indexState">Index</span><strong id="rag-status-index">--</strong></div>
@@ -273,10 +273,10 @@
           <div class="rag-workbench-grid">
             <section class="panel-section rag-panel rag-kb-panel">
               <div class="section-title">
-                <h2 data-i18n="rag.kbTitle">Knowledge Base</h2>
+                <h2 data-i18n="rag.kbTitle">Project Knowledge</h2>
                 <span class="summary-badge" id="rag-kb-badge">0 docs</span>
               </div>
-              <p class="section-help" data-i18n="rag.kbHelp">Import text content and track upload, parse, chunk, embed, and index readiness.</p>
+              <p class="section-help" data-i18n="rag.kbHelp">Sync active project artifacts or import project notes, reports, logs, and export contracts.</p>
               <div class="rag-form-grid">
                 <label>
                   <span data-i18n="rag.filename">Filename</span>
@@ -300,7 +300,7 @@
 
             <section class="panel-section rag-panel rag-retrieval-panel">
               <div class="section-title">
-                <h2 data-i18n="rag.retrievalTitle">Retrieval Workbench</h2>
+                <h2 data-i18n="rag.retrievalTitle">Source Search</h2>
                 <span class="summary-badge" data-i18n="rag.profileBadge">profiles</span>
               </div>
               <p class="section-help" data-i18n="rag.retrievalHelp">Test queries before answer generation and inspect ranked chunks.</p>
@@ -314,7 +314,7 @@
 
             <section class="panel-section rag-panel rag-chat-panel">
               <div class="section-title">
-                <h2 data-i18n="rag.chatTitle">Grounded Chat</h2>
+                <h2 data-i18n="rag.chatTitle">Project Q&A</h2>
                 <span class="summary-badge" data-i18n="rag.noRawThought">no raw thought</span>
               </div>
               <p class="section-help" data-i18n="rag.chatHelp">Answers use clean conversation state and render sources separately from model history.</p>
@@ -324,7 +324,7 @@
               </div>
               <article class="rag-answer-card">
                 <h3 data-i18n="rag.answer">Answer</h3>
-                <div id="rag-chat-answer" class="rag-answer-body" data-i18n="rag.noAnswer">No RAG answer yet.</div>
+                <div id="rag-chat-answer" class="rag-answer-body" data-i18n="rag.noAnswer">No assistant answer yet.</div>
                 <h3 data-i18n="rag.sources">Sources</h3>
                 <div id="rag-chat-sources" class="rag-source-list"></div>
               </article>
@@ -351,7 +351,7 @@
                 <button class="btn btn-secondary" id="btn-rag-export-artifact"><i class="fa-solid fa-file-zipper"></i> <span data-i18n="rag.exportArtifact">Export Artifact</span></button>
               </div>
               <textarea id="rag-sandbox-content" class="rag-textarea rag-code-textarea" rows="8"></textarea>
-              <iframe id="rag-sandbox-preview" title="RAG artifact preview" data-i18n-title="rag.previewTitle" sandbox="allow-scripts"></iframe>
+              <iframe id="rag-sandbox-preview" title="Project assistant artifact preview" data-i18n-title="rag.previewTitle" sandbox="allow-scripts"></iframe>
             </section>
 
             <section class="panel-section rag-panel rag-evaluation-panel">
@@ -359,7 +359,7 @@
                 <h2 data-i18n="rag.evaluationTitle">Evaluation Registry</h2>
                 <span class="summary-badge" data-i18n="rag.reportBadge">report</span>
               </div>
-              <p class="section-help" data-i18n="rag.evaluationHelp">Summarize source hit rate, citation coverage, latency, and failure types across RAG runs.</p>
+              <p class="section-help" data-i18n="rag.evaluationHelp">Summarize source hit rate, citation coverage, latency, and failure types across assistant runs.</p>
               <button class="btn btn-primary" id="btn-rag-eval-report"><i class="fa-solid fa-chart-simple"></i> <span data-i18n="rag.generateReport">Generate Report</span></button>
               <div id="rag-evaluation-summary" class="rag-evaluation-summary"></div>
             </section>

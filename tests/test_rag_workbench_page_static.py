@@ -26,6 +26,11 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
         self.assertIn('id="rag-agent-trace"', html)
         self.assertIn('id="rag-sandbox-preview"', html)
         self.assertIn('id="rag-evaluation-summary"', html)
+        project_assistant_fragment = html.split('<section class="page" id="page-project-assistant">', 1)[1].split('<section class="page"', 1)[0]
+        self.assertNotIn(">RAG<", project_assistant_fragment)
+        self.assertNotIn("No RAG answer yet.", project_assistant_fragment)
+        self.assertNotIn("RAG artifact preview", project_assistant_fragment)
+        self.assertNotIn("Retrieval Workbench", project_assistant_fragment)
 
     def test_project_assistant_module_is_registered_and_calls_contract_apis(self):
         bootstrap = (ROOT / "static" / "core" / "bootstrap.js").read_text(encoding="utf-8")
@@ -72,6 +77,9 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
         self.assertIn('"rag.uploadFile"', zh)
         self.assertIn('"rag.syncArtifacts"', en)
         self.assertIn('"rag.syncArtifacts"', zh)
+        self.assertNotIn('"rag.mode": "Mode"', en)
+        self.assertNotIn("RAG answer", en)
+        self.assertNotIn("RAG artifact", en)
 
     def test_project_assistant_context_is_available_on_decision_pages(self):
         right_panel = (ROOT / "static" / "core" / "right_panel.js").read_text(encoding="utf-8")
