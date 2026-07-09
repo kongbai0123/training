@@ -1,0 +1,9 @@
+{
+  "name": "vision-training-studio-i18n-audit",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Isolated Playwright runtime for Vision Training Studio DOM i18n smoke audits.",
+  "devDependencies": {
+    "playwright": "^1.55.0"
+  }
+}

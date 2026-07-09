@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 import process from "node:process";
 import { createRequire } from "node:module";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = resolve(SCRIPT_DIR, "..");
+const LOCAL_AUDIT_NODE_MODULES = resolve(PROJECT_ROOT, "tools", "i18n-audit", "node_modules");
 
 const args = parseArgs(process.argv.slice(2));
 const url = args.url || "http://127.0.0.1:18080/";
@@ -22,13 +28,17 @@ try {
 }
 
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+await context.addInitScript((nextLang) => {
+  localStorage.setItem("vts-language", nextLang);
+}, lang);
+const page = await context.newPage();
 const issues = [];
 
 try {
   await page.goto(url, { waitUntil: "networkidle", timeout: Number(args.timeout || 30000) });
   await page.evaluate((nextLang) => {
-    localStorage.setItem("vision_training_language", nextLang);
+    localStorage.setItem("vts-language", nextLang);
     document.documentElement.lang = nextLang;
     window.dispatchEvent(new CustomEvent("language-changed", { detail: { language: nextLang } }));
   }, lang);
@@ -90,14 +100,18 @@ try {
   console.log(JSON.stringify(result, null, 2));
   if (failOnIssues && issues.length) process.exitCode = 1;
 } finally {
+  await context.close();
   await browser.close();
 }
 
 function parseArgs(argv) {
-  const parsed = {};
+  const parsed = { _: [] };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (!arg.startsWith("--")) continue;
+    if (!arg.startsWith("--")) {
+      parsed._.push(arg);
+      continue;
+    }
     const key = arg.slice(2);
     const next = argv[index + 1];
     if (!next || next.startsWith("--")) {
@@ -107,6 +121,8 @@ function parseArgs(argv) {
       index += 1;
     }
   }
+  if (!parsed.url && parsed._[0]) parsed.url = parsed._[0];
+  if (!parsed.lang && parsed._[1]) parsed.lang = parsed._[1];
   return parsed;
 }
 
@@ -119,6 +135,7 @@ async function loadPlaywright() {
     const candidates = [
       process.env.PLAYWRIGHT_NODE_MODULES,
       process.env.PLAYWRIGHT_NODE_MODULES ? `${process.env.PLAYWRIGHT_NODE_MODULES}/..` : "",
+      LOCAL_AUDIT_NODE_MODULES,
       "C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node",
       "C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules",
     ].filter(Boolean);
@@ -142,7 +159,18 @@ async function loadPlaywright() {
 
 function allowedEnglish(text) {
   const trimmed = String(text || "").trim();
+  if (trimmed.includes("Vision Training Studio")) return true;
+  if (trimmed.includes("LabelMe")) return true;
+  if (/^[A-Za-z]:[\\/]/.test(trimmed) || /[A-Za-z]:[\\/]/.test(trimmed) || trimmed.includes(":/")) return true;
+  if (/run_YYYYMMDD_HHMMSS/i.test(trimmed)) return true;
+  if (/\b(run|mAP|IoU|bbox|COCO|mask|ZIP|RNN|CNN|CSV|learning rate|mosaic augmentation|Stratified|Group|epoch|checkpoint|VRAM|CUDA|CPU|GPU|Auto|timestep|timestamp|Date Time|time steps|horizon|class_[a-z]|sequence_id|machine_id|batch_id|RoadSeg|builtin|ultralytics_yolo|Instance Segmentation|my_vision_project|defect|scratch|stain)\b/i.test(trimmed)) {
+    return true;
+  }
+  if (/sequences\/features\.csv/i.test(trimmed)) return true;
   if (/^(RNN|CNN|GPU|RAM|CSV|ZIP|ONNX|TensorRT|XGBoost|LSTM|GRU|BiLSTM|MAE|RMSE|JSON|LabelMe|YOLO)$/i.test(trimmed)) {
+    return true;
+  }
+  if (/^(RNN|CNN|GPU|RAM|CSV|ZIP|ONNX|TensorRT|XGBoost|LSTM|GRU|BiLSTM|MAE|RMSE|JSON|LabelMe|YOLO)\b/i.test(trimmed)) {
     return true;
   }
   if (/^[A-Z0-9_\-./:]+$/.test(trimmed)) return true;

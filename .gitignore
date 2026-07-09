@@ -5,6 +5,8 @@ __pycache__/
 .venv/
 venv/
 ENV/
+node_modules/
+tools/i18n-audit/node_modules/
 
 # Project Data (large images, videos, checkpoints, exports)
 projects/
