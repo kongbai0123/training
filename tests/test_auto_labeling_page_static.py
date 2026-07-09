@@ -36,7 +36,7 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         page_registry_js = (ROOT / "static" / "core" / "page_registry.js").read_text(encoding="utf-8")
 
         self.assertIn(
-            "./pages/auto_labeling.js?v=20260703-auto-workbench-rules",
+            "./pages/auto_labeling.js?v=20260709-execution-console",
             page_registry_js,
         )
 
@@ -52,7 +52,8 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         auto_labeling_css = (ROOT / "static" / "styles" / "pages" / "auto_labeling.css").read_text(encoding="utf-8")
 
         self.assertIn("/static/style.css?v=20260706-rnn-pc-catalog", index_html)
-        self.assertIn('data-i18n="autoLabel.taskSetupHelp"', index_html)
+        self.assertIn('data-i18n="autoLabel.executionConsole"', index_html)
+        self.assertIn('data-i18n="autoLabel.executionConsoleHelp"', index_html)
         self.assertIn('data-i18n="autoLabel.reviewWorkspaceHelp"', index_html)
         self.assertIn('data-i18n="autoLabel.jobHistoryHelp"', index_html)
         self.assertIn(".auto-label-status-strip .metric-card", auto_labeling_css)
@@ -61,6 +62,7 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         self.assertIn(".auto-label-workbench", auto_labeling_css)
         self.assertIn("grid-template-columns: minmax(0, 1fr);", auto_labeling_css)
         self.assertIn(".auto-job-builder", auto_labeling_css)
+        self.assertIn(".auto-execution-console-panel", auto_labeling_css)
         self.assertIn("grid-template-columns: minmax(260px, 0.9fr) minmax(340px, 1.25fr) minmax(300px, 1fr);", auto_labeling_css)
         self.assertIn(".output-target-block", auto_labeling_css)
         self.assertIn("grid-template-columns: minmax(170px, 0.34fr) minmax(0, 1fr) auto;", auto_labeling_css)
@@ -114,6 +116,8 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         self.assertIn('id="auto-review-queue-body"', index_html)
         self.assertIn('id="auto-review-original"', index_html)
         self.assertIn('id="auto-review-overlay"', index_html)
+        self.assertNotIn('id="auto-review-original" data-i18n=', index_html)
+        self.assertNotIn('id="auto-review-overlay" data-i18n=', index_html)
         self.assertIn("renderAutoLabelReviewQueue", auto_labeling_js)
         self.assertIn("getAutoLabelReviewItems", auto_labeling_js)
         self.assertIn("data-auto-review-preview", auto_labeling_js)

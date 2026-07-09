@@ -140,6 +140,10 @@
 .output-target-block #btn-start-auto-label {
   grid-column: 3;
   white-space: nowrap;
+  min-height: 46px;
+  padding-inline: 20px;
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
 .output-target-block #auto-start-reason {
@@ -211,8 +215,14 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.auto-task-setup-panel {
-  border-left: 3px solid rgba(59, 130, 246, 0.58);
+.auto-task-setup-panel,
+.auto-execution-console-panel {
+  border-left: 4px solid var(--primary);
+  border-color: rgba(59, 130, 246, 0.62);
+  background:
+    linear-gradient(180deg, rgba(59, 130, 246, 0.075), transparent 220px),
+    var(--bg-panel);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1);
 }
 
 .target-card {
@@ -275,8 +285,9 @@
 }
 
 .auto-review-workspace-panel {
-  border-color: rgba(59, 130, 246, 0.5);
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08);
+  border-color: var(--border);
+  background: var(--bg-panel);
+  box-shadow: none;
 }
 
 .auto-review-queue-card,

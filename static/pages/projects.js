@@ -68,6 +68,7 @@ export function initProjects() {
   qs("#inference-job-detail-modal")?.addEventListener("click", (event) => {
     if (event.target.id === "inference-job-detail-modal") closeInferenceJobDetailModal();
   });
+  document.addEventListener("click", handleProjectListActionClick);
 
   eventBus.on("render-recent-projects-list", (subset) => {
     setHTML("#recent-projects-list", renderProjectList(subset, { includeDelete: false, compact: true }));
@@ -416,24 +417,30 @@ function fileMetric(label, value, badgeType = null) {
 }
 
 export function bindProjectListButtons() {
-  qsa("[data-open-project]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      closeHistoryModal();
-      closeCreateProjectModal();
-      eventBus.emit("open-project", btn.dataset.openProject);
-    });
-  });
-  qsa("[data-delete-project]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      closeHistoryModal();
-      openDeleteProjectModal(btn.dataset.deleteProject);
-    });
-  });
-  qsa("[data-copy-project-path]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      copyText(btn.dataset.copyProjectPath || "");
-    });
-  });
+  // Project cards are re-rendered in multiple history surfaces. A delegated
+  // handler keeps open/delete/copy actions attached after each render.
+}
+
+function handleProjectListActionClick(event) {
+  const openBtn = event.target.closest("[data-open-project]");
+  if (openBtn) {
+    closeHistoryModal();
+    closeCreateProjectModal();
+    eventBus.emit("open-project", openBtn.dataset.openProject);
+    return;
+  }
+
+  const deleteBtn = event.target.closest("[data-delete-project]");
+  if (deleteBtn) {
+    closeHistoryModal();
+    openDeleteProjectModal(deleteBtn.dataset.deleteProject);
+    return;
+  }
+
+  const copyBtn = event.target.closest("[data-copy-project-path]");
+  if (copyBtn) {
+    copyText(copyBtn.dataset.copyProjectPath || "");
+  }
 }
 
 function bindInferenceJobButtons() {

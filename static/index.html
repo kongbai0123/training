@@ -27,7 +27,7 @@
             <i class="fa-solid fa-folder-open"></i>
             <div>
               <span data-i18n="common.currentProject">Current Project</span>
-              <strong class="no-i18n" id="header-project-title" data-i18n="common.noProjectOpened">No project opened</strong>
+              <strong class="no-i18n" id="header-project-title">No project opened</strong>
             </div>
           </div>
           <div class="header-resource-item">
@@ -1715,13 +1715,13 @@
           </div>
 
           <div class="auto-label-workbench">
-            <section class="panel-section auto-job-builder auto-task-setup-panel">
+            <section class="panel-section auto-job-builder auto-task-setup-panel auto-execution-console-panel">
               <div class="section-title">
                 <div>
-                  <h2 data-i18n="autoLabel.createJob">Create Draft Job</h2>
-                  <p class="section-subtitle" data-i18n="autoLabel.taskSetupHelp">Set source, model, draft rules, and output target before generating reviewable drafts.</p>
+                  <h2 data-i18n="autoLabel.executionConsole">Execution Console</h2>
+                  <p class="section-subtitle" data-i18n="autoLabel.executionConsoleHelp">Choose input, model, and draft rules, then run a draft-only auto-label job.</p>
                 </div>
-                <span class="info-icon" data-tooltip="Create draft annotations from input source, model source, and draft rules." data-i18n-tooltip="autoLabel.principle1">i</span>
+                <span class="info-icon" data-tooltip="Create draft annotations from input source, model source, and draft rules." data-i18n-tooltip="autoLabel.executionTooltip">i</span>
               </div>
 
               <div class="auto-step-block active">
@@ -1766,7 +1766,7 @@
                   <label><span data-i18n="autoLabel.maxDetections">Max detections</span><input type="number" id="auto-max-detections" value="20" min="1" max="300" step="1"></label>
                   <label><span data-i18n="autoLabel.classFilter">Class filter</span><input type="text" id="auto-class-filter" placeholder="class_a, class_b" data-i18n-placeholder="autoLabel.classFilterPlaceholder"></label>
                   <label><span data-i18n="autoLabel.minMaskArea">Minimum mask area</span><input type="number" id="auto-min-mask-area" value="400" min="0"></label>
-                  <label><span data-i18n="autoLabel.outputMode">Output mode</span><select id="auto-output-mode"><option value="mask_polygon">Mask / Polygon draft</option><option value="bbox">BBox draft</option></select></label>
+                  <label><span data-i18n="autoLabel.outputMode">Output mode</span><select id="auto-output-mode"><option value="mask_polygon" data-i18n="autoLabel.output.maskPolygon">Mask / Polygon draft</option><option value="bbox" data-i18n="autoLabel.output.bbox">BBox draft</option></select></label>
                 </div>
                 <details class="advanced-collapse">
                   <summary data-i18n="autoLabel.reviewRules">Review priority rules</summary>
@@ -1783,15 +1783,15 @@
                 <div class="auto-step-heading"><span>4</span><strong data-i18n="autoLabel.step.target">Output Target</strong></div>
                 <div class="target-card safe-target"><i class="fa-solid fa-shield-halved"></i><div><strong data-i18n="autoLabel.draftOnly">Draft only</strong><span data-i18n="autoLabel.targetHelp">Save to annotations/drafts/auto_label/{job_id}. Do not write to current annotations.</span></div></div>
                 <button class="btn btn-primary btn-disabled" id="btn-start-auto-label" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="autoLabel.start">Start Auto-Label Job</span></button>
-                <p class="muted-note" id="auto-start-reason" data-i18n="autoLabel.startReason.noProject">Open a project before creating an auto-label job.</p>
+                <p class="muted-note" id="auto-start-reason">Open a project before creating an auto-label job.</p>
               </div>
             </section>
 
             <section class="panel-section auto-review-panel auto-review-workspace-panel">
               <div class="section-title">
                 <div>
-                  <h2 data-i18n="autoLabel.previewTitle">Draft Preview / Review</h2>
-                  <p class="section-subtitle" data-i18n="autoLabel.reviewWorkspaceHelp">Review generated draft overlays first, then accept, reject, edit, or mark hard cases.</p>
+                  <h2 data-i18n="autoLabel.reviewResults">Review Results</h2>
+                  <p class="section-subtitle" data-i18n="autoLabel.reviewWorkspaceHelp">After execution, inspect draft overlays and decide accept, reject, edit, or hard-case routing.</p>
                 </div>
                 <span class="info-icon" data-tooltip="Use this area to review whether draft annotations are acceptable." data-i18n-tooltip="autoLabel.previewTooltip">i</span>
               </div>
@@ -1806,8 +1806,8 @@
                     <div><button class="btn-small secondary" type="button" disabled>100%</button><button class="btn-small secondary" type="button" disabled data-i18n="autoLabel.fit">Fit</button></div>
                   </div>
                   <div class="review-preview-grid">
-                    <div class="preview-tile"><h3 data-i18n="autoLabel.original">Original Image</h3><div class="preview-placeholder" id="auto-review-original" data-i18n="autoLabel.noDraft">No draft annotations generated yet.</div></div>
-                    <div class="preview-tile"><h3 data-i18n="autoLabel.overlay">Draft Overlay</h3><div class="preview-placeholder" id="auto-review-overlay" data-i18n="autoLabel.overlayHelp">Mask / bbox / polygon overlay will appear here.</div></div>
+                    <div class="preview-tile"><h3 data-i18n="autoLabel.original">Original Image</h3><div class="preview-placeholder" id="auto-review-original">No draft annotations generated yet.</div></div>
+                    <div class="preview-tile"><h3 data-i18n="autoLabel.overlay">Draft Overlay</h3><div class="preview-placeholder" id="auto-review-overlay">Mask / bbox / polygon overlay will appear here.</div></div>
                   </div>
                   <div class="auto-shape-review-grid">
                     <div class="data-table compact-table"><table><thead><tr><th>ID</th><th data-i18n="autoLabel.table.class">Class</th><th data-i18n="autoLabel.table.type">Type</th><th data-i18n="autoLabel.confidence">Confidence</th><th data-i18n="autoLabel.table.issue">Issue</th></tr></thead><tbody id="auto-shape-table-body"><tr><td colspan="5" data-i18n="autoLabel.noSelectedDraft">No selected draft.</td></tr></tbody></table></div>
@@ -1815,7 +1815,7 @@
                       <div class="summary-row"><span data-i18n="autoLabel.predictionClass">Prediction class</span><code id="auto-review-class">--</code></div>
                       <div class="summary-row"><span data-i18n="autoLabel.confidence">Confidence</span><code id="auto-review-confidence">--</code></div>
                       <div class="summary-row"><span data-i18n="autoLabel.warningReason">Warning reason</span><code id="auto-review-issue">--</code></div>
-                      <div class="summary-row"><span data-i18n="autoLabel.reviewState">Review state</span><code id="auto-review-state" data-i18n="autoLabel.waiting">Waiting for job</code></div>
+                      <div class="summary-row"><span data-i18n="autoLabel.reviewState">Review state</span><code id="auto-review-state">Waiting for job</code></div>
                     </div>
                   </div>
                 </div>
@@ -2222,7 +2222,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260708-rnn-active-run"></script>
+  <script type="module" src="/static/app.js?v=20260709-auto-label-smoke"></script>
 </body>
 </html>
 

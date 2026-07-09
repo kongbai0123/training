@@ -21,7 +21,7 @@ import {
   initPageModules,
   renderPrimaryPageModules,
   renderSecondaryPageModules,
-} from "./page_registry.js?v=20260708-rnn-active-run";
+} from "./page_registry.js?v=20260709-auto-label-smoke";
 
 const {
   bootstrapSession,
@@ -52,6 +52,12 @@ export async function bootstrapApp() {
 
   // Start with an empty workspace. Users explicitly open projects from Browse History.
   await loadProjects({ autoOpenLatest: false });
+  const params = new URLSearchParams(window.location.search || "");
+  const openProjectId = params.get("openProjectId") || "";
+  if (openProjectId) {
+    await openProject(openProjectId, { page: params.get("page") || "dashboard" });
+    return;
+  }
   navigate("dashboard");
 }
 
@@ -120,7 +126,7 @@ function bindGlobalNavigation() {
     if (appState.currentProjectId) {
       await openProject(appState.currentProjectId, { stayOnPage: true });
     }
-    showToastCore("Project refreshed.");
+    showToastCore(t("common.projectRefreshed"));
   });
 
   eventBus.on("project-deleted", async (projectId) => {

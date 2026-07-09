@@ -290,7 +290,7 @@ function renderWeightManager() {
 function renderWeightManagerRow(model) {
   const weightType = String(model.weight_type || "").toLowerCase();
   const checked = selectedWeightIds.has(model.model_id) ? "checked" : "";
-  const badge = weightType === "best" ? "Best" : "Checkpoint";
+  const badge = weightType === "best" ? t("autoLabel.model.bestBadge") : t("autoLabel.model.checkpoint");
   return `
     <label class="weight-manager-row">
       <input type="checkbox" data-weight-id="${escapeHtml(model.model_id)}" ${checked}>
@@ -423,8 +423,8 @@ function renderRunCleanupRow(run) {
       <div class="weight-manager-row-meta">
         <span>${escapeHtml(best)}</span>
         <span>${escapeHtml(last)}</span>
-        <span>${Number(run.artifact_count || 0)} files</span>
-        <span class="status-badge warning">Test candidate</span>
+        <span>${escapeHtml(t("autoLabel.cleanup.files", { count: Number(run.artifact_count || 0) }))}</span>
+        <span class="status-badge warning">${escapeHtml(t("autoLabel.cleanup.testCandidate"))}</span>
       </div>
     </label>
   `;
@@ -499,23 +499,23 @@ async function uploadAutoLabelSourceFiles(files) {
 
   const allFiles = [...(files || [])];
   if (!allFiles.length) {
-    showToast("請選擇圖片或 ZIP 檔。");
+    showToast(t("autoLabel.toast.noFiles"));
     return;
   }
 
   const dropZone = qs("#auto-source-drop-zone");
   const progressPanel = ensureAutoProgressPanel("auto-source-upload-progress", dropZone);
-  updateAutoProgress(progressPanel, "正在檢查資料來源", 0, "正在分析圖片與 ZIP 檔。");
+  updateAutoProgress(progressPanel, t("autoLabel.progress.filtering"), 0, t("autoLabel.progress.analyzing"));
 
   const classified = classifyAutoLabelSourceFiles(allFiles);
   const imageFiles = classified.images;
   const zipFiles = classified.zips;
   const rejected = classified.rejected.length;
-  if (rejected > 0) showToast(`已略過 ${rejected} 個非圖片/ZIP 檔。`);
+  if (rejected > 0) showToast(t("autoLabel.toast.filteredSource", { count: rejected }));
 
   if (!imageFiles.length && !zipFiles.length) {
     progressPanel?.remove();
-    showToast("自動標註資料來源只接受圖片或 ZIP。");
+    showToast(t("autoLabel.toast.noImageOrZip"));
     return;
   }
 
@@ -525,7 +525,7 @@ async function uploadAutoLabelSourceFiles(files) {
   try {
     for (let idx = 0; idx < zipFiles.length; idx += 1) {
       const file = zipFiles[idx];
-      updateAutoProgress(progressPanel, "正在匯入 ZIP", Math.round((idx / Math.max(1, zipFiles.length)) * 100), `正在處理 ${file.name}`);
+      updateAutoProgress(progressPanel, t("autoLabel.progress.importingZip"), Math.round((idx / Math.max(1, zipFiles.length)) * 100), t("autoLabel.progress.processingZip", { name: file.name }));
       const formData = new FormData();
       formData.append("file", file, file.name);
       const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-zip`, { method: "POST", body: formData });
@@ -537,7 +537,7 @@ async function uploadAutoLabelSourceFiles(files) {
     for (let i = 0; i < imageFiles.length; i += batchSize) {
       const batchIndex = Math.floor(i / batchSize) + 1;
       const batch = imageFiles.slice(i, i + batchSize);
-      updateAutoProgress(progressPanel, "正在上傳圖片", Math.round((i / Math.max(1, imageFiles.length)) * 100), `正在上傳第 ${batchIndex}/${totalBatches} 批，共 ${batch.length} 張。`);
+      updateAutoProgress(progressPanel, t("autoLabel.progress.uploadingImages"), Math.round((i / Math.max(1, imageFiles.length)) * 100), t("autoLabel.progress.uploadingBatch", { index: batchIndex, total: totalBatches, count: batch.length }));
       const formData = new FormData();
       batch.forEach((file) => formData.append("files", file, file.name));
       const data = await apiFetch(`/api/projects/${appState.currentProjectId}/upload-images`, { method: "POST", body: formData });
@@ -546,13 +546,13 @@ async function uploadAutoLabelSourceFiles(files) {
       renamedCount += Number(data.renamed_same_name_diff_hash || 0);
     }
 
-    updateAutoProgress(progressPanel, "正在同步 LabelMe 狀態", 95, "正在更新專案圖片與標註狀態。");
+    updateAutoProgress(progressPanel, t("autoLabel.progress.syncing"), 95, t("autoLabel.progress.syncingDetail"));
     try { await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/sync`, { method: "POST" }); } catch (err) { console.warn("Auto-label source sync failed", err); }
-    updateAutoProgress(progressPanel, "匯入完成", 100, `已匯入 ${importedImages} 張，重複 ${duplicateSameHash} 張，重新命名 ${renamedCount} 張。`);
+    updateAutoProgress(progressPanel, t("autoLabel.progress.completed"), 100, t("autoLabel.progress.importSummary", { imported: importedImages, duplicates: duplicateSameHash, renamed: renamedCount }));
     eventBus.emit("refresh-project");
   } catch (err) {
-    showToast(`資料來源匯入失敗：${err.message}`);
-    updateAutoProgress(progressPanel, "匯入失敗", 100, `Error: ${err.message}`);
+    showToast(t("autoLabel.toast.importFailed", { message: err.message }));
+    updateAutoProgress(progressPanel, t("autoLabel.progress.failed"), 100, `Error: ${err.message}`);
   } finally {
     setTimeout(() => progressPanel?.remove(), 5000);
   }
@@ -604,12 +604,12 @@ async function createAutoLabelJob() {
         ...draftRules,
       }),
     });
-    showToast(`已建立自動標註草稿任務：${payload.job_id || "--"}`);
+    showToast(t("autoLabel.toast.jobCreated", { job: payload.job_id || "--" }));
     loadedAutoLabelStatusProjectId = null;
     await loadAutoLabelStatus({ hasProject: true });
     renderAutoLabelReviewQueue();
   } catch (err) {
-    showToast(`建立自動標註任務失敗：${err.message}`);
+    showToast(t("autoLabel.toast.jobFailed", { message: err.message }));
   } finally {
     button?.removeAttribute("disabled");
     renderStartReason();
@@ -771,7 +771,7 @@ function renderStartReason(status = null) {
     reason.textContent = t("autoLabel.startReason.noModel");
     return;
   }
-  reason.textContent = "已可建立 draft annotation job。輸出只會寫入 drafts，不會覆蓋 current annotations。";
+  reason.textContent = t("autoLabel.startReason.ready");
 }
 
 function renderAutoLabelModelList(status = null) {
@@ -840,9 +840,7 @@ function renderAutoLabelJobHistory() {
   const body = qs("#auto-job-history-body");
   if (!body) return;
   if (!autoLabelJobs.length) {
-    setHTML("#auto-job-history-body", `<tr><td colspan="5">No auto-label jobs yet.</td></tr>`);
-    return;
-    setHTML("#auto-job-history-body", `<tr><td colspan="5">尚無 auto-label job。建立任務後會顯示 job_id、來源、模型與草稿數。</td></tr>`);
+    setHTML("#auto-job-history-body", `<tr><td colspan="5">${escapeHtml(t("autoLabel.emptyJobsShort"))}</td></tr>`);
     return;
   }
   setHTML("#auto-job-history-body", autoLabelJobs.map((job) => `
@@ -926,16 +924,16 @@ function showAutoLabelPreview(item) {
   overlay.classList.remove("preview-placeholder");
   original.innerHTML = originalUrl
     ? `<img src="${escapeHtml(originalUrl)}" alt="${escapeHtml(filename)}">`
-    : "No source image available.";
+    : escapeHtml(t("autoLabel.noSourceImage"));
   overlay.innerHTML = previewUrl
     ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(filename)} draft overlay">`
-    : "No overlay preview available.";
+    : escapeHtml(t("autoLabel.noOverlayPreview"));
 
   const summary = item?.inference_summary || {};
   setText("#auto-review-class", firstDetectedClass(summary) || "--");
   setText("#auto-review-confidence", summary.average_confidence === undefined ? "--" : Number(summary.average_confidence).toFixed(2));
-  setText("#auto-review-issue", item?.review_status || (item?.shape_count ? "needs review" : "empty draft"));
-  setText("#auto-review-state", item?.draft_labelme_url ? `selected: ${item?.filename || "--"}` : "draft JSON missing");
+  setText("#auto-review-issue", item?.review_status || (item?.shape_count ? t("autoLabel.reviewStatus.needsReview") : t("autoLabel.reviewStatus.emptyDraft")));
+  setText("#auto-review-state", item?.draft_labelme_url ? t("autoLabel.reviewStatus.selected", { filename: item?.filename || "--" }) : t("autoLabel.reviewStatus.draftJsonMissing"));
   renderAutoShapeTable(item);
   renderAutoReviewTaskInfo(item);
 }
@@ -945,11 +943,11 @@ function clearAutoLabelPreview() {
   const overlay = qs("#auto-review-overlay");
   if (original) {
     original.classList.add("preview-placeholder");
-    original.textContent = "No draft annotations generated yet.";
+    original.textContent = t("autoLabel.noDraft");
   }
   if (overlay) {
     overlay.classList.add("preview-placeholder");
-    overlay.textContent = "Mask / bbox / polygon overlay will appear here.";
+    overlay.textContent = t("autoLabel.overlayHelp");
   }
   setText("#auto-review-class", "--");
   setText("#auto-review-confidence", "--");
@@ -964,7 +962,7 @@ function renderAutoShapeTable(item) {
   const predictions = item?.inference_summary?.predictions || item?.predictions || [];
   const shapeCount = Number(item?.shape_count || 0);
   if (!Array.isArray(predictions) || !predictions.length) {
-    setHTML("#auto-shape-table-body", `<tr><td colspan="5">${shapeCount ? `${shapeCount} shape(s)` : "No shape details available."}</td></tr>`);
+    setHTML("#auto-shape-table-body", `<tr><td colspan="5">${escapeHtml(shapeCount ? t("autoLabel.shapeCount", { count: shapeCount }) : t("autoLabel.noShapeDetails"))}</td></tr>`);
     return;
   }
   setHTML("#auto-shape-table-body", predictions.slice(0, 12).map((row, index) => {
@@ -995,13 +993,13 @@ function renderAutoReviewTaskInfo(item) {
 
 async function reviewSelectedAutoLabelItem(action) {
   if (!appState.currentProjectId || !selectedAutoReviewItem) {
-    showToast("Select a draft review item first.");
+    showToast(t("autoLabel.toast.selectDraftFirst"));
     return;
   }
   const jobId = selectedAutoReviewItem.job_id || "";
   const filename = selectedAutoReviewItem.filename || "";
   if (!jobId || !filename) {
-    showToast("Draft item is missing job_id or filename.");
+    showToast(t("autoLabel.toast.missingDraftIdentity"));
     return;
   }
 
@@ -1012,12 +1010,12 @@ async function reviewSelectedAutoLabelItem(action) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filename, action }),
     });
-    showToast(`Review updated: ${filename} -> ${result.review_status || action}`);
+    showToast(t("autoLabel.toast.reviewUpdated", { filename, status: result.review_status || action }));
     loadedAutoLabelStatusProjectId = null;
     await loadAutoLabelStatus({ hasProject: true });
     eventBus.emit("refresh-project");
   } catch (err) {
-    showToast(`Review update failed: ${err.message}`);
+    showToast(t("autoLabel.toast.reviewFailed", { message: err.message }));
   } finally {
     updateAutoReviewToolbar();
   }
@@ -1025,7 +1023,7 @@ async function reviewSelectedAutoLabelItem(action) {
 
 function editSelectedAutoLabelItem() {
   if (!selectedAutoReviewItem?.draft_labelme_url) {
-    showToast("Selected item has no LabelMe draft JSON.");
+    showToast(t("autoLabel.toast.noDraftJson"));
     return;
   }
   openAutoLabelReviewUrl(selectedAutoReviewItem.draft_labelme_url);

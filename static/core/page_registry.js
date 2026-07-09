@@ -1,5 +1,5 @@
 import { initDashboard, renderDashboard } from "../pages/dashboard.js";
-import { initProjects, renderProjectsPage } from "../pages/projects.js?v=20260708-rnn-history-family";
+import { initProjects, renderProjectsPage } from "../pages/projects.js?v=20260709-project-open-delegation";
 import { initDataset, renderDatasetPage } from "../pages/dataset.js?v=20260630-progress-hud";
 import { initLabelMe, renderLabelMeManager } from "../pages/labelme.js";
 import { initSplit, renderSplitPage } from "../pages/split.js";
@@ -14,7 +14,7 @@ import {
 import { initEvaluation, renderEvaluationPage } from "../pages/evaluation.js?v=20260702-cnn-eval-polish2";
 import { initModelCompare, renderModelComparePage } from "../pages/model_compare.js?v=20260708-compare-scope-artifacts";
 import { initInference, renderInferencePage } from "../pages/inference.js?v=20260702-model-scroll-bounds";
-import { initAutoLabeling, renderAutoLabelingPage } from "../pages/auto_labeling.js?v=20260703-auto-workbench-rules";
+import { initAutoLabeling, renderAutoLabelingPage } from "../pages/auto_labeling.js?v=20260709-execution-console";
 import { initExport, renderExportPage } from "../pages/export.js?v=20260701-xgb-eval-final";
 import { initSettings, renderSettingsPage } from "../pages/settings.js";
 
