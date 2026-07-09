@@ -376,6 +376,7 @@ function setBaseline(runId) {
 
 function renderModeControls() {
   const forced = getProjectCompareArchitecture();
+  const hasProject = Boolean(appState.currentProjectId);
   const toggle = qs("#compare-architecture-toggle");
   const scopeSummary = qs("#compare-scope-summary");
   qsa("[data-compare-architecture]").forEach((button) => {
@@ -384,13 +385,15 @@ function renderModeControls() {
   qsa("[data-compare-view]").forEach((button) => {
     button.classList.toggle("active", button.dataset.compareView === compareState.viewMode);
   });
-  toggle?.classList.toggle("hidden", Boolean(forced));
+  toggle?.classList.add("hidden");
   scopeSummary?.classList.toggle("hidden", !forced);
   setText("#compare-scope-title", architectureLabel());
-  setText("#compare-mode-badge", forced ? t("compare.projectScope") : architectureLabel());
+  setText("#compare-mode-badge", forced ? t("compare.projectScope") : hasProject ? architectureLabel() : t("common.noProjectOpened"));
   setText(
     "#compare-mode-note",
-    forced
+    !hasProject
+      ? t("compare.openProject")
+      : forced
       ? t("compare.modeNoteLocked", { architecture: architectureLabel() })
       : compareState.architecture === "cnn"
         ? t("compare.modeNoteCnn")

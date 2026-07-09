@@ -1,5 +1,5 @@
 import { eventBus } from "../event_bus.js";
-import { appState, applyTheme, applyLanguage } from "../state.js";
+import { appState, applyTheme, applyLanguage, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, setHTML, escapeHtml } from "../utils.js";
 
@@ -37,12 +37,12 @@ export function renderSettingsPage() {
 async function scanProjectDataMigration() {
   const button = qs("#btn-scan-data-migration");
   if (button) button.disabled = true;
-  setHTML("#project-data-migration-list", `<div class="empty-state">Scanning legacy C drive projects...</div>`);
+  setHTML("#project-data-migration-list", `<div class="empty-state">${escapeHtml(t("settings.scanningLegacy"))}</div>`);
   try {
     migrationScan = await apiFetch("/api/projects/data-migration/scan");
     renderProjectDataMigration();
   } catch (err) {
-    setHTML("#project-data-migration-list", `<div class="empty-state">Scan failed: ${escapeHtml(err.message)}</div>`);
+    setHTML("#project-data-migration-list", `<div class="empty-state">${escapeHtml(t("settings.scanFailed", { message: err.message }))}</div>`);
   } finally {
     if (button) button.disabled = false;
   }
@@ -52,11 +52,11 @@ async function applyProjectDataMigration() {
   const selected = qsa("[data-migration-project]:checked").map((item) => item.value);
   const deleteSource = Boolean(qs("#migration-delete-source")?.checked);
   if (!selected.length) {
-    eventBus.emit("toast", "Select at least one project to migrate.");
+    eventBus.emit("toast", t("settings.selectProjectToMigrate"));
     return;
   }
   if (deleteSource) {
-    const confirmed = window.confirm("This will delete selected source projects from the legacy C drive folder after copy verification. Continue?");
+    const confirmed = window.confirm(t("settings.deleteSourceConfirm"));
     if (!confirmed) return;
   }
 
@@ -64,7 +64,7 @@ async function applyProjectDataMigration() {
   if (button) {
     button.disabled = true;
     button.classList.add("btn-disabled");
-    button.textContent = "Migrating...";
+    button.textContent = t("settings.migrating");
   }
 
   try {
@@ -76,11 +76,11 @@ async function applyProjectDataMigration() {
     migrationScan = result;
     renderProjectDataMigration();
     eventBus.emit("reload-projects");
-    eventBus.emit("toast", `Migration completed: ${result.migrated?.length || 0} copied, ${result.deleted?.length || 0} deleted.`);
+    eventBus.emit("toast", t("settings.migrationCompleted", { copied: result.migrated?.length || 0, deleted: result.deleted?.length || 0 }));
   } catch (err) {
-    eventBus.emit("toast", `Migration failed: ${err.message}`);
+    eventBus.emit("toast", t("settings.migrationFailed", { message: err.message }));
   } finally {
-    if (button) button.textContent = "Copy Selected Projects";
+    if (button) button.textContent = t("settings.copySelectedProjects");
     updateMigrationApplyButton();
   }
 }
@@ -89,29 +89,29 @@ function renderProjectDataMigration() {
   const paths = qs("#project-data-migration-paths");
   if (paths) {
     paths.innerHTML = `
-      <div class="path-row"><span>Source</span><code>${escapeHtml(migrationScan?.source_root || "Not scanned")}</code></div>
-      <div class="path-row"><span>Target</span><code>${escapeHtml(migrationScan?.target_root || "Not scanned")}</code></div>
+      <div class="path-row"><span>${escapeHtml(t("settings.source"))}</span><code>${escapeHtml(migrationScan?.source_root || t("settings.notScanned"))}</code></div>
+      <div class="path-row"><span>${escapeHtml(t("settings.target"))}</span><code>${escapeHtml(migrationScan?.target_root || t("settings.notScanned"))}</code></div>
     `;
   }
   const list = qs("#project-data-migration-list");
   if (!list) return;
   if (!migrationScan) {
-    list.innerHTML = `<div class="empty-state">Scan first to list legacy C drive projects.</div>`;
+    list.innerHTML = `<div class="empty-state">${escapeHtml(t("settings.scanFirst"))}</div>`;
     updateMigrationApplyButton();
     return;
   }
   if (migrationScan.same_root) {
-    list.innerHTML = `<div class="empty-state">Source and target are already the same project root.</div>`;
+    list.innerHTML = `<div class="empty-state">${escapeHtml(t("settings.sameProjectRoot"))}</div>`;
     updateMigrationApplyButton();
     return;
   }
   const candidates = migrationScan.candidates || [];
   const messages = [
-    ...(migrationScan.errors || []).map((msg) => `<div class="status-guard danger"><div class="guard-title">Error</div><ul><li>${escapeHtml(msg)}</li></ul></div>`),
-    ...(migrationScan.skipped || []).map((item) => `<div class="status-guard warning"><div class="guard-title">Skipped</div><ul><li>${escapeHtml(item.project_id)}: ${escapeHtml(item.reason || "skipped")}</li></ul></div>`),
+    ...(migrationScan.errors || []).map((msg) => `<div class="status-guard danger"><div class="guard-title">${escapeHtml(t("settings.error"))}</div><ul><li>${escapeHtml(msg)}</li></ul></div>`),
+    ...(migrationScan.skipped || []).map((item) => `<div class="status-guard warning"><div class="guard-title">${escapeHtml(t("settings.skipped"))}</div><ul><li>${escapeHtml(item.project_id)}: ${escapeHtml(item.reason || t("settings.skipped"))}</li></ul></div>`),
   ].join("");
   if (!candidates.length) {
-    list.innerHTML = `${messages}<div class="empty-state">No legacy C drive projects found.</div>`;
+    list.innerHTML = `${messages}<div class="empty-state">${escapeHtml(t("settings.noLegacyProjects"))}</div>`;
     updateMigrationApplyButton();
     return;
   }
@@ -131,16 +131,16 @@ function renderMigrationCandidate(item) {
           <div>
             <div class="project-history-title-row">
               <h3>${escapeHtml(item.project_name || item.project_id)}</h3>
-              <span class="badge ${item.target_exists ? "badge-warning" : "badge-info"}">${item.target_exists ? "Target exists" : "Ready"}</span>
+              <span class="badge ${item.target_exists ? "badge-warning" : "badge-info"}">${escapeHtml(item.target_exists ? t("settings.targetExists") : t("common.ready"))}</span>
               <span class="badge badge-muted">${escapeHtml(item.task_type || "--")}</span>
             </div>
-            <p>${formatBytes(item.size_bytes)} 繚 ${escapeHtml(item.updated_at || item.created_at || "--")}</p>
+            <p>${formatBytes(item.size_bytes)} · ${escapeHtml(item.updated_at || item.created_at || "--")}</p>
           </div>
         </label>
       </div>
       <div class="project-file-details">
-        <div><span>Source</span><code>${escapeHtml(item.source_path)}</code></div>
-        <div><span>Target</span><code>${escapeHtml(item.target_path)}</code></div>
+        <div><span>${escapeHtml(t("settings.source"))}</span><code>${escapeHtml(item.source_path)}</code></div>
+        <div><span>${escapeHtml(t("settings.target"))}</span><code>${escapeHtml(item.target_path)}</code></div>
       </div>
     </article>
   `;
@@ -152,7 +152,7 @@ function updateMigrationApplyButton() {
   const count = qsa("[data-migration-project]:checked").length;
   button.disabled = count === 0;
   button.classList.toggle("btn-disabled", count === 0);
-  button.textContent = count ? `Copy ${count} Selected Project${count > 1 ? "s" : ""}` : "Copy Selected Projects";
+  button.textContent = count ? t("settings.copySelectedCount", { count }) : t("settings.copySelectedProjects");
 }
 
 function formatBytes(bytes) {

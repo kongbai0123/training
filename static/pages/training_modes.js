@@ -1264,7 +1264,7 @@ function renderRnnEvaluationRunSelector({ runs = [], activeRun = null, metricsBy
   }
   if (label) {
     if (!activeRun?.run_id) {
-      label.textContent = loading ? "Loading run history..." : "No active run selected.";
+      label.textContent = loading ? t("rnn.evaluation.loadingRunHistory") : t("rnn.evaluation.noActiveRun");
       return;
     }
     const metrics = metricsByRun[activeRun.run_id] || {};
@@ -1309,12 +1309,12 @@ function renderRnnMetricTrendRows(history, isRegression, metricContext = {}) {
 }
 
 function renderRnnTaskAwareDashboard(dashboard, fallback = {}) {
-  setText("#rnn-eval-chart-count", `${dashboard.chartCount || 0} metrics`);
-  setText("#rnn-eval-score-chart-title", dashboard.scoreChart?.title || "Score curve");
-  setText("#rnn-eval-score-chart-note", dashboard.scoreChart?.note || "Driven by task metric schema.");
-  setText("#rnn-eval-loss-chart-title", dashboard.lossChart?.title || "Loss curve");
-  setText("#rnn-eval-loss-chart-note", dashboard.lossChart?.note || "Train / validation loss.");
-  setText("#rnn-eval-diagnostic-title", dashboard.diagnostic?.title || "Task Diagnostic");
+  setText("#rnn-eval-chart-count", t("rnn.evaluation.metricCount", { count: dashboard.chartCount || 0 }));
+  setText("#rnn-eval-score-chart-title", dashboard.scoreChart?.title || t("rnn.evaluation.scoreCurve"));
+  setText("#rnn-eval-score-chart-note", dashboard.scoreChart?.note || t("rnn.evaluation.scoreCurveNote"));
+  setText("#rnn-eval-loss-chart-title", dashboard.lossChart?.title || t("rnn.evaluation.lossCurve"));
+  setText("#rnn-eval-loss-chart-note", dashboard.lossChart?.note || t("rnn.evaluation.lossCurveNote"));
+  setText("#rnn-eval-diagnostic-title", dashboard.diagnostic?.title || t("rnn.evaluation.taskDiagnostic"));
   setText("#rnn-eval-diagnostic-badge", dashboard.diagnostic?.badge || "schema");
 
   const baselineNote = qs("#rnn-eval-baseline-note");
@@ -1369,7 +1369,7 @@ function renderRnnBaselineComparison(metricSchema = {}) {
     metricsByRun: trainingModeState.rnn.evaluationRunMetrics || {},
     metricKey
   }));
-  setText("#rnn-eval-run-comparison-count", `${comparisons.length} metrics`);
+  setText("#rnn-eval-run-comparison-count", t("rnn.evaluation.metricCount", { count: comparisons.length }));
   countBadge?.classList.toggle("hidden", !comparisons.length);
   renderRnnRunComparisonCharts(comparisons);
 }
@@ -1422,7 +1422,7 @@ function renderRnnRunComparisonCharts(comparisons = []) {
 
   const available = comparisons.filter((comparison) => (comparison.rows || []).some((row) => row.hasValue));
   if (!available.length) {
-    host.innerHTML = `<div class="rnn-eval-chart-empty">No comparable runs loaded.</div>`;
+    host.innerHTML = `<div class="rnn-eval-chart-empty">${escapeHtml(t("rnn.evaluation.noComparableRuns"))}</div>`;
     return;
   }
 

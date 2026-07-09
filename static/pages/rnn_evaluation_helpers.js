@@ -92,13 +92,13 @@ export function buildRnnTaskAwareDashboard({ metrics = null, summary = {}, histo
     primaryMetric: metricSchema.primary_metric || {},
     chartCount: qualityKeys.length + lossKeys.length,
     scoreChart: {
-      title: isRegression ? "Regression Error Curve" : "Classification Score Curve",
+      title: isRegression ? t("rnn.evaluation.regressionErrorCurve") : t("rnn.evaluation.classificationScoreCurve"),
       note: `Schema quality: ${qualityKeys.length ? qualityKeys.join(", ") : "none"}`,
       labels,
       series: qualityKeys.map((key) => buildAlignedChartSeries(history, key))
     },
     lossChart: {
-      title: "Loss Curve",
+      title: t("rnn.evaluation.lossCurve"),
       note: `Schema loss: ${lossKeys.length ? lossKeys.join(", ") : "none"}`,
       labels,
       series: lossKeys.map((key) => buildAlignedChartSeries(history, key))
@@ -191,14 +191,14 @@ function buildRnnTaskDiagnostic({ metrics = null, latest = {}, isRegression = fa
   }
   return {
     type: "confusion",
-    title: "Confusion Matrix Diagnostic",
+    title: t("rnn.evaluation.confusionDiagnostic"),
     badge: confusion?.length ? "matrix" : "schema-ready",
     matrix: Array.isArray(confusion) ? confusion : [],
     labels: metrics?.confusion_labels || metrics?.confusionLabels || [],
     cards: [
-      ["Accuracy", formatSequenceMetric(latest["val/accuracy"])],
-      ["Precision / Recall", `${formatSequenceMetric(latest["val/precision"])} / ${formatSequenceMetric(latest["val/recall"])}`],
-      ["Matrix source", confusion?.length ? "Loaded from metrics payload" : "Confusion matrix is schema-ready; raw class counts are not persisted yet."]
+      [t("rnn.evaluation.accuracy"), formatSequenceMetric(latest["val/accuracy"])],
+      [t("rnn.evaluation.precisionRecall"), `${formatSequenceMetric(latest["val/precision"])} / ${formatSequenceMetric(latest["val/recall"])}`],
+      [t("rnn.evaluation.matrixSource"), confusion?.length ? t("rnn.evaluation.loadedFromMetrics") : t("rnn.evaluation.schemaReadyNoCounts")]
     ]
   };
 }
@@ -218,7 +218,7 @@ export function buildRnnMetricTrendRows({ history = [], isRegression = false, me
     return {
       isSinglePointBaseline,
       hasHistory: false,
-      emptyMessage: "No metric trend loaded.",
+      emptyMessage: t("rnn.evaluation.noMetricTrend"),
       charts: []
     };
   }
@@ -227,14 +227,14 @@ export function buildRnnMetricTrendRows({ history = [], isRegression = false, me
     ? [
       { label: "MAE", key: "val/mae" },
       { label: "RMSE", key: "val/rmse" },
-      { label: "Train Loss", key: "train/loss" },
-      { label: "Val Loss", key: "val/loss" }
+      { label: t("rnn.evaluation.trainLoss"), key: "train/loss" },
+      { label: t("rnn.evaluation.valLoss"), key: "val/loss" }
     ]
     : [
-      { label: "Accuracy", key: "val/accuracy" },
+      { label: t("rnn.evaluation.accuracy"), key: "val/accuracy" },
       { label: "Macro-F1", key: "val/macro_f1" },
-      { label: "Train Loss", key: "train/loss" },
-      { label: "Val Loss", key: "val/loss" }
+      { label: t("rnn.evaluation.trainLoss"), key: "train/loss" },
+      { label: t("rnn.evaluation.valLoss"), key: "val/loss" }
     ];
 
   return {
@@ -248,11 +248,11 @@ export function buildRnnMetricTrendRows({ history = [], isRegression = false, me
         ...chart,
         values,
         latest,
-        latestPrefix: isSinglePointBaseline ? "Single-point baseline" : "Latest",
+        latestPrefix: isSinglePointBaseline ? t("rnn.evaluation.singlePointBaselineLabel") : t("rnn.evaluation.latest"),
         latestLabel: formatSequenceMetric(latest),
         points: buildSparklinePoints(values),
         empty: values.length < 1,
-        emptyMessage: "Not enough data"
+        emptyMessage: t("rnn.evaluation.notEnoughData")
       };
     })
   };
@@ -262,7 +262,7 @@ export function buildRnnEvaluationEpochRows(history = []) {
   if (!Array.isArray(history) || !history.length) {
     return {
       hasRows: false,
-      emptyMessage: "No metric rows.",
+      emptyMessage: t("rnn.evaluation.noMetricRows"),
       rows: []
     };
   }
@@ -290,7 +290,7 @@ export function buildRnnEvaluationRunHistoryRows(runs = []) {
   if (!Array.isArray(runs) || !runs.length) {
     return {
       hasRows: false,
-      emptyMessage: "No sequence runs.",
+      emptyMessage: t("rnn.evaluation.noSequenceRuns"),
       rows: []
     };
   }
@@ -360,7 +360,7 @@ export function buildRnnBaselineComparisonViewModel({ runs = [], metricsByRun = 
   const comparison = buildRnnBaselineComparisonRows({ runs, metricsByRun, metricKey });
   let emptyMessage = "";
   if (!comparison.hasCompletedRuns) {
-    emptyMessage = "No comparable runs loaded.";
+    emptyMessage = t("rnn.evaluation.noComparableRuns");
   } else if (!comparison.hasAvailableRows) {
     emptyMessage = `No ${comparison.metricConfig.label} values loaded for completed runs.`;
   }

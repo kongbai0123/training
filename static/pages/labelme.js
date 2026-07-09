@@ -425,15 +425,16 @@ async function syncLabelMeLabels(silent = false) {
 export function renderLabelMeManager(status) {
   const datasetPath = status.datasetPath || "";
   const layoutPaths = appState.currentProject?._layout_report?.paths || {};
-  const imagesPath = layoutPaths.raw_images?.path || (datasetPath ? `${datasetPath}/raw/images` : "No project loaded");
-  const jsonPath = layoutPaths.current_labelme?.path || (datasetPath ? `${datasetPath}/raw/annotations/labelme` : "No project loaded");
-  const outputPath = layoutPaths.current_yolo?.path || (datasetPath ? `${datasetPath}/raw/labels` : "No project loaded");
+  const noProjectText = t("common.noProjectLoaded");
+  const imagesPath = layoutPaths.raw_images?.path || (datasetPath ? `${datasetPath}/raw/images` : noProjectText);
+  const jsonPath = layoutPaths.current_labelme?.path || (datasetPath ? `${datasetPath}/raw/annotations/labelme` : noProjectText);
+  const outputPath = layoutPaths.current_yolo?.path || (datasetPath ? `${datasetPath}/raw/labels` : noProjectText);
 
   setText("#labelme-images-path", imagesPath);
   setText("#labelme-json-path", jsonPath);
   setText("#labelme-output-path", outputPath);
   setText("#labelme-classes", status.classNames.length ? status.classNames.join(", ") : "--");
-  setText("#labelme-command", datasetPath ? `labelme "${imagesPath}" --output "${jsonPath}"` : "No project loaded");
+  setText("#labelme-command", datasetPath ? `labelme "${imagesPath}" --output "${jsonPath}"` : noProjectText);
 
   const labelmeProgress = appState.currentProject?.labelme_progress || {};
   const corruptedJsons = labelmeProgress.corrupted_jsons_list || [];

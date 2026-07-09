@@ -653,7 +653,7 @@
                 <div id="cnn-overview-panel" class="cnn-panel active" data-cnn-panel="overview">
                   <section class="panel-section cnn-overview-hero">
                     <div>
-                      <span class="summary-badge badge-neutral">CNN / YOLO</span>
+                      <span class="summary-badge badge-neutral" data-i18n="compare.scope.cnn">CNN / YOLO</span>
                       <h2>CNN 總覽</h2>
                       <p>影像 / 物件偵測工作區。這裡只顯示資料、標註、切分、訓練與模型狀態摘要；正式訓練請進入「CNN 模型訓練」。</p>
                     </div>
@@ -1227,49 +1227,49 @@
                   <section class="rnn-preview-card">
                     <div class="section-title">
                       <h2>RNN / XGBoost 評估</h2>
-                      <span id="rnn-eval-run-badge" class="summary-badge badge-neutral">No run</span>
+                      <span id="rnn-eval-run-badge" class="summary-badge badge-neutral" data-i18n="rnn.evaluation.noRun">No run</span>
                     </div>
                     <div class="metric-grid compact rnn-eval-overview-grid">
                       <div class="metric-card"><span id="rnn-eval-primary-label">Primary</span><strong id="rnn-eval-primary-value">--</strong></div>
                       <div class="metric-card"><span id="rnn-eval-secondary-label">Secondary</span><strong id="rnn-eval-secondary-value">--</strong></div>
-                      <div class="metric-card"><span>Train Loss</span><strong id="rnn-eval-train-loss">--</strong></div>
-                      <div class="metric-card"><span>Val Loss</span><strong id="rnn-eval-val-loss">--</strong></div>
+                      <div class="metric-card"><span data-i18n="rnn.evaluation.trainLoss">Train Loss</span><strong id="rnn-eval-train-loss">--</strong></div>
+                      <div class="metric-card"><span data-i18n="rnn.evaluation.valLoss">Val Loss</span><strong id="rnn-eval-val-loss">--</strong></div>
                     </div>
                     <div class="rnn-eval-run-toolbar">
-                      <label class="field-label" for="rnn-eval-run-select">Active run</label>
+                      <label class="field-label" for="rnn-eval-run-select" data-i18n="rnn.evaluation.activeRun">Active run</label>
                       <select id="rnn-eval-run-select">
-                        <option value="">No completed RNN/XGBoost run</option>
+                        <option value="" data-i18n="rnn.evaluation.noCompletedRun">No completed RNN/XGBoost run</option>
                       </select>
-                      <div id="rnn-eval-active-run-label" class="rnn-eval-active-run-label">No active run selected.</div>
+                      <div id="rnn-eval-active-run-label" class="rnn-eval-active-run-label" data-i18n="rnn.evaluation.noActiveRun">No active run selected.</div>
                     </div>
                     <div class="inline-actions">
-                      <button type="button" class="btn btn-secondary" id="rnn-refresh-evaluation">Refresh Evaluation</button>
+                      <button type="button" class="btn btn-secondary" id="rnn-refresh-evaluation" data-i18n="rnn.evaluation.refresh">Refresh Evaluation</button>
                     </div>
-                    <div id="rnn-eval-message" class="rnn-placeholder-box">No RNN or XGBoost run has been loaded yet.</div>
+                    <div id="rnn-eval-message" class="rnn-placeholder-box" data-i18n="rnn.evaluation.noRunLoaded">No RNN or XGBoost run has been loaded yet.</div>
                     <div class="rnn-eval-flow">
                       <div class="rnn-result-panel rnn-chart-panel">
-                        <div class="section-title"><h3>Task-aware Trends</h3><span class="summary-badge badge-neutral" id="rnn-eval-chart-count">0 metrics</span></div>
-                        <div class="rnn-baseline-note hidden" id="rnn-eval-baseline-note">Single-point baseline metrics are shown as flat reference lines.</div>
+                        <div class="section-title"><h3 data-i18n="rnn.evaluation.taskTrends">Task-aware Trends</h3><span class="summary-badge badge-neutral" id="rnn-eval-chart-count">0 metrics</span></div>
+                        <div class="rnn-baseline-note hidden" id="rnn-eval-baseline-note" data-i18n="rnn.evaluation.singlePointBaseline">Single-point baseline metrics are shown as flat reference lines.</div>
                         <div class="rnn-eval-chart-grid" id="rnn-eval-chart-stack">
                           <div class="rnn-chart-shell">
-                            <div class="rnn-chart-heading"><strong id="rnn-eval-score-chart-title">Score curve</strong><span id="rnn-eval-score-chart-note">Driven by task metric schema.</span></div>
+                            <div class="rnn-chart-heading"><strong id="rnn-eval-score-chart-title" data-i18n="rnn.evaluation.scoreCurve">Score curve</strong><span id="rnn-eval-score-chart-note" data-i18n="rnn.evaluation.scoreCurveNote">Driven by task metric schema.</span></div>
                             <canvas id="rnn-eval-score-chart"></canvas>
-                            <div class="rnn-eval-chart-empty hidden" id="rnn-eval-score-empty">No score metrics loaded.</div>
+                            <div class="rnn-eval-chart-empty hidden" id="rnn-eval-score-empty" data-i18n="rnn.evaluation.noScoreMetrics">No score metrics loaded.</div>
                           </div>
                           <div class="rnn-chart-shell">
-                            <div class="rnn-chart-heading"><strong id="rnn-eval-loss-chart-title">Loss curve</strong><span id="rnn-eval-loss-chart-note">Train / validation loss.</span></div>
+                            <div class="rnn-chart-heading"><strong id="rnn-eval-loss-chart-title" data-i18n="rnn.evaluation.lossCurve">Loss curve</strong><span id="rnn-eval-loss-chart-note" data-i18n="rnn.evaluation.lossCurveNote">Train / validation loss.</span></div>
                             <canvas id="rnn-eval-loss-chart"></canvas>
-                            <div class="rnn-eval-chart-empty hidden" id="rnn-eval-loss-empty">No loss metrics loaded.</div>
+                            <div class="rnn-eval-chart-empty hidden" id="rnn-eval-loss-empty" data-i18n="rnn.evaluation.noLossMetrics">No loss metrics loaded.</div>
                           </div>
                         </div>
                       </div>
                       <div class="rnn-result-panel rnn-chart-panel">
                         <div class="section-title">
-                          <h3>Run Comparison</h3>
+                          <h3 data-i18n="rnn.evaluation.runComparison">Run Comparison</h3>
                           <span class="summary-badge badge-neutral" id="rnn-eval-run-comparison-count">0 metrics</span>
                         </div>
                         <div class="rnn-comparison-chart-grid" id="rnn-eval-run-comparison-chart-grid">
-                          <div class="rnn-eval-chart-empty">No comparable runs loaded.</div>
+                          <div class="rnn-eval-chart-empty" data-i18n="rnn.evaluation.noComparableRuns">No comparable runs loaded.</div>
                         </div>
                       </div>
                       <div class="rnn-result-panel">
@@ -1279,7 +1279,7 @@
                         </div>
                       </div>
                       <div class="rnn-result-panel">
-                        <div class="section-title"><h3>Epoch History</h3><span class="summary-badge badge-neutral">scroll after 10</span></div>
+                        <div class="section-title"><h3 data-i18n="rnn.evaluation.epochHistory">Epoch History</h3><span class="summary-badge badge-neutral" data-i18n="rnn.evaluation.scrollAfter10">scroll after 10</span></div>
                         <div class="rnn-result-table-wrap rnn-table-scroll-10">
                           <table class="rnn-result-table">
                             <thead>
@@ -1293,13 +1293,13 @@
                               </tr>
                             </thead>
                             <tbody id="rnn-eval-epoch-rows">
-                              <tr><td colspan="6">No metric rows.</td></tr>
+                              <tr><td colspan="6" data-i18n="rnn.evaluation.noMetricRows">No metric rows.</td></tr>
                             </tbody>
                           </table>
                         </div>
                       </div>
                       <div class="rnn-result-panel">
-                        <div class="section-title"><h3>Run History</h3><span class="summary-badge badge-neutral">sequence</span></div>
+                        <div class="section-title"><h3 data-i18n="rnn.evaluation.runHistory">Run History</h3><span class="summary-badge badge-neutral" data-i18n="rnn.evaluation.sequence">sequence</span></div>
                         <div class="rnn-result-table-wrap rnn-table-scroll-10">
                           <table class="rnn-result-table">
                             <thead>
@@ -1313,7 +1313,7 @@
                               </tr>
                             </thead>
                             <tbody id="rnn-eval-run-history">
-                              <tr><td colspan="6">No sequence runs.</td></tr>
+                              <tr><td colspan="6" data-i18n="rnn.evaluation.noSequenceRuns">No sequence runs.</td></tr>
                             </tbody>
                           </table>
                         </div>
@@ -1865,8 +1865,8 @@
         <section class="page" id="page-history">
           <div class="page-header">
             <div>
-              <h1>History</h1>
-              <p>最近專案與操作紀錄。</p>
+              <h1 data-i18n="history.title">History</h1>
+              <p data-i18n="history.subtitle">Recent projects and operation records.</p>
             </div>
           </div>
           <div class="history-filter-row">
@@ -1909,27 +1909,27 @@
           <section class="panel-section narrow-form settings-system-panel">
             <div class="section-title"><h2 data-i18n="systemTitle">System</h2></div>
             <div class="path-list">
-              <div class="path-row"><span>Frontend phase</span><code>Phase 1 UI Redesign</code></div>
-              <div class="path-row"><span>LabelMe backend</span><code>Connected</code></div>
-              <div class="path-row"><span>Conversion backend</span><code>Connected</code></div>
+              <div class="path-row"><span data-i18n="settings.frontendPhase">Frontend phase</span><code data-i18n="settings.phase1Ui">Phase 1 UI Redesign</code></div>
+              <div class="path-row"><span data-i18n="settings.labelmeBackend">LabelMe backend</span><code data-i18n="common.connected">Connected</code></div>
+              <div class="path-row"><span data-i18n="settings.conversionBackend">Conversion backend</span><code data-i18n="common.connected">Connected</code></div>
             </div>
           </section>
           <section class="panel-section narrow-form settings-system-panel">
             <div class="section-title">
-              <h2>Project Data Migration</h2>
-              <button class="btn btn-secondary btn-sm" id="btn-scan-data-migration" type="button">Scan C Drive</button>
+              <h2 data-i18n="settings.dataMigration">Project Data Migration</h2>
+              <button class="btn btn-secondary btn-sm" id="btn-scan-data-migration" type="button" data-i18n="settings.scanCDrive">Scan C Drive</button>
             </div>
-            <p class="section-help">Scan legacy C drive projects, copy selected projects into the managed project folder, and delete the C drive source only after explicit confirmation.</p>
+            <p class="section-help" data-i18n="settings.dataMigrationHelp">Scan legacy C drive projects, copy selected projects into the managed project folder, and delete the C drive source only after explicit confirmation.</p>
             <div class="path-list" id="project-data-migration-paths">
-              <div class="path-row"><span>Source</span><code>Not scanned</code></div>
-              <div class="path-row"><span>Target</span><code>Not scanned</code></div>
+              <div class="path-row"><span data-i18n="settings.source">Source</span><code data-i18n="settings.notScanned">Not scanned</code></div>
+              <div class="path-row"><span data-i18n="settings.target">Target</span><code data-i18n="settings.notScanned">Not scanned</code></div>
             </div>
             <div class="history-filter-row project-data-migration-actions">
               <label class="inline-checkbox">
                 <input type="checkbox" id="migration-delete-source">
-                <span>Delete C drive source after verified copy</span>
+                <span data-i18n="settings.deleteSourceAfterCopy">Delete C drive source after verified copy</span>
               </label>
-              <button class="btn btn-primary btn-disabled" id="btn-apply-data-migration" type="button" disabled>Copy Selected Projects</button>
+              <button class="btn btn-primary btn-disabled" id="btn-apply-data-migration" type="button" disabled data-i18n="settings.copySelectedProjects">Copy Selected Projects</button>
             </div>
             <div id="project-data-migration-list" class="list-stack"></div>
           </section>

@@ -4,7 +4,7 @@ import { formatSequenceMetric } from "./rnn_metric_helpers.js";
 
 export function renderRnnEvaluationRunSelectorOptions({ runs = [], selectedRunId = "", metricsByRun = {} } = {}) {
   if (!Array.isArray(runs) || !runs.length) {
-    return `<option value="">No completed RNN/XGBoost run</option>`;
+    return `<option value="">${escapeHtml(t("rnn.evaluation.noCompletedRun"))}</option>`;
   }
 
   return runs.map((run) => {
@@ -30,7 +30,7 @@ export function renderRnnEvaluationRunSelectorOptions({ runs = [], selectedRunId
 export function resolveRnnEvaluationRunBadge({ hasMetrics = false, loading = false, activeRun = null, backend = "" } = {}) {
   return {
     className: `summary-badge ${hasMetrics ? "badge-success" : loading ? "badge-neutral" : "badge-warning"}`,
-    text: loading ? "Loading" : activeRun ? backend : "No run"
+    text: loading ? t("common.loading") : activeRun ? backend : t("rnn.evaluation.noRun")
   };
 }
 
@@ -38,10 +38,10 @@ export function resolveRnnEvaluationMessage({ loading = false, activeRun = null 
   return {
     hidden: Boolean(activeRun && !loading),
     text: loading
-      ? "Loading sequence training metrics, artifacts, and run history..."
+      ? t("rnn.evaluation.loadingMetrics")
       : activeRun
         ? ""
-        : "No RNN or XGBoost training run found for this project."
+        : t("rnn.evaluation.noRunFound")
   };
 }
 
@@ -70,7 +70,7 @@ export function resolveRnnEvaluationSidebarStatusRender(sidebar = {}) {
   return {
     selector: sidebar.statusSelector,
     className: sidebar.status?.className || "summary-badge badge-neutral",
-    text: sidebar.status?.text || "No run"
+    text: sidebar.status?.text || t("rnn.evaluation.noRun")
   };
 }
 
@@ -272,8 +272,8 @@ export function renderRnnTaskDiagnostic(diagnostic = {}) {
   return `
     <div class="rnn-diagnostic-grid">${cards}</div>
     <div class="rnn-diagnostic-card">
-      <strong>Confusion Matrix</strong>
-      <p>${escapeHtml(matrix.length ? "Loaded class-count matrix." : "Matrix placeholder shown until class-count data is persisted.")}</p>
+      <strong>${escapeHtml(t("rnn.evaluation.confusionMatrix"))}</strong>
+      <p>${escapeHtml(matrix.length ? t("rnn.evaluation.loadedClassCountMatrix") : t("rnn.evaluation.matrixPlaceholder"))}</p>
       <div class="rnn-confusion-preview"${gridStyle}>${cells}</div>
     </div>
   `;
