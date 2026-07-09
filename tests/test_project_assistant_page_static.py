@@ -91,6 +91,10 @@ class ProjectAssistantPageStaticTests(unittest.TestCase):
 
         self.assertIn("Vision Training Studio is not a RAG product", plan)
         self.assertIn("Project Assistant is an auxiliary layer", plan)
+        self.assertIn("tests/test_project_assistant_contract.py", plan)
+        self.assertIn("tests/test_project_assistant_page_static.py", plan)
+        self.assertNotIn("tests/test_rag_workbench_contract.py", plan)
+        self.assertNotIn("tests/test_rag_workbench_page_static.py", plan)
         self.assertIn("Legacy compatibility components", plan)
         self.assertIn("Visible UI copy no longer presents this as RAG Workbench", plan)
 

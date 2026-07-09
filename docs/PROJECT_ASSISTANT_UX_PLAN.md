@@ -78,8 +78,8 @@ Implemented components:
 - Header/context entry: `static/index.html`
 - Context-aware assistant panel: `static/core/right_panel.js`
 - i18n catalogs: `static/state/i18n/en.js`, `static/state/i18n/zh-TW.js`
-- Contract tests: `tests/test_rag_workbench_contract.py`
-- Static page tests: `tests/test_rag_workbench_page_static.py`
+- Contract tests: `tests/test_project_assistant_contract.py`
+- Static page tests: `tests/test_project_assistant_page_static.py`
 
 Legacy compatibility components:
 
@@ -133,11 +133,10 @@ Recent validation on this branch:
 
 Recommended next slices:
 
-1. Rename remaining test module names from legacy workbench naming to Project Assistant naming while preserving compatibility aliases.
-2. Add page-specific assistant prompts for RNN schema, sequence training, model comparison, export, and error history.
-3. Add project report summarization templates that do not require an LLM.
-4. Add optional LLM generation only behind explicit assistant mode settings.
-5. Extend DOM audit pages for Evaluation, Compare, Export, History, and Project Assistant after each UI copy change.
+1. Add page-specific assistant prompts for RNN schema, sequence training, model comparison, export, and error history.
+2. Add project report summarization templates that do not require an LLM.
+3. Add optional LLM generation only behind explicit assistant mode settings.
+4. Extend DOM audit pages for Evaluation, Compare, Export, History, and Project Assistant after each UI copy change.
 
 ## Completion Criteria
 
