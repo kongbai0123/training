@@ -16,6 +16,7 @@ if %ERRORLEVEL% EQU 0 (
     static\state\*.js
     static\state\i18n\*.js
     static\ui\*.js
+    scripts\i18n_dom_audit.mjs
   ) do (
     if exist "%%F" (
       echo [JS] %%F

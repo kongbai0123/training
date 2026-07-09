@@ -16,6 +16,7 @@ class BuildScriptStaticTests(unittest.TestCase):
         self.assertIn("static\\state\\*.js", build_bat)
         self.assertIn("static\\state\\i18n\\*.js", build_bat)
         self.assertIn("static\\ui\\*.js", build_bat)
+        self.assertIn("scripts\\i18n_dom_audit.mjs", build_bat)
         self.assertIn('node --check "%%F" || exit /b 1', build_bat)
         self.assertNotIn("node --check static\\app.js || exit /b 1", build_bat)
 
