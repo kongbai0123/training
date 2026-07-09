@@ -19,6 +19,9 @@ class I18nAuditScriptStaticTests(unittest.TestCase):
         self.assertIn("parseAuditTargets", script)
         self.assertIn("navigateAuditTarget", script)
         self.assertIn("args.pages || args.nav", script)
+        self.assertIn("pageAliases", script)
+        self.assertIn('dashboard: "overview"', script)
+        self.assertIn("data-nav", script)
         self.assertIn("data-rnn-nav", script)
         self.assertIn("data-cnn-nav", script)
 

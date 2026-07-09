@@ -102,11 +102,15 @@ async function navigateAuditTarget(page, target) {
     await clickFirstVisible(page, `[data-training-mode="${target.mode}"]`);
   }
   if (!target.page) return;
+  const pageAliases = {
+    dashboard: "overview",
+  };
+  const modeNavPage = pageAliases[target.page] || target.page;
   const selectors = target.mode === "rnn"
     ? [`[data-rnn-nav="${target.page}"]`, `[data-page="${target.page}"]`]
     : target.mode === "cnn"
       ? [`[data-cnn-nav="${target.page}"]`, `[data-page="${target.page}"]`]
-      : [`[data-page="${target.page}"]`, `[data-mode-nav="${target.page}"]`];
+      : [`[data-nav="${target.page}"]`, `[data-page="${target.page}"]`, `[data-mode-nav="${modeNavPage}"]`];
   for (const selector of selectors) {
     if (await clickFirstVisible(page, selector)) {
       return;
