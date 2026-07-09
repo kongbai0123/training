@@ -111,7 +111,7 @@
           <div class="workspace-context-bar">
             <button type="button" class="workspace-context-toggle" id="workspace-context-toggle" aria-expanded="false" aria-controls="workspace-context-strip">
               <i class="fa-solid fa-chevron-down"></i>
-              <span>Workspace status</span>
+              <span data-i18n="workspace.statusTitle">工作區狀態</span>
             </button>
             <div class="workspace-context-summary" id="workspace-context-summary">No active project.</div>
           </div>
@@ -1054,11 +1054,12 @@
                       <h2>RNN CSV 設定 <span class="info-icon" data-tooltip="先決定任務與預測目標，再選擇輸入特徵 X，最後設定時間序列切窗欄位。">i</span></h2>
                       <span class="summary-badge badge-neutral" id="rnn-config-hash-badge">No config</span>
                     </div>
+                    <div class="rnn-schema-wizard-guide" id="rnn-schema-wizard-guide"></div>
                     <div class="rnn-feature-wizard-summary" id="rnn-feature-wizard-summary">
-                      <div><span>Dataset rows</span><strong id="rnn-feature-summary-rows">--</strong></div>
-                      <div><span>Recommended task</span><strong id="rnn-feature-summary-task">--</strong></div>
-                      <div><span>Selected X</span><strong id="rnn-feature-summary-x">0 features</strong></div>
-                      <div><span>Target / Y</span><strong id="rnn-feature-summary-y">Not set</strong></div>
+                      <div><span data-i18n="rnn.featureSummary.rows">資料筆數</span><strong id="rnn-feature-summary-rows">--</strong></div>
+                      <div><span data-i18n="rnn.featureSummary.task">建議任務</span><strong id="rnn-feature-summary-task">--</strong></div>
+                      <div><span data-i18n="rnn.featureSummary.selectedX">已選特徵</span><strong id="rnn-feature-summary-x">0</strong></div>
+                      <div><span data-i18n="rnn.featureSummary.targetY">目標欄位</span><strong id="rnn-feature-summary-y">未設定</strong></div>
                     </div>
                     <div class="rnn-feature-wizard">
                       <section class="rnn-feature-step">
@@ -1070,12 +1071,12 @@
                           </div>
                         </div>
                         <div class="rnn-schema-grid two-col">
-                          <label><span>Task type <span class="info-icon" data-tooltip="Regression 用於預測連續數值；Classification 用於預測離散類別 Label。">i</span></span><select id="rnn-feature-task-head"><option value="classification">Classification / Label</option><option value="regression">Regression / Numeric target</option></select></label>
-                          <label><span>Target column <span class="info-icon" data-tooltip="要預測的 y 欄位。Regression 通常選數值欄位；Classification 必須選類別 Label 欄位。">i</span></span><select id="rnn-target-column"><option value="">Select target / label / y</option></select></label>
+                          <label><span><span data-i18n="rnn.schemaWizard.taskType">任務類型</span> <span class="info-icon" data-tooltip="回歸用於預測連續數值；分類用於預測離散類別標籤。" data-i18n-tooltip="rnn.schemaWizard.taskTooltip">i</span></span><select id="rnn-feature-task-head"><option value="classification" data-i18n="rnn.task.classification">分類</option><option value="regression" data-i18n="rnn.task.regression">回歸</option></select></label>
+                          <label><span><span data-i18n="rnn.schemaWizard.targetColumn">目標欄位</span> <span class="info-icon" data-tooltip="要預測的 y 欄位。回歸通常選數值欄位；分類必須選類別標籤欄位。" data-i18n-tooltip="rnn.schemaWizard.targetTooltip">i</span></span><select id="rnn-target-column"><option value="" data-i18n="rnn.schemaWizard.targetPlaceholder">選擇目標欄位</option></select></label>
                         </div>
                         <div class="rnn-config-recommendation" id="rnn-feature-recommendation">
                           <i class="fa-solid fa-wand-magic-sparkles"></i>
-                          <span id="rnn-feature-recommendation-text">Import a CSV to get task recommendations.</span>
+                          <span id="rnn-feature-recommendation-text" data-i18n="rnn.schemaWizard.importForRecommendation">匯入 CSV 後取得任務建議。</span>
                           <button type="button" class="btn btn-secondary btn-sm" id="rnn-apply-feature-recommendation">套用建議</button>
                         </div>
                       </section>
@@ -1091,10 +1092,11 @@
                         <input id="rnn-feature-dim" type="hidden" value="0">
                         <div class="inline-actions rnn-feature-actions">
                           <button type="button" class="btn btn-secondary btn-sm" id="rnn-select-numeric-features">全選數值欄位</button>
-                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-exclude-target-features">排除 Target / Time</button>
+                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-exclude-target-features" data-i18n="rnn.schemaWizard.excludeTargetTime">排除目標 / 時間欄位</button>
                           <button type="button" class="btn btn-secondary btn-sm" id="rnn-clear-features">清除</button>
                         </div>
                         <div class="rnn-feature-checkbox-list" id="rnn-feature-checkbox-list"></div>
+                        <div class="rnn-dataset-quality-report" id="rnn-dataset-quality-report"></div>
                       </section>
                       <section class="rnn-feature-step">
                         <div class="rnn-feature-step-header">
@@ -1105,8 +1107,8 @@
                           </div>
                         </div>
                         <div class="rnn-schema-grid two-col">
-                          <label><span>Time column <span class="info-icon" data-tooltip="用來排序序列內 time steps 的欄位，例如 timestep、timestamp 或 Date Time。">i</span></span><select id="rnn-time-column"><option value="">No time column</option></select></label>
-                          <label><span>Sequence ID column <span class="info-icon" data-tooltip="用來區分不同序列的欄位，例如 sequence_id、machine_id 或 batch_id。沒有此欄位時代表單一連續序列。">i</span></span><select id="rnn-sequence-column"><option value="">None / single continuous series</option></select></label>
+                          <label><span><span data-i18n="rnn.schemaWizard.timeColumn">時間欄位</span> <span class="info-icon" data-tooltip="用來排序序列內時間步的欄位，例如 timestep、timestamp 或 Date Time。" data-i18n-tooltip="rnn.schemaWizard.timeTooltip">i</span></span><select id="rnn-time-column"><option value="" data-i18n="rnn.schemaWizard.noTimeColumn">不使用時間欄位</option></select></label>
+                          <label><span><span data-i18n="rnn.schemaWizard.sequenceColumn">序列 ID 欄位</span> <span class="info-icon" data-tooltip="用來區分不同序列的欄位，例如 sequence_id、machine_id 或 batch_id。沒有此欄位時代表單一連續序列。" data-i18n-tooltip="rnn.schemaWizard.sequenceTooltip">i</span></span><select id="rnn-sequence-column"><option value="" data-i18n="rnn.schemaWizard.noSequenceColumn">無，視為單一連續序列</option></select></label>
                         </div>
                       </section>
                     </div>
@@ -1227,11 +1229,18 @@
                       <h2>RNN / XGBoost 評估</h2>
                       <span id="rnn-eval-run-badge" class="summary-badge badge-neutral">No run</span>
                     </div>
-                    <div class="metric-grid compact">
+                    <div class="metric-grid compact rnn-eval-overview-grid">
                       <div class="metric-card"><span id="rnn-eval-primary-label">Primary</span><strong id="rnn-eval-primary-value">--</strong></div>
                       <div class="metric-card"><span id="rnn-eval-secondary-label">Secondary</span><strong id="rnn-eval-secondary-value">--</strong></div>
                       <div class="metric-card"><span>Train Loss</span><strong id="rnn-eval-train-loss">--</strong></div>
                       <div class="metric-card"><span>Val Loss</span><strong id="rnn-eval-val-loss">--</strong></div>
+                    </div>
+                    <div class="rnn-eval-run-toolbar">
+                      <label class="field-label" for="rnn-eval-run-select">Active run</label>
+                      <select id="rnn-eval-run-select">
+                        <option value="">No completed RNN/XGBoost run</option>
+                      </select>
+                      <div id="rnn-eval-active-run-label" class="rnn-eval-active-run-label">No active run selected.</div>
                     </div>
                     <div class="inline-actions">
                       <button type="button" class="btn btn-secondary" id="rnn-refresh-evaluation">Refresh Evaluation</button>
@@ -1437,15 +1446,30 @@
 
           <section class="panel-section model-compare-mode-card">
             <div class="section-title">
-              <h2 data-i18n="compare.mode">Compare Mode</h2>
+              <h2 data-i18n="compare.mode">Compare Scope</h2>
               <span class="summary-badge badge-neutral" id="compare-mode-badge">CNN / YOLO</span>
             </div>
             <div class="compare-mode-row">
-              <div class="compare-mode-toggle" role="group" aria-label="Compare architecture" data-i18n-aria-label="compare.architectureAria">
+              <div class="compare-mode-toggle" id="compare-architecture-toggle" role="group" aria-label="Compare architecture" data-i18n-aria-label="compare.architectureAria">
                 <button type="button" id="compare-mode-cnn" class="active" data-compare-architecture="cnn">CNN / YOLO</button>
                 <button type="button" id="compare-mode-rnn" data-compare-architecture="rnn">RNN / Sequence</button>
               </div>
+              <div class="compare-scope-summary hidden" id="compare-scope-summary">
+                <span data-i18n="compare.projectScope">Project scope</span>
+                <strong id="compare-scope-title">CNN / YOLO</strong>
+              </div>
               <p id="compare-mode-note" data-i18n="compare.modeNote">Phase 3B supports completed CNN runs. Select 2 to 4 compatible runs for metric comparison.</p>
+            </div>
+            <div class="compare-view-row">
+              <span data-i18n="compare.viewMode">View</span>
+              <div class="compare-view-toggle" role="group" aria-label="Compare view" data-i18n-aria-label="compare.viewAria">
+                <button type="button" class="active" data-compare-view="performance">
+                  <i class="fa-solid fa-chart-line"></i> <span data-i18n="compare.view.performance">Performance</span>
+                </button>
+                <button type="button" data-compare-view="artifacts">
+                  <i class="fa-solid fa-box-archive"></i> <span data-i18n="compare.view.artifacts">Training Artifacts</span>
+                </button>
+              </div>
             </div>
           </section>
 
@@ -1467,7 +1491,7 @@
             </section>
           </div>
 
-          <section class="panel-section">
+          <section class="panel-section compare-performance-panel" id="compare-page-decision">
             <div class="section-title">
               <h2 data-i18n="compare.decisionSummary">Decision Summary</h2>
               <span id="compare-recommendation-badge" class="summary-badge badge-neutral" data-i18n="compare.noComparison">No comparison</span>
@@ -1475,7 +1499,7 @@
             <div id="compare-decision-summary" class="compare-decision-summary"></div>
           </section>
 
-          <section class="panel-section">
+          <section class="panel-section compare-performance-panel" id="compare-page-trends">
             <div class="section-title">
               <h2 data-i18n="compare.trendComparison">Trend Comparison</h2>
               <div id="compare-chart-tabs" class="inline-actions"></div>
@@ -1486,7 +1510,7 @@
             </div>
           </section>
 
-          <section class="panel-section">
+          <section class="panel-section compare-performance-panel" id="compare-page-output">
             <div class="section-title">
               <h2 data-i18n="compare.outputComparison">Output Comparison</h2>
               <span class="summary-badge badge-neutral" data-i18n="compare.sameImageSelectedRuns">Same image / selected runs</span>
@@ -1528,7 +1552,7 @@
             <div id="compare-output-results" class="compare-output-grid"></div>
           </section>
 
-          <section class="panel-section">
+          <section class="panel-section compare-performance-panel" id="compare-page-config">
             <div class="section-title">
               <h2 data-i18n="compare.configDifference">Config Difference</h2>
               <span class="summary-badge badge-neutral" data-i18n="compare.readOnly">Read-only</span>
@@ -1536,13 +1560,21 @@
             <div id="compare-config-diff" class="compare-config-diff"></div>
           </section>
 
+          <section class="panel-section compare-artifact-panel hidden" id="compare-page-artifacts">
+            <div class="section-title">
+              <h2 data-i18n="compare.artifactComparison">Training Artifact Comparison</h2>
+              <span class="summary-badge badge-neutral" data-i18n="compare.selectedRuns">Selected runs</span>
+            </div>
+            <div id="compare-artifact-comparison" class="compare-artifact-comparison"></div>
+          </section>
+
           <section class="panel-section">
             <div class="section-title">
-              <h2>Compare Report</h2>
-              <span id="compare-report-badge" class="summary-badge badge-neutral">Not exported</span>
+              <h2 data-i18n="compare.report">Compare Report</h2>
+              <span id="compare-report-badge" class="summary-badge badge-neutral" data-i18n="compare.notExported">Not exported</span>
             </div>
             <div id="compare-report-files" class="compare-report-files">
-              <div class="empty-state">Export a report after comparison to download JSON, Markdown, CSV, and PDF files.</div>
+              <div class="empty-state" data-i18n="compare.exportAfterComparison">Export a report after comparison to download JSON, Markdown, CSV, and PDF files.</div>
             </div>
           </section>
         </section>
@@ -2181,7 +2213,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260708-rnn-epoch-axis"></script>
+  <script type="module" src="/static/app.js?v=20260708-rnn-active-run"></script>
 </body>
 </html>
 

@@ -108,6 +108,85 @@
 .rnn-preview-card .section-title h2 {
   font-size: 0.98rem;
 }
+.rnn-schema-wizard-guide,
+.rnn-dataset-quality-report {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+.rnn-schema-wizard-head,
+.rnn-quality-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rnn-schema-wizard-head > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+.rnn-schema-wizard-head strong,
+.rnn-quality-head strong {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+.rnn-schema-wizard-head span,
+.rnn-quality-grid span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.rnn-schema-role-pills,
+.rnn-schema-step-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rnn-schema-role-pills span,
+.rnn-schema-step-strip span {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+.rnn-schema-step-strip span.ok {
+  border-color: rgba(34, 197, 94, 0.45);
+  color: var(--success);
+  background: rgba(34, 197, 94, 0.08);
+}
+.rnn-schema-step-strip span.warn,
+.rnn-quality-warning {
+  border-color: rgba(245, 158, 11, 0.45);
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.08);
+}
+.rnn-quality-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.rnn-quality-grid > div {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel);
+}
+.rnn-quality-grid strong {
+  color: var(--text);
+}
+.rnn-quality-warning {
+  padding: 7px 8px;
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
 .rnn-preview-card p {
   margin: 0 0 10px;
   color: var(--text-muted);
@@ -256,6 +335,40 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   margin-top: 12px;
+}
+.rnn-eval-overview-grid.metric-grid.compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.rnn-eval-overview-grid .metric-card {
+  min-height: 74px;
+  padding: 12px;
+}
+.rnn-eval-run-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 340px) minmax(280px, 1fr);
+  gap: 8px 12px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+.rnn-eval-run-toolbar .field-label {
+  grid-column: 1 / -1;
+  margin-bottom: -4px;
+}
+.rnn-eval-run-toolbar select {
+  width: 100%;
+}
+.rnn-eval-active-run-label {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
 }
 .rnn-eval-chart-stack {
   display: grid;
@@ -657,6 +770,10 @@
 @media (max-width: 1100px) {
   .rnn-eval-chart-grid,
   .rnn-diagnostic-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rnn-eval-overview-grid.metric-grid.compact,
+  .rnn-eval-run-toolbar {
     grid-template-columns: minmax(0, 1fr);
   }
 }

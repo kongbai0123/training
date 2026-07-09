@@ -1,6 +1,6 @@
-import { appState } from "../state.js";
+import { appState, t } from "../state.js";
 import { qs, setHTML, escapeHtml } from "../utils.js";
-import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260708-rnn-feature-wizard";
+import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260708-i18n-tooltips";
 
 function contextCardFor(selector) {
   return qs(selector)?.closest(".workspace-context-card, .summary-section") || null;
@@ -34,21 +34,21 @@ export function initWorkspaceContextPanel() {
 }
 
 function updateWorkspaceContextSummary(pageId, status, config = {}) {
-  const projectLabel = status.hasProject ? status.projectName : "No project";
+  const projectLabel = status.hasProject ? status.projectName : t("common.noProject");
   const pageLabel = config.title || getPageTitle(pageId);
   const actionsCount = config.suppressActions ? 0 : (config.actions || []).length;
   const warningCount = config.suppressWarnings ? 0 : ((config.warnings || []).length);
   const notesCount = config.suppressWarnings ? 0 : ((config.notes || []).length);
   const readiness = status.hasProject
-    ? (status.trainReady ? "Training ready" : status.hasDataset ? "Dataset active" : "Project open")
-    : "Workspace idle";
+    ? (status.trainReady ? t("workspace.trainingReady") : status.hasDataset ? t("workspace.datasetActive") : t("workspace.projectOpen"))
+    : t("workspace.idle");
   setHTML("#workspace-context-summary", `
     <span class="summary-badge badge-neutral">${escapeHtml(projectLabel)}</span>
     <span class="summary-badge badge-info">${escapeHtml(pageLabel)}</span>
     <span class="summary-badge badge-${status.trainReady ? "success" : "neutral"}">${escapeHtml(readiness)}</span>
-    <span class="summary-badge badge-neutral">${actionsCount} actions</span>
-    <span class="summary-badge badge-${warningCount > 0 ? "warning" : "neutral"}">${warningCount} warnings</span>
-    ${notesCount > 0 ? `<span class="summary-badge badge-info">${notesCount} notes</span>` : ""}
+    <span class="summary-badge badge-neutral">${escapeHtml(t("workspace.actionsCount", { count: actionsCount }))}</span>
+    <span class="summary-badge badge-${warningCount > 0 ? "warning" : "neutral"}">${escapeHtml(t("workspace.warningsCount", { count: warningCount }))}</span>
+    ${notesCount > 0 ? `<span class="summary-badge badge-info">${escapeHtml(t("workspace.notesCount", { count: notesCount }))}</span>` : ""}
   `);
 }
 

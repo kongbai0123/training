@@ -1,5 +1,5 @@
 ﻿import { eventBus } from "../event_bus.js";
-import { appState } from "../state.js";
+import { appState, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, escapeHtml, setText } from "../utils.js";
 import {
@@ -17,6 +17,7 @@ import {
   resolveRnnEvaluationViewModel
 } from "./rnn_evaluation_helpers.js?v=20260708-rnn-epoch-axis";
 import {
+  renderRnnEvaluationRunSelectorOptions,
   renderRnnEvaluationArtifactList,
   renderRnnEvaluationEpochTableRows,
   renderRnnEvaluationRunHistoryTableRows,
@@ -25,7 +26,7 @@ import {
   renderRnnTaskDiagnostic,
   resolveRnnEvaluationOverviewRender,
   resolveRnnEvaluationSidebarStatusRender
-} from "./rnn_evaluation_render_helpers.js";
+} from "./rnn_evaluation_render_helpers.js?v=20260708-rnn-active-run";
 import {
   renderRnnFeatureChipList,
   renderRnnPreviewContent,
@@ -263,6 +264,14 @@ export function renderTrainingWorkspace() {
   });
 
   renderRnnReadiness();
+  if (!isCnn
+    && appState.currentProjectId
+    && !trainingModeState.rnn.config
+    && !trainingModeState.rnn.configLoading
+    && !trainingModeState.rnn.readiness
+    && !trainingModeState.rnn.readinessLoading) {
+    loadRnnConfig();
+  }
   renderRnnSidebarReadiness(isCnn);
   toggleRnnEvaluationRightPanel(isRnnEvaluation);
   if (isRnnEvaluation) {
@@ -415,6 +424,7 @@ export function initRnnPreviewEvents() {
   qs("#rnn-refresh-models")?.addEventListener("click", () => loadRnnInferenceModels({ force: true }));
   qs("#rnn-refresh-inference-result")?.addEventListener("click", () => loadLatestRnnInferenceResult({ force: true }));
   qs("#rnn-refresh-evaluation")?.addEventListener("click", () => loadRnnEvaluation({ force: true }));
+  qs("#rnn-eval-run-select")?.addEventListener("change", (event) => selectRnnEvaluationRun(event.target.value));
   qs("#rnn-inference-model")?.addEventListener("change", updateRnnInferenceControls);
   qs("#rnn-inference-csv-file")?.addEventListener("change", () => {
     if (qs("#rnn-inference-csv-file")?.files?.[0]) {
@@ -483,6 +493,7 @@ async function loadRnnConfig(options = {}) {
     trainingModeState.rnn.configValidation = payload.validation || null;
     trainingModeState.rnn.windowSummary = payload.window || payload.validation?.window || null;
     trainingModeState.rnn.configMismatches = payload.mismatches || [];
+    await loadRnnSchemaWizardAndQuality();
     applyRnnConfigToForm();
     await loadRnnModelCatalog({ force: options.force });
     await loadRnnReadiness({ force: true });
@@ -492,6 +503,18 @@ async function loadRnnConfig(options = {}) {
     trainingModeState.rnn.configLoading = false;
     renderRnnConfig();
   }
+}
+
+async function loadRnnSchemaWizardAndQuality() {
+  if (!appState.currentProjectId) return;
+  const [wizardResult, qualityResult, registryResult] = await Promise.all([
+    apiFetch(`/api/projects/${appState.currentProjectId}/rnn/schema-wizard`, { suppressToast: true }).catch(() => null),
+    apiFetch(`/api/projects/${appState.currentProjectId}/dataset/quality-report`, { suppressToast: true }).catch(() => null),
+    apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/registry`, { suppressToast: true }).catch(() => null)
+  ]);
+  trainingModeState.rnn.schemaWizard = wizardResult?.wizard || null;
+  trainingModeState.rnn.qualityReport = qualityResult || null;
+  trainingModeState.rnn.runRegistry = registryResult || null;
 }
 
 function applyRnnConfigToForm() {
@@ -593,9 +616,9 @@ function detectRnnRecommendedConfig() {
 
 function renderRnnFeatureControls() {
   const headers = rnnInspectionHeaders();
-  renderRnnColumnSelect("#rnn-target-column", headers, "Select target / label / y");
-  renderRnnColumnSelect("#rnn-time-column", headers, "No time column");
-  renderRnnColumnSelect("#rnn-sequence-column", headers, "None / single continuous series");
+  renderRnnColumnSelect("#rnn-target-column", headers, t("rnn.schemaWizard.targetPlaceholder"));
+  renderRnnColumnSelect("#rnn-time-column", headers, t("rnn.schemaWizard.noTimeColumn"));
+  renderRnnColumnSelect("#rnn-sequence-column", headers, t("rnn.schemaWizard.noSequenceColumn"));
   renderRnnFeatureCheckboxes();
 }
 
@@ -618,7 +641,7 @@ function renderRnnFeatureCheckboxes() {
   const time = qs("#rnn-time-column")?.value || "";
   const sequence = qs("#rnn-sequence-column")?.value || "";
   if (!headers.length) {
-    container.innerHTML = `<div class="rnn-empty-feature-list">Import a CSV to select feature columns.</div>`;
+    container.innerHTML = `<div class="rnn-empty-feature-list">${escapeHtml(t("rnn.schemaWizard.importForFeatures"))}</div>`;
     return;
   }
   container.innerHTML = headers.map((name) => {
@@ -629,7 +652,7 @@ function renderRnnFeatureCheckboxes() {
       <input type="checkbox" data-rnn-feature-column="${escapeHtml(name)}" value="${escapeHtml(name)}" ${checked ? "checked" : ""} ${reserved ? "disabled" : ""}>
       <span>
         <strong>${escapeHtml(name)}</strong>
-        <em>${reserved ? "reserved" : numeric ? "numeric" : "text"}</em>
+        <em>${escapeHtml(reserved ? t("rnn.schemaWizard.reserved") : numeric ? t("rnn.schemaWizard.numeric") : t("rnn.schemaWizard.text"))}</em>
       </span>
     </label>`;
   }).join("");
@@ -698,9 +721,9 @@ function updateRnnFeatureWizardSummary() {
   const target = qs("#rnn-target-column")?.value || "";
   const featureCount = selectedRnnFeatureColumns().length;
   setText("#rnn-feature-summary-rows", inspection.row_count ? String(inspection.row_count) : "--");
-  setText("#rnn-feature-summary-task", taskHead === "regression" ? "Regression" : "Classification");
-  setText("#rnn-feature-summary-x", `${featureCount} features`);
-  setText("#rnn-feature-summary-y", target || "Not set");
+  setText("#rnn-feature-summary-task", taskHead === "regression" ? t("rnn.task.regression") : t("rnn.task.classification"));
+  setText("#rnn-feature-summary-x", t("rnn.featureSummary.featureCount", { count: featureCount }));
+  setText("#rnn-feature-summary-y", target || t("common.notSet"));
 }
 
 function renderRnnFeatureRecommendation() {
@@ -709,7 +732,7 @@ function renderRnnFeatureRecommendation() {
   if (!text) return;
   const headers = rnnInspectionHeaders();
   if (!headers.length) {
-    text.textContent = "Import a CSV to get task recommendations.";
+    text.textContent = t("rnn.schemaWizard.importForRecommendation");
     if (button) button.disabled = true;
     return;
   }
@@ -717,10 +740,10 @@ function renderRnnFeatureRecommendation() {
   const message = recommendation.taskHead === "regression"
     ? (
         recommendation.targetColumn
-          ? `Recommended: Regression, target ${recommendation.targetColumn}, time ${recommendation.timeColumn || "none"}.`
-          : `Recommended: Regression setup, but target must be selected manually. ${recommendation.featureColumns.length} numeric feature(s) detected.`
+          ? t("rnn.schemaWizard.recommendRegressionWithTarget", { target: recommendation.targetColumn, time: recommendation.timeColumn || t("common.none") })
+          : t("rnn.schemaWizard.recommendRegressionManual", { count: recommendation.featureColumns.length })
       )
-    : `Categorical label detected. Recommended: Classification, label ${recommendation.targetColumn}.`;
+    : t("rnn.schemaWizard.recommendClassification", { target: recommendation.targetColumn });
   text.textContent = recommendation.reason ? `${message} ${recommendation.reason}` : message;
   if (button) button.disabled = !recommendation.targetColumn && !recommendation.featureColumns.length;
 }
@@ -752,6 +775,7 @@ async function saveRnnFeatureConfig(options = {}) {
     trainingModeState.rnn.configValidation = result.validation || null;
     trainingModeState.rnn.windowSummary = result.window || result.validation?.window || null;
     trainingModeState.rnn.configMismatches = result.mismatches || [];
+    await loadRnnSchemaWizardAndQuality();
     renderRnnConfig(result.validation);
     await loadRnnReadiness({ force: true });
     if (!options.silent) eventBus.emit("toast", "RNN feature config saved.");
@@ -799,6 +823,7 @@ async function importRnnDataset() {
     trainingModeState.rnn.configValidation = result.validation || null;
     trainingModeState.rnn.windowSummary = result.window || result.validation?.window || null;
     trainingModeState.rnn.configMismatches = result.mismatches || [];
+    await loadRnnSchemaWizardAndQuality();
     applyRnnConfigToForm();
     await loadRnnReadiness({ force: true });
     eventBus.emit("toast", "RNN sequence dataset imported.");
@@ -838,10 +863,78 @@ function renderRnnConfig(validation = null) {
   renderRnnFeatureControls();
   updateRnnFeatureWizardSummary();
   renderRnnFeatureRecommendation();
+  renderRnnSchemaWizard();
+  renderRnnDatasetQualityReport();
   renderRnnFeatureChips(validation);
   renderRnnWindowSummary(validation);
   renderRnnConfigMismatch();
   renderRnnModelGuide();
+}
+
+function renderRnnSchemaWizard() {
+  const host = qs("#rnn-schema-wizard-guide");
+  if (!host) return;
+  const wizard = trainingModeState.rnn.schemaWizard;
+  if (!wizard || !(wizard.columns || []).length) {
+    host.innerHTML = `<div class="rnn-empty-feature-list">${escapeHtml(t("rnn.schemaWizard.empty"))}</div>`;
+    return;
+  }
+  const steps = wizard.steps || [];
+  const roleCounts = (wizard.columns || []).reduce((acc, column) => {
+    const role = column.current_role || column.recommended_role || "ignored";
+    acc[role] = (acc[role] || 0) + 1;
+    return acc;
+  }, {});
+  const targetStatus = wizard.target_status === "manual_required"
+    ? t("rnn.schemaWizard.targetManual")
+    : wizard.target_status === "configured"
+      ? t("rnn.schemaWizard.targetConfigured")
+      : t("rnn.schemaWizard.targetSuggested");
+  host.innerHTML = `
+    <div class="rnn-schema-wizard-head">
+      <div>
+        <strong>${escapeHtml(t("rnn.schemaWizard.title"))}</strong>
+        <span>${escapeHtml(targetStatus)} · ${escapeHtml(t("rnn.schemaWizard.rows", { count: wizard.row_count || 0 }))}</span>
+      </div>
+      <div class="rnn-schema-role-pills">
+        <span>${escapeHtml(t("rnn.schemaWizard.features", { count: roleCounts.feature || 0 }))}</span>
+        <span>${escapeHtml(t("rnn.schemaWizard.target", { count: roleCounts.target || 0 }))}</span>
+        <span>${escapeHtml(t("rnn.schemaWizard.time", { count: roleCounts.time || 0 }))}</span>
+        <span>${escapeHtml(t("rnn.schemaWizard.sequence", { count: roleCounts.sequence_id || 0 }))}</span>
+      </div>
+    </div>
+    <div class="rnn-schema-step-strip">
+      ${steps.map((step) => `<span class="${step.status === "ready" || step.status === "configured" || step.status === "suggested" ? "ok" : "warn"}">${escapeHtml(step.label)}: ${escapeHtml(step.status)}</span>`).join("")}
+    </div>
+  `;
+}
+
+function renderRnnDatasetQualityReport() {
+  const host = qs("#rnn-dataset-quality-report");
+  if (!host) return;
+  const report = trainingModeState.rnn.qualityReport;
+  if (!report) {
+    host.innerHTML = "";
+    return;
+  }
+  const checks = report.checks || [];
+  const warnings = checks.filter((item) => item.status !== "pass");
+  const summary = report.summary || {};
+  const missing = report.missing_values?.high_missing_columns || [];
+  host.innerHTML = `
+    <div class="rnn-quality-head">
+      <strong>${escapeHtml(t("rnn.quality.title"))}</strong>
+      <span class="summary-badge ${Number(report.health_score || 0) >= 80 ? "badge-success" : "badge-warning"}">${escapeHtml(String(report.health_score || 0))}%</span>
+    </div>
+    <div class="rnn-quality-grid">
+      <div><span>${escapeHtml(t("rnn.quality.rows"))}</span><strong>${escapeHtml(String(summary.row_count ?? summary.image_count ?? "--"))}</strong></div>
+      <div><span>${escapeHtml(t("rnn.quality.sequences"))}</span><strong>${escapeHtml(String(summary.sequence_count ?? "--"))}</strong></div>
+      <div><span>${escapeHtml(t("rnn.quality.features"))}</span><strong>${escapeHtml(String(summary.feature_count ?? "--"))}</strong></div>
+      <div><span>${escapeHtml(t("rnn.quality.warnings"))}</span><strong>${warnings.length}</strong></div>
+    </div>
+    ${missing.length ? `<div class="rnn-quality-warning">${escapeHtml(t("rnn.quality.highMissing"))}: ${missing.slice(0, 4).map((item) => escapeHtml(item.column)).join(", ")}</div>` : ""}
+    ${warnings.length ? `<div class="rnn-quality-warning">${warnings.slice(0, 3).map((item) => escapeHtml(item.message)).join(" · ")}</div>` : ""}
+  `;
 }
 
 function renderRnnWindowSummary(validation = null) {
@@ -998,8 +1091,9 @@ async function loadRnnEvaluation(options = {}) {
     trainingModeState.rnn.evaluationProjectId = projectId;
     trainingModeState.rnn.evaluationRuns = runs;
 
-    const latestRun = runs[0] || null;
-    if (!latestRun?.run_id) {
+    const preferredRunId = options.runId || (!projectChanged ? trainingModeState.rnn.evaluationRunId : "");
+    const activeRun = runs.find((run) => run.run_id === preferredRunId) || runs[0] || null;
+    if (!activeRun?.run_id) {
       trainingModeState.rnn.evaluationMetrics = null;
       trainingModeState.rnn.evaluationArtifacts = [];
       trainingModeState.rnn.evaluationRunId = "";
@@ -1016,13 +1110,13 @@ async function loadRnnEvaluation(options = {}) {
       }
     }));
     const metricsByRun = Object.fromEntries(runMetricEntries.filter(([runId, payload]) => runId && payload));
-    const metrics = metricsByRun[latestRun.run_id] || null;
+    const metrics = metricsByRun[activeRun.run_id] || null;
     const [artifacts] = await Promise.all([
-      apiFetch(`/api/projects/${projectId}/train/runs/${encodeURIComponent(latestRun.run_id)}/artifacts`)
+      apiFetch(`/api/projects/${projectId}/train/runs/${encodeURIComponent(activeRun.run_id)}/artifacts`)
     ]);
     trainingModeState.rnn.evaluationMetrics = metrics || null;
     trainingModeState.rnn.evaluationArtifacts = Array.isArray(artifacts) ? artifacts : [];
-    trainingModeState.rnn.evaluationRunId = latestRun.run_id;
+    trainingModeState.rnn.evaluationRunId = activeRun.run_id;
     trainingModeState.rnn.evaluationRunMetrics = metricsByRun;
   } catch (err) {
     eventBus.emit("toast", `RNN evaluation load failed: ${err.message}`);
@@ -1031,6 +1125,37 @@ async function loadRnnEvaluation(options = {}) {
     trainingModeState.rnn.evaluationRunMetrics = {};
   } finally {
     trainingModeState.rnn.evaluationLoading = false;
+    renderRnnEvaluation();
+  }
+}
+
+async function selectRnnEvaluationRun(runId) {
+  const projectId = appState.currentProjectId;
+  if (!projectId) return;
+  const runs = trainingModeState.rnn.evaluationRuns || [];
+  const activeRun = runs.find((run) => run.run_id === runId) || runs[0] || null;
+  if (!activeRun?.run_id) {
+    trainingModeState.rnn.evaluationRunId = "";
+    trainingModeState.rnn.evaluationMetrics = null;
+    trainingModeState.rnn.evaluationArtifacts = [];
+    renderRnnEvaluation();
+    return;
+  }
+
+  trainingModeState.rnn.evaluationRunId = activeRun.run_id;
+  trainingModeState.rnn.evaluationMetrics = trainingModeState.rnn.evaluationRunMetrics?.[activeRun.run_id] || null;
+  trainingModeState.rnn.evaluationArtifacts = [];
+  renderRnnEvaluation();
+  try {
+    const artifacts = await apiFetch(`/api/projects/${projectId}/train/runs/${encodeURIComponent(activeRun.run_id)}/artifacts`, { suppressToast: true });
+    if (trainingModeState.rnn.evaluationRunId === activeRun.run_id) {
+      trainingModeState.rnn.evaluationArtifacts = Array.isArray(artifacts) ? artifacts : [];
+    }
+  } catch (err) {
+    if (trainingModeState.rnn.evaluationRunId === activeRun.run_id) {
+      trainingModeState.rnn.evaluationArtifacts = [];
+    }
+  } finally {
     renderRnnEvaluation();
   }
 }
@@ -1090,6 +1215,12 @@ function renderRnnEvaluation() {
   setText("#rnn-eval-secondary-history-label", overview.secondaryLabel);
   setText("#rnn-eval-train-loss", overview.trainLoss);
   setText("#rnn-eval-val-loss", overview.valLoss);
+  renderRnnEvaluationRunSelector({
+    runs,
+    activeRun,
+    metricsByRun: trainingModeState.rnn.evaluationRunMetrics || {},
+    loading: trainingModeState.rnn.evaluationLoading
+  });
 
   if (message) {
     message.classList.toggle("hidden", overview.message.hidden);
@@ -1120,6 +1251,34 @@ function renderRnnEvaluation() {
     primary,
     secondary
   });
+}
+
+function renderRnnEvaluationRunSelector({ runs = [], activeRun = null, metricsByRun = {}, loading = false } = {}) {
+  const select = qs("#rnn-eval-run-select");
+  const label = qs("#rnn-eval-active-run-label");
+  if (!select && !label) return;
+  if (select) {
+    select.innerHTML = renderRnnEvaluationRunSelectorOptions({ runs, selectedRunId: activeRun?.run_id || "", metricsByRun });
+    select.value = activeRun?.run_id || "";
+    select.disabled = loading || !runs.length;
+  }
+  if (label) {
+    if (!activeRun?.run_id) {
+      label.textContent = loading ? "Loading run history..." : "No active run selected.";
+      return;
+    }
+    const metrics = metricsByRun[activeRun.run_id] || {};
+    const epochCount = Array.isArray(metrics.history) && metrics.history.length
+      ? metrics.history.length
+      : Number(activeRun.best_epoch || activeRun.epochs || 0);
+    const parts = [
+      activeRun.run_id,
+      sequenceBackendLabel(activeRun),
+      epochCount ? `${epochCount} epoch${epochCount === 1 ? "" : "s"}` : "",
+      activeRun.completed_at || activeRun.updated_at || activeRun.started_at || ""
+    ].filter(Boolean);
+    label.textContent = `Viewing ${parts.join(" / ")}`;
+  }
 }
 
 function renderRnnEvaluationEpochRows(history) {
@@ -1699,7 +1858,10 @@ function syncRnnModelSelection() {
     backend.value = selectedRnnBackendDisplay(entry, model);
   }
   if (infoIcon) {
-    infoIcon.dataset.tooltip = RNN_MODEL_TOOLTIPS[model] || entry?.display_name || "Select a compatible sequence model.";
+    const tooltipKey = `rnn.modelTooltip.${model}`;
+    const fallback = RNN_MODEL_TOOLTIPS[model] || entry?.display_name || t("rnn.modelTooltip.default");
+    infoIcon.dataset.tooltip = t(tooltipKey) === tooltipKey ? fallback : t(tooltipKey);
+    infoIcon.dataset.i18nTooltip = tooltipKey;
   }
 }
 
@@ -1718,7 +1880,7 @@ function canStartRnnTraining() {
     hasProject: Boolean(appState.currentProjectId),
     modelTrainable: isSelectedRnnModelTrainable(),
     readiness: trainingModeState.rnn.readiness,
-    readinessLoading: trainingModeState.rnn.readinessLoading,
+    readinessLoading: trainingModeState.rnn.readinessLoading || trainingModeState.rnn.configLoading,
     trainingStarting: trainingModeState.rnn.trainingStarting,
     trainingStatus: appState.trainingStatus?.status || ""
   });
@@ -1760,7 +1922,7 @@ function preferGpuDevice(selector) {
 function getRnnStartBlockerMessage() {
   return rnnStartBlockerMessage({
     hasProject: Boolean(appState.currentProjectId),
-    readinessLoading: trainingModeState.rnn.readinessLoading,
+    readinessLoading: trainingModeState.rnn.readinessLoading || trainingModeState.rnn.configLoading,
     trainingStarting: trainingModeState.rnn.trainingStarting,
     trainingStatus: appState.trainingStatus?.status || "",
     modelTrainable: isSelectedRnnModelTrainable(),

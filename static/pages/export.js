@@ -82,7 +82,7 @@ async function exportModel() {
     eventBus.emit("toast", t("export.toast.running"));
     const data = await apiFetch(url);
     eventBus.emit("toast", t("export.toast.done", {
-      path: data.onnx_path || data.pt_path || "exported"
+      path: data.package_path || data.onnx_path || data.pt_path || "exported"
     }));
   } catch (err) {
     eventBus.emit("toast", t("export.toast.failed", { message: err.message }));
