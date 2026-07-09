@@ -15,7 +15,7 @@ import { initEvaluation, renderEvaluationPage } from "../pages/evaluation.js?v=2
 import { initModelCompare, renderModelComparePage } from "../pages/model_compare.js?v=20260708-compare-scope-artifacts";
 import { initInference, renderInferencePage } from "../pages/inference.js?v=20260702-model-scroll-bounds";
 import { initAutoLabeling, renderAutoLabelingPage } from "../pages/auto_labeling.js?v=20260709-review-gate";
-import { initExport, renderExportPage } from "../pages/export.js?v=20260701-xgb-eval-final";
+import { initExport, renderExportPage } from "../pages/export.js?v=20260709-task-aware-export2";
 import { initSettings, renderSettingsPage } from "../pages/settings.js";
 
 export function initPageModules() {

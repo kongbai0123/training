@@ -1,5 +1,5 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js?v=20260709-review-gate";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260709-task-aware-export2";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

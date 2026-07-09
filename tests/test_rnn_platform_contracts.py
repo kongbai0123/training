@@ -126,6 +126,50 @@ class RNNPlatformContractTests(unittest.TestCase):
             self.assertEqual(summary["inference_contract"]["architecture"], "rnn")
             self.assertIn("preprocess/feature_schema.json", {item["path"] for item in summary["files"]})
 
+    def test_rnn_export_can_write_contract_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "proj"
+            run_id = "run_rnn_lstm_001"
+            write_rnn_run(root, run_id)
+            project = {
+                "project_id": "proj",
+                "dataset_path": (root / "dataset").as_posix(),
+                "task_type": "sequence_regression",
+                "training_runs": [{"run_id": run_id, "status": "completed"}],
+            }
+
+            with patch("src.training.export_service.ProjectManager.save_project", return_value=True):
+                result = ExportService.export_project_model("proj", project, run_id=run_id, export_format="rnn_contract")
+
+            self.assertEqual(result["export_type"], "rnn_inference_contract")
+            contract_path = Path(result["contract_path"])
+            self.assertTrue(contract_path.exists())
+            contract = json.loads(contract_path.read_text(encoding="utf-8"))
+            self.assertEqual(contract["architecture"], "rnn")
+            self.assertEqual(contract["run_id"], run_id)
+
+    def test_rnn_export_can_write_schema_scaler_package(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "proj"
+            run_id = "run_rnn_lstm_001"
+            write_rnn_run(root, run_id)
+            project = {
+                "project_id": "proj",
+                "dataset_path": (root / "dataset").as_posix(),
+                "task_type": "sequence_regression",
+                "training_runs": [{"run_id": run_id, "status": "completed"}],
+            }
+
+            with patch("src.training.export_service.ProjectManager.save_project", return_value=True):
+                result = ExportService.export_project_model("proj", project, run_id=run_id, export_format="rnn_schema_scaler")
+
+            self.assertEqual(result["export_type"], "rnn_schema_scaler_package")
+            package_path = Path(result["package_path"])
+            self.assertTrue(package_path.exists())
+            summary = json.loads((root / "exports" / result["export_id"] / "summary.json").read_text(encoding="utf-8"))
+            self.assertIn("preprocess/feature_schema.json", {item["path"] for item in summary["files"]})
+            self.assertIn("preprocess/normalization_stats.json", {item["path"] for item in summary["files"]})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -43,7 +43,7 @@ class ExportServiceTests(unittest.TestCase):
     def test_export_project_model_writes_export_summary_and_updates_current(self):
         with patch("src.training.export_service.YOLO", FakeYOLO), \
              patch("src.training.export_service.ProjectManager.save_project", return_value=True) as save_project:
-            payload = ExportService.export_project_model("proj_export", self.project, run_id="run_a")
+            payload = ExportService.export_project_model("proj_export", self.project, run_id="run_a", export_format="onnx")
 
         self.assertTrue(payload["success"])
         self.assertTrue(Path(payload["pt_path"]).exists())
@@ -51,6 +51,16 @@ class ExportServiceTests(unittest.TestCase):
         self.assertEqual(Path(payload["onnx_path"]).read_bytes(), b"fake-onnx")
         self.assertEqual(self.project["current"]["export_id"], payload["export_id"])
         save_project.assert_called_once()
+
+    def test_export_project_model_can_copy_cnn_pt_without_onnx_conversion(self):
+        with patch("src.training.export_service.ProjectManager.save_project", return_value=True):
+            payload = ExportService.export_project_model("proj_export", self.project, run_id="run_a", export_format="pt")
+
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["export_type"], "cnn_pt_copy")
+        self.assertTrue(Path(payload["pt_path"]).exists())
+        self.assertEqual(Path(payload["pt_path"]).read_bytes(), b"fake-pt")
+        self.assertTrue(Path(payload["summary_path"]).exists())
 
     def test_export_run_onnx_requires_best_weight(self):
         self.best_pt.unlink()

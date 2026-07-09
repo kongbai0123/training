@@ -32,26 +32,115 @@ class ExportService:
         *,
         run_id: Optional[str] = None,
         model_id: Optional[str] = None,
+        export_format: Optional[str] = None,
     ) -> Dict[str, Any]:
         layout = ProjectLayout.from_project(project)
-        if cls._should_export_rnn_package(project, layout, run_id=run_id, model_id=model_id):
-            summary = cls.export_rnn_package(project_id, project, layout, run_id=run_id, model_id=model_id)
+        normalized_format = cls._normalize_export_format(export_format)
+        is_rnn_export = cls._should_export_rnn_package(project, layout, run_id=run_id, model_id=model_id)
+
+        if is_rnn_export:
+            if normalized_format in {"auto", "rnn_package"}:
+                summary = cls.export_rnn_package(project_id, project, layout, run_id=run_id, model_id=model_id)
+                return {
+                    "success": True,
+                    "export_id": summary["export_id"],
+                    "package_path": summary["package_abs_path"],
+                    "summary_path": summary["summary_abs_path"],
+                    "export_type": "rnn_model_package",
+                }
+            if normalized_format == "rnn_contract":
+                summary = cls.export_rnn_contract(project_id, project, layout, run_id=run_id, model_id=model_id)
+                return {
+                    "success": True,
+                    "export_id": summary["export_id"],
+                    "contract_path": summary["contract_abs_path"],
+                    "summary_path": summary["summary_abs_path"],
+                    "export_type": "rnn_inference_contract",
+                }
+            if normalized_format == "rnn_schema_scaler":
+                summary = cls.export_rnn_schema_scaler(project_id, project, layout, run_id=run_id, model_id=model_id)
+                return {
+                    "success": True,
+                    "export_id": summary["export_id"],
+                    "package_path": summary["package_abs_path"],
+                    "summary_path": summary["summary_abs_path"],
+                    "export_type": "rnn_schema_scaler_package",
+                }
+            raise ExportServiceError(f"Export format '{normalized_format}' is not supported for RNN projects.")
+
+        if normalized_format in {"auto", "onnx"}:
+            best_pt = cls.resolve_exportable_weight(project, run_id=run_id, model_id=model_id)
+            summary = cls.export_weight_to_onnx(project_id, project, layout, best_pt, run_id=run_id)
             return {
                 "success": True,
                 "export_id": summary["export_id"],
-                "package_path": summary["package_abs_path"],
-                "summary_path": summary["summary_abs_path"],
-                "export_type": "rnn_model_package",
+                "pt_path": summary["pt_abs_path"],
+                "onnx_path": summary["onnx_abs_path"],
+                "export_type": "cnn_onnx",
             }
-        best_pt = cls.resolve_exportable_weight(project, run_id=run_id, model_id=model_id)
-        summary = cls.export_weight_to_onnx(project_id, project, layout, best_pt, run_id=run_id)
-        return {
-            "success": True,
-            "export_id": summary["export_id"],
-            "pt_path": summary["pt_abs_path"],
-            "onnx_path": summary["onnx_abs_path"],
-            "export_type": "cnn_onnx",
+        if normalized_format == "pt":
+            best_pt = cls.resolve_exportable_weight(project, run_id=run_id, model_id=model_id)
+            summary = cls.export_weight_copy(project_id, project, layout, best_pt, run_id=run_id)
+            return {
+                "success": True,
+                "export_id": summary["export_id"],
+                "pt_path": summary["pt_abs_path"],
+                "summary_path": summary["summary_abs_path"],
+                "export_type": "cnn_pt_copy",
+            }
+        raise ExportServiceError(f"Export format '{normalized_format}' is not supported for CNN projects.")
+
+    @staticmethod
+    def _normalize_export_format(export_format: Optional[str]) -> str:
+        normalized = str(export_format or "auto").strip().lower().replace("-", "_")
+        aliases = {
+            "": "auto",
+            "package": "rnn_package",
+            "zip": "rnn_package",
+            "model_package": "rnn_package",
+            "contract": "rnn_contract",
+            "inference_contract": "rnn_contract",
+            "schema": "rnn_schema_scaler",
+            "schema_scaler": "rnn_schema_scaler",
+            "schema_and_scaler": "rnn_schema_scaler",
         }
+        return aliases.get(normalized, normalized)
+
+    @classmethod
+    def export_weight_copy(
+        cls,
+        project_id: str,
+        project: Dict[str, Any],
+        layout: ProjectLayout,
+        best_pt: Path,
+        *,
+        run_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        export_id = f"export_pt_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        export_dir = layout.export_dir(export_id)
+        exports_pt_dir = export_dir / "pt"
+        exports_pt_dir.mkdir(parents=True, exist_ok=True)
+
+        export_pt = exports_pt_dir / "best.pt"
+        shutil.copy(str(best_pt), str(export_pt))
+
+        summary = {
+            "export_id": export_id,
+            "export_type": "cnn_pt_copy",
+            "created_at": datetime.now().isoformat(),
+            "source_weight": str(best_pt.resolve().as_posix()),
+            "pt_path": export_pt.relative_to(layout.project_dir).as_posix(),
+            "pt_abs_path": str(export_pt.resolve().as_posix()),
+            "summary_abs_path": str((export_dir / "summary.json").resolve().as_posix()),
+        }
+        if run_id:
+            summary["run_id"] = run_id
+
+        (export_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+        layout.latest_export_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+        project.setdefault("current", {})["export_id"] = export_id
+        ProjectManager.save_project(project_id, project)
+        return summary
 
     @classmethod
     def export_run_onnx(cls, project_id: str, project: Dict[str, Any], run_id: str) -> Dict[str, Any]:
@@ -239,6 +328,103 @@ class ExportService:
             "summary_abs_path": str((export_dir / "summary.json").resolve().as_posix()),
             "files": copied,
             "inference_contract": contract,
+        }
+        (export_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+        layout.latest_export_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+        project.setdefault("current", {})["export_id"] = export_id
+        ProjectManager.save_project(project_id, project)
+        return summary
+
+    @classmethod
+    def export_rnn_contract(
+        cls,
+        project_id: str,
+        project: Dict[str, Any],
+        layout: ProjectLayout,
+        *,
+        run_id: Optional[str] = None,
+        model_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        safe_run_id = cls._resolve_rnn_run_id(project, layout, run_id=run_id, model_id=model_id)
+        run_dir = layout.training_run_dir(safe_run_id)
+        if not run_dir.exists():
+            raise ExportableModelNotFound("RNN run directory not found; cannot export inference contract.")
+
+        export_id = f"export_rnn_contract_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        export_dir = layout.export_dir(export_id)
+        export_dir.mkdir(parents=True, exist_ok=True)
+        contract = cls._build_rnn_inference_contract(project, run_dir, safe_run_id)
+        contract_path = export_dir / "inference_contract.json"
+        contract_path.write_text(json.dumps(contract, indent=2, ensure_ascii=False), encoding="utf-8")
+        summary = {
+            "export_id": export_id,
+            "export_type": "rnn_inference_contract",
+            "created_at": datetime.now().isoformat(),
+            "run_id": safe_run_id,
+            "contract_path": contract_path.relative_to(layout.project_dir).as_posix(),
+            "contract_abs_path": str(contract_path.resolve().as_posix()),
+            "summary_abs_path": str((export_dir / "summary.json").resolve().as_posix()),
+            "inference_contract": contract,
+        }
+        (export_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+        layout.latest_export_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+        project.setdefault("current", {})["export_id"] = export_id
+        ProjectManager.save_project(project_id, project)
+        return summary
+
+    @classmethod
+    def export_rnn_schema_scaler(
+        cls,
+        project_id: str,
+        project: Dict[str, Any],
+        layout: ProjectLayout,
+        *,
+        run_id: Optional[str] = None,
+        model_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        safe_run_id = cls._resolve_rnn_run_id(project, layout, run_id=run_id, model_id=model_id)
+        run_dir = layout.training_run_dir(safe_run_id)
+        if not run_dir.exists():
+            raise ExportableModelNotFound("RNN run directory not found; cannot export schema and scaler.")
+
+        export_id = f"export_rnn_schema_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        export_dir = layout.export_dir(export_id)
+        package_root = export_dir / "schema_scaler"
+        package_root.mkdir(parents=True, exist_ok=True)
+
+        copied = []
+        for rel_path in (
+            "preprocess/feature_schema.json",
+            "preprocess/normalization_stats.json",
+            "preprocess/label_encoder.json",
+        ):
+            source = run_dir / rel_path
+            if not source.exists() or not source.is_file():
+                continue
+            target = package_root / rel_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(str(source), str(target))
+            copied.append({"path": rel_path, "size_bytes": target.stat().st_size})
+
+        if not copied:
+            raise ExportableModelNotFound("No RNN schema or scaler artifacts were found in this run.")
+
+        zip_path = export_dir / "rnn_schema_scaler.zip"
+        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for path in package_root.rglob("*"):
+                if path.is_file():
+                    archive.write(path, path.relative_to(package_root).as_posix())
+
+        summary = {
+            "export_id": export_id,
+            "export_type": "rnn_schema_scaler_package",
+            "created_at": datetime.now().isoformat(),
+            "run_id": safe_run_id,
+            "package_dir": package_root.relative_to(layout.project_dir).as_posix(),
+            "package_path": zip_path.relative_to(layout.project_dir).as_posix(),
+            "package_abs_path": str(zip_path.resolve().as_posix()),
+            "summary_abs_path": str((export_dir / "summary.json").resolve().as_posix()),
+            "files": copied,
         }
         (export_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
         layout.latest_export_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")

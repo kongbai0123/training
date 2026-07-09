@@ -1122,4 +1122,17 @@ export const zhTW = {
   "status.blocker.autoLabelReview": "訓練前請先完成自動標註草稿審查。",
   "training.blocker.autoLabelReview": "自動標註審查尚未完成。待審草稿：{pending}。",
   "training.action.reviewAutoLabel": "前往審查草稿"
+  ,
+  "export.ptCopyTitle": "PT 複製",
+  "export.ptAction": "複製 PT",
+  "export.onnxAction": "匯出 ONNX",
+  "export.rnnPackageTitle": "模型封裝 ZIP",
+  "export.rnnPackageHelp": "匯出模型權重、schema、scaler、metrics、diagnostics 與推論 contract。",
+  "export.rnnPackageAction": "匯出封裝 ZIP",
+  "export.rnnContractTitle": "推論 Contract",
+  "export.rnnContractHelp": "匯出下游序列推論所需的 JSON contract。",
+  "export.rnnContractAction": "匯出 Contract",
+  "export.rnnSchemaTitle": "Schema + Scaler",
+  "export.rnnSchemaHelp": "匯出 feature schema、normalization statistics 與可用的 label encoder。",
+  "export.rnnSchemaAction": "匯出 Schema + Scaler"
 };

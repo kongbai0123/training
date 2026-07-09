@@ -1,13 +1,18 @@
 import { eventBus } from "../event_bus.js";
 import { appState, getProjectStatus, t } from "../state.js";
 import { apiFetch } from "../api.js";
-import { qs } from "../utils.js";
+import { qs, qsa } from "../utils.js";
 
 let loadedProjectId = null;
+let exportModels = [];
 
 export function initExport() {
-  qs("#btn-export-pt")?.addEventListener("click", exportModel);
-  qs("#btn-export-onnx")?.addEventListener("click", exportModel);
+  qsa("[data-export-format]").forEach((button) => {
+    button.addEventListener("click", () => exportModel(button.dataset.exportFormat || "auto"));
+  });
+  qsa("[data-export-report]").forEach((button) => {
+    button.addEventListener("click", generateReport);
+  });
   qs("#btn-export-report")?.addEventListener("click", generateReport);
   qs("#btn-refresh-export-models")?.addEventListener("click", () => loadExportModels());
   qs("#export-model-select")?.addEventListener("change", () => updateButtonStates());
@@ -33,17 +38,28 @@ export function renderExportPage() {
 
 function updateButtonStates() {
   const status = getProjectStatus(appState.currentProject);
-  const ptBtn = qs("#btn-export-pt");
-  const onnxBtn = qs("#btn-export-onnx");
   const select = qs("#export-model-select");
   const hasSelected = Boolean(select?.value);
-  const canExport = Boolean(status.bestModelExists || hasSelected);
+  const canExport = Boolean(status.bestModelExists || hasSelected || exportModels.length > 0);
+  const isRnn = isRnnProject(appState.currentProject);
+  const cnnActions = qs("#export-cnn-actions");
+  const rnnActions = qs("#export-rnn-actions");
 
-  if (ptBtn) ptBtn.disabled = !canExport;
-  if (onnxBtn) onnxBtn.disabled = !canExport;
+  if (cnnActions) cnnActions.hidden = isRnn;
+  if (rnnActions) rnnActions.hidden = !isRnn;
 
-  ptBtn?.closest(".control-card")?.classList.toggle("muted", !canExport);
-  onnxBtn?.closest(".control-card")?.classList.toggle("muted", !canExport);
+  qsa("[data-export-format]").forEach((button) => {
+    const visibleGroup = button.closest("#export-rnn-actions, #export-cnn-actions");
+    const visible = !visibleGroup || !visibleGroup.hidden;
+    button.disabled = !canExport || !visible;
+    button.closest(".control-card")?.classList.toggle("muted", !canExport || !visible);
+  });
+}
+
+function isRnnProject(project) {
+  const taskType = String(project?.task_type || "").toLowerCase();
+  const architecture = String(project?.architecture || project?.training_config?.architecture || "").toLowerCase();
+  return architecture === "rnn" || taskType.startsWith("sequence_") || taskType.includes("time_series");
 }
 
 async function loadExportModels() {
@@ -51,15 +67,17 @@ async function loadExportModels() {
   if (!select) return;
 
   if (!appState.currentProjectId) {
+    exportModels = [];
     select.innerHTML = `<option value="">${t("export.selectProjectFirst")}</option>`;
     return;
   }
 
   try {
     const models = await apiFetch(`/api/projects/${appState.currentProjectId}/models`);
+    exportModels = Array.isArray(models) ? models : [];
     select.innerHTML = `<option value="">${t("export.selectPlaceholder")}</option>`;
-    if (Array.isArray(models) && models.length > 0) {
-      models.forEach((model) => {
+    if (exportModels.length > 0) {
+      exportModels.forEach((model) => {
         const option = document.createElement("option");
         option.value = model.model_id;
         option.textContent = `${model.run_id} / ${model.weight_type}.pt (${model.task_type})`;
@@ -68,21 +86,25 @@ async function loadExportModels() {
     }
   } catch (err) {
     console.error("Failed to load export models", err);
+    exportModels = [];
     select.innerHTML = `<option value="">${t("export.selectFailed")}</option>`;
   }
   updateButtonStates();
 }
 
-async function exportModel() {
+async function exportModel(format = "auto") {
   const selectedModelId = qs("#export-model-select")?.value || "";
-  let url = `/api/projects/${appState.currentProjectId}/export`;
-  if (selectedModelId) url += `?model_id=${encodeURIComponent(selectedModelId)}`;
+  const params = new URLSearchParams();
+  if (selectedModelId) params.set("model_id", selectedModelId);
+  if (format) params.set("format", format);
+  const query = params.toString();
+  const url = `/api/projects/${appState.currentProjectId}/export${query ? `?${query}` : ""}`;
 
   try {
     eventBus.emit("toast", t("export.toast.running"));
     const data = await apiFetch(url);
     eventBus.emit("toast", t("export.toast.done", {
-      path: data.package_path || data.onnx_path || data.pt_path || "exported"
+      path: data.package_path || data.contract_path || data.onnx_path || data.pt_path || "exported"
     }));
   } catch (err) {
     eventBus.emit("toast", t("export.toast.failed", { message: err.message }));

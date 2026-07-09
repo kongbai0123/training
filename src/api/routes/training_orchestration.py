@@ -212,14 +212,25 @@ async def compare_project_image_outputs(
 
 # Export API.
 @router.get("/api/projects/{project_id}/export")
-def export_model(project_id: str, run_id: Optional[str] = None, model_id: Optional[str] = None):
+def export_model(
+    project_id: str,
+    run_id: Optional[str] = None,
+    model_id: Optional[str] = None,
+    format: Optional[str] = None,
+):
     require_feature("export_onnx")()
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     try:
-        return ExportService.export_project_model(project_id, project, run_id=run_id, model_id=model_id)
+        return ExportService.export_project_model(
+            project_id,
+            project,
+            run_id=run_id,
+            model_id=model_id,
+            export_format=format,
+        )
     except ExportableModelNotFound as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except ExportServiceError as exc:
