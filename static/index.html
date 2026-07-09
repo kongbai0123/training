@@ -415,7 +415,7 @@
                   <div class="dataset-upload-header">
                     <span class="dataset-field-label" data-i18n="dataset.uploadTitle">Upload ZIP or folder</span>
                     <div class="dataset-storage-status">
-                      <span><span data-i18n="dataset.zipStorage">ZIP storage</span>: <code id="dataset-zip-storage-path">Not loaded</code></span>
+                      <span><span data-i18n="dataset.zipStorage">ZIP storage</span>: <code id="dataset-zip-storage-path" data-i18n="common.notLoaded">Not loaded</code></span>
                       <button class="icon-btn guarded dataset-copy-button" data-requires="project" id="btn-copy-zip-path" title="Copy" data-i18n-title="common.copy"><i class="fa-regular fa-copy"></i></button>
                     </div>
                   </div>
@@ -1511,8 +1511,8 @@
                           </div>
                         </div>
                         <div class="inline-actions">
-                          <button type="button" class="btn btn-secondary" id="rnn-refresh-models">Refresh Models</button>
-                          <button type="button" class="btn btn-primary" id="rnn-run-sequence-inference" disabled>Run Sequence Test</button>
+                          <button type="button" class="btn btn-secondary" id="rnn-refresh-models" data-i18n="rnn.models.refresh">Refresh Models</button>
+                          <button type="button" class="btn btn-primary" id="rnn-run-sequence-inference" data-i18n="rnn.inference.runTest" disabled>Run Sequence Test</button>
                         </div>
                         <p class="form-hint" id="rnn-inference-reason">Select an RNN model and provide a CSV feature sequence.</p>
                       </div>

@@ -1328,6 +1328,7 @@
     "rnn.inference.input": "Input",
     "rnn.inference.result": "Result",
     "rnn.inference.refreshResult": "Refresh Result",
+    "rnn.inference.runTest": "Run Sequence Test",
     "rnn.inference.noResult": "No sequence inference result yet.",
     "rnn.inference.loadingLatest": "Loading latest sequence inference result...",
     "rnn.export.title": "RNN Export",
