@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -33,6 +34,15 @@ class ExportService:
         model_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         layout = ProjectLayout.from_project(project)
+        if cls._should_export_rnn_package(project, layout, run_id=run_id, model_id=model_id):
+            summary = cls.export_rnn_package(project_id, project, layout, run_id=run_id, model_id=model_id)
+            return {
+                "success": True,
+                "export_id": summary["export_id"],
+                "package_path": summary["package_abs_path"],
+                "summary_path": summary["summary_abs_path"],
+                "export_type": "rnn_model_package",
+            }
         best_pt = cls.resolve_exportable_weight(project, run_id=run_id, model_id=model_id)
         summary = cls.export_weight_to_onnx(project_id, project, layout, best_pt, run_id=run_id)
         return {
@@ -40,6 +50,7 @@ class ExportService:
             "export_id": summary["export_id"],
             "pt_path": summary["pt_abs_path"],
             "onnx_path": summary["onnx_abs_path"],
+            "export_type": "cnn_onnx",
         }
 
     @classmethod
@@ -170,3 +181,197 @@ class ExportService:
         project["current"]["export_id"] = export_id
         ProjectManager.save_project(project_id, project)
         return summary
+
+    @classmethod
+    def export_rnn_package(
+        cls,
+        project_id: str,
+        project: Dict[str, Any],
+        layout: ProjectLayout,
+        *,
+        run_id: Optional[str] = None,
+        model_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        safe_run_id = cls._resolve_rnn_run_id(project, layout, run_id=run_id, model_id=model_id)
+        run_dir = layout.training_run_dir(safe_run_id)
+        if not run_dir.exists():
+            raise ExportableModelNotFound("RNN run directory not found; cannot export package.")
+
+        export_id = f"export_rnn_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        export_dir = layout.export_dir(export_id)
+        package_root = export_dir / "rnn_model_package"
+        package_root.mkdir(parents=True, exist_ok=True)
+
+        copied = []
+        for rel_path in cls._rnn_package_candidate_paths(run_dir):
+            source = run_dir / rel_path
+            if not source.exists() or not source.is_file():
+                continue
+            target = package_root / rel_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(str(source), str(target))
+            copied.append({"path": rel_path, "size_bytes": target.stat().st_size})
+
+        if not any(item["path"].startswith("weights/") for item in copied):
+            raise ExportableModelNotFound("No RNN model artifact was found in this run.")
+
+        contract = cls._build_rnn_inference_contract(project, run_dir, safe_run_id)
+        (package_root / "inference_contract.json").write_text(
+            json.dumps(contract, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        copied.append({"path": "inference_contract.json", "size_bytes": (package_root / "inference_contract.json").stat().st_size})
+
+        zip_path = export_dir / "rnn_model_package.zip"
+        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for path in package_root.rglob("*"):
+                if path.is_file():
+                    archive.write(path, path.relative_to(package_root).as_posix())
+
+        summary = {
+            "export_id": export_id,
+            "export_type": "rnn_model_package",
+            "created_at": datetime.now().isoformat(),
+            "run_id": safe_run_id,
+            "package_dir": package_root.relative_to(layout.project_dir).as_posix(),
+            "package_path": zip_path.relative_to(layout.project_dir).as_posix(),
+            "package_abs_path": str(zip_path.resolve().as_posix()),
+            "summary_abs_path": str((export_dir / "summary.json").resolve().as_posix()),
+            "files": copied,
+            "inference_contract": contract,
+        }
+        (export_dir / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+        layout.latest_export_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+        project.setdefault("current", {})["export_id"] = export_id
+        ProjectManager.save_project(project_id, project)
+        return summary
+
+    @classmethod
+    def _should_export_rnn_package(
+        cls,
+        project: Dict[str, Any],
+        layout: ProjectLayout,
+        *,
+        run_id: Optional[str] = None,
+        model_id: Optional[str] = None,
+    ) -> bool:
+        task_type = str(project.get("task_type") or "").lower()
+        architecture = str(project.get("architecture") or project.get("mode") or "").lower()
+        if architecture == "rnn" or task_type.startswith("sequence_"):
+            return True
+        try:
+            safe_run_id = cls._resolve_rnn_run_id(project, layout, run_id=run_id, model_id=model_id, allow_missing=True)
+            if safe_run_id:
+                backend = _read_json(layout.training_run_dir(safe_run_id) / "backend.json")
+                metrics = _read_json(layout.training_run_dir(safe_run_id) / "metrics.json")
+                return (
+                    str(backend.get("architecture") or "").lower() == "rnn"
+                    or str(metrics.get("architecture") or "").lower() == "rnn"
+                    or str(metrics.get("task_type") or "").lower().startswith("sequence_")
+                )
+        except Exception:
+            return False
+        return False
+
+    @classmethod
+    def _resolve_rnn_run_id(
+        cls,
+        project: Dict[str, Any],
+        layout: ProjectLayout,
+        *,
+        run_id: Optional[str] = None,
+        model_id: Optional[str] = None,
+        allow_missing: bool = False,
+    ) -> str:
+        if run_id:
+            safe_run_id = sanitize_run_id(run_id)
+            if allow_missing or layout.training_run_dir(safe_run_id).exists():
+                return safe_run_id
+        if model_id:
+            parts = model_id.split("::")
+            if len(parts) >= 2:
+                safe_run_id = sanitize_run_id(parts[1])
+                if allow_missing or layout.training_run_dir(safe_run_id).exists():
+                    return safe_run_id
+        completed_runs = [run for run in project.get("training_runs") or [] if str(run.get("status") or "").lower() == "completed"]
+        completed_runs.sort(key=lambda item: item.get("completed_at") or item.get("timestamp") or item.get("created_at") or "", reverse=True)
+        for run in completed_runs:
+            candidate = sanitize_run_id(str(run.get("run_id") or ""))
+            if not candidate:
+                continue
+            run_dir = layout.training_run_dir(candidate)
+            if not run_dir.exists():
+                continue
+            backend = _read_json(run_dir / "backend.json")
+            metrics = _read_json(run_dir / "metrics.json")
+            if str(backend.get("architecture") or metrics.get("architecture") or "").lower() == "rnn":
+                return candidate
+        if allow_missing:
+            return ""
+        raise ExportableModelNotFound("No completed RNN run was found for package export.")
+
+    @staticmethod
+    def _rnn_package_candidate_paths(run_dir: Path) -> list[str]:
+        candidates = [
+            "weights/best.pt",
+            "weights/last.pt",
+            "weights/best.json",
+            "weights/last.json",
+            "weights/model_metadata.json",
+            "preprocess/feature_schema.json",
+            "preprocess/normalization_stats.json",
+            "preprocess/label_encoder.json",
+            "train_config.json",
+            "metrics.json",
+            "results.csv",
+            "run_summary.json",
+            "backend.json",
+            "metric_schema.json",
+            "artifact_manifest.json",
+        ]
+        diagnostics = []
+        for path in run_dir.rglob("*"):
+            if path.is_file() and any(token in path.name.lower() for token in ("diagnostic", "residual", "confusion")):
+                diagnostics.append(path.relative_to(run_dir).as_posix())
+        return candidates + sorted(set(diagnostics))
+
+    @staticmethod
+    def _build_rnn_inference_contract(project: Dict[str, Any], run_dir: Path, run_id: str) -> Dict[str, Any]:
+        feature_schema = _read_json(run_dir / "preprocess" / "feature_schema.json")
+        backend = _read_json(run_dir / "backend.json")
+        metrics = _read_json(run_dir / "metrics.json")
+        config = _read_json(run_dir / "train_config.json")
+        sequence_length = (
+            feature_schema.get("sequence_length")
+            or config.get("sequence_length")
+            or (metrics.get("dataset_summary") or {}).get("sequence_length")
+            or project.get("rnn_config", {}).get("sequence_length")
+        )
+        return {
+            "contract_version": "1.0",
+            "architecture": "rnn",
+            "run_id": run_id,
+            "backend": backend.get("backend") or metrics.get("backend") or config.get("backend"),
+            "task_type": metrics.get("task_type") or project.get("task_type"),
+            "task_head": feature_schema.get("task_head") or project.get("rnn_config", {}).get("task_head"),
+            "feature_columns": feature_schema.get("feature_columns") or project.get("rnn_config", {}).get("feature_columns") or [],
+            "target_column": feature_schema.get("target_column") or project.get("rnn_config", {}).get("target_column") or "",
+            "sequence_column": feature_schema.get("sequence_column") or project.get("rnn_config", {}).get("sequence_column") or "",
+            "time_column": feature_schema.get("time_column") or project.get("rnn_config", {}).get("time_column") or "",
+            "sequence_length": sequence_length,
+            "stride": config.get("stride") or project.get("rnn_config", {}).get("stride"),
+            "horizon": config.get("horizon") or project.get("rnn_config", {}).get("horizon"),
+            "normalization": "preprocess/normalization_stats.json",
+            "label_encoder": "preprocess/label_encoder.json" if (run_dir / "preprocess" / "label_encoder.json").exists() else None,
+            "model_artifacts": [path for path in ("weights/best.pt", "weights/best.json", "weights/last.pt", "weights/last.json") if (run_dir / path).exists()],
+        }
+
+
+def _read_json(path: Path) -> Dict[str, Any]:
+    if not path.exists() or not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else {}
+    except Exception:
+        return {}

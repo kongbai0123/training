@@ -8,6 +8,7 @@ from src.project_manager import ProjectManager
 from src.training.rnn_readiness import build_rnn_readiness_report
 from src.training.rnn_config import (
     active_rnn_config,
+    build_schema_wizard,
     build_suggested_config,
     build_window_summary,
     find_config_mismatches,
@@ -82,6 +83,39 @@ def get_rnn_config(project_id: str):
         "window": build_window_summary(config, inspection),
         "mismatches": find_config_mismatches(project),
     }
+
+
+@router.get("/api/projects/{project_id}/rnn/schema-wizard")
+def get_rnn_schema_wizard(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    layout = ProjectLayout.from_project(project)
+    csv_files = sorted(layout.sequences_dir().glob("*.csv")) if layout.sequences_dir().exists() else []
+    inspection = inspect_sequence_csv_files(csv_files) if csv_files else {
+        "files": [],
+        "headers": [],
+        "headers_match": True,
+        "row_count": 0,
+        "sequence_count": 0,
+        "split_counts": {},
+        "feature_columns": [],
+        "feature_dim": 0,
+        "column_profiles": {},
+        "preview_rows": [],
+    }
+    return {
+        "wizard": build_schema_wizard(project, inspection),
+        "inspection": inspection,
+        "config": active_rnn_config(project),
+        "validation": validate_rnn_config(active_rnn_config(project), inspection),
+    }
+
+
+@router.post("/api/projects/{project_id}/rnn/schema-wizard/apply")
+def apply_rnn_schema_wizard(project_id: str, request: RNNConfigRequest):
+    return save_rnn_config(project_id, request)
 
 
 @router.post("/api/projects/{project_id}/rnn/config")

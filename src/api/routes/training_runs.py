@@ -15,6 +15,7 @@ from src.project_manager import ProjectManager
 from src.run_filters import TEST_RUN_MARKERS, is_test_run
 from src.training.dispatcher import TrainerDispatcher
 from src.training.export_service import ExportableModelNotFound, ExportService, ExportServiceError
+from src.training.run_registry import ExperimentRunRegistry
 from src.training.state_store import TrainingStateStore
 
 
@@ -187,6 +188,14 @@ def list_runs(project_id: str):
     from src.training.run_manager import RunManager
 
     return RunManager.list_project_runs(runs_dir)
+
+
+@router.get("/api/projects/{project_id}/train/runs/registry")
+def get_run_registry(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return ExperimentRunRegistry.build(project)
 
 
 @router.get("/api/projects/{project_id}/train/runs/{run_id}/metrics")

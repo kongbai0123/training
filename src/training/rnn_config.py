@@ -248,6 +248,127 @@ def build_suggested_config(project: Dict[str, Any], inspection: Dict[str, Any]) 
     return config
 
 
+def build_schema_wizard(project: Dict[str, Any], inspection: Dict[str, Any]) -> Dict[str, Any]:
+    """Build role-oriented schema guidance for generic RNN CSV datasets."""
+    config = active_rnn_config(project)
+    recommendation = build_suggested_config(project, inspection)
+    headers = inspection.get("headers") or []
+    profiles = inspection.get("column_profiles") or {}
+    selected_features = set(parse_feature_columns(config.get("feature_columns")))
+    selected_target = str(config.get("target_column") or "").strip()
+    selected_sequence = str(config.get("sequence_column") or "").strip()
+    selected_time = str(config.get("time_column") or "").strip()
+    recommended_features = set(parse_feature_columns(recommendation.get("feature_columns")))
+
+    columns: List[Dict[str, Any]] = []
+    for name in headers:
+        profile = profiles.get(name) or {}
+        current_role = "ignored"
+        if name == selected_target:
+            current_role = "target"
+        elif selected_sequence and name == selected_sequence:
+            current_role = "sequence_id"
+        elif selected_time and name == selected_time:
+            current_role = "time"
+        elif name in selected_features:
+            current_role = "feature"
+
+        recommended_role = _schema_wizard_recommended_role(name, recommendation, profile)
+        missing = int(profile.get("missing") or 0)
+        row_count = max(0, int(inspection.get("row_count") or 0))
+        warnings: List[str] = []
+        if missing and row_count:
+            missing_ratio = missing / max(row_count, 1)
+            if missing_ratio >= 0.1:
+                warnings.append("missing_values")
+        if recommended_role == "feature" and not bool(profile.get("is_numeric")):
+            warnings.append("non_numeric_feature")
+        if recommended_role == "target" and recommendation.get("recommendation_confidence") == "needs_user":
+            warnings.append("target_needs_manual_selection")
+
+        columns.append({
+            "name": name,
+            "current_role": current_role,
+            "recommended_role": recommended_role,
+            "role_hint": profile.get("role_hint") or "feature",
+            "is_numeric": bool(profile.get("is_numeric")),
+            "numeric_ratio": float(profile.get("numeric_ratio") or 0.0),
+            "missing": missing,
+            "missing_ratio": round((missing / max(row_count, 1)) if row_count else 0.0, 4),
+            "distinct_count": int(profile.get("distinct_count") or 0),
+            "examples": profile.get("examples") or [],
+            "warnings": warnings,
+            "selectable_roles": _schema_wizard_selectable_roles(profile),
+        })
+
+    target_status = "manual_required" if not recommendation.get("target_column") else "suggested"
+    if selected_target:
+        target_status = "configured"
+    return {
+        "schema_version": "1.0",
+        "project_id": project.get("project_id"),
+        "task_type": project.get("task_type"),
+        "row_count": inspection.get("row_count", 0),
+        "sequence_count": inspection.get("sequence_count", 0),
+        "headers_match": inspection.get("headers_match", True),
+        "columns": columns,
+        "task_options": [
+            {
+                "value": "classification",
+                "label": "Classification",
+                "recommended": recommendation.get("task_head") == "classification",
+                "hint": "Use for discrete labels, class states, fault categories, or pass/fail targets.",
+            },
+            {
+                "value": "regression",
+                "label": "Regression",
+                "recommended": recommendation.get("task_head") == "regression",
+                "hint": "Use for continuous numeric targets such as temperature, pressure, load, or demand.",
+            },
+        ],
+        "roles": {
+            "time_column": selected_time,
+            "sequence_column": selected_sequence,
+            "feature_columns": list(selected_features),
+            "target_column": selected_target,
+            "task_head": config.get("task_head") or recommendation.get("task_head") or "classification",
+        },
+        "recommendation": recommendation,
+        "recommended_feature_columns": list(recommended_features),
+        "target_status": target_status,
+        "steps": [
+            {"id": "task", "label": "Task type", "status": "ready" if recommendation.get("task_head") else "needs_input"},
+            {"id": "target", "label": "Target column", "status": target_status},
+            {"id": "features", "label": "Feature columns", "status": "ready" if recommended_features or selected_features else "needs_input"},
+            {"id": "sequence", "label": "Time / sequence", "status": "ready"},
+        ],
+    }
+
+
+def _schema_wizard_recommended_role(name: str, recommendation: Dict[str, Any], profile: Dict[str, Any]) -> str:
+    if name == recommendation.get("target_column"):
+        return "target"
+    if name == recommendation.get("sequence_column"):
+        return "sequence_id"
+    if name == recommendation.get("time_column"):
+        return "time"
+    if name in set(parse_feature_columns(recommendation.get("feature_columns"))):
+        return "feature"
+    hint = str(profile.get("role_hint") or "").lower()
+    if hint == "split":
+        return "split"
+    return "ignored"
+
+
+def _schema_wizard_selectable_roles(profile: Dict[str, Any]) -> List[str]:
+    roles = ["ignored", "target", "time", "sequence_id"]
+    if bool(profile.get("is_numeric")):
+        roles.insert(1, "feature")
+    else:
+        roles.append("feature")
+    return roles
+
+
 def infer_rnn_config_from_inspection(headers: List[str], column_profiles: Dict[str, Dict[str, Any]], row_count: int = 0) -> Dict[str, Any]:
     sequence_column = _infer_sequence_column(headers)
     time_column = _infer_time_column(headers, column_profiles, sequence_column)

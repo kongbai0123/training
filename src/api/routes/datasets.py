@@ -18,6 +18,7 @@ from src.dataset_helpers import (
     resolve_project_image_path,
     run_dataset_quality_check,
 )
+from src.dataset_quality_report import build_dataset_quality_report
 from src.dataset_utils import DatasetUtils
 from src.labelme_adapter import LabelMeAdapter
 from src.project_layout import ProjectLayout
@@ -178,6 +179,14 @@ def trigger_quality_check(project_id: str):
     health_report = run_dataset_quality_check(project, layout)
     ProjectManager.save_project(project_id, project)
     return health_report
+
+
+@router.get("/api/projects/{project_id}/dataset/quality-report")
+def get_dataset_quality_report(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return build_dataset_quality_report(project)
 
 @router.get("/api/projects/{project_id}/thumbnails/{filename}")
 def get_image_thumbnail(project_id: str, filename: str):

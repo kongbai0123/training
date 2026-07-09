@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from src.training.rnn.sequence_dataset import load_csv_feature_sequences
 from src.training.rnn_config import (
+    build_schema_wizard,
     build_window_summary,
     compute_feature_config_hash,
     find_config_mismatches,
@@ -107,6 +108,25 @@ class RNNConfigPhaseR1Tests(unittest.TestCase):
             self.assertEqual(suggested["target_column"], "")
             self.assertEqual(suggested["recommendation_confidence"], "needs_user")
             self.assertIn("T (degC)", suggested["feature_columns"])
+
+    def test_schema_wizard_marks_target_manual_when_no_generic_target_column(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "weather.csv"
+            _write_single_series_csv(source)
+            inspection = inspect_sequence_csv_files([source])
+            project = {
+                "project_id": "proj_rnn",
+                "dataset_path": (Path(tmp) / "proj_rnn" / "dataset").as_posix(),
+                "task_type": "sequence_regression",
+            }
+
+            wizard = build_schema_wizard(project, inspection)
+
+            self.assertEqual(wizard["target_status"], "manual_required")
+            self.assertEqual(wizard["recommendation"]["target_column"], "")
+            roles = {column["name"]: column["recommended_role"] for column in wizard["columns"]}
+            self.assertEqual(roles["Date Time"], "time")
+            self.assertEqual(roles["T (degC)"], "feature")
 
     def test_schema_recommendation_detects_numeric_target_as_regression(self):
         with tempfile.TemporaryDirectory() as tmp:
