@@ -1,3 +1,5 @@
+import { apiFetch } from "../api.js";
+import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { qs, setHTML, escapeHtml } from "../utils.js";
 import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260708-i18n-tooltips";
@@ -23,14 +25,36 @@ function setWorkspaceContextExpanded(expanded) {
 
 export function initWorkspaceContextPanel() {
   const toggle = qs("#workspace-context-toggle");
-  if (!toggle) return;
-  const stored = localStorage.getItem("vts.workspaceContextExpanded");
-  setWorkspaceContextExpanded(stored === "true");
-  toggle.addEventListener("click", () => {
-    const expanded = toggle.getAttribute("aria-expanded") !== "true";
-    localStorage.setItem("vts.workspaceContextExpanded", expanded ? "true" : "false");
-    setWorkspaceContextExpanded(expanded);
-  });
+  if (toggle) {
+    const stored = localStorage.getItem("vts.workspaceContextExpanded");
+    setWorkspaceContextExpanded(stored === "true");
+    toggle.addEventListener("click", () => {
+      const expanded = toggle.getAttribute("aria-expanded") !== "true";
+      localStorage.setItem("vts.workspaceContextExpanded", expanded ? "true" : "false");
+      setWorkspaceContextExpanded(expanded);
+    });
+  }
+  qs("#btn-project-assistant-sync-context")?.addEventListener("click", syncProjectAssistantContextArtifacts);
+}
+
+async function syncProjectAssistantContextArtifacts() {
+  if (!appState.currentProjectId) {
+    eventBus.emit("toast", t("projectAssistant.toast.noActiveProject"));
+    return;
+  }
+  const button = qs("#btn-project-assistant-sync-context");
+  if (button) button.disabled = true;
+  try {
+    const result = await apiFetch(`/api/project-assistant/projects/${encodeURIComponent(appState.currentProjectId)}/sync-artifacts`, {
+      method: "POST",
+    });
+    eventBus.emit("toast", t("projectAssistant.toast.syncedArtifacts", {
+      count: result.document_count || 0,
+      chunks: result.chunk_count || 0,
+    }));
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
 
 function updateWorkspaceContextSummary(pageId, status, config = {}) {
@@ -225,6 +249,8 @@ function renderProjectAssistantContext(pageId, status) {
 
   const config = buildProjectAssistantContext(pageId, status);
   section.style.display = config ? "block" : "none";
+  const syncButton = qs("#btn-project-assistant-sync-context");
+  if (syncButton) syncButton.disabled = !status.hasProject;
   if (!config) {
     help.textContent = "";
     suggestions.innerHTML = "";
