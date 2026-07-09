@@ -57,6 +57,13 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def _mtime_iso(path: Path) -> str:
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds")
+    except Exception:
+        return ""
+
+
 class ProjectAssistantService:
     """Offline-first project assistant service.
 
@@ -405,10 +412,34 @@ class ProjectAssistantService:
                 "content": cls._training_runs_markdown(project, registry, layout),
             },
             {
+                "filename": "evaluation-diagnostics.md",
+                "source_type": "evaluation_report",
+                "sync_key": f"{project_id}:evaluation-diagnostics",
+                "content": cls._evaluation_diagnostics_markdown(project, registry, layout),
+            },
+            {
+                "filename": "model-comparison-reports.md",
+                "source_type": "model_comparison",
+                "sync_key": f"{project_id}:model-comparison",
+                "content": cls._model_comparison_markdown(project, registry, layout),
+            },
+            {
                 "filename": "exports-and-contracts.md",
                 "source_type": "exports",
                 "sync_key": f"{project_id}:exports",
                 "content": cls._exports_markdown(project, exports),
+            },
+            {
+                "filename": "history-and-activity.md",
+                "source_type": "history",
+                "sync_key": f"{project_id}:history",
+                "content": cls._history_markdown(project, layout),
+            },
+            {
+                "filename": "error-logs.md",
+                "source_type": "error_logs",
+                "sync_key": f"{project_id}:error-logs",
+                "content": cls._error_logs_markdown(project, registry, layout),
             },
         ]
         return [doc for doc in docs if doc["content"].strip()]
@@ -525,6 +556,114 @@ class ProjectAssistantService:
         return "\n".join(lines)
 
     @classmethod
+    def _evaluation_diagnostics_markdown(cls, project: Dict[str, Any], registry: Dict[str, Any], layout: ProjectLayout) -> str:
+        lines = [
+            "# Evaluation Diagnostics",
+            "",
+            f"- Project ID: {project.get('project_id') or ''}",
+            f"- Task type: {project.get('task_type') or ''}",
+            "",
+        ]
+        runs = registry.get("runs") if isinstance(registry.get("runs"), list) else []
+        completed = [run for run in runs if str(run.get("status") or "").lower() == "completed"]
+        if not completed:
+            lines.append("No completed training runs are available for evaluation.")
+            return "\n".join(lines)
+        for run in completed[:20]:
+            run_id = str(run.get("run_id") or "")
+            run_dir = layout.training_run_dir(run_id)
+            metrics = _read_json(run_dir / "metrics.json", {})
+            metric_schema = _read_json(run_dir / "metric_schema.json", {})
+            diagnostics = {
+                key: metrics.get(key)
+                for key in ("confusion_matrix", "confusion_labels", "residuals", "prediction_actual_samples", "outliers")
+                if key in metrics
+            }
+            best_metrics = metrics.get("best_metrics") if isinstance(metrics.get("best_metrics"), dict) else {}
+            history = metrics.get("history") if isinstance(metrics.get("history"), list) else []
+            lines.extend([
+                f"## Evaluation Run {run_id}",
+                f"- Architecture: {run.get('architecture') or ''}",
+                f"- Backend: {run.get('backend') or ''}",
+                f"- Task type: {run.get('task_type') or ''}",
+                f"- Primary metric: {run.get('primary_metric') or ''}",
+                f"- Primary value: {run.get('primary_value') if run.get('primary_value') is not None else ''}",
+                "",
+                "### Best Metrics",
+                cls._compact_json(best_metrics),
+                "",
+                "### Metric Schema",
+                cls._compact_json(metric_schema),
+                "",
+                "### Diagnostics",
+                cls._compact_json(diagnostics or {"present": False, "message": "No task-specific diagnostic payload found."}),
+                "",
+                "### Recent Epoch History",
+                cls._compact_json(history[-12:] if history else []),
+                "",
+            ])
+        return "\n".join(lines)
+
+    @classmethod
+    def _model_comparison_markdown(cls, project: Dict[str, Any], registry: Dict[str, Any], layout: ProjectLayout) -> str:
+        reports_root = layout.project_dir / "exports" / "compare_reports"
+        reports: List[Dict[str, Any]] = []
+        if reports_root.exists():
+            for report_dir in sorted((path for path in reports_root.iterdir() if path.is_dir()), key=lambda path: path.stat().st_mtime, reverse=True):
+                report = _read_json(report_dir / "report.json", {})
+                if report:
+                    reports.append({
+                        "report_id": report_dir.name,
+                        "created_at": _mtime_iso(report_dir),
+                        "report": report,
+                    })
+        lines = [
+            "# Model Comparison Reports",
+            "",
+            f"- Project ID: {project.get('project_id') or ''}",
+            f"- Report count: {len(reports)}",
+            "",
+        ]
+        if reports:
+            for item in reports[:12]:
+                report = item.get("report") or {}
+                lines.extend([
+                    f"## Compare Report {item.get('report_id') or ''}",
+                    f"- Created at: {item.get('created_at') or ''}",
+                    f"- Architecture: {report.get('architecture') or ''}",
+                    f"- Task family: {report.get('task_family') or ''}",
+                    f"- Baseline run: {report.get('baseline_run_id') or ''}",
+                    f"- Selected runs: {', '.join(str(run.get('run_id') or '') for run in report.get('selected_runs', []) if isinstance(run, dict))}",
+                    "",
+                    "### Recommendation",
+                    cls._compact_json(report.get("recommendation") or {}),
+                    "",
+                    "### Summary",
+                    cls._compact_json(report.get("summary") or {}),
+                    "",
+                ])
+            return "\n".join(lines)
+
+        completed_runs = [
+            {
+                "run_id": run.get("run_id"),
+                "architecture": run.get("architecture"),
+                "task_type": run.get("task_type"),
+                "primary_metric": run.get("primary_metric"),
+                "primary_value": run.get("primary_value"),
+            }
+            for run in (registry.get("runs") if isinstance(registry.get("runs"), list) else [])
+            if str(run.get("status") or "").lower() == "completed"
+        ]
+        lines.extend([
+            "No exported model comparison report found.",
+            "",
+            "## Comparable Completed Runs",
+            cls._compact_json(completed_runs[:20]),
+        ])
+        return "\n".join(lines)
+
+    @classmethod
     def _exports_markdown(cls, project: Dict[str, Any], exports: Dict[str, Any]) -> str:
         lines = [
             "# Exports And Contracts",
@@ -549,6 +688,94 @@ class ProjectAssistantService:
                 "",
             ])
         return "\n".join(lines)
+
+    @classmethod
+    def _history_markdown(cls, project: Dict[str, Any], layout: ProjectLayout) -> str:
+        imports_history = project.get("imports_history") if isinstance(project.get("imports_history"), list) else []
+        training_runs = project.get("training_runs") if isinstance(project.get("training_runs"), list) else []
+        history_dir = layout.project_dir / "history"
+        history_files = cls._read_small_text_files(history_dir, suffixes={".md", ".txt", ".json", ".log"}, limit=12)
+        lines = [
+            "# Project History And Activity",
+            "",
+            f"- Project ID: {project.get('project_id') or ''}",
+            f"- Import records: {len(imports_history)}",
+            f"- Training run records: {len(training_runs)}",
+            f"- History files: {len(history_files)}",
+            "",
+            "## Recent Imports",
+            cls._compact_json(imports_history[-12:] if imports_history else []),
+            "",
+            "## Training Run Records",
+            cls._compact_json(training_runs[-20:] if training_runs else []),
+            "",
+            "## History Files",
+            cls._compact_json(history_files),
+        ]
+        return "\n".join(lines)
+
+    @classmethod
+    def _error_logs_markdown(cls, project: Dict[str, Any], registry: Dict[str, Any], layout: ProjectLayout) -> str:
+        project_logs = cls._read_small_text_files(layout.project_dir / "logs", suffixes={".log", ".txt", ".json"}, limit=12)
+        run_errors: List[Dict[str, Any]] = []
+        runs = registry.get("runs") if isinstance(registry.get("runs"), list) else []
+        for run in runs[:30]:
+            run_id = str(run.get("run_id") or "")
+            run_dir = layout.training_run_dir(run_id)
+            summary = _read_json(run_dir / "run_summary.json", {})
+            error_log = run_dir / "error.log"
+            if summary.get("error") or error_log.exists() or str(run.get("status") or "").lower() == "failed":
+                run_errors.append({
+                    "run_id": run_id,
+                    "status": run.get("status"),
+                    "summary_error": summary.get("error") or "",
+                    "error_log": cls._read_text_excerpt(error_log),
+                })
+        lines = [
+            "# Error Logs And Failures",
+            "",
+            f"- Project ID: {project.get('project_id') or ''}",
+            f"- Project log files: {len(project_logs)}",
+            f"- Runs with error evidence: {len(run_errors)}",
+            "",
+            "## Project Logs",
+            cls._compact_json(project_logs),
+            "",
+            "## Run Error Evidence",
+            cls._compact_json(run_errors),
+        ]
+        if not project_logs and not run_errors:
+            lines.append("\nNo project error logs or failed run evidence found.")
+        return "\n".join(lines)
+
+    @classmethod
+    def _read_small_text_files(cls, directory: Path, suffixes: set[str], limit: int = 12) -> List[Dict[str, Any]]:
+        if not directory.exists() or not directory.is_dir():
+            return []
+        files: List[Dict[str, Any]] = []
+        for path in sorted((item for item in directory.rglob("*") if item.is_file()), key=lambda item: item.stat().st_mtime, reverse=True):
+            if path.suffix.lower() not in suffixes:
+                continue
+            files.append({
+                "path": path.relative_to(directory).as_posix(),
+                "size_bytes": path.stat().st_size,
+                "modified_at": _mtime_iso(path),
+                "excerpt": cls._read_text_excerpt(path),
+            })
+            if len(files) >= limit:
+                break
+        return files
+
+    @staticmethod
+    def _read_text_excerpt(path: Path, limit: int = 2200) -> str:
+        if not path.exists() or not path.is_file():
+            return ""
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            return ""
+        text = text.strip()
+        return text[:limit] + ("\n... truncated ..." if len(text) > limit else "")
 
     @staticmethod
     def _compact_json(payload: Any, limit: int = 5000) -> str:

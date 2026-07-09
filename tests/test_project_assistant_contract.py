@@ -257,6 +257,17 @@ class ProjectAssistantContractTests(unittest.TestCase):
             "package_path": "exports/export_rnn_1/rnn_model_package.zip",
             "files": [{"path": "inference_contract.json", "size_bytes": 128}],
         }), encoding="utf-8")
+        compare_report_dir = Path(project["dataset_path"]).parent / "exports" / "compare_reports" / "compare_rnn_smoke"
+        compare_report_dir.mkdir(parents=True, exist_ok=True)
+        (compare_report_dir / "report.json").write_text(json.dumps({
+            "architecture": "rnn",
+            "task_family": "regression",
+            "baseline_run_id": "run_lstm_1",
+            "selected_runs": [{"run_id": "run_lstm_1"}],
+            "recommendation": {"winner_run_id": "run_lstm_1", "reason": "deployment champion recommendation"},
+            "summary": {"val/mae": {"best_run_id": "run_lstm_1", "best_value": 0.12}},
+        }), encoding="utf-8")
+        (run_dir / "error.log").write_text("CUDA out of memory diagnostic from previous retry.", encoding="utf-8")
         ProjectAssistantService.ingest_document(
             "manual-note.md",
             "Manual note about deployment review.",
@@ -269,18 +280,50 @@ class ProjectAssistantContractTests(unittest.TestCase):
         documents = kb["documents"]
         auto_docs = [doc for doc in documents if (doc.get("metadata") or {}).get("auto_indexed")]
         manual_docs = [doc for doc in documents if not (doc.get("metadata") or {}).get("auto_indexed")]
+        auto_source_types = sorted((doc.get("metadata") or {}).get("source_type") for doc in auto_docs)
         retrieval = ProjectAssistantService.retrieve(
             "val mae inference contract deployment review",
             top_k=8,
             filters={"project_id": "project_sync"},
         )
+        evaluation_retrieval = ProjectAssistantService.retrieve(
+            "residual prediction actual val mae diagnostics",
+            top_k=5,
+            filters={"project_id": "project_sync", "scope": "evaluation"},
+        )
+        compare_retrieval = ProjectAssistantService.retrieve(
+            "deployment champion recommendation",
+            top_k=5,
+            filters={"project_id": "project_sync", "scope": "model_compare"},
+        )
+        history_retrieval = ProjectAssistantService.retrieve(
+            "CUDA out of memory diagnostic",
+            top_k=5,
+            filters={"project_id": "project_sync", "scope": "history"},
+        )
 
-        self.assertEqual(first["document_count"], 4)
-        self.assertEqual(second["removed_auto_documents"], 4)
-        self.assertEqual(len(auto_docs), 4)
+        self.assertEqual(first["document_count"], 8)
+        self.assertEqual(second["removed_auto_documents"], 8)
+        self.assertEqual(len(auto_docs), 8)
+        self.assertEqual(auto_source_types, [
+            "dataset_schema",
+            "error_logs",
+            "evaluation_report",
+            "exports",
+            "history",
+            "model_comparison",
+            "project_summary",
+            "training_runs",
+        ])
         self.assertEqual([doc["filename"] for doc in manual_docs], ["manual-note.md"])
         self.assertTrue(any(result["source"] == "training-runs-and-metrics.md" for result in retrieval["results"]))
         self.assertTrue(any(result["source"] == "manual-note.md" for result in retrieval["results"]))
+        self.assertEqual(evaluation_retrieval["results"][0]["source"], "evaluation-diagnostics.md")
+        self.assertEqual(evaluation_retrieval["results"][0]["source_type"], "evaluation_report")
+        self.assertEqual(compare_retrieval["results"][0]["source"], "model-comparison-reports.md")
+        self.assertEqual(compare_retrieval["results"][0]["source_type"], "model_comparison")
+        self.assertEqual(history_retrieval["results"][0]["source"], "error-logs.md")
+        self.assertEqual(history_retrieval["results"][0]["source_type"], "error_logs")
 
     def test_sync_project_artifacts_api_uses_project_manager_scope(self):
         client = TestClient(app)
@@ -292,9 +335,9 @@ class ProjectAssistantContractTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["project_id"], "project_api_sync")
-        self.assertEqual(payload["document_count"], 4)
+        self.assertEqual(payload["document_count"], 8)
         docs = client.get("/api/project-assistant/knowledge-base?project_id=project_api_sync").json()["documents"]
-        self.assertEqual(len([doc for doc in docs if doc["metadata"].get("auto_indexed")]), 4)
+        self.assertEqual(len([doc for doc in docs if doc["metadata"].get("auto_indexed")]), 8)
 
     def test_chat_uses_clean_conversation_state_and_saves_agent_run(self):
         ProjectAssistantService.ingest_document(
