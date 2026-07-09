@@ -1692,12 +1692,12 @@
                 <i class="fa-solid fa-rotate"></i> <span data-i18n="autoLabel.refreshModels">Refresh Models</span>
               </button>
               <button class="btn btn-secondary guarded" data-requires="project" id="btn-open-weight-manager">
-                <i class="fa-solid fa-hard-drive"></i> <span>管理權重</span>
+                <i class="fa-solid fa-hard-drive"></i> <span data-i18n="autoLabel.manageWeights">Manage Weights</span>
               </button>
             </div>
           </div>
 
-          <div class="auto-label-status-strip">
+          <div class="auto-label-status-strip auto-label-context-strip">
             <div class="metric-card"><span data-i18n="autoLabel.stat.unlabeled">Unlabeled images</span><strong id="auto-stat-unlabeled">--</strong></div>
             <div class="metric-card"><span data-i18n="autoLabel.stat.drafts">Draft annotations</span><strong id="auto-stat-drafts">0</strong></div>
             <div class="metric-card"><span data-i18n="autoLabel.stat.models">Available models</span><strong id="auto-stat-models">--</strong></div>
@@ -1705,7 +1705,7 @@
             <div class="metric-card"><span data-i18n="autoLabel.stat.target">Target</span><strong data-i18n="autoLabel.draftOnly">Draft only</strong></div>
           </div>
 
-          <div class="status-guard info compact-guard">
+          <div class="status-guard info compact-guard auto-label-safety-rail">
             <div class="guard-title" data-i18n="autoLabel.principleTitle">Auto-Labeling workflow rules</div>
             <ul>
               <li data-i18n="autoLabel.principle1">This page creates draft annotation jobs. It is not a model test page or a LabelMe replacement.</li>
@@ -1715,9 +1715,12 @@
           </div>
 
           <div class="auto-label-workbench">
-            <section class="panel-section auto-job-builder">
+            <section class="panel-section auto-job-builder auto-task-setup-panel">
               <div class="section-title">
-                <h2 data-i18n="autoLabel.createJob">Create Draft Job</h2>
+                <div>
+                  <h2 data-i18n="autoLabel.createJob">Create Draft Job</h2>
+                  <p class="section-subtitle" data-i18n="autoLabel.taskSetupHelp">Set source, model, draft rules, and output target before generating reviewable drafts.</p>
+                </div>
                 <span class="info-icon" data-tooltip="Create draft annotations from input source, model source, and draft rules." data-i18n-tooltip="autoLabel.principle1">i</span>
               </div>
 
@@ -1784,8 +1787,14 @@
               </div>
             </section>
 
-            <section class="panel-section auto-review-panel">
-              <div class="section-title"><h2 data-i18n="autoLabel.previewTitle">Draft Preview / Review</h2><span class="info-icon" data-tooltip="Use this area to review whether draft annotations are acceptable." data-i18n-tooltip="autoLabel.previewTooltip">i</span></div>
+            <section class="panel-section auto-review-panel auto-review-workspace-panel">
+              <div class="section-title">
+                <div>
+                  <h2 data-i18n="autoLabel.previewTitle">Draft Preview / Review</h2>
+                  <p class="section-subtitle" data-i18n="autoLabel.reviewWorkspaceHelp">Review generated draft overlays first, then accept, reject, edit, or mark hard cases.</p>
+                </div>
+                <span class="info-icon" data-tooltip="Use this area to review whether draft annotations are acceptable." data-i18n-tooltip="autoLabel.previewTooltip">i</span>
+              </div>
               <div class="auto-review-workstation">
                 <aside class="auto-review-queue-card">
                   <div class="review-card-title"><strong data-i18n="autoLabel.reviewQueue">Draft Review Queue</strong><span id="auto-review-queue-count">0</span></div>
@@ -1831,8 +1840,8 @@
             </section>
           </div>
 
-          <div class="auto-label-bottom-grid redesigned">
-            <section class="panel-section"><div class="section-title"><h2 data-i18n="autoLabel.jobHistory">Job History</h2></div><div class="data-table compact-table"><table><thead><tr><th data-i18n="autoLabel.table.job">Job</th><th data-i18n="autoLabel.source">Source</th><th data-i18n="autoLabel.model">Model</th><th data-i18n="autoLabel.table.status">Status</th><th data-i18n="autoLabel.table.drafts">Drafts</th></tr></thead><tbody id="auto-job-history-body"><tr><td colspan="5" data-i18n="autoLabel.emptyJobs">No auto-label job yet. Connected functionality will show job_id, source, model, and draft count.</td></tr></tbody></table></div></section>
+          <div class="auto-label-bottom-grid redesigned auto-label-history-band">
+            <section class="panel-section auto-history-panel"><div class="section-title"><div><h2 data-i18n="autoLabel.jobHistory">Job History</h2><p class="section-subtitle" data-i18n="autoLabel.jobHistoryHelp">Secondary log for completed and draft-generation jobs.</p></div></div><div class="data-table compact-table"><table><thead><tr><th data-i18n="autoLabel.table.job">Job</th><th data-i18n="autoLabel.source">Source</th><th data-i18n="autoLabel.model">Model</th><th data-i18n="autoLabel.table.status">Status</th><th data-i18n="autoLabel.table.drafts">Drafts</th></tr></thead><tbody id="auto-job-history-body"><tr><td colspan="5" data-i18n="autoLabel.emptyJobs">No auto-label job yet. Connected functionality will show job_id, source, model, and draft count.</td></tr></tbody></table></div></section>
           </div>
         </section>
 
