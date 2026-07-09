@@ -276,7 +276,7 @@ function renderProjectAssistantContext(pageId, status) {
   `);
 }
 
-function buildProjectAssistantContext(pageId, status) {
+export function buildProjectAssistantContext(pageId, status) {
   if (!status.hasProject && pageId !== "history") return null;
   const runs = Array.isArray(appState.currentProject?.training_runs) ? appState.currentProject.training_runs : [];
   const latestRun = runs.length ? runs[runs.length - 1] : null;
@@ -291,63 +291,63 @@ function buildProjectAssistantContext(pageId, status) {
 
   const pageConfigs = {
     dashboard: {
-      help: "Project Assistant can summarize the active project state, dataset readiness, runs, and likely next actions without replacing the training workflow.",
+      help: t("projectAssistant.context.dashboardHelp"),
       facts: [
-        { label: "Project", value: status.projectName || "--" },
-        { label: "Task", value: projectType },
-        { label: "Latest run", value: `${latestRunId} / ${latestRunStatus}` },
+        { label: t("projectAssistant.context.fact.project"), value: status.projectName || "--" },
+        { label: t("projectAssistant.context.fact.task"), value: projectType },
+        { label: t("projectAssistant.context.fact.latestRun"), value: `${latestRunId} / ${latestRunStatus}` },
       ],
       prompts: [
-        { label: "Summary", text: `Summarize the current ${projectType} project status and cite project artifacts.` },
-        { label: "Next step", text: "What should I check next before training, evaluation, comparison, or export?" },
+        { label: t("projectAssistant.context.prompt.summary"), text: t("projectAssistant.context.dashboardSummaryPrompt", { task: projectType }) },
+        { label: t("projectAssistant.context.prompt.nextStep"), text: t("projectAssistant.context.dashboardNextPrompt") },
       ],
     },
     evaluation: {
-      help: "Training Diagnostic Assistant can explain evaluation metrics using the active project's run records and reports. Metric decisions still come from deterministic evaluation.",
+      help: t("projectAssistant.context.evaluationHelp"),
       facts: [
-        { label: "Task", value: projectType },
-        { label: "Best model", value: bestModel ? `${bestModel.weight_type || "model"} / ${bestModel.run_id || "--"}` : "No model" },
-        { label: "Completed runs", value: String(completedRuns.length) },
+        { label: t("projectAssistant.context.fact.task"), value: projectType },
+        { label: t("projectAssistant.context.fact.bestModel"), value: bestModel ? `${bestModel.weight_type || "model"} / ${bestModel.run_id || "--"}` : t("projectAssistant.context.value.noModel") },
+        { label: t("projectAssistant.context.fact.completedRuns"), value: String(completedRuns.length) },
       ],
       prompts: [
-        { label: "Metric", text: `Explain ${projectType} evaluation results for run ${latestRunId} with source citations.` },
-        { label: "Risk", text: "Identify likely data or model quality risks from the latest evaluation report." },
+        { label: t("projectAssistant.context.prompt.metric"), text: t("projectAssistant.context.evaluationMetricPrompt", { task: projectType, run: latestRunId }) },
+        { label: t("projectAssistant.context.prompt.risk"), text: t("projectAssistant.context.evaluationRiskPrompt") },
       ],
     },
     "model-compare": {
-      help: "Training Diagnostic Assistant can summarize run differences, but the compare table remains the source of truth for best-run selection.",
+      help: t("projectAssistant.context.compareHelp"),
       facts: [
-        { label: "Comparable runs", value: String(completedRuns.length) },
-        { label: "Latest run", value: `${latestRunId} / ${latestRunStatus}` },
-        { label: "Task", value: projectType },
+        { label: t("projectAssistant.context.fact.comparableRuns"), value: String(completedRuns.length) },
+        { label: t("projectAssistant.context.fact.latestRun"), value: `${latestRunId} / ${latestRunStatus}` },
+        { label: t("projectAssistant.context.fact.task"), value: projectType },
       ],
       prompts: [
-        { label: "Best run", text: `Compare completed ${projectType} runs and explain the winner with metric evidence.` },
-        { label: "Artifact", text: "List practical deployment tradeoffs between the compared model artifacts." },
+        { label: t("projectAssistant.context.prompt.bestRun"), text: t("projectAssistant.context.compareBestRunPrompt", { task: projectType }) },
+        { label: t("projectAssistant.context.prompt.artifact"), text: t("projectAssistant.context.compareArtifactPrompt") },
       ],
     },
     export: {
-      help: "Project Assistant can explain export artifacts, schemas, scalers, reports, and inference contracts for the active project.",
+      help: t("projectAssistant.context.exportHelp"),
       facts: [
-        { label: "Models", value: String(models.length) },
-        { label: "Exports", value: String(exportItems.length) },
-        { label: "Best model", value: bestModel ? `${bestModel.weight_type || "model"} / ${bestModel.run_id || "--"}` : "No model" },
+        { label: t("projectAssistant.context.fact.models"), value: String(models.length) },
+        { label: t("projectAssistant.context.fact.exports"), value: String(exportItems.length) },
+        { label: t("projectAssistant.context.fact.bestModel"), value: bestModel ? `${bestModel.weight_type || "model"} / ${bestModel.run_id || "--"}` : t("projectAssistant.context.value.noModel") },
       ],
       prompts: [
-        { label: "Package", text: `Explain the export package for ${projectType} deployment and cite the export contract.` },
-        { label: "Verify", text: "What should be checked before handing this model package to deployment?" },
+        { label: t("projectAssistant.context.prompt.package"), text: t("projectAssistant.context.exportPackagePrompt", { task: projectType }) },
+        { label: t("projectAssistant.context.prompt.verify"), text: t("projectAssistant.context.exportVerifyPrompt") },
       ],
     },
     history: {
-      help: "Project Assistant can search project runs, imports, exports, reports, and error logs without becoming the primary workflow.",
+      help: t("projectAssistant.context.historyHelp"),
       facts: [
-        { label: "Projects", value: String(appState.projects?.length || 0) },
-        { label: "Runs", value: String(runs.length) },
-        { label: "Imports", value: String(imports.length) },
+        { label: t("projectAssistant.context.fact.projects"), value: String(appState.projects?.length || 0) },
+        { label: t("projectAssistant.context.fact.runs"), value: String(runs.length) },
+        { label: t("projectAssistant.context.fact.imports"), value: String(imports.length) },
       ],
       prompts: [
-        { label: "Recent", text: "Summarize the latest project runs, imports, exports, and warnings." },
-        { label: "Errors", text: "Find recent project errors and recommend the next diagnostic step." },
+        { label: t("projectAssistant.context.prompt.recent"), text: t("projectAssistant.context.historyRecentPrompt") },
+        { label: t("projectAssistant.context.prompt.errors"), text: t("projectAssistant.context.historyErrorsPrompt") },
       ],
     },
   };

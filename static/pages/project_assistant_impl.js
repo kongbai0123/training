@@ -1,6 +1,7 @@
 import { apiFetch } from "../api.js";
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
+import { buildProjectAssistantContext } from "../core/right_panel.js?v=20260708-rnn-feature-wizard";
 import { escapeHtml, qs, setHTML, setText } from "../utils.js";
 
 const assistantState = {
@@ -39,6 +40,15 @@ export function initProjectAssistantImpl() {
     assistantState.activeSandboxFile = event.target.value || "index.html";
     renderSandboxEditor();
   });
+  qs("#project-assistant-page-context-prompts")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-assistant-prompt]");
+    if (!button) return;
+    const input = qs("#rag-chat-input");
+    if (input) {
+      input.value = button.dataset.assistantPrompt || "";
+      input.focus();
+    }
+  });
   eventBus.on("open-project-assistant", openProjectAssistantDrawer);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && assistantState.drawerOpen) closeProjectAssistantDrawer();
@@ -52,6 +62,7 @@ export function renderProjectAssistantImplPage() {
     return;
   }
   renderStatus();
+  renderPageContext();
   renderKnowledgeBase();
   renderProfiles();
   renderSettings();
@@ -60,6 +71,61 @@ export function renderProjectAssistantImplPage() {
   renderAgentRuns();
   renderSandbox();
   renderEvaluation();
+}
+
+function renderPageContext() {
+  const section = qs("#project-assistant-page-context");
+  if (!section) return;
+  const status = buildAssistantStatusSnapshot();
+  const config = buildProjectAssistantContext(appState.currentPage, status);
+  section.hidden = !config;
+  if (!config) {
+    setText("#project-assistant-page-context-help", "");
+    setHTML("#project-assistant-page-context-facts", "");
+    setHTML("#project-assistant-page-context-prompts", "");
+    return;
+  }
+
+  setText("#project-assistant-page-context-badge", getPageContextBadge(appState.currentPage));
+  setText("#project-assistant-page-context-help", config.help || "");
+  setHTML("#project-assistant-page-context-facts", (config.facts || []).map((fact) => `
+    <div class="path-row">
+      <span>${escapeHtml(fact.label)}</span>
+      <code>${escapeHtml(fact.value)}</code>
+    </div>
+  `).join("") || `<div class="empty-state">${escapeHtml(t("rag.noSources"))}</div>`);
+  setHTML("#project-assistant-page-context-prompts", (config.prompts || []).map((prompt) => `
+    <button type="button" class="assistant-prompt-row" data-assistant-prompt="${escapeHtml(prompt.text)}">
+      <span>${escapeHtml(prompt.label)}</span>
+      <code>${escapeHtml(prompt.text)}</code>
+    </button>
+  `).join(""));
+}
+
+function buildAssistantStatusSnapshot() {
+  const project = appState.currentProject || {};
+  const images = Array.isArray(project.images) ? project.images : [];
+  const annotatedCount = images.filter((image) => image.annotated || image.annotation_status === "annotated").length;
+  return {
+    hasProject: Boolean(appState.currentProjectId),
+    projectName: project.name || appState.currentProjectId || "",
+    taskType: project.task_type || project.task || "",
+    hasDataset: images.length > 0 || Boolean(project.dataset_manifest || project.sequence_manifest),
+    imageCount: images.length,
+    annotatedCount,
+    trainReady: Boolean(project.train_ready || project.training_ready),
+  };
+}
+
+function getPageContextBadge(pageId) {
+  const labels = {
+    dashboard: t("navDashboard"),
+    evaluation: t("navEvaluation"),
+    "model-compare": t("compare.title"),
+    export: t("navExport"),
+    history: t("navHistory"),
+  };
+  return labels[pageId] || pageId || "--";
 }
 
 async function openProjectAssistantDrawer() {

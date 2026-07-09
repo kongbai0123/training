@@ -239,6 +239,24 @@
             <div><span data-i18n="rag.indexState">Index</span><strong id="rag-status-index">--</strong></div>
           </section>
 
+          <section class="panel-section assistant-panel assistant-context-panel" id="project-assistant-page-context" hidden>
+            <div class="section-title">
+              <h2 data-i18n="projectAssistant.pageContextTitle">Current Page Guidance</h2>
+              <span class="summary-badge" id="project-assistant-page-context-badge">--</span>
+            </div>
+            <p class="section-help" id="project-assistant-page-context-help"></p>
+            <div class="assistant-context-drawer-grid">
+              <div>
+                <strong data-i18n="projectAssistant.evidence">Evidence</strong>
+                <div class="path-list compact" id="project-assistant-page-context-facts"></div>
+              </div>
+              <div>
+                <strong data-i18n="projectAssistant.suggestedQuestions">Suggested Questions</strong>
+                <div class="path-list compact" id="project-assistant-page-context-prompts"></div>
+              </div>
+            </div>
+          </section>
+
           <section class="panel-section assistant-panel assistant-settings-panel">
             <div class="section-title">
               <h2 data-i18n="rag.settingsTitle">Assistant Mode</h2>

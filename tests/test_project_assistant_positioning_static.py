@@ -45,6 +45,7 @@ class ProjectAssistantPositioningStaticTests(unittest.TestCase):
         router = (ROOT / "static" / "core" / "router.js").read_text(encoding="utf-8")
         impl = (ROOT / "static" / "pages" / "project_assistant_impl.js").read_text(encoding="utf-8")
         legacy = (ROOT / "static" / "pages" / "rag_workbench.js").read_text(encoding="utf-8")
+        right_panel = (ROOT / "static" / "core" / "right_panel.js").read_text(encoding="utf-8")
 
         self.assertIn("../pages/project_assistant.js", registry)
         self.assertNotIn("../pages/rag_workbench.js", registry)
@@ -52,6 +53,8 @@ class ProjectAssistantPositioningStaticTests(unittest.TestCase):
         self.assertIn('"project-assistant": "dashboard"', router)
         self.assertIn("/api/project-assistant", impl)
         self.assertIn("openProjectAssistantDrawer", impl)
+        self.assertIn("import { buildProjectAssistantContext }", impl)
+        self.assertIn("export function buildProjectAssistantContext", right_panel)
         self.assertNotIn("/api/rag-workbench", impl)
         self.assertIn("initProjectAssistantImpl as initRagWorkbench", legacy)
 

@@ -95,6 +95,7 @@ These legacy names are compatibility shims only. User-facing copy should say Pro
 
 - Project Assistant is not present as a primary sidebar page.
 - Header and context panel open the assistant as a right-side contextual drawer, not a main workflow page.
+- The assistant drawer reuses the same page-aware context as the workspace panel, so Evaluation, Model Compare, Export, History, and Project Summary open with relevant evidence and suggested questions.
 - Project Summary, Evaluation, Model Compare, Export, and History show context-aware assistant suggestions.
 - Context panel can sync active project artifacts without opening a separate assistant page.
 - Active-project artifact sync indexes:
