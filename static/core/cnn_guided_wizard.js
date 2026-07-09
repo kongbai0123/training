@@ -1,55 +1,56 @@
 import { escapeHtml } from "../utils.js";
+import { t } from "../state.js";
 
 export function buildCnnGuidedWizard(status = {}, appState = {}) {
   const hasProject = Boolean(status.hasProject);
   const steps = [
     {
       id: "project",
-      title: "Project",
+      title: t("guided.project"),
       page: "projects",
       complete: hasProject,
-      blocker: "Create or open a project.",
-      action: "Create / Open"
+      blocker: t("guided.projectBlocker"),
+      action: t("guided.projectAction")
     },
     {
       id: "dataset",
-      title: "Dataset",
+      title: t("guided.dataset"),
       page: "dataset",
       complete: Boolean(status.hasDataset),
-      blocker: "Import images or a dataset ZIP.",
-      action: "Import Dataset"
+      blocker: t("guided.datasetBlocker"),
+      action: t("guided.datasetAction")
     },
     {
       id: "annotation",
-      title: "Annotation",
+      title: t("guided.annotation"),
       page: "labelme",
       complete: Boolean(status.labelme?.synced),
-      blocker: "Sync or review LabelMe annotations.",
-      action: "Open LabelMe"
+      blocker: t("guided.annotationBlocker"),
+      action: t("guided.annotationAction")
     },
     {
       id: "split",
-      title: "Split",
+      title: t("guided.split"),
       page: "split",
       complete: Boolean(status.splitComplete),
-      blocker: "Create train / validation / test split.",
-      action: "Create Split"
+      blocker: t("guided.splitBlocker"),
+      action: t("guided.splitAction")
     },
     {
       id: "training",
-      title: "Training",
+      title: t("guided.training"),
       page: "training",
       complete: Boolean(status.trainReady || appState.trainingStatus?.status === "completed"),
-      blocker: "Review training config and start a run.",
-      action: "Open Training"
+      blocker: t("guided.trainingBlocker"),
+      action: t("guided.trainingAction")
     },
     {
       id: "decision",
-      title: "Evaluate",
+      title: t("guided.evaluate"),
       page: "model-compare",
       complete: Boolean(status.bestModelExists),
-      blocker: "Compare completed runs before export.",
-      action: "Compare Runs"
+      blocker: t("guided.evaluateBlocker"),
+      action: t("guided.evaluateAction")
     }
   ];
   const nextStep = steps.find((step) => !step.complete) || steps[steps.length - 1];
@@ -69,14 +70,14 @@ export function renderCnnGuidedWizard(wizard) {
     <section class="cnn-guided-wizard" data-ui-smoke="cnn-guided-wizard">
       <div class="section-title workflow-map-title">
         <div>
-          <h2><i class="fa-solid fa-route"></i> CNN Guided Wizard</h2>
-          <p>Practical path from project setup to deployment decision. Next action is always routed to the real page.</p>
+          <h2><i class="fa-solid fa-route"></i> ${escapeHtml(t("guided.title"))}</h2>
+          <p>${escapeHtml(t("guided.subtitle"))}</p>
         </div>
         <span class="summary-badge badge-neutral">${escapeHtml(wizard.completed)} / ${escapeHtml(wizard.total)}</span>
       </div>
       <div class="progress-block">
         <div class="progress-track"><div class="progress-fill" style="width:${escapeHtml(wizard.percent)}%"></div></div>
-        <div class="progress-row"><span>Workflow progress</span><strong>${escapeHtml(wizard.percent)}%</strong></div>
+        <div class="progress-row"><span>${escapeHtml(t("guided.progress"))}</span><strong>${escapeHtml(wizard.percent)}%</strong></div>
       </div>
       <div class="guided-step-grid">
         ${wizard.steps.map((step, index) => `
@@ -84,7 +85,7 @@ export function renderCnnGuidedWizard(wizard) {
             <span>${index + 1}</span>
             <div>
               <strong>${escapeHtml(step.title)}</strong>
-              <small>${escapeHtml(step.complete ? "Ready" : step.blocker)}</small>
+              <small>${escapeHtml(step.complete ? t("common.ready") : step.blocker)}</small>
             </div>
             <button type="button" class="btn btn-secondary btn-sm" data-nav="${escapeHtml(step.page)}">${escapeHtml(step.action)}</button>
           </article>

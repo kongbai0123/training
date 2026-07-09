@@ -42,7 +42,7 @@ class UIHardeningPhasesStaticTests(unittest.TestCase):
         self.assertIn('data-ui-smoke="cnn-guided-wizard"', wizard_js)
         self.assertIn("buildCnnGuidedWizard(status, appState)", dashboard_js)
         self.assertIn("workflow-map-details", dashboard_js)
-        self.assertIn("Detailed Workflow Map", dashboard_js)
+        self.assertIn('t("workflow.detailsSummary")', dashboard_js)
         self.assertIn("guided-step-grid", dashboard_css)
         self.assertIn(".workflow-map-details", dashboard_css)
         self.assertIn(".workflow-map-summary", dashboard_css)

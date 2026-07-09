@@ -1889,12 +1889,15 @@ function canStartRnnTraining() {
 function updateRnnStartControls() {
   const canStart = canStartRnnTraining();
   const message = getRnnStartBlockerMessage();
+  const titleMessage = message === "Open a project before starting RNN training."
+    ? t("rnn.training.openProjectFirst")
+    : message;
   const buttons = [qs("#rnn-start-disabled")].filter(Boolean);
   buttons.forEach((button) => {
     button.disabled = !canStart;
     button.classList.toggle("btn-primary", canStart);
     button.classList.toggle("btn-disabled", !canStart);
-    button.title = canStart ? t("rnn.training.startTitle") : message;
+    button.title = canStart ? t("rnn.training.startTitle") : titleMessage;
   });
 
   const bannerBtn = qs("#rnn-start-disabled");

@@ -1,5 +1,5 @@
 import { eventBus } from "../event_bus.js";
-import { appState } from "../state.js";
+import { appState, t } from "../state.js";
 import { qs, setHTML, escapeHtml } from "../utils.js";
 import { getDirtyFormSummaries } from "../core/dirty_forms.js";
 import { getStaleResources } from "../core/resource_freshness.js";
@@ -52,110 +52,110 @@ function renderWorkflowMap(status) {
     {
       step: 1,
       icon: "fa-folder-open",
-      title: "Dataset",
+      title: t("workflow.dataset"),
       page: "dataset",
       accent: "violet",
-      badge: status.hasDataset ? "Ready" : "Not started",
+      badge: status.hasDataset ? t("common.ready") : t("common.notStarted"),
       badgeClass: status.hasDataset ? "success" : "muted",
-      rows: [["Images", status.imageCount], ["Quality check", appState.currentProject?.dataset_health ? "Done" : "Not run"]],
+      rows: [[t("workflow.images"), status.imageCount], [t("workflow.qualityCheck"), appState.currentProject?.dataset_health ? t("common.done") : t("common.notRun")]],
       progress: status.hasDataset ? 100 : 0,
-      action: "Manage Dataset",
+      action: t("workflow.manageDataset"),
     },
     {
       step: 2,
       icon: "fa-pen-nib",
-      title: "Annotation",
+      title: t("workflow.annotation"),
       page: "labelme",
       accent: "green",
-      badge: status.labelme.synced ? "Synced" : "Not started",
+      badge: status.labelme.synced ? t("workflow.synced") : t("common.notStarted"),
       badgeClass: status.labelme.synced ? "success" : "muted",
-      rows: [["Annotated", `${status.annotatedCount}/${status.imageCount}`], ["Coverage", `${status.labelme.completionRate || 0}%`]],
+      rows: [[t("workflow.annotated"), `${status.annotatedCount}/${status.imageCount}`], [t("workflow.coverage"), `${status.labelme.completionRate || 0}%`]],
       progress: status.labelme.completionRate || 0,
-      action: "Open LabelMe",
+      action: t("workflow.openLabelMe"),
     },
     {
       step: 3,
       icon: "fa-robot",
-      title: "Auto-Labeling",
+      title: t("workflow.autoLabeling"),
       page: "auto-labeling",
       accent: "cyan",
-      badge: "Not started",
+      badge: t("common.notStarted"),
       badgeClass: "muted",
-      rows: [["Drafts", 0], ["Models", appState.models?.length || 0]],
+      rows: [[t("workflow.drafts"), 0], [t("workflow.models"), appState.models?.length || 0]],
       progress: 0,
-      action: "Start Auto-Labeling",
+      action: t("workflow.startAutoLabeling"),
     },
     {
       step: 4,
       icon: "fa-code-branch",
-      title: "Split",
+      title: t("workflow.split"),
       page: "split",
       accent: "orange",
-      badge: status.splitComplete ? "Ready" : "Not ready",
+      badge: status.splitComplete ? t("common.ready") : t("common.notReady"),
       badgeClass: status.splitComplete ? "success" : "danger",
-      rows: [["Train / Val / Test", `${status.splitCounts.train || "-"} / ${status.splitCounts.val || "-"} / ${status.splitCounts.test || "-"}`], ["Split file", status.splitComplete ? "Ready" : "None"]],
+      rows: [[t("workflow.trainValTest"), `${status.splitCounts.train || "-"} / ${status.splitCounts.val || "-"} / ${status.splitCounts.test || "-"}`], [t("workflow.splitFile"), status.splitComplete ? t("common.ready") : t("common.none")]],
       progress: status.splitComplete ? 100 : 0,
-      action: "Create Split",
+      action: t("workflow.createSplit"),
     },
     {
       step: 5,
       icon: "fa-wand-magic-sparkles",
-      title: "Augmentation",
+      title: t("workflow.augmentation"),
       page: "augmentation",
       accent: "amber",
-      badge: appState.currentProject?.augmentation_config ? "Configured" : "Not started",
+      badge: appState.currentProject?.augmentation_config ? t("workflow.configured") : t("common.notStarted"),
       badgeClass: appState.currentProject?.augmentation_config ? "success" : "muted",
-      rows: [["Policies", appState.currentProject?.augmentation_config ? 1 : 0], ["Active", appState.currentProject?.augmentation_config ? "Yes" : "No"]],
+      rows: [[t("workflow.policies"), appState.currentProject?.augmentation_config ? 1 : 0], [t("workflow.active"), appState.currentProject?.augmentation_config ? t("common.yes") : t("common.no")]],
       progress: appState.currentProject?.augmentation_config ? 100 : 0,
-      action: "Configure Augmentation",
+      action: t("workflow.configureAugmentation"),
     },
     {
       step: 6,
       icon: "fa-microchip",
-      title: "Training",
+      title: t("workflow.training"),
       page: "training",
       accent: "blue",
-      badge: status.trainReady ? "Ready" : "Not started",
+      badge: status.trainReady ? t("common.ready") : t("common.notStarted"),
       badgeClass: status.trainReady ? "success" : "muted",
-      rows: [["Runs", appState.currentProject?.training_runs?.length || 0], ["Best mAP", "--"]],
+      rows: [[t("workflow.runs"), appState.currentProject?.training_runs?.length || 0], [t("workflow.bestMap"), "--"]],
       progress: status.bestModelExists ? 100 : status.trainReady ? 60 : 0,
-      action: "Start Training",
+      action: t("workflow.startTraining"),
     },
     {
       step: 7,
       icon: "fa-chart-line",
-      title: "Evaluation",
+      title: t("workflow.evaluation"),
       page: "evaluation",
       accent: "purple",
-      badge: status.bestModelExists ? "Available" : "Not started",
+      badge: status.bestModelExists ? t("common.available") : t("common.notStarted"),
       badgeClass: status.bestModelExists ? "success" : "muted",
-      rows: [["Evaluations", 0], ["Best mAP", "--"]],
+      rows: [[t("workflow.evaluations"), 0], [t("workflow.bestMap"), "--"]],
       progress: status.bestModelExists ? 70 : 0,
-      action: "Run Evaluation",
+      action: t("workflow.runEvaluation"),
     },
     {
       step: 8,
       icon: "fa-flask",
-      title: "Inference Lab",
+      title: t("workflow.inferenceLab"),
       page: "inference",
       accent: "indigo",
-      badge: appState.models?.length ? "Available" : "Not started",
+      badge: appState.models?.length ? t("common.available") : t("common.notStarted"),
       badgeClass: appState.models?.length ? "success" : "muted",
-      rows: [["Models", appState.models?.length || 0], ["Tests", 0]],
+      rows: [[t("workflow.models"), appState.models?.length || 0], [t("workflow.tests"), 0]],
       progress: appState.models?.length ? 50 : 0,
-      action: "Open Inference Lab",
+      action: t("workflow.openInferenceLab"),
     },
     {
       step: 9,
       icon: "fa-box-archive",
-      title: "Export",
+      title: t("workflow.export"),
       page: "export",
       accent: "teal",
-      badge: status.bestModelExists ? "Ready" : "Not ready",
+      badge: status.bestModelExists ? t("common.ready") : t("common.notReady"),
       badgeClass: status.bestModelExists ? "success" : "danger",
-      rows: [["Exports", 0], ["Last export", "--"]],
+      rows: [[t("workflow.exports"), 0], [t("workflow.lastExport"), "--"]],
       progress: status.bestModelExists ? 80 : 0,
-      action: "Export Model",
+      action: t("workflow.exportModel"),
     },
   ];
 
@@ -163,13 +163,13 @@ function renderWorkflowMap(status) {
     ${renderCnnGuidedWizard(wizard)}
     <details class="workflow-map-panel workflow-map-details">
       <summary class="workflow-map-summary">
-        <span><i class="fa-solid fa-map"></i> Detailed Workflow Map</span>
-        <small>Open when you need stage-level metrics and direct page shortcuts.</small>
+        <span><i class="fa-solid fa-map"></i> ${escapeHtml(t("workflow.detailsSummary"))}</span>
+        <small>${escapeHtml(t("workflow.detailsHint"))}</small>
       </summary>
       <div class="section-title workflow-map-title">
         <div>
-          <h2><i class="fa-solid fa-map"></i> Workflow Details</h2>
-          <p>Detailed project progress by stage. Use Guided Wizard above for the primary next action.</p>
+          <h2><i class="fa-solid fa-map"></i> ${escapeHtml(t("workflow.detailsTitle"))}</h2>
+          <p>${escapeHtml(t("workflow.detailsSubtitle"))}</p>
         </div>
       </div>
       <div class="workflow-grid">
