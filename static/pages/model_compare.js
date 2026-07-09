@@ -6,6 +6,7 @@ import { buildDeploymentDecision, renderDeploymentDecisionCard } from "../core/d
 
 const compareState = {
   architecture: "cnn",
+  viewMode: "performance",
   loadingRuns: false,
   comparing: false,
   runs: [],
@@ -20,6 +21,8 @@ const compareState = {
   reportResult: null,
   reportLoading: false,
   reportHistory: [],
+  loadingArtifacts: false,
+  artifactsByRun: {},
 };
 
 let trendChart = null;
@@ -30,6 +33,9 @@ export function initModelCompare() {
       const architecture = button.dataset.compareArchitecture || "cnn";
       setCompareArchitecture(architecture);
     });
+  });
+  qsa("[data-compare-view]").forEach((button) => {
+    button.addEventListener("click", () => setCompareViewMode(button.dataset.compareView || "performance"));
   });
 
   qs("#btn-compare-refresh")?.addEventListener("click", () => loadComparableRuns({ force: true }));
@@ -49,6 +55,7 @@ export function renderModelComparePage() {
   const page = qs("#page-model-compare");
   if (!page) return;
 
+  syncCompareArchitectureWithProject();
   const isActive = appState.currentPage === "model-compare";
   if (isActive && appState.currentProjectId && compareState.loadedProjectId !== appState.currentProjectId && !compareState.loadingRuns) {
     loadComparableRuns({ force: true });
@@ -64,12 +71,19 @@ export function renderModelComparePage() {
   renderTrendChart();
   renderOutputComparison();
   renderConfigDiff();
+  renderArtifactComparison();
   renderCompareReport();
   updateCompareActions();
 }
 
 function setCompareArchitecture(architecture) {
+  const forced = getProjectCompareArchitecture();
   const next = architecture === "rnn" ? "rnn" : "cnn";
+  if (forced && forced !== next) {
+    eventBus.emit("toast", t("compare.toast.projectScopeLocked", { architecture: architectureLabel(forced) }));
+    renderModelComparePage();
+    return;
+  }
   if (compareState.architecture === next) return;
   compareState.architecture = next;
   compareState.selectedRuns = [];
@@ -81,9 +95,85 @@ function setCompareArchitecture(architecture) {
   compareState.outputResult = null;
   compareState.reportResult = null;
   compareState.reportHistory = [];
+  compareState.artifactsByRun = {};
   loadComparableRuns({ force: true });
   loadCompareReports({ force: true });
   renderModelComparePage();
+}
+
+function setCompareViewMode(viewMode) {
+  const next = viewMode === "artifacts" ? "artifacts" : "performance";
+  if (compareState.viewMode === next) return;
+  compareState.viewMode = next;
+  renderModelComparePage();
+  if (next === "artifacts") loadSelectedRunArtifacts();
+}
+
+function getProjectCompareArchitecture() {
+  if (!appState.currentProjectId) return null;
+  const project = appState.currentProject || {};
+  const architecture = String(project.architecture || project.mode || "").toLowerCase();
+  const taskType = String(project.task_type || "").toLowerCase();
+  if (architecture === "rnn" || taskType.includes("sequence") || taskType.includes("time_series") || taskType.includes("timeseries") || taskType.includes("rnn")) {
+    return "rnn";
+  }
+  if (architecture === "cnn" || taskType.includes("detection") || taskType.includes("segmentation") || taskType.includes("classification")) {
+    return "cnn";
+  }
+  return null;
+}
+
+function syncCompareArchitectureWithProject() {
+  const forced = getProjectCompareArchitecture();
+  if (!forced || compareState.architecture === forced) return;
+  compareState.architecture = forced;
+  compareState.selectedRuns = [];
+  compareState.baselineRunId = null;
+  compareState.result = null;
+  compareState.activeMetricKey = null;
+  compareState.runs = [];
+  compareState.loadedProjectId = "";
+  compareState.outputResult = null;
+  compareState.reportResult = null;
+  compareState.artifactsByRun = {};
+}
+
+function architectureLabel(architecture = compareState.architecture) {
+  return architecture === "rnn" ? t("compare.scope.rnn") : t("compare.scope.cnn");
+}
+
+function clearRunDependentResults() {
+  compareState.result = null;
+  compareState.activeMetricKey = null;
+  compareState.outputResult = null;
+  compareState.reportResult = null;
+  compareState.artifactsByRun = {};
+}
+
+async function loadSelectedRunArtifacts({ force = false } = {}) {
+  if (compareState.viewMode !== "artifacts" || compareState.loadingArtifacts) return;
+  if (!appState.currentProjectId || !compareState.selectedRuns.length) return;
+  const missing = compareState.selectedRuns.filter((runId) => force || !compareState.artifactsByRun[runId]);
+  if (!missing.length) return;
+
+  compareState.loadingArtifacts = true;
+  renderModelComparePage();
+  try {
+    const results = await Promise.all(missing.map(async (runId) => {
+      try {
+        const artifacts = await apiFetch(`/api/projects/${encodeURIComponent(appState.currentProjectId)}/train/runs/${encodeURIComponent(runId)}/artifacts`, { suppressToast: true });
+        return [runId, { artifacts: Array.isArray(artifacts) ? artifacts : [] }];
+      } catch (err) {
+        return [runId, { error: err.message, artifacts: [] }];
+      }
+    }));
+    results.forEach(([runId, payload]) => {
+      compareState.artifactsByRun[runId] = payload;
+    });
+  } finally {
+    compareState.loadingArtifacts = false;
+    renderModelComparePage();
+  }
 }
 
 async function loadComparableRuns({ force = false } = {}) {
@@ -108,6 +198,7 @@ async function loadComparableRuns({ force = false } = {}) {
     compareState.activeMetricKey = null;
     compareState.outputResult = null;
     compareState.reportResult = null;
+    compareState.artifactsByRun = {};
   } catch (err) {
     compareState.runs = [];
     compareState.result = null;
@@ -208,12 +299,12 @@ async function exportCompareReport() {
 async function runOutputComparison() {
   if (!appState.currentProjectId || compareState.selectedRuns.length < 2 || compareState.selectedRuns.length > 4) return;
   if (compareState.architecture !== "cnn") {
-    eventBus.emit("toast", "RNN output comparison is not enabled in this phase.");
+    eventBus.emit("toast", t("compare.toast.rnnOutputDisabled"));
     return;
   }
   const file = qs("#compare-output-image-file")?.files?.[0];
   if (!file) {
-    eventBus.emit("toast", "Please upload one test image for output comparison.");
+    eventBus.emit("toast", t("compare.toast.uploadTestImage"));
     return;
   }
 
@@ -235,7 +326,7 @@ async function runOutputComparison() {
     });
   } catch (err) {
     compareState.outputResult = null;
-    eventBus.emit("toast", `Output compare failed: ${err.message}`);
+    eventBus.emit("toast", t("compare.toast.outputCompareFailed", { message: err.message }));
   } finally {
     compareState.outputComparing = false;
     renderModelComparePage();
@@ -271,29 +362,42 @@ function toggleRun(runId) {
   compareState.activeMetricKey = null;
   compareState.outputResult = null;
   compareState.reportResult = null;
+  compareState.artifactsByRun = {};
+  if (compareState.viewMode === "artifacts") loadSelectedRunArtifacts();
   renderModelComparePage();
 }
 
 function setBaseline(runId) {
   if (!compareState.selectedRuns.includes(runId)) return;
   compareState.baselineRunId = runId;
-  compareState.result = null;
-  compareState.outputResult = null;
-  compareState.reportResult = null;
+  clearRunDependentResults();
   renderModelComparePage();
 }
 
 function renderModeControls() {
+  const forced = getProjectCompareArchitecture();
+  const toggle = qs("#compare-architecture-toggle");
+  const scopeSummary = qs("#compare-scope-summary");
   qsa("[data-compare-architecture]").forEach((button) => {
     button.classList.toggle("active", button.dataset.compareArchitecture === compareState.architecture);
   });
-  setText("#compare-mode-badge", compareState.architecture === "cnn" ? "CNN / YOLO" : "RNN / Sequence");
+  qsa("[data-compare-view]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.compareView === compareState.viewMode);
+  });
+  toggle?.classList.toggle("hidden", Boolean(forced));
+  scopeSummary?.classList.toggle("hidden", !forced);
+  setText("#compare-scope-title", architectureLabel());
+  setText("#compare-mode-badge", forced ? t("compare.projectScope") : architectureLabel());
   setText(
     "#compare-mode-note",
-    compareState.architecture === "cnn"
-      ? "Completed CNN / YOLO runs can be compared by metrics, settings, and image output overlays."
-      : "Completed RNN / Sequence runs can be compared by Loss, Accuracy, Macro-F1, MAE, RMSE, and settings. Sequence output compare remains gated."
+    forced
+      ? t("compare.modeNoteLocked", { architecture: architectureLabel() })
+      : compareState.architecture === "cnn"
+        ? t("compare.modeNoteCnn")
+        : t("compare.modeNoteRnn")
   );
+  qsa(".compare-performance-panel").forEach((panel) => panel.classList.toggle("hidden", compareState.viewMode !== "performance"));
+  qs("#compare-page-artifacts")?.classList.toggle("hidden", compareState.viewMode !== "artifacts");
 }
 
 function renderCompareAlert() {
@@ -302,7 +406,7 @@ function renderCompareAlert() {
   const warnings = compareState.result?.summary?.warnings || compareState.result?.recommendation?.warnings || [];
   const messages = [];
   if (!appState.currentProjectId) messages.push(t("compare.openProject"));
-  if (compareState.architecture === "rnn") messages.push("RNN metric comparison is enabled for completed RNN runs. Sequence output comparison is still disabled.");
+  if (compareState.architecture === "rnn") messages.push(t("compare.rnnMetricOnly"));
   if (warnings.length) messages.push(...warnings.slice(0, 3));
   alert.classList.toggle("hidden", messages.length === 0);
   alert.innerHTML = messages.map((message) => `<div>${escapeHtml(message)}</div>`).join("");
@@ -467,8 +571,8 @@ function renderTrendChart() {
   if (!metric || !Object.keys(metric.runs || {}).length) {
     empty?.classList.remove("hidden");
     if (empty) empty.textContent = compareState.architecture === "rnn"
-      ? "Select 2 to 4 completed RNN runs and run comparison to view sequence metrics."
-      : "Select 2 to 4 completed CNN runs and run comparison.";
+      ? t("compare.chartEmptyRnn")
+      : t("compare.chartEmptyCnn");
     if (trendChart) {
       trendChart.destroy();
       trendChart = null;
@@ -503,7 +607,7 @@ function renderTrendChart() {
       scales: {
         x: {
           type: "linear",
-          title: { display: true, text: "Epoch" },
+          title: { display: true, text: t("compare.chartEpoch") },
           grid: { color: "rgba(148, 163, 184, 0.14)" },
         },
         y: {
@@ -521,12 +625,12 @@ function renderOutputComparison() {
   if (!empty || !host) return;
   if (compareState.architecture === "rnn") {
     empty.classList.remove("hidden");
-    empty.textContent = "Sequence output comparison is not enabled in Phase 3E. This phase compares completed RNN training metrics only.";
+    empty.textContent = t("compare.rnnOutputDisabled");
     host.innerHTML = `
       <div class="rnn-compare-skeleton-grid">
-        ${renderRnnMetricPlaceholder("Ground truth", "target column / label sequence")}
-        ${renderRnnMetricPlaceholder("Prediction", "LSTM / GRU output sequence")}
-        ${renderRnnMetricPlaceholder("Diagnostics", "delay, residual, transition stability")}
+        ${renderRnnMetricPlaceholder(t("compare.placeholder.groundTruth"), t("compare.placeholder.groundTruthBody"))}
+        ${renderRnnMetricPlaceholder(t("compare.placeholder.prediction"), t("compare.placeholder.predictionBody"))}
+        ${renderRnnMetricPlaceholder(t("compare.placeholder.diagnostics"), t("compare.placeholder.diagnosticsBody"))}
       </div>
     `;
     return;
@@ -534,7 +638,7 @@ function renderOutputComparison() {
 
   if (compareState.outputComparing) {
     empty.classList.remove("hidden");
-    empty.textContent = "Running output comparison. This may take a moment while each model performs inference.";
+    empty.textContent = t("compare.outputRunning");
     host.innerHTML = "";
     return;
   }
@@ -542,7 +646,7 @@ function renderOutputComparison() {
   const result = compareState.outputResult;
   if (!result || !Array.isArray(result.outputs) || !result.outputs.length) {
     empty.classList.remove("hidden");
-    empty.textContent = "Select 2 to 4 runs and upload one test image to compare prediction overlays.";
+    empty.textContent = t("compare.outputEmpty");
     host.innerHTML = "";
     return;
   }
@@ -564,17 +668,130 @@ function renderOutputComparison() {
           <span class="summary-badge badge-neutral">${escapeHtml(summary.inference_time_ms ?? "--")} ms</span>
         </div>
         <div class="compare-output-image">
-          ${annotatedUrl ? `<img src="${escapeHtml(annotatedUrl)}?t=${Date.now()}" alt="Prediction overlay for ${escapeHtml(output.run_id || "run")}">` : `<div class="empty-state">No overlay image returned.</div>`}
+          ${annotatedUrl ? `<img src="${escapeHtml(annotatedUrl)}?t=${Date.now()}" alt="${escapeHtml(t("compare.predictionOverlayAlt", { run: output.run_id || "run" }))}">` : `<div class="empty-state">${escapeHtml(t("compare.noOverlay"))}</div>`}
         </div>
         <div class="compare-output-stats">
-          <div><span>Predictions</span><strong>${escapeHtml(summary.prediction_count ?? "--")}</strong></div>
-          <div><span>Avg confidence</span><strong>${summary.average_confidence == null ? "--" : Number(summary.average_confidence).toFixed(3)}</strong></div>
-          <div><span>Mask area</span><strong>${summary.mask_area_ratio == null ? "--" : Number(summary.mask_area_ratio).toFixed(3)}</strong></div>
-          <div><span>Classes</span><strong>${escapeHtml(labels)}</strong></div>
+          <div><span>${escapeHtml(t("compare.predictions"))}</span><strong>${escapeHtml(summary.prediction_count ?? "--")}</strong></div>
+          <div><span>${escapeHtml(t("compare.avgConfidence"))}</span><strong>${summary.average_confidence == null ? "--" : Number(summary.average_confidence).toFixed(3)}</strong></div>
+          <div><span>${escapeHtml(t("compare.maskArea"))}</span><strong>${summary.mask_area_ratio == null ? "--" : Number(summary.mask_area_ratio).toFixed(3)}</strong></div>
+          <div><span>${escapeHtml(t("compare.classes"))}</span><strong>${escapeHtml(labels)}</strong></div>
         </div>
       </article>
     `;
   }).join("");
+}
+
+function renderArtifactComparison() {
+  const host = qs("#compare-artifact-comparison");
+  if (!host) return;
+  if (compareState.viewMode === "artifacts") loadSelectedRunArtifacts();
+
+  if (!appState.currentProjectId) {
+    host.innerHTML = `<div class="empty-state">${escapeHtml(t("compare.openProject"))}</div>`;
+    return;
+  }
+  if (!compareState.selectedRuns.length) {
+    host.innerHTML = `<div class="empty-state">${escapeHtml(t("compare.artifactsSelectRuns"))}</div>`;
+    return;
+  }
+  if (compareState.loadingArtifacts) {
+    host.innerHTML = `<div class="empty-state">${escapeHtml(t("compare.loadingArtifacts"))}</div>`;
+    return;
+  }
+
+  host.innerHTML = `
+    <div class="compare-artifact-grid">
+      ${compareState.selectedRuns.map((runId) => renderArtifactRunColumn(runId)).join("")}
+    </div>
+  `;
+  qsa("[data-compare-artifact-download]").forEach((button) => {
+    button.addEventListener("click", () => {
+      downloadRunArtifact(button.dataset.compareArtifactRun, button.dataset.compareArtifactDownload, button.dataset.compareArtifactFilename);
+    });
+  });
+}
+
+function renderArtifactRunColumn(runId) {
+  const run = compareState.runs.find((item) => item.run_id === runId) || {};
+  const payload = compareState.artifactsByRun[runId] || { artifacts: [] };
+  if (payload.error) {
+    return `
+      <article class="compare-artifact-column">
+        <div class="compare-artifact-column-head">
+          <strong>${escapeHtml(runId)}</strong>
+          <span>${escapeHtml(run.model || "--")}</span>
+        </div>
+        <div class="empty-state">${escapeHtml(t("compare.artifactsLoadFailed", { message: payload.error }))}</div>
+      </article>
+    `;
+  }
+  const groups = groupArtifacts(payload.artifacts || []);
+  const groupHtml = Object.entries(groups).map(([group, artifacts]) => renderArtifactGroup(runId, group, artifacts)).join("");
+  return `
+    <article class="compare-artifact-column">
+      <div class="compare-artifact-column-head">
+        <strong>${escapeHtml(runId)}</strong>
+        <span>${escapeHtml(run.model || "--")} · ${escapeHtml(run.task_family || run.task_type || "--")}</span>
+      </div>
+      ${groupHtml || `<div class="empty-state">${escapeHtml(t("compare.noArtifacts"))}</div>`}
+    </article>
+  `;
+}
+
+function renderArtifactGroup(runId, group, artifacts) {
+  const visible = artifacts.slice(0, 8);
+  const hiddenCount = Math.max(0, artifacts.length - visible.length);
+  return `
+    <section class="compare-artifact-group">
+      <h3>${escapeHtml(t(`compare.artifactGroup.${group}`))}</h3>
+      <div class="compare-artifact-list">
+        ${visible.map((artifact) => renderArtifactRow(runId, artifact)).join("")}
+        ${hiddenCount ? `<div class="compare-artifact-more">${escapeHtml(t("compare.artifactsMore", { count: hiddenCount }))}</div>` : ""}
+      </div>
+    </section>
+  `;
+}
+
+function renderArtifactRow(runId, artifact) {
+  const relPath = artifact.rel_path || artifact.path || artifact.filename || "";
+  const filename = artifact.filename || relPath.split("/").pop() || "artifact";
+  const url = buildArtifactDownloadUrl(runId, artifact);
+  return `
+    <div class="compare-artifact-row">
+      <div>
+        <strong>${escapeHtml(filename)}</strong>
+        <span>${escapeHtml(relPath)} · ${escapeHtml(formatBytes(artifact.size ?? artifact.size_bytes))}</span>
+      </div>
+      <button type="button" class="icon-btn" data-compare-artifact-run="${escapeHtml(runId)}" data-compare-artifact-download="${escapeHtml(url)}" data-compare-artifact-filename="${escapeHtml(filename)}" aria-label="${escapeHtml(t("compare.downloadArtifact"))}">
+        <i class="fa-solid fa-download"></i>
+      </button>
+    </div>
+  `;
+}
+
+function groupArtifacts(artifacts) {
+  const groups = { checkpoints: [], metrics: [], config: [], reports: [], other: [] };
+  artifacts.forEach((artifact) => {
+    const relPath = String(artifact.rel_path || artifact.path || artifact.filename || "").toLowerCase();
+    if (relPath.includes("weight") || relPath.endsWith(".pt") || relPath.endsWith(".onnx") || relPath.includes("best.")) {
+      groups.checkpoints.push(artifact);
+    } else if (relPath.includes("metric") || relPath.includes("result") || relPath.endsWith(".csv")) {
+      groups.metrics.push(artifact);
+    } else if (relPath.includes("schema") || relPath.includes("config") || relPath.includes("normalization") || relPath.includes("label_encoder")) {
+      groups.config.push(artifact);
+    } else if (relPath.includes("report") || relPath.endsWith(".md") || relPath.endsWith(".pdf")) {
+      groups.reports.push(artifact);
+    } else {
+      groups.other.push(artifact);
+    }
+  });
+  return Object.fromEntries(Object.entries(groups).filter(([, items]) => items.length));
+}
+
+function buildArtifactDownloadUrl(runId, artifact) {
+  const relPath = artifact.rel_path || artifact.path || artifact.filename || "";
+  const filename = artifact.filename || relPath.split("/").pop() || "artifact";
+  return `/api/projects/${encodeURIComponent(appState.currentProjectId)}/train/runs/${encodeURIComponent(runId)}/artifacts/download/${encodeURIComponent(filename)}?path=${encodeURIComponent(relPath)}`;
 }
 
 function renderConfigDiff() {
@@ -595,7 +812,7 @@ function renderConfigDiff() {
     <div class="compare-table-wrap">
       <table class="compare-table">
         <thead>
-          <tr><th>Config</th>${selected.map((run) => `<th>${escapeHtml(run.run_id)}</th>`).join("")}</tr>
+          <tr><th>${escapeHtml(t("compare.config"))}</th>${selected.map((run) => `<th>${escapeHtml(run.run_id)}</th>`).join("")}</tr>
         </thead>
         <tbody>
           ${keys.map((key) => `
@@ -646,7 +863,7 @@ function renderCompareReport() {
               <div>
                 <strong>${escapeHtml(report.report_id || "--")}</strong>
                 <span>${escapeHtml(report.architecture || "--")} · ${escapeHtml(report.task_family || "--")} · ${escapeHtml((report.selected_run_ids || []).join(", ") || "--")}</span>
-                <small>${escapeHtml(report.recommendation?.best_overall ? `Best: ${report.recommendation.best_overall}` : "No recommendation")}</small>
+                <small>${escapeHtml(report.recommendation?.best_overall ? t("compare.bestReportRun", { run: report.recommendation.best_overall }) : t("compare.noRecommendation"))}</small>
               </div>
               <div class="inline-actions">
                 ${(report.files || []).map(renderReportFileButton).join("")}
@@ -727,6 +944,29 @@ async function downloadCompareReportFile(url, filename) {
   }
 }
 
+async function downloadRunArtifact(runId, url, filename) {
+  if (!runId || !url) return;
+  try {
+    const headers = {};
+    if (appState.bootstrap?.token) headers["X-VTS-Token"] = appState.bootstrap.token;
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      throw new Error(await response.text() || `HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = filename || "artifact";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(downloadUrl);
+  } catch (err) {
+    eventBus.emit("toast", t("compare.toast.downloadArtifactFailed", { message: err.message }));
+  }
+}
+
 function renderReportFileRow(file) {
   return `
     <div class="compare-report-file">
@@ -752,7 +992,7 @@ function renderRnnMetricPlaceholder(title, body) {
     <article class="rnn-compare-placeholder-card">
       <strong>${escapeHtml(title)}</strong>
       <span>${escapeHtml(body)}</span>
-      <em>Schema placeholder</em>
+      <em>${escapeHtml(t("compare.schemaPlaceholder"))}</em>
     </article>
   `;
 }

@@ -10,9 +10,9 @@ import {
   renderTrainingModeSidebar,
   renderTrainingWorkspace,
   syncTrainingModeForProject,
-} from "../pages/training_modes.js?v=20260708-rnn-epoch-axis";
+} from "../pages/training_modes.js?v=20260708-i18n-tooltips";
 import { initEvaluation, renderEvaluationPage } from "../pages/evaluation.js?v=20260702-cnn-eval-polish2";
-import { initModelCompare, renderModelComparePage } from "../pages/model_compare.js?v=20260630-ui-init-fix";
+import { initModelCompare, renderModelComparePage } from "../pages/model_compare.js?v=20260708-compare-scope-artifacts";
 import { initInference, renderInferencePage } from "../pages/inference.js?v=20260702-model-scroll-bounds";
 import { initAutoLabeling, renderAutoLabelingPage } from "../pages/auto_labeling.js?v=20260703-auto-workbench-rules";
 import { initExport, renderExportPage } from "../pages/export.js?v=20260701-xgb-eval-final";

@@ -44,6 +44,65 @@
   color: #fff;
 }
 
+.compare-scope-summary {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.compare-scope-summary span,
+.compare-view-row > span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.compare-scope-summary strong {
+  color: var(--text);
+  font-size: 0.98rem;
+}
+
+.compare-view-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.compare-view-toggle {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.compare-view-toggle button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.compare-view-toggle button:last-child {
+  border-right: 0;
+}
+
+.compare-view-toggle button.active {
+  background: var(--primary);
+  color: #fff;
+}
+
 .model-compare-layout {
   display: grid;
   grid-template-columns: minmax(360px, 1fr) minmax(320px, 0.85fr);
@@ -382,6 +441,78 @@
 
 .compare-config-diff {
   min-height: 80px;
+}
+
+.compare-artifact-comparison {
+  min-height: 120px;
+}
+
+.compare-artifact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.compare-artifact-column {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.compare-artifact-column-head strong {
+  display: block;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.compare-artifact-column-head span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.compare-artifact-group {
+  display: grid;
+  gap: 8px;
+}
+
+.compare-artifact-group h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.86rem;
+}
+
+.compare-artifact-list {
+  display: grid;
+  gap: 8px;
+}
+
+.compare-artifact-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.compare-artifact-row strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+.compare-artifact-row span,
+.compare-artifact-more {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  overflow-wrap: anywhere;
 }
 
 .compare-report-files {

@@ -2,6 +2,31 @@ import { escapeHtml } from "../utils.js";
 import { t } from "../state.js";
 import { formatSequenceMetric } from "./rnn_metric_helpers.js";
 
+export function renderRnnEvaluationRunSelectorOptions({ runs = [], selectedRunId = "", metricsByRun = {} } = {}) {
+  if (!Array.isArray(runs) || !runs.length) {
+    return `<option value="">No completed RNN/XGBoost run</option>`;
+  }
+
+  return runs.map((run) => {
+    const runId = run?.run_id || "";
+    const metrics = metricsByRun[runId] || {};
+    const historyLength = Array.isArray(metrics.history) ? metrics.history.length : 0;
+    const epochCount = historyLength || Number(run?.best_epoch || run?.epochs || 0);
+    const backend = run?.backend === "sklearn_xgboost"
+      ? "XGBoost"
+      : run?.backend === "pytorch_lstm"
+        ? "LSTM/GRU"
+        : (run?.backend || "run");
+    const status = run?.status || "completed";
+    const suffix = [
+      backend,
+      epochCount ? `${epochCount} epoch${epochCount === 1 ? "" : "s"}` : "",
+      status
+    ].filter(Boolean).join(" / ");
+    return `<option value="${escapeHtml(runId)}" ${runId === selectedRunId ? "selected" : ""}>${escapeHtml(runId)} - ${escapeHtml(suffix)}</option>`;
+  }).join("");
+}
+
 export function resolveRnnEvaluationRunBadge({ hasMetrics = false, loading = false, activeRun = null, backend = "" } = {}) {
   return {
     className: `summary-badge ${hasMetrics ? "badge-success" : loading ? "badge-neutral" : "badge-warning"}`,

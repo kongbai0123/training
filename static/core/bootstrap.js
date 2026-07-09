@@ -21,7 +21,7 @@ import {
   initPageModules,
   renderPrimaryPageModules,
   renderSecondaryPageModules,
-} from "./page_registry.js?v=20260708-rnn-epoch-axis";
+} from "./page_registry.js?v=20260708-rnn-active-run";
 
 const {
   bootstrapSession,
