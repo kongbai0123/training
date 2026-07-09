@@ -50,7 +50,7 @@
           <span data-i18n="common.systemStatus">System Status</span>
           <strong id="header-health-label" data-i18n="common.checking">Checking</strong>
         </div>
-        <button class="btn btn-secondary btn-sm" id="btn-project-assistant" type="button" data-nav="project-assistant">
+        <button class="btn btn-secondary btn-sm" id="btn-project-assistant" type="button" data-assistant-open>
           <i class="fa-solid fa-circle-question"></i>
           <span data-i18n="projectAssistant.open">Assistant</span>
         </button>
@@ -169,7 +169,7 @@
                   <i class="fa-solid fa-link"></i>
                   <span data-i18n="projectAssistant.syncArtifacts">Sync</span>
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" data-nav="project-assistant">
+                <button type="button" class="btn btn-secondary btn-sm" data-assistant-open>
                   <i class="fa-solid fa-arrow-up-right-from-square"></i>
                   <span data-i18n="projectAssistant.open">Assistant</span>
                 </button>
@@ -219,7 +219,7 @@
           </div>
         </section>
 
-        <section class="page" id="page-project-assistant">
+        <aside class="assistant-drawer" id="project-assistant-drawer" aria-label="Project Assistant" data-i18n-aria-label="rag.statusAria" hidden>
           <div class="page-header">
             <div>
               <h1 data-i18n="rag.title">Project Assistant</h1>
@@ -227,6 +227,7 @@
             </div>
             <div class="page-actions">
               <button class="btn btn-secondary" id="btn-rag-refresh"><i class="fa-solid fa-rotate"></i> <span data-i18n="common.refresh">Refresh</span></button>
+              <button class="btn btn-secondary" id="btn-project-assistant-close" type="button"><i class="fa-solid fa-xmark"></i> <span data-i18n="common.close">Close</span></button>
             </div>
           </div>
 
@@ -364,7 +365,7 @@
               <div id="rag-evaluation-summary" class="assistant-evaluation-summary"></div>
             </section>
           </div>
-        </section>
+        </aside>
 
         <section class="page" id="page-projects">
           <div class="page-header">

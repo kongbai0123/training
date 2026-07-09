@@ -12,7 +12,9 @@ class ProjectAssistantPositioningStaticTests(unittest.TestCase):
         header = html.split('<header class="top-header">', 1)[1].split("</header>", 1)[0]
 
         self.assertIn('id="btn-project-assistant"', header)
-        self.assertIn('data-nav="project-assistant"', header)
+        self.assertIn('data-assistant-open', header)
+        self.assertIn('id="project-assistant-drawer"', html)
+        self.assertNotIn('id="page-project-assistant"', html)
         self.assertNotIn("project-assistant", sidebar)
         self.assertNotIn("rag-workbench", sidebar)
         self.assertNotIn("Project Assistant", sidebar)
@@ -46,8 +48,10 @@ class ProjectAssistantPositioningStaticTests(unittest.TestCase):
 
         self.assertIn("../pages/project_assistant.js", registry)
         self.assertNotIn("../pages/rag_workbench.js", registry)
-        self.assertIn('"rag-workbench": "project-assistant"', router)
+        self.assertIn('"rag-workbench": "dashboard"', router)
+        self.assertIn('"project-assistant": "dashboard"', router)
         self.assertIn("/api/project-assistant", impl)
+        self.assertIn("openProjectAssistantDrawer", impl)
         self.assertNotIn("/api/rag-workbench", impl)
         self.assertIn("initProjectAssistantImpl as initRagWorkbench", legacy)
 

@@ -72,10 +72,10 @@ Implemented components:
 - Backend service: `src/project_assistant_service.py`
 - Primary API routes: `src/api/routes/project_assistant.py`
 - Primary service alias: `src/project_assistant.py`
-- Frontend page: `static/pages/project_assistant.js`
+- Frontend drawer module: `static/pages/project_assistant.js`
 - Frontend implementation: `static/pages/project_assistant_impl.js`
 - Page CSS: `static/styles/pages/project_assistant.css`
-- Header/context entry: `static/index.html`
+- Header/context drawer entry: `static/index.html`
 - Context-aware assistant panel: `static/core/right_panel.js`
 - i18n catalogs: `static/state/i18n/en.js`, `static/state/i18n/zh-TW.js`
 - Contract tests: `tests/test_project_assistant_contract.py`
@@ -87,14 +87,14 @@ Legacy compatibility components:
 - `src/api/routes/rag_workbench.py`
 - `static/pages/rag_workbench.js`
 - `/api/rag-workbench/*`
-- `?page=rag-workbench` route alias
+- `?page=rag-workbench` and `?page=project-assistant` route aliases that open the assistant drawer while keeping the main workflow page active
 
 These legacy names are compatibility shims only. User-facing copy should say Project Assistant, Training Diagnostic Assistant, Project Q&A, Source Search, or Project Knowledge.
 
 ## Implemented Behavior
 
 - Project Assistant is not present as a primary sidebar page.
-- Header and context panel can open the assistant.
+- Header and context panel open the assistant as a right-side contextual drawer, not a main workflow page.
 - Project Summary, Evaluation, Model Compare, Export, and History show context-aware assistant suggestions.
 - Context panel can sync active project artifacts without opening a separate assistant page.
 - Active-project artifact sync indexes:
@@ -117,7 +117,8 @@ Recent validation on this branch:
 - `scripts\test.bat`
 - DOM audit for `project-assistant` and `rnn:export` in `zh-TW`
 - API contract tests for project-scoped knowledge base, chat, upload, SSE, and artifact sync
-- Static tests proving no primary sidebar `rag-workbench` page and no visible RAG copy in the Project Assistant page
+- Runtime drawer smoke proving the assistant opens from the header while Dashboard remains the active main page
+- Static tests proving no primary sidebar `rag-workbench` page, no `page-project-assistant` main page, and no visible RAG copy in the Project Assistant drawer
 
 ## Guardrails
 

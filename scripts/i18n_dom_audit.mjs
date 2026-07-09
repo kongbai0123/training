@@ -102,6 +102,12 @@ async function navigateAuditTarget(page, target) {
     await clickFirstVisible(page, `[data-training-mode="${target.mode}"]`);
   }
   if (!target.page) return;
+  if (target.page === "project-assistant" || target.page === "rag-workbench") {
+    if (await clickFirstVisible(page, "[data-assistant-open]")) {
+      await page.waitForSelector("#project-assistant-drawer:not([hidden])", { timeout: 5000 });
+    }
+    return;
+  }
   const pageAliases = {
     dashboard: "overview",
   };

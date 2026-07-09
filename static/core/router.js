@@ -3,7 +3,8 @@ import { qsa } from "../utils.js";
 
 export function setActivePage(pageId) {
   const aliases = {
-    "rag-workbench": "project-assistant",
+    "rag-workbench": "dashboard",
+    "project-assistant": "dashboard",
   };
   appState.currentPage = aliases[pageId] || pageId || "dashboard";
 

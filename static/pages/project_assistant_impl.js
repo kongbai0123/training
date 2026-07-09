@@ -15,9 +15,14 @@ const assistantState = {
   evaluation: null,
   settings: null,
   conversationState: [],
+  drawerOpen: false,
 };
 
 export function initProjectAssistantImpl() {
+  qs("#btn-project-assistant-close")?.addEventListener("click", closeProjectAssistantDrawer);
+  qs("#project-assistant-drawer")?.addEventListener("click", (event) => {
+    if (event.target.id === "project-assistant-drawer") closeProjectAssistantDrawer();
+  });
   qs("#btn-rag-refresh")?.addEventListener("click", () => loadProjectAssistant({ force: true }));
   qs("#btn-rag-ingest")?.addEventListener("click", ingestDocument);
   qs("#btn-rag-upload")?.addEventListener("click", uploadDocumentFile);
@@ -34,10 +39,14 @@ export function initProjectAssistantImpl() {
     assistantState.activeSandboxFile = event.target.value || "index.html";
     renderSandboxEditor();
   });
+  eventBus.on("open-project-assistant", openProjectAssistantDrawer);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && assistantState.drawerOpen) closeProjectAssistantDrawer();
+  });
 }
 
 export function renderProjectAssistantImplPage() {
-  if (appState.currentPage !== "project-assistant") return;
+  if (!assistantState.drawerOpen) return;
   if (!assistantState.status) {
     loadProjectAssistant();
     return;
@@ -51,6 +60,28 @@ export function renderProjectAssistantImplPage() {
   renderAgentRuns();
   renderSandbox();
   renderEvaluation();
+}
+
+async function openProjectAssistantDrawer() {
+  assistantState.drawerOpen = true;
+  const drawer = qs("#project-assistant-drawer");
+  if (drawer) {
+    drawer.hidden = false;
+    drawer.setAttribute("aria-hidden", "false");
+  }
+  document.body.classList.add("assistant-drawer-open");
+  await loadProjectAssistant({ force: !assistantState.status });
+  renderProjectAssistantImplPage();
+}
+
+function closeProjectAssistantDrawer() {
+  assistantState.drawerOpen = false;
+  const drawer = qs("#project-assistant-drawer");
+  if (drawer) {
+    drawer.hidden = true;
+    drawer.setAttribute("aria-hidden", "true");
+  }
+  document.body.classList.remove("assistant-drawer-open");
 }
 
 function requireActiveProject() {

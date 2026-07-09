@@ -75,6 +75,13 @@ function bindGlobalNavigation() {
   });
 
   document.addEventListener("click", (event) => {
+    const assistantTarget = event.target.closest("[data-assistant-open]");
+    if (assistantTarget) {
+      event.preventDefault();
+      eventBus.emit("open-project-assistant");
+      return;
+    }
+
     const navTarget = event.target.closest("[data-nav]");
     if (!navTarget) return;
     event.preventDefault();
@@ -137,6 +144,14 @@ function bindGlobalNavigation() {
 }
 
 function navigate(pageId) {
+  if (pageId === "project-assistant" || pageId === "rag-workbench") {
+    eventBus.emit("open-project-assistant");
+    if (!appState.currentPage || appState.currentPage === "project-assistant" || appState.currentPage === "rag-workbench") {
+      setActivePage("dashboard");
+    }
+    renderAll();
+    return;
+  }
   setActivePage(pageId);
   renderAll();
 }
