@@ -1,89 +1,89 @@
-.rag-status-strip {
+.assistant-status-strip {
   display: grid;
   grid-template-columns: repeat(5, minmax(130px, 1fr));
   gap: 10px;
   margin: 12px 0 16px;
 }
 
-.rag-status-strip > div,
-.rag-panel,
-.rag-source-card,
-.rag-document-card,
-.rag-run-card,
-.rag-answer-card {
+.assistant-status-strip > div,
+.assistant-panel,
+.assistant-source-card,
+.assistant-document-card,
+.assistant-run-card,
+.assistant-answer-card {
   border: 1px solid var(--border-color);
   background: var(--panel-bg);
   border-radius: 8px;
 }
 
-.rag-status-strip > div {
+.assistant-status-strip > div {
   padding: 12px;
   display: grid;
   gap: 4px;
 }
 
-.rag-status-strip span,
-.rag-source-head span,
-.rag-document-card span,
-.rag-run-card span,
-.rag-eval-grid span {
+.assistant-status-strip span,
+.assistant-source-head span,
+.assistant-document-card span,
+.assistant-run-card span,
+.assistant-eval-grid span {
   color: var(--text-muted);
   font-size: 0.85rem;
 }
 
-.rag-status-strip strong {
+.assistant-status-strip strong {
   color: var(--text-primary);
 }
 
-.rag-settings-panel {
+.assistant-settings-panel {
   margin-bottom: 16px;
 }
 
-.rag-settings-grid {
+.assistant-settings-grid {
   display: grid;
   grid-template-columns: minmax(160px, 0.9fr) minmax(220px, 1.2fr) minmax(200px, 1.1fr) auto auto;
   gap: 10px;
   align-items: end;
 }
 
-.rag-settings-grid label {
+.assistant-settings-grid label {
   margin: 0;
 }
 
-.rag-settings-grid .checkbox-row {
+.assistant-settings-grid .checkbox-row {
   align-self: center;
 }
 
-.rag-workbench-grid {
+.project-assistant-grid {
   display: grid;
   grid-template-columns: minmax(360px, 0.95fr) minmax(480px, 1.35fr);
   gap: 14px;
   align-items: start;
 }
 
-.rag-panel {
+.assistant-panel {
   padding: 16px;
 }
 
-.rag-chat-panel,
-.rag-sandbox-panel,
-.rag-evaluation-panel {
+.assistant-chat-panel,
+.assistant-sandbox-panel,
+.assistant-evaluation-panel {
   grid-column: 2;
 }
 
-.rag-kb-panel,
-.rag-agent-panel {
+.assistant-kb-panel,
+.assistant-agent-panel {
   grid-column: 1;
 }
 
-.rag-retrieval-panel {
+.assistant-retrieval-panel {
   grid-column: 2;
 }
 
-.rag-form-grid,
-.rag-query-row,
-.rag-sandbox-editor,
-.rag-upload-row {
+.assistant-form-grid,
+.assistant-query-row,
+.assistant-sandbox-editor,
+.assistant-upload-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
@@ -91,44 +91,44 @@
   margin: 10px 0;
 }
 
-.rag-query-row {
+.assistant-query-row {
   grid-template-columns: minmax(180px, 1fr) minmax(160px, 220px) auto;
 }
 
-.rag-upload-row {
+.assistant-upload-row {
   grid-template-columns: minmax(180px, 1fr) auto auto;
 }
 
-.rag-actions-inline {
+.assistant-actions-inline {
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
-.rag-textarea {
+.assistant-textarea {
   width: 100%;
   min-height: 120px;
   resize: vertical;
   margin: 8px 0 10px;
 }
 
-.rag-code-textarea {
+.assistant-code-textarea {
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
   min-height: 190px;
 }
 
-.rag-stage-list,
-.rag-document-list,
-.rag-source-list,
-.rag-agent-trace,
-.rag-run-list,
-.rag-evaluation-summary {
+.assistant-stage-list,
+.assistant-document-list,
+.assistant-source-list,
+.assistant-agent-trace,
+.assistant-run-list,
+.assistant-evaluation-summary {
   display: grid;
   gap: 8px;
   margin-top: 12px;
 }
 
-.rag-stage {
+.assistant-stage {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -138,18 +138,18 @@
   background: var(--surface-subtle);
 }
 
-.rag-stage.done,
-.rag-agent-step.done {
+.assistant-stage.done,
+.assistant-agent-step.done {
   border-color: rgba(34, 197, 94, 0.45);
 }
 
-.rag-stage.failed,
-.rag-agent-step.failed {
+.assistant-stage.failed,
+.assistant-agent-step.failed {
   border-color: rgba(239, 68, 68, 0.55);
 }
 
-.rag-document-card,
-.rag-run-card {
+.assistant-document-card,
+.assistant-run-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
@@ -157,11 +157,11 @@
   align-items: center;
 }
 
-.rag-source-card {
+.assistant-source-card {
   padding: 12px;
 }
 
-.rag-source-head {
+.assistant-source-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
@@ -169,23 +169,23 @@
   margin-bottom: 8px;
 }
 
-.rag-source-card p,
+.assistant-source-card p,
 .rag-answer-body {
   color: var(--text-secondary);
   line-height: 1.55;
 }
 
-.rag-answer-card {
+.assistant-answer-card {
   padding: 12px;
   margin-top: 12px;
 }
 
-.rag-answer-card h3 {
+.assistant-answer-card h3 {
   font-size: 0.95rem;
   margin: 8px 0;
 }
 
-.rag-agent-step {
+.assistant-agent-step {
   display: grid;
   grid-template-columns: 110px minmax(0, 1fr);
   gap: 10px;
@@ -203,13 +203,13 @@
   background: #fff;
 }
 
-.rag-eval-grid {
+.assistant-eval-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
-.rag-eval-grid > div {
+.assistant-eval-grid > div {
   display: grid;
   gap: 6px;
   padding: 10px;
@@ -219,37 +219,37 @@
 }
 
 @media (max-width: 1200px) {
-  .rag-settings-grid {
+  .assistant-settings-grid {
     grid-template-columns: 1fr 1fr;
   }
 
-  .rag-workbench-grid,
-  .rag-chat-panel,
-  .rag-sandbox-panel,
-  .rag-evaluation-panel,
-  .rag-kb-panel,
-  .rag-agent-panel,
-  .rag-retrieval-panel {
+  .project-assistant-grid,
+  .assistant-chat-panel,
+  .assistant-sandbox-panel,
+  .assistant-evaluation-panel,
+  .assistant-kb-panel,
+  .assistant-agent-panel,
+  .assistant-retrieval-panel {
     grid-column: auto;
   }
 
-  .rag-workbench-grid {
+  .project-assistant-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 760px) {
-  .rag-status-strip,
-  .rag-settings-grid,
-  .rag-query-row,
-  .rag-form-grid,
-  .rag-upload-row,
-  .rag-eval-grid {
+  .assistant-status-strip,
+  .assistant-settings-grid,
+  .assistant-query-row,
+  .assistant-form-grid,
+  .assistant-upload-row,
+  .assistant-eval-grid {
     grid-template-columns: 1fr;
   }
 
-  .rag-actions-inline,
-  .rag-sandbox-editor {
+  .assistant-actions-inline,
+  .assistant-sandbox-editor {
     display: grid;
     grid-template-columns: 1fr;
   }

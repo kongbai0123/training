@@ -74,6 +74,7 @@ Implemented components:
 - Primary service alias: `src/project_assistant.py`
 - Frontend page: `static/pages/project_assistant.js`
 - Frontend implementation: `static/pages/project_assistant_impl.js`
+- Page CSS: `static/styles/pages/project_assistant.css`
 - Header/context entry: `static/index.html`
 - Context-aware assistant panel: `static/core/right_panel.js`
 - i18n catalogs: `static/state/i18n/en.js`, `static/state/i18n/zh-TW.js`
@@ -132,7 +133,7 @@ Recent validation on this branch:
 
 Recommended next slices:
 
-1. Rename tests and CSS modules from legacy workbench naming to Project Assistant naming while preserving compatibility aliases.
+1. Rename remaining test module names from legacy workbench naming to Project Assistant naming while preserving compatibility aliases.
 2. Add page-specific assistant prompts for RNN schema, sequence training, model comparison, export, and error history.
 3. Add project report summarization templates that do not require an LLM.
 4. Add optional LLM generation only behind explicit assistant mode settings.

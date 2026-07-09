@@ -269,7 +269,7 @@ function renderKnowledgeBase() {
   const docs = assistantState.kb?.documents || [];
   const html = docs.length
     ? docs.map((doc) => `
-      <article class="rag-document-card">
+      <article class="assistant-document-card">
         <strong>${escapeHtml(doc.filename)}</strong>
         <span>${escapeHtml(t("rag.chunkCount", { count: doc.chunk_count || 0 }))}</span>
         <code>${escapeHtml(formatIndexState(doc.index_state))}</code>
@@ -293,7 +293,7 @@ function formatIndexState(state) {
 
 function renderStages(stages = []) {
   const html = stages.map((stage) => `
-    <div class="rag-stage ${escapeHtml(stage.state)}">
+    <div class="assistant-stage ${escapeHtml(stage.state)}">
       <strong>${escapeHtml(stage.stage)}</strong>
       <span>${escapeHtml(stage.message || stage.state)}</span>
     </div>
@@ -327,8 +327,8 @@ function renderChatResult() {
 function renderSourceList(sources = [], { allowMark = false, query = "" } = {}) {
   if (!sources.length) return `<div class="empty-state">${escapeHtml(t("rag.noSources"))}</div>`;
   return sources.map((source) => `
-    <article class="rag-source-card">
-      <div class="rag-source-head">
+    <article class="assistant-source-card">
+      <div class="assistant-source-head">
         <strong>${escapeHtml(source.source || source.document_id || "--")}</strong>
         <span>${escapeHtml(source.section || "")}</span>
         <code>${escapeHtml(String(source.score ?? "--"))}</code>
@@ -349,7 +349,7 @@ function bindSourceMarkButtons() {
           query: button.dataset.ragQuery || "",
           chunk_id: button.dataset.ragMarkBad,
           relevance: "bad",
-          note: "Marked from Retrieval Workbench",
+          note: "Marked from Source Search",
         }),
       });
       eventBus.emit("toast", t("rag.toast.marked"));
@@ -368,7 +368,7 @@ function assistantApi(path) {
 function renderAgentTrace(steps = []) {
   if (!steps.length) return `<div class="empty-state">${escapeHtml(t("rag.noTrace"))}</div>`;
   return steps.map((step) => `
-    <div class="rag-agent-step ${escapeHtml(step.state || "pending")}">
+    <div class="assistant-agent-step ${escapeHtml(step.state || "pending")}">
       <strong>${escapeHtml(step.step || "--")}</strong>
       <span>${escapeHtml(step.message || "")}</span>
     </div>
@@ -377,7 +377,7 @@ function renderAgentTrace(steps = []) {
 
 function renderAgentRuns() {
   setHTML("#rag-agent-runs", (assistantState.agentRuns || []).slice(0, 6).map((run) => `
-    <article class="rag-run-card">
+    <article class="assistant-run-card">
       <strong>${escapeHtml(run.run_id)}</strong>
       <span>${escapeHtml(run.query || "")}</span>
       <code>${escapeHtml(t("rag.sourceCount", { count: run.sources?.length || 0 }))}</code>
@@ -415,7 +415,7 @@ function renderEvaluation() {
     return;
   }
   setHTML("#rag-evaluation-summary", `
-    <div class="rag-eval-grid">
+    <div class="assistant-eval-grid">
       <div><span>${escapeHtml(t("rag.runs"))}</span><strong>${escapeHtml(report.run_count)}</strong></div>
       <div><span>${escapeHtml(t("rag.citationCoverage"))}</span><strong>${escapeHtml(report.citation_coverage)}</strong></div>
       <div><span>${escapeHtml(t("rag.sourceHitRate"))}</span><strong>${escapeHtml(report.source_hit_rate)}</strong></div>

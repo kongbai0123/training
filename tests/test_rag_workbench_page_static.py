@@ -55,12 +55,14 @@ class ProjectAssistantPageStaticTests(unittest.TestCase):
 
     def test_project_assistant_i18n_and_legacy_css_are_wired(self):
         style = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
-        css = (ROOT / "static" / "styles" / "pages" / "rag_workbench.css").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "styles" / "pages" / "project_assistant.css").read_text(encoding="utf-8")
         en = (ROOT / "static" / "state" / "i18n" / "en.js").read_text(encoding="utf-8")
         zh = (ROOT / "static" / "state" / "i18n" / "zh-TW.js").read_text(encoding="utf-8")
 
-        self.assertIn('styles/pages/rag_workbench.css', style)
-        self.assertIn(".rag-workbench-grid", css)
+        self.assertIn('styles/pages/project_assistant.css', style)
+        self.assertNotIn('styles/pages/rag_workbench.css', style)
+        self.assertIn(".project-assistant-grid", css)
+        self.assertNotIn(".rag-workbench-grid", css)
         self.assertIn("@media (max-width: 1200px)", css)
         self.assertIn('"projectAssistant.open"', en)
         self.assertIn('"projectAssistant.open"', zh)
