@@ -99,7 +99,7 @@ function parseAuditTargets(value) {
 
 async function navigateAuditTarget(page, target) {
   if (target.mode) {
-    await page.locator(`[data-training-mode="${target.mode}"]`).click({ timeout: 5000 });
+    await clickFirstVisible(page, `[data-training-mode="${target.mode}"]`);
   }
   if (!target.page) return;
   const selectors = target.mode === "rnn"
@@ -108,12 +108,23 @@ async function navigateAuditTarget(page, target) {
       ? [`[data-cnn-nav="${target.page}"]`, `[data-page="${target.page}"]`]
       : [`[data-page="${target.page}"]`, `[data-mode-nav="${target.page}"]`];
   for (const selector of selectors) {
-    const locator = page.locator(selector).first();
-    if (await locator.count()) {
-      await locator.click({ timeout: 5000 });
+    if (await clickFirstVisible(page, selector)) {
       return;
     }
   }
+}
+
+async function clickFirstVisible(page, selector) {
+  const locators = page.locator(selector);
+  const count = await locators.count();
+  for (let index = 0; index < count; index += 1) {
+    const locator = locators.nth(index);
+    if (await locator.isVisible()) {
+      await locator.click({ timeout: 5000 });
+      return true;
+    }
+  }
+  return false;
 }
 
 async function collectSnapshot(page) {

@@ -1056,8 +1056,8 @@ function updateTrainingModelRegistrySkeleton(status) {
 
   setText("#training-model-selected-name", selectedOption?.textContent || modelName);
   setText("#training-model-task", modelTask);
-  if (nameEl) nameEl.title = `${modelName} 繚 ${source} 繚 ${backend} 繚 ${statusText}`;
-  if (taskEl) taskEl.title = `${modelTask} 繚 ${source} 繚 ${backend} 繚 ${statusText}`;
+  if (nameEl) nameEl.title = [modelName, source, backend, statusText].filter(Boolean).join(" / ");
+  if (taskEl) taskEl.title = [modelTask, source, backend, statusText].filter(Boolean).join(" / ");
   if (noteEl) {
     noteEl.textContent = compatible
       ? t("training.modelRegistry.compatible")
