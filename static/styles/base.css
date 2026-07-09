@@ -67,3 +67,7 @@ code {
   overflow-wrap: normal;
   word-break: normal;
 }
+
+[hidden] {
+  display: none !important;
+}

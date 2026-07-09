@@ -51,7 +51,7 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
         auto_labeling_css = (ROOT / "static" / "styles" / "pages" / "auto_labeling.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/style.css?v=20260709-review-gate", index_html)
+        self.assertIn("/static/style.css?v=20260709-export-layout", index_html)
         self.assertIn('data-i18n="autoLabel.executionConsole"', index_html)
         self.assertIn('data-i18n="autoLabel.executionConsoleHelp"', index_html)
         self.assertIn('data-i18n="autoLabel.reviewWorkspaceHelp"', index_html)

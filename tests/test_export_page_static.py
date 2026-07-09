@@ -13,6 +13,9 @@ class ExportPageStaticTests(unittest.TestCase):
 
         self.assertIn('id="export-cnn-actions"', index_html)
         self.assertIn('id="export-rnn-actions" hidden', index_html)
+        self.assertIn("export-selector-grid", index_html)
+        self.assertIn("export-model-selector-card", index_html)
+        self.assertIn("export-model-toolbar", index_html)
         self.assertIn('data-export-format="onnx"', index_html)
         self.assertIn('data-export-format="pt"', index_html)
         self.assertIn('data-export-format="rnn_package"', index_html)
@@ -23,6 +26,18 @@ class ExportPageStaticTests(unittest.TestCase):
         self.assertIn("cnnActions.hidden = isRnn", export_js)
         self.assertIn("rnnActions.hidden = !isRnn", export_js)
         self.assertIn('params.set("format", format)', export_js)
+
+    def test_export_layout_hides_inactive_action_group_and_bottom_aligns_buttons(self):
+        base_css = (ROOT / "static" / "styles" / "base.css").read_text(encoding="utf-8")
+        components_css = (ROOT / "static" / "styles" / "components.css").read_text(encoding="utf-8")
+
+        self.assertIn("[hidden]", base_css)
+        self.assertIn("display: none !important;", base_css)
+        self.assertIn("#page-export .export-model-selector-card", components_css)
+        self.assertIn("#page-export .export-model-toolbar", components_css)
+        self.assertIn("#page-export #export-cnn-actions", components_css)
+        self.assertIn("margin-top: auto;", components_css)
+        self.assertIn("justify-content: center;", components_css)
 
     def test_rnn_workspace_export_panel_is_operational(self):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")

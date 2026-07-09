@@ -265,6 +265,91 @@ body[data-theme="light"] .card-heading i {
   font-size: 0.86rem;
 }
 
+#page-export .export-selector-grid {
+  grid-template-columns: 1fr;
+  margin-bottom: 18px;
+}
+
+#page-export .export-model-selector-card {
+  min-height: 0;
+  padding: 16px;
+  gap: 14px;
+  grid-template-rows: auto auto;
+}
+
+#page-export .export-model-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 420px) auto;
+  gap: 10px;
+  align-items: center;
+  justify-content: start;
+}
+
+#page-export .export-model-toolbar .form-control {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+
+#page-export #export-cnn-actions,
+#page-export #export-rnn-actions {
+  grid-template-columns: repeat(4, minmax(190px, 1fr));
+  align-items: stretch;
+}
+
+#page-export #export-cnn-actions .control-card,
+#page-export #export-rnn-actions .control-card {
+  min-height: 230px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+#page-export #export-cnn-actions .card-heading,
+#page-export #export-rnn-actions .card-heading {
+  align-items: flex-start;
+}
+
+#page-export #export-cnn-actions .card-heading h3,
+#page-export #export-rnn-actions .card-heading h3 {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#page-export #export-cnn-actions .control-card p,
+#page-export #export-rnn-actions .control-card p {
+  flex: 1;
+  text-align: left;
+}
+
+#page-export #export-cnn-actions .control-card .btn,
+#page-export #export-rnn-actions .control-card .btn {
+  width: 100%;
+  margin-top: auto;
+  justify-content: center;
+}
+
+@media (max-width: 1100px) {
+  #page-export #export-cnn-actions,
+  #page-export #export-rnn-actions {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  #page-export .export-model-toolbar,
+  #page-export #export-cnn-actions,
+  #page-export #export-rnn-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 .card-stat {
   display: flex;
   justify-content: space-between;

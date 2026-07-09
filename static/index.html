@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260709-review-gate">
+  <link rel="stylesheet" href="/static/style.css?v=20260709-export-layout">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -1890,14 +1890,14 @@
               <p data-i18n="export.subtitle">Select a trained model and export it for deployment. Export actions are disabled until a model is available.</p>
             </div>
           </div>
-          <div class="control-card-grid compact" style="grid-template-columns: 1fr; margin-bottom: 20px;">
-            <article class="control-card">
+          <div class="control-card-grid compact export-selector-grid">
+            <article class="control-card export-model-selector-card">
               <div class="card-heading"><i class="fa-solid fa-cube"></i><h3 data-i18n="export.selectorTitle">Select exportable model</h3></div>
-              <div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
-                <select id="export-model-select" class="form-control" style="flex: 1; max-width: 400px; padding: 8px; border-radius: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">
+              <div class="export-model-toolbar">
+                <select id="export-model-select" class="form-control">
                   <option value="" data-i18n="export.selectPlaceholder">-- Select model weight --</option>
                 </select>
-                <button class="btn btn-secondary" id="btn-refresh-export-models" style="padding: 8px 12px;"><i class="fa-solid fa-rotate"></i> <span data-i18n="export.refresh">Refresh</span></button>
+                <button class="btn btn-secondary" id="btn-refresh-export-models"><i class="fa-solid fa-rotate"></i> <span data-i18n="export.refresh">Refresh</span></button>
               </div>
             </article>
           </div>
