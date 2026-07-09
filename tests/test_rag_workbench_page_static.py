@@ -68,6 +68,7 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
 
     def test_project_assistant_context_is_available_on_decision_pages(self):
         right_panel = (ROOT / "static" / "core" / "right_panel.js").read_text(encoding="utf-8")
+        layout_css = (ROOT / "static" / "styles" / "layout.css").read_text(encoding="utf-8")
 
         self.assertIn("renderProjectAssistantContext", right_panel)
         self.assertIn("buildProjectAssistantContext", right_panel)
@@ -75,7 +76,12 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
         self.assertIn('"model-compare":', right_panel)
         self.assertIn("export:", right_panel)
         self.assertIn("history:", right_panel)
-        self.assertIn("Use the assistant to explain metrics", right_panel)
+        self.assertIn("Evidence", right_panel)
+        self.assertIn("Suggested questions", right_panel)
+        self.assertIn("Metric decisions still come from deterministic evaluation.", right_panel)
+        self.assertIn("compare table remains the source of truth", right_panel)
+        self.assertIn("Explain the export package", right_panel)
+        self.assertIn(".assistant-context-group", layout_css)
 
 
 if __name__ == "__main__":

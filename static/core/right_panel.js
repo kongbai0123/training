@@ -232,47 +232,94 @@ function renderProjectAssistantContext(pageId, status) {
   }
 
   help.textContent = config.help;
-  setHTML("#project-assistant-context-suggestions", config.prompts.map((prompt) => `
+  const facts = (config.facts || []).map((fact) => `
+    <div class="path-row">
+      <span>${escapeHtml(fact.label)}</span>
+      <code>${escapeHtml(fact.value)}</code>
+    </div>
+  `).join("");
+  const prompts = (config.prompts || []).map((prompt) => `
     <div class="path-row">
       <span>${escapeHtml(prompt.label)}</span>
       <code>${escapeHtml(prompt.text)}</code>
     </div>
-  `).join(""));
+  `).join("");
+  setHTML("#project-assistant-context-suggestions", `
+    ${facts ? `<div class="assistant-context-group"><strong>Evidence</strong>${facts}</div>` : ""}
+    <div class="assistant-context-group"><strong>Suggested questions</strong>${prompts}</div>
+  `);
 }
 
 function buildProjectAssistantContext(pageId, status) {
+  if (!status.hasProject && pageId !== "history") return null;
+  const runs = Array.isArray(appState.currentProject?.training_runs) ? appState.currentProject.training_runs : [];
+  const latestRun = runs.length ? runs[runs.length - 1] : null;
+  const completedRuns = runs.filter((run) => String(run.status || "").toLowerCase() === "completed");
+  const models = Array.isArray(appState.models) ? appState.models : [];
+  const bestModel = models.find((model) => model.weight_type === "best") || models[0] || null;
+  const exportItems = Array.isArray(appState.currentProject?.exports) ? appState.currentProject.exports : [];
+  const imports = Array.isArray(appState.currentProject?.imports_history) ? appState.currentProject.imports_history : [];
+  const projectType = normalizeTaskLabel(status.taskType || appState.currentProject?.task_type || "--");
+  const latestRunId = latestRun?.run_id || bestModel?.run_id || "--";
+  const latestRunStatus = latestRun?.status || "--";
+
   const pageConfigs = {
     evaluation: {
-      help: "Use the assistant to explain metrics and cite the active project's reports or run records.",
+      help: "Training Diagnostic Assistant can explain evaluation metrics using the active project's run records and reports. Metric decisions still come from deterministic evaluation.",
+      facts: [
+        { label: "Task", value: projectType },
+        { label: "Best model", value: bestModel ? `${bestModel.weight_type || "model"} / ${bestModel.run_id || "--"}` : "No model" },
+        { label: "Completed runs", value: String(completedRuns.length) },
+      ],
       prompts: [
-        { label: "Metric", text: "Explain the latest evaluation metrics and cite the source report." },
-        { label: "Risk", text: "What are the likely quality risks in this evaluation?" },
+        { label: "Metric", text: `Explain ${projectType} evaluation results for run ${latestRunId} with source citations.` },
+        { label: "Risk", text: "Identify likely data or model quality risks from the latest evaluation report." },
       ],
     },
     "model-compare": {
-      help: "Use the assistant to summarize run differences without replacing deterministic comparison metrics.",
+      help: "Training Diagnostic Assistant can summarize run differences, but the compare table remains the source of truth for best-run selection.",
+      facts: [
+        { label: "Comparable runs", value: String(completedRuns.length) },
+        { label: "Latest run", value: `${latestRunId} / ${latestRunStatus}` },
+        { label: "Task", value: projectType },
+      ],
       prompts: [
-        { label: "Best run", text: "Summarize why the selected run is better, using metric evidence." },
-        { label: "Tradeoff", text: "List the deployment tradeoffs between compared artifacts." },
+        { label: "Best run", text: `Compare completed ${projectType} runs and explain the winner with metric evidence.` },
+        { label: "Artifact", text: "List practical deployment tradeoffs between the compared model artifacts." },
       ],
     },
     export: {
-      help: "Use the assistant to explain exported files, schema, scaler, reports, and inference contracts.",
+      help: "Project Assistant can explain export artifacts, schemas, scalers, reports, and inference contracts for the active project.",
+      facts: [
+        { label: "Models", value: String(models.length) },
+        { label: "Exports", value: String(exportItems.length) },
+        { label: "Best model", value: bestModel ? `${bestModel.weight_type || "model"} / ${bestModel.run_id || "--"}` : "No model" },
+      ],
       prompts: [
-        { label: "Package", text: "Explain what each exported file is used for." },
-        { label: "Deploy", text: "What should be verified before deploying this export?" },
+        { label: "Package", text: `Explain the export package for ${projectType} deployment and cite the export contract.` },
+        { label: "Verify", text: "What should be checked before handing this model package to deployment?" },
       ],
     },
     history: {
-      help: "Use the assistant to search project runs, imports, exports, reports, and error logs.",
+      help: "Project Assistant can search project runs, imports, exports, reports, and error logs without becoming the primary workflow.",
+      facts: [
+        { label: "Projects", value: String(appState.projects?.length || 0) },
+        { label: "Runs", value: String(runs.length) },
+        { label: "Imports", value: String(imports.length) },
+      ],
       prompts: [
-        { label: "Recent", text: "Summarize the latest runs and warnings for this project." },
-        { label: "Errors", text: "Find recent errors and suggest the next diagnostic step." },
+        { label: "Recent", text: "Summarize the latest project runs, imports, exports, and warnings." },
+        { label: "Errors", text: "Find recent project errors and recommend the next diagnostic step." },
       ],
     },
   };
-  if (!status.hasProject && pageId !== "history") return null;
   return pageConfigs[pageId] || null;
+}
+
+function normalizeTaskLabel(value) {
+  return String(value || "--")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 function getPageTitle(pageId) {
   const map = {
