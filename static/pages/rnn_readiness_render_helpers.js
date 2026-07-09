@@ -1,4 +1,5 @@
 import { escapeHtml } from "../utils.js";
+import { t } from "../state.js";
 
 export function renderRnnReadinessCompactGrid(compactRows = []) {
   return compactRows.map((item) => {
@@ -33,16 +34,16 @@ export function renderRnnReadinessCheckList(checks = []) {
 export function resolveRnnReadinessBadge({ canStart = false, loading = false, readiness = null } = {}) {
   return {
     className: `summary-badge ${canStart ? "badge-success" : loading ? "badge-neutral" : "badge-warning"}`,
-    text: canStart ? "Ready" : loading ? "Checking" : readiness?.ready ? "Manifest only" : "Not Ready"
+    text: canStart ? t("common.ready") : loading ? t("common.checking") : readiness?.ready ? t("rnn.readiness.manifestOnly") : t("common.notReady")
   };
 }
 
 export function resolveRnnReadinessEmptyView(loading = false) {
   return {
-    status: loading ? "Checking..." : "Not Ready / Preview",
+    status: loading ? t("common.checking") : t("rnn.readiness.notReadyPreview"),
     message: loading
-      ? "Checking sequence manifest and CSV feature files..."
-      : "Sequence CSV readiness summary appears here when a project is active."
+      ? t("rnn.readiness.checkingMessage")
+      : t("rnn.readiness.emptyMessage")
   };
 }
 
@@ -55,14 +56,14 @@ export function resolveRnnReadinessSummaryView({
   splitText = ""
 } = {}) {
   return {
-    status: canStart ? "Ready / CSV training enabled" : readiness.ready ? "Ready but CSV required for training" : "Not Ready",
+    status: canStart ? t("rnn.readiness.csvTrainingEnabled") : readiness.ready ? t("rnn.readiness.readyCsvRequired") : t("common.notReady"),
     message: canStart
-      ? "Sequence CSV is ready for RNN training. Full checks are available only for diagnostics."
-      : readiness.message || "Sequence dataset still needs attention. Open full checks for diagnostics.",
-    modeBadge: canStart ? "Training enabled" : "CSV required",
+      ? t("rnn.readiness.readyMessage")
+      : readiness.message || t("rnn.readiness.needsAttention"),
+    modeBadge: canStart ? t("rnn.readiness.trainingEnabled") : t("rnn.readiness.csvRequired"),
     datasetMessage: canStart
-      ? `${sequenceCount} sequence(s) detected from CSV. RNN training can start.`
-      : `${sequenceCount} sequence(s) detected. CSV must include sequence id, target label/value, at least one feature column, train/val split, and enough rows for sequence_length.`,
+      ? t("rnn.readiness.datasetReady", { count: sequenceCount })
+      : t("rnn.readiness.datasetBlocked", { count: sequenceCount }),
     datasetPreview: source === "none"
       ? "sequence_id, timestep, feature_1, feature_2, target"
       : `source=${source}, feature_dim=${featureDim}, split=${splitText}`
@@ -71,17 +72,17 @@ export function resolveRnnReadinessSummaryView({
 
 export function renderRnnStartBannerButtonContent(canStart = false) {
   return canStart
-    ? `<i class="fa-solid fa-play"></i> Start RNN`
-    : `<i class="fa-solid fa-lock"></i> Start RNN Disabled`;
+    ? `<i class="fa-solid fa-play"></i> ${escapeHtml(t("rnn.training.startShort"))}`
+    : `<i class="fa-solid fa-lock"></i> ${escapeHtml(t("rnn.training.startDisabled"))}`;
 }
 
 export function resolveRnnTrainingActionText({ canStart = false, message = "" } = {}) {
-  return canStart ? "Start RNN Training" : message;
+  return canStart ? t("rnn.training.start") : message;
 }
 
 export function resolveRnnTrainingStateBadge({ canStart = false, modelTrainable = false } = {}) {
   return {
     className: `summary-badge ${canStart ? "badge-success" : "badge-warning"}`,
-    text: canStart ? "Training enabled" : modelTrainable ? "Readiness required" : "Backend planned"
+    text: canStart ? t("rnn.readiness.trainingEnabled") : modelTrainable ? t("rnn.readiness.required") : t("rnn.readiness.backendPlanned")
   };
 }

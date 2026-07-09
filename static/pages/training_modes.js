@@ -1032,10 +1032,14 @@ function renderRnnReadiness() {
     requirementRows
   } = summarizeRnnReadiness(readiness);
 
-  setText("#rnn-manifest-status", manifest.exists ? `${manifest.sequence_count || 0} sequences` : "sequence_manifest.json not connected");
+  setText("#rnn-manifest-status", manifest.exists ? t("rnn.sequenceCountValue", { count: manifest.sequence_count || 0 }) : t("rnn.readiness.manifestNotConnected"));
   setText("#rnn-source-status", source === "manifest" ? "sequence_manifest.json" : source === "csv" ? `${csvFiles} CSV feature file(s)` : "No sequence source");
   setText("#rnn-split-status", splitText);
-  setText("#rnn-feature-columns-status", csv.feature_dim ? `${csv.feature_dim} CSV feature columns` : requirements.feature_dim ? `${featureDim} manifest feature dim` : "not parsed");
+  setText("#rnn-feature-columns-status", csv.feature_dim
+    ? t("rnn.readiness.csvFeatureColumns", { count: csv.feature_dim })
+    : requirements.feature_dim
+      ? t("rnn.readiness.manifestFeatureDim", { count: featureDim })
+      : t("rnn.readiness.notParsed"));
   setText("#rnn-target-status", (manifest.label_count || csv.label_count) ? `${manifest.label_count || csv.label_count} labeled sequence(s)` : "label / target missing");
   setText("#rnn-feature-dim-status", String(featureDim));
   const summaryView = resolveRnnReadinessSummaryView({

@@ -113,6 +113,81 @@ class ProjectAssistantContractTests(unittest.TestCase):
         self.assertEqual(len(retrieval["results"]), 1)
         self.assertEqual(retrieval["results"][0]["source"], "project-a-report.md")
 
+    def test_project_assistant_scopes_sources_to_active_decision_page(self):
+        ProjectAssistantService.ingest_document(
+            "training-runs-and-metrics.md",
+            "Shared project evidence says schema and validation metrics decide the active run.",
+            metadata={"project_id": "project_scope", "source_type": "training_runs"},
+        )
+        ProjectAssistantService.ingest_document(
+            "exports-and-contracts.md",
+            "Shared project evidence says schema and inference contract files are required for deployment export.",
+            metadata={"project_id": "project_scope", "source_type": "exports"},
+        )
+        ProjectAssistantService.ingest_document(
+            "dataset-and-schema.md",
+            "Shared project evidence says feature schema and target column define training readiness.",
+            metadata={"project_id": "project_scope", "source_type": "dataset_schema"},
+        )
+
+        evaluation = ProjectAssistantService.retrieve(
+            "shared project evidence schema validation",
+            top_k=5,
+            filters={"project_id": "project_scope", "scope": "evaluation"},
+        )
+        export = ProjectAssistantService.retrieve(
+            "shared project evidence schema contract",
+            top_k=5,
+            filters={"project_id": "project_scope", "scope": "export"},
+        )
+
+        self.assertEqual(evaluation["diagnostic"]["scope"], "evaluation")
+        self.assertIn("training_runs", evaluation["diagnostic"]["source_types"])
+        self.assertTrue(evaluation["results"])
+        self.assertNotIn("exports-and-contracts.md", [item["source"] for item in evaluation["results"]])
+        self.assertEqual(export["diagnostic"]["scope"], "export")
+        self.assertTrue(export["results"])
+        self.assertIn("exports-and-contracts.md", [item["source"] for item in export["results"]])
+        self.assertTrue(all(item["source_type"] in {"exports", "training_runs", "dataset_schema"} for item in export["results"]))
+
+    def test_project_assistant_scope_contract_is_available_through_api_and_chat(self):
+        client = TestClient(app)
+        client.post(
+            "/api/project-assistant/knowledge-base/documents?project_id=project_scope_api",
+            json={
+                "filename": "training-runs-and-metrics.md",
+                "content": "Validation metric history explains model risk.",
+                "metadata": {"source_type": "training_runs"},
+            },
+        )
+        client.post(
+            "/api/project-assistant/knowledge-base/documents?project_id=project_scope_api",
+            json={
+                "filename": "exports-and-contracts.md",
+                "content": "Deployment contract explains schema and scaler files.",
+                "metadata": {"source_type": "exports"},
+            },
+        )
+
+        retrieval = client.post(
+            "/api/project-assistant/retrieval/query?project_id=project_scope_api",
+            json={"query": "explains schema contract", "scope": "export"},
+        )
+        chat = client.post(
+            "/api/project-assistant/chat?project_id=project_scope_api",
+            json={"message": "Which files explain schema contract?", "scope": "export"},
+        )
+
+        self.assertEqual(retrieval.status_code, 200)
+        payload = retrieval.json()
+        self.assertEqual(payload["filters"]["scope"], "export")
+        self.assertIn("exports", payload["filters"]["source_types"])
+        self.assertEqual(payload["results"][0]["source"], "exports-and-contracts.md")
+        self.assertEqual(chat.status_code, 200)
+        run = chat.json()
+        self.assertEqual(run["retrieval_config"]["filters"]["scope"], "export")
+        self.assertEqual(run["sources"][0]["source"], "exports-and-contracts.md")
+
     def test_project_assistant_api_requires_active_project_scope(self):
         client = TestClient(app)
         unscoped_ingest = client.post(

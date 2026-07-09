@@ -19,6 +19,16 @@ from src.training.run_registry import ExperimentRunRegistry
 
 WORD_RE = re.compile(r"[\w\u4e00-\u9fff]+", re.UNICODE)
 ASSISTANT_MODES = {"disabled", "local_search_only", "local_gguf", "cloud_api"}
+ASSISTANT_SCOPE_SOURCE_TYPES = {
+    "dashboard": {"project_summary", "dataset_schema", "training_runs", "exports"},
+    "dataset": {"dataset_schema", "project_summary"},
+    "training": {"dataset_schema", "training_runs", "project_summary"},
+    "evaluation": {"training_runs", "evaluation_report", "diagnostics", "project_summary"},
+    "model_compare": {"training_runs", "model_comparison", "project_summary"},
+    "model-compare": {"training_runs", "model_comparison", "project_summary"},
+    "export": {"exports", "training_runs", "dataset_schema"},
+    "history": {"project_summary", "dataset_schema", "training_runs", "exports", "history", "error_logs"},
+}
 
 
 def _now() -> str:
@@ -649,21 +659,58 @@ class ProjectAssistantService:
         return cls.status(project_id=project_id)
 
     @classmethod
+    def _normalize_retrieval_filters(cls, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        normalized = dict(filters or {})
+        scope = str(normalized.get("scope") or "").strip()
+        if scope:
+            normalized["scope"] = scope
+        source_types = normalized.get("source_types")
+        if source_types is None and scope:
+            source_types = ASSISTANT_SCOPE_SOURCE_TYPES.get(scope, set())
+        if isinstance(source_types, str):
+            source_types = [source_types]
+        normalized_source_types = {
+            str(item or "").strip()
+            for item in (source_types or [])
+            if str(item or "").strip()
+        }
+        if normalized_source_types:
+            normalized["source_types"] = sorted(normalized_source_types)
+        else:
+            normalized.pop("source_types", None)
+        return normalized
+
+    @classmethod
     def retrieve(cls, query: str, top_k: int = 5, profile_id: str = "lexical_default", filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         state = cls._state()
         query_tokens = Counter(_tokens(query))
-        filters = filters or {}
+        filters = cls._normalize_retrieval_filters(filters)
         has_project_filter = "project_id" in filters
         project_id_filter = str(filters.get("project_id") or "").strip()
+        source_type_filter = set(filters.get("source_types") or [])
         if not query_tokens:
-            return {"query": query, "profile_id": profile_id, "results": [], "diagnostic": {"reason": "empty_query"}}
+            return {
+                "query": query,
+                "profile_id": profile_id,
+                "filters": filters,
+                "results": [],
+                "diagnostic": {"reason": "empty_query"},
+            }
 
         scored = []
+        candidate_chunks = 0
+        scoped_candidate_chunks = 0
         for chunk in state.get("chunks", []):
             if filters.get("document_id") and chunk.get("document_id") != filters["document_id"]:
                 continue
             if has_project_filter and not cls._project_matches(chunk.get("metadata") or {}, project_id_filter):
                 continue
+            candidate_chunks += 1
+            metadata = chunk.get("metadata") or {}
+            source_type = str(metadata.get("source_type") or "").strip()
+            if source_type_filter and source_type not in source_type_filter:
+                continue
+            scoped_candidate_chunks += 1
             token_index = chunk.get("token_index") or {}
             overlap = sum(min(query_tokens[token], int(token_index.get(token, 0))) for token in query_tokens)
             if not overlap:
@@ -685,6 +732,7 @@ class ProjectAssistantService:
                 "score": item["score"],
                 "rerank_score": item["rerank_score"],
                 "content": item["content"],
+                "source_type": (item.get("metadata") or {}).get("source_type", ""),
             }
             for item in scored[:safe_top_k]
         ]
@@ -692,11 +740,15 @@ class ProjectAssistantService:
             "query": query,
             "profile_id": profile_id,
             "top_k": safe_top_k,
+            "filters": filters,
             "results": results,
             "diagnostic": {
                 "query_tokens": list(query_tokens.keys()),
-                "candidate_chunks": len(state.get("chunks", [])),
+                "candidate_chunks": candidate_chunks,
+                "scoped_candidate_chunks": scoped_candidate_chunks,
                 "matched_chunks": len(scored),
+                "scope": filters.get("scope", ""),
+                "source_types": filters.get("source_types", []),
             },
         }
 
@@ -725,6 +777,7 @@ class ProjectAssistantService:
     ) -> Dict[str, Any]:
         start_time = time.perf_counter()
         settings = cls.get_settings()
+        filters = cls._normalize_retrieval_filters(filters)
         if settings["mode"] == "disabled":
             sources = []
             latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
@@ -743,7 +796,7 @@ class ProjectAssistantService:
                     {"role": "user", "content": message, "meta": {"source": "clean_state"}},
                     {"role": "assistant", "content": answer, "meta": {"source_count": 0}},
                 ],
-                "retrieval_config": {"profile_id": profile_id, "top_k": 0, "filters": filters or {}, "mode": settings["mode"]},
+                "retrieval_config": {"profile_id": profile_id, "top_k": 0, "filters": filters, "mode": settings["mode"]},
                 "metrics": cls._run_metrics(sources, latency_ms, "assistant_disabled"),
                 "failure_type": "assistant_disabled",
                 "created_at": _now(),
@@ -754,7 +807,7 @@ class ProjectAssistantService:
             cls._save_state(state)
             return run
         conversation = cls._clean_conversation(conversation_state or [])
-        retrieval = cls.retrieve(message, top_k=5, profile_id=profile_id, filters=filters or {})
+        retrieval = cls.retrieve(message, top_k=5, profile_id=profile_id, filters=filters)
         sources = retrieval["results"]
         steps = [
             cls._agent_step("parse", "done", "Parsed user request."),
@@ -781,7 +834,7 @@ class ProjectAssistantService:
                 {"role": "user", "content": message, "meta": {"source": "clean_state"}},
                 {"role": "assistant", "content": answer, "meta": {"source_count": len(sources)}},
             ],
-            "retrieval_config": {"profile_id": profile_id, "top_k": 5, "filters": filters or {}},
+            "retrieval_config": {"profile_id": profile_id, "top_k": 5, "filters": retrieval.get("filters") or filters},
             "metrics": cls._run_metrics(sources, latency_ms, failure_type),
             "failure_type": failure_type,
             "created_at": _now(),

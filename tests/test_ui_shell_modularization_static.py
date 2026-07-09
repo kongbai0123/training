@@ -540,6 +540,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         rnn_readiness_render_helpers_js = (
             ROOT / "static" / "pages" / "rnn_readiness_render_helpers.js"
         ).read_text(encoding="utf-8")
+        en_js = (ROOT / "static" / "state" / "i18n" / "en.js").read_text(encoding="utf-8")
 
         self.assertIn('import { trainingModeState } from "./training_mode_state.js";', training_modes_js)
         self.assertIn('export { trainingModeState } from "./training_mode_state.js";', training_modes_js)
@@ -728,9 +729,12 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("export function resolveRnnReadinessBadge", rnn_readiness_render_helpers_js)
         self.assertIn("export function resolveRnnReadinessEmptyView", rnn_readiness_render_helpers_js)
         self.assertIn("export function resolveRnnReadinessSummaryView", rnn_readiness_render_helpers_js)
-        self.assertIn("Sequence CSV is ready for RNN training", rnn_readiness_render_helpers_js)
-        self.assertIn("CSV must include sequence id", rnn_readiness_render_helpers_js)
-        self.assertIn("Start RNN Disabled", rnn_readiness_render_helpers_js)
+        self.assertIn('t("rnn.readiness.readyMessage")', rnn_readiness_render_helpers_js)
+        self.assertIn('t("rnn.readiness.datasetBlocked"', rnn_readiness_render_helpers_js)
+        self.assertIn('t("rnn.training.startDisabled")', rnn_readiness_render_helpers_js)
+        self.assertIn("Sequence CSV is ready for RNN training", en_js)
+        self.assertIn("CSV must include sequence id", en_js)
+        self.assertIn("Start RNN Disabled", en_js)
         self.assertIn("rnn-inference-list", rnn_inference_render_helpers_js)
         self.assertNotIn("rnn-readiness-compact-item", training_modes_js)
         self.assertNotIn("rnn-readiness-item", training_modes_js)

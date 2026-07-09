@@ -23,6 +23,7 @@ class ProjectAssistantRetrievalRequest(BaseModel):
     query: str
     top_k: int = 5
     profile_id: str = "lexical_default"
+    scope: str = ""
     filters: Optional[Dict[str, Any]] = None
 
 
@@ -37,6 +38,8 @@ class ProjectAssistantChatRequest(BaseModel):
     message: str
     conversation_state: Optional[List[Dict[str, Any]]] = None
     profile_id: str = "lexical_default"
+    scope: str = ""
+    filters: Optional[Dict[str, Any]] = None
 
 
 class ProjectAssistantSandboxFileRequest(BaseModel):
@@ -172,7 +175,7 @@ def project_assistant_retrieval_query(
 ):
     project_id = _require_project_scope(project_id)
     filters = request.filters or {}
-    filters = {**filters, "project_id": project_id}
+    filters = {**filters, "project_id": project_id, "scope": request.scope}
     return ProjectAssistantService.retrieve(
         query=request.query,
         top_k=request.top_k,
@@ -199,11 +202,12 @@ def project_assistant_chat(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
     project_id = _require_project_scope(project_id)
+    filters = {**(request.filters or {}), "project_id": project_id, "scope": request.scope}
     return ProjectAssistantService.chat(
         message=request.message,
         conversation_state=request.conversation_state or [],
         profile_id=request.profile_id,
-        filters={"project_id": project_id},
+        filters=filters,
     )
 
 
@@ -214,11 +218,12 @@ def project_assistant_chat_stream(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
     project_id = _require_project_scope(project_id)
+    filters = {**(request.filters or {}), "project_id": project_id, "scope": request.scope}
     events = ProjectAssistantService.chat_stream_events(
         message=request.message,
         conversation_state=request.conversation_state or [],
         profile_id=request.profile_id,
-        filters={"project_id": project_id},
+        filters=filters,
     )
 
     def iter_events():

@@ -17,6 +17,7 @@ const assistantState = {
   settings: null,
   conversationState: [],
   drawerOpen: false,
+  activeScope: "",
 };
 
 export function initProjectAssistantImpl() {
@@ -48,6 +49,7 @@ export function initProjectAssistantImpl() {
       input.value = button.dataset.assistantPrompt || "";
       input.focus();
     }
+    assistantState.activeScope = button.dataset.assistantScope || getActiveAssistantScope();
   });
   eventBus.on("open-project-assistant", openProjectAssistantDrawer);
   document.addEventListener("keydown", (event) => {
@@ -80,12 +82,14 @@ function renderPageContext() {
   const config = buildProjectAssistantContext(appState.currentPage, status);
   section.hidden = !config;
   if (!config) {
+    assistantState.activeScope = "";
     setText("#project-assistant-page-context-help", "");
     setHTML("#project-assistant-page-context-facts", "");
     setHTML("#project-assistant-page-context-prompts", "");
     return;
   }
 
+  assistantState.activeScope = config.scope || "";
   setText("#project-assistant-page-context-badge", getPageContextBadge(appState.currentPage));
   setText("#project-assistant-page-context-help", config.help || "");
   setHTML("#project-assistant-page-context-facts", (config.facts || []).map((fact) => `
@@ -95,11 +99,18 @@ function renderPageContext() {
     </div>
   `).join("") || `<div class="empty-state">${escapeHtml(t("rag.noSources"))}</div>`);
   setHTML("#project-assistant-page-context-prompts", (config.prompts || []).map((prompt) => `
-    <button type="button" class="assistant-prompt-row" data-assistant-prompt="${escapeHtml(prompt.text)}">
+    <button type="button" class="assistant-prompt-row" data-assistant-prompt="${escapeHtml(prompt.text)}" data-assistant-scope="${escapeHtml(prompt.scope || config.scope || "")}">
       <span>${escapeHtml(prompt.label)}</span>
       <code>${escapeHtml(prompt.text)}</code>
     </button>
   `).join(""));
+}
+
+function getActiveAssistantScope() {
+  if (assistantState.activeScope) return assistantState.activeScope;
+  const status = buildAssistantStatusSnapshot();
+  const config = buildProjectAssistantContext(appState.currentPage, status);
+  return config?.scope || "";
 }
 
 function buildAssistantStatusSnapshot() {
@@ -261,6 +272,7 @@ async function runRetrieval() {
     body: JSON.stringify({
       query,
       profile_id: qs("#rag-retrieval-profile")?.value || "lexical_default",
+      scope: getActiveAssistantScope(),
       top_k: 5,
     }),
   });
@@ -281,6 +293,7 @@ async function runProjectAssistantChat() {
       message,
       conversation_state: assistantState.conversationState,
       profile_id: qs("#rag-retrieval-profile")?.value || "lexical_default",
+      scope: getActiveAssistantScope(),
     }),
   });
   assistantState.conversationState = assistantState.lastRun.conversation_state || [];

@@ -291,6 +291,7 @@ export function buildProjectAssistantContext(pageId, status) {
 
   const pageConfigs = {
     dashboard: {
+      scope: "dashboard",
       help: t("projectAssistant.context.dashboardHelp"),
       facts: [
         { label: t("projectAssistant.context.fact.project"), value: status.projectName || "--" },
@@ -303,6 +304,7 @@ export function buildProjectAssistantContext(pageId, status) {
       ],
     },
     evaluation: {
+      scope: "evaluation",
       help: t("projectAssistant.context.evaluationHelp"),
       facts: [
         { label: t("projectAssistant.context.fact.task"), value: projectType },
@@ -315,6 +317,7 @@ export function buildProjectAssistantContext(pageId, status) {
       ],
     },
     "model-compare": {
+      scope: "model_compare",
       help: t("projectAssistant.context.compareHelp"),
       facts: [
         { label: t("projectAssistant.context.fact.comparableRuns"), value: String(completedRuns.length) },
@@ -327,6 +330,7 @@ export function buildProjectAssistantContext(pageId, status) {
       ],
     },
     export: {
+      scope: "export",
       help: t("projectAssistant.context.exportHelp"),
       facts: [
         { label: t("projectAssistant.context.fact.models"), value: String(models.length) },
@@ -339,6 +343,7 @@ export function buildProjectAssistantContext(pageId, status) {
       ],
     },
     history: {
+      scope: "history",
       help: t("projectAssistant.context.historyHelp"),
       facts: [
         { label: t("projectAssistant.context.fact.projects"), value: String(appState.projects?.length || 0) },
