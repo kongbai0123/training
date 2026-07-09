@@ -1663,7 +1663,7 @@ async function loadLatestRnnInferenceResult(options = {}) {
 
   const container = qs("#rnn-inference-result");
   if (container && options.force) {
-    container.textContent = "Loading latest sequence inference result...";
+    container.textContent = t("rnn.inference.loadingLatest");
   }
 
   try {
@@ -1723,7 +1723,7 @@ function renderRnnInferenceResult() {
   const result = trainingModeState.rnn.inferenceResult;
   if (!container) return;
   if (!result) {
-    container.textContent = "No sequence inference result yet.";
+    container.textContent = t("rnn.inference.noResult");
     return;
   }
   container.innerHTML = renderRnnInferenceResultPanel(result);

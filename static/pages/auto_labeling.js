@@ -870,7 +870,7 @@ function renderAutoLabelReviewQueue() {
   const items = getAutoLabelReviewItems();
   setText("#auto-review-queue-count", String(items.length));
   if (!items.length) {
-    setHTML("#auto-review-queue-body", `<tr><td colspan="3">No drafts waiting for review.</td></tr>`);
+    setHTML("#auto-review-queue-body", `<tr><td colspan="3">${escapeHtml(t("autoLabel.emptyQueueShort"))}</td></tr>`);
     selectedAutoReviewItem = null;
     clearAutoLabelPreview();
     updateAutoReviewToolbar();
@@ -955,7 +955,7 @@ function clearAutoLabelPreview() {
   setText("#auto-review-confidence", "--");
   setText("#auto-review-issue", "--");
   setText("#auto-review-state", "--");
-  setHTML("#auto-shape-table-body", `<tr><td colspan="5">No selected draft.</td></tr>`);
+  setHTML("#auto-shape-table-body", `<tr><td colspan="5">${escapeHtml(t("autoLabel.noSelectedDraft"))}</td></tr>`);
   renderAutoReviewTaskInfo(null);
   updateAutoReviewToolbar();
 }

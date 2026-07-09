@@ -277,7 +277,7 @@ async function runQualityCheck() {
 
 function copyZipPath() {
   const text = qs("#dataset-zip-storage-path")?.textContent;
-  if (!text || text === "Not loaded") return;
+  if (!text || text === "Not loaded" || text === t("common.notLoaded")) return;
   navigator.clipboard.writeText(text).then(() => eventBus.emit("toast", t("dataset.toast.pathCopied")));
 }
 
@@ -319,7 +319,7 @@ function updateProgress(panel, statusText, percent, detailsText) {
 export function renderDatasetPage(status) {
   const project = appState.currentProject;
   const rawImages = (project?.images || []).filter((img) => !img.is_augmented);
-  const zipPath = status.datasetPath ? `${status.datasetPath}/packages/zip` : "Not loaded";
+  const zipPath = status.datasetPath ? `${status.datasetPath}/packages/zip` : t("common.notLoaded");
   setText("#dataset-zip-storage-path", zipPath);
 
   if (!appState.currentProjectClasses && project) appState.currentProjectClasses = [...(project.class_names || [])];

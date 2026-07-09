@@ -1327,13 +1327,13 @@
                     <div class="section-title"><h2>序列測試</h2><span class="summary-badge badge-neutral">CSV sequence only</span></div>
                     <div class="rnn-sequence-test-layout">
                       <div class="rnn-sequence-test-config">
-                        <div class="section-title compact"><h3>測試設定</h3><span class="summary-badge badge-neutral">Input</span></div>
+                        <div class="section-title compact"><h3 data-i18n="rnn.inference.testSettings">測試設定</h3><span class="summary-badge badge-neutral" data-i18n="rnn.inference.input">Input</span></div>
                         <div class="rnn-sequence-config-stack">
                           <div class="rnn-sequence-config-group">
                             <div class="config-group-title">模型與執行</div>
                             <div class="rnn-schema-grid two-col">
                               <label><span>RNN model</span><select id="rnn-inference-model"><option value="">Select RNN model</option></select></label>
-                              <label><span>Device</span><select id="rnn-inference-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
+                              <label><span data-i18n="training.device">Device</span><select id="rnn-inference-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
                             </div>
                           </div>
                           <div class="rnn-sequence-config-group">
@@ -1354,11 +1354,11 @@
                         <div class="section-title compact">
                           <h3>測試結果</h3>
                           <div class="inline-actions compact-actions">
-                            <button type="button" class="btn btn-secondary btn-sm" id="rnn-refresh-inference-result">Refresh Result</button>
-                            <span class="summary-badge badge-neutral">Result</span>
+                            <button type="button" class="btn btn-secondary btn-sm" id="rnn-refresh-inference-result" data-i18n="rnn.inference.refreshResult">Refresh Result</button>
+                            <span class="summary-badge badge-neutral" data-i18n="rnn.inference.result">Result</span>
                           </div>
                         </div>
-                        <div class="rnn-placeholder-box" id="rnn-inference-result">No sequence inference result yet.</div>
+                        <div class="rnn-placeholder-box" id="rnn-inference-result" data-i18n="rnn.inference.noResult">No sequence inference result yet.</div>
                       </div>
                     </div>
                   </section>
@@ -1366,7 +1366,7 @@
 
                 <div id="rnn-export-panel" class="rnn-panel" data-rnn-panel="export">
                   <section class="rnn-preview-card">
-                    <div class="section-title"><h2>RNN 匯出</h2><span class="summary-badge badge-neutral">Future artifacts</span></div>
+                    <div class="section-title"><h2 data-i18n="rnn.export.title">RNN 匯出</h2><span class="summary-badge badge-neutral" data-i18n="rnn.export.futureArtifacts">Future artifacts</span></div>
                     <div class="rnn-artifact-list">
                       <code>model.pt</code>
                       <code>model.onnx</code>
@@ -1582,12 +1582,12 @@
         <section class="page" id="page-inference">
           <div class="page-header">
             <div>
-              <h1>Inference Lab</h1>
-              <p>選擇已訓練的 best.pt / last.pt，對單張圖片執行模型測試，輸出不會混入 dataset。</p>
+              <h1 data-i18n="inference.title">Inference Lab</h1>
+              <p data-i18n="inference.subtitle">Select trained best.pt / last.pt weights, run image inference, and keep outputs separate from the dataset.</p>
             </div>
             <div class="page-actions">
               <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-models">
-                <i class="fa-solid fa-rotate"></i> Refresh Models
+                <i class="fa-solid fa-rotate"></i> <span data-i18n="inference.refreshModels">Refresh Models</span>
               </button>
             </div>
           </div>
@@ -1597,22 +1597,22 @@
 
           <section class="panel-section inference-result-panel">
             <div class="section-title">
-              <h2>Preview / Result</h2>
+              <h2 data-i18n="inference.previewResult">Preview / Result</h2>
               <div class="inline-actions">
-                <button class="btn btn-secondary btn-sm" id="btn-view-inference-output" disabled>View Output</button>
-                <button class="btn btn-secondary btn-sm" id="btn-copy-inference-path" disabled>Copy Path</button>
+                <button class="btn btn-secondary btn-sm" id="btn-view-inference-output" disabled data-i18n="inference.viewOutput">View Output</button>
+                <button class="btn btn-secondary btn-sm" id="btn-copy-inference-path" disabled data-i18n="inference.copyPath">Copy Path</button>
               </div>
             </div>
             <div class="inference-preview-grid">
               <div class="preview-tile">
-                <h3>Original</h3>
+                <h3 data-i18n="inference.original">Original</h3>
                 <img id="inference-original-img" alt="Original inference input" data-i18n-alt="inference.originalAlt">
-                <div class="preview-placeholder" id="inference-original-placeholder">選擇或上傳單張圖片。</div>
+                <div class="preview-placeholder" id="inference-original-placeholder" data-i18n="inference.originalPlaceholder">Select or upload one image.</div>
               </div>
               <div class="preview-tile">
-                <h3>Prediction Overlay</h3>
+                <h3 data-i18n="inference.predictionOverlay">Prediction Overlay</h3>
                 <img id="inference-result-img" alt="Inference result overlay" data-i18n-alt="inference.resultAlt">
-                <div class="preview-placeholder" id="inference-result-placeholder">推論完成後顯示 overlay。</div>
+                <div class="preview-placeholder" id="inference-result-placeholder" data-i18n="inference.resultPlaceholder">The prediction overlay appears after inference.</div>
               </div>
             </div>
           </section>
@@ -1620,64 +1620,64 @@
 
           <div class="inference-lab-grid">
             <section class="panel-section inference-config-panel">
-              <div class="section-title"><h2>Model Selector</h2></div>
+              <div class="section-title"><h2 data-i18n="inference.modelSelector">Model Selector</h2></div>
               <div id="inference-model-list" class="model-registry-list"></div>
 
               <div class="phase-card disabled">
                 <div>
-                  <strong>Compare Models</strong>
-                  <span>Model A / B comparison will be available in Phase 3.</span>
+                  <strong data-i18n="inference.compareModels">Compare Models</strong>
+                  <span data-i18n="inference.compareModelsHelp">Model A / B comparison will be available in Phase 3.</span>
                 </div>
-                <button class="btn btn-disabled" disabled>Phase 3</button>
+                <button class="btn btn-disabled" disabled data-i18n="common.phase3">Phase 3</button>
               </div>
             </section>
 
             <section class="panel-section inference-config-panel">
-              <div class="section-title"><h2>Test Source</h2></div>
+              <div class="section-title"><h2 data-i18n="inference.testSource">Test Source</h2></div>
               <div class="form-stack">
                 <label>
-                  <span>Upload image</span>
+                  <span data-i18n="inference.uploadImage">Upload image</span>
                   <input type="file" id="inference-image-file" accept=".jpg,.jpeg,.png,.bmp,.webp,image/*" multiple>
                 </label>
                 <label>
-                  <span>Local image path</span>
+                  <span data-i18n="inference.localImagePath">Local image path</span>
                   <input type="text" id="inference-image-path" placeholder="D:\samples\image_1.jpg; D:\samples\image_2.jpg" data-i18n-placeholder="inference.imagePathPlaceholder">
                 </label>
               </div>
 
-              <div class="section-title sub-section-title"><h2>Inference Settings</h2></div>
+              <div class="section-title sub-section-title"><h2 data-i18n="inference.settings">Inference Settings</h2></div>
               <div class="inference-settings-grid">
                 <label><span>Confidence</span><input type="number" id="inference-conf" value="0.25" min="0.01" max="1" step="0.01"></label>
                 <label><span>IoU</span><input type="number" id="inference-iou" value="0.70" min="0.01" max="1" step="0.01"></label>
-                <label><span>Image size</span><select id="inference-imgsz"><option value="320">320</option><option value="640" selected>640</option><option value="768">768</option><option value="960">960</option></select></label>
-                <label><span>Device</span><select id="inference-device"><option value="cpu">CPU</option><option value="gpu">GPU</option></select></label>
-                <label><span>Mask opacity</span><input type="number" id="inference-mask-opacity" value="0.45" min="0" max="1" step="0.05"></label>
-                <label><span>Class filter</span><input type="text" id="inference-class-filter" placeholder="class_a, class_b" data-i18n-placeholder="inference.classFilterPlaceholder"></label>
+                <label><span data-i18n="inference.imageSize">Image size</span><select id="inference-imgsz"><option value="320">320</option><option value="640" selected>640</option><option value="768">768</option><option value="960">960</option></select></label>
+                <label><span data-i18n="inference.device">Device</span><select id="inference-device"><option value="cpu">CPU</option><option value="gpu">GPU</option></select></label>
+                <label><span data-i18n="inference.maskOpacity">Mask opacity</span><input type="number" id="inference-mask-opacity" value="0.45" min="0" max="1" step="0.05"></label>
+                <label><span data-i18n="inference.classFilter">Class filter</span><input type="text" id="inference-class-filter" placeholder="class_a, class_b" data-i18n-placeholder="inference.classFilterPlaceholder"></label>
               </div>
               <div class="inline-actions inference-toggle-row">
-                <label class="checkbox-row"><input type="checkbox" id="inference-show-mask" checked> Show mask</label>
-                <label class="checkbox-row"><input type="checkbox" id="inference-show-bbox" checked> Show bbox</label>
+                <label class="checkbox-row"><input type="checkbox" id="inference-show-mask" checked> <span data-i18n="inference.showMask">Show mask</span></label>
+                <label class="checkbox-row"><input type="checkbox" id="inference-show-bbox" checked> <span data-i18n="inference.showBbox">Show bbox</span></label>
               </div>
 
               <button class="btn btn-primary btn-block" id="btn-run-inference" disabled>
-                <i class="fa-solid fa-play"></i> Run Inference
+                <i class="fa-solid fa-play"></i> <span data-i18n="inference.run">Run Inference</span>
               </button>
               <div class="form-hint" id="inference-run-reason">請先選擇模型與測試圖片。</div>
             </section>
           </div>
           <div class="inference-summary-grid">
             <section class="panel-section">
-              <div class="section-title"><h2>Output Summary</h2></div>
+              <div class="section-title"><h2 data-i18n="inference.outputSummary">Output Summary</h2></div>
               <div id="inference-summary" class="path-list"></div>
             </section>
             <section class="panel-section">
-              <div class="section-title"><h2>Prediction Signals</h2></div>
+              <div class="section-title"><h2 data-i18n="inference.predictionSignals">Prediction Signals</h2></div>
               <div id="inference-prediction-signals" class="metric-grid compact"></div>
             </section>
             <section class="panel-section">
-              <div class="section-title"><h2>Future Actions</h2></div>
-              <div class="phase-card disabled"><strong>Video inference</strong><span>Phase 2 job queue.</span><button class="btn btn-disabled" disabled>Phase 2</button></div>
-              <div class="phase-card disabled"><strong>Add to Hard Case</strong><span>Phase 3 feedback loop.</span><button class="btn btn-disabled" disabled>Phase 3</button></div>
+              <div class="section-title"><h2 data-i18n="inference.futureActions">Future Actions</h2></div>
+              <div class="phase-card disabled"><strong data-i18n="inference.videoInference">Video inference</strong><span data-i18n="inference.phase2Queue">Phase 2 job queue.</span><button class="btn btn-disabled" disabled data-i18n="common.phase2">Phase 2</button></div>
+              <div class="phase-card disabled"><strong data-i18n="inference.addHardCase">Add to Hard Case</strong><span data-i18n="inference.phase3Feedback">Phase 3 feedback loop.</span><button class="btn btn-disabled" disabled data-i18n="common.phase3">Phase 3</button></div>
             </section>
           </div>
         </section>
@@ -1726,9 +1726,9 @@
                 <div class="source-option-grid auto-source-grid">
                   <button type="button" class="source-option active" data-auto-source="unlabeled"><i class="fa-solid fa-image"></i><strong data-i18n="autoLabel.source.unlabeled">Unlabeled images</strong><span data-i18n="autoLabel.source.unlabeledHelp">Images without valid LabelMe JSON</span></button>
                   <button type="button" class="source-option" data-auto-source="invalid-json"><i class="fa-solid fa-triangle-exclamation"></i><strong data-i18n="autoLabel.source.invalid">Invalid annotations</strong><span data-i18n="autoLabel.source.invalidHelp">Missing JSON, empty annotations, or items that need review</span></button>
-                  <button type="button" class="source-option disabled" disabled><i class="fa-solid fa-folder-open"></i><strong data-i18n="autoLabel.source.folder">Selected folder</strong><span>Phase 2</span></button>
+                  <button type="button" class="source-option disabled" disabled><i class="fa-solid fa-folder-open"></i><strong data-i18n="autoLabel.source.folder">Selected folder</strong><span data-i18n="common.phase2">Phase 2</span></button>
                 </div>
-                <div class="drop-zone compact source-drop-preview" id="auto-source-drop-zone"><i class="fa-solid fa-cloud-arrow-up"></i><strong>拖入圖片或 ZIP</strong><span>拖曳圖片檔或資料集 ZIP 到此處，或點擊選擇檔案。</span></div>
+                <div class="drop-zone compact source-drop-preview" id="auto-source-drop-zone"><i class="fa-solid fa-cloud-arrow-up"></i><strong data-i18n="autoLabel.dropSourceTitle">Drop images or ZIP</strong><span data-i18n="autoLabel.dropSourceHelp">Drop images or a dataset ZIP here, or click to choose files.</span></div>
               </div>
 
               <div class="auto-step-block">
@@ -1736,7 +1736,7 @@
                 <div class="model-source-tabs">
                   <button type="button" class="model-source-tab active" data-model-source="project" data-i18n="autoLabel.model.project">Project model</button>
                   <button type="button" class="model-source-tab" data-model-source="external" data-i18n="autoLabel.model.external">External model</button>
-                  <button type="button" class="model-source-tab" disabled data-i18n="autoLabel.model.foundation">Foundation model ? Phase 2</button>
+                  <button type="button" class="model-source-tab" disabled data-i18n="autoLabel.model.foundation">Foundation model - Phase 2</button>
                 </div>
                 <div id="auto-label-model-list" class="model-registry-list grouped"></div>
                 <details class="advanced-collapse model-import-collapse">
@@ -1758,7 +1758,7 @@
               <div class="auto-step-block">
                 <div class="auto-step-heading"><span>3</span><strong data-i18n="autoLabel.step.rules">Draft Rules</strong></div>
                 <div class="auto-basic-settings expanded">
-                  <label><span>Confidence</span><input type="number" id="auto-confidence" value="0.35" min="0.01" max="1" step="0.01"></label>
+                  <label><span data-i18n="autoLabel.confidence">Confidence</span><input type="number" id="auto-confidence" value="0.35" min="0.01" max="1" step="0.01"></label>
                   <label><span>IoU</span><input type="number" id="auto-iou" value="0.50" min="0.01" max="1" step="0.01"></label>
                   <label><span data-i18n="autoLabel.maxDetections">Max detections</span><input type="number" id="auto-max-detections" value="20" min="1" max="300" step="1"></label>
                   <label><span data-i18n="autoLabel.classFilter">Class filter</span><input type="text" id="auto-class-filter" placeholder="class_a, class_b" data-i18n-placeholder="autoLabel.classFilterPlaceholder"></label>
@@ -1789,19 +1789,19 @@
               <div class="auto-review-workstation">
                 <aside class="auto-review-queue-card">
                   <div class="review-card-title"><strong data-i18n="autoLabel.reviewQueue">Draft Review Queue</strong><span id="auto-review-queue-count">0</span></div>
-                  <div class="data-table compact-table auto-review-queue-table"><table><thead><tr><th>Image</th><th>Class</th><th>Issue</th></tr></thead><tbody id="auto-review-queue-body"><tr><td colspan="3" data-i18n="autoLabel.emptyQueue">No drafts waiting for review. Draft jobs will list review items here.</td></tr></tbody></table></div>
+                  <div class="data-table compact-table auto-review-queue-table"><table><thead><tr><th data-i18n="autoLabel.table.image">Image</th><th data-i18n="autoLabel.table.class">Class</th><th data-i18n="autoLabel.table.issue">Issue</th></tr></thead><tbody id="auto-review-queue-body"><tr><td colspan="3" data-i18n="autoLabel.emptyQueue">No drafts waiting for review. Draft jobs will list review items here.</td></tr></tbody></table></div>
                 </aside>
                 <div class="auto-review-preview-card">
                   <div class="review-preview-toolbar">
-                    <span>Image review</span>
-                    <div><button class="btn-small secondary" type="button" disabled>100%</button><button class="btn-small secondary" type="button" disabled>Fit</button></div>
+                    <span data-i18n="autoLabel.imageReview">Image review</span>
+                    <div><button class="btn-small secondary" type="button" disabled>100%</button><button class="btn-small secondary" type="button" disabled data-i18n="autoLabel.fit">Fit</button></div>
                   </div>
                   <div class="review-preview-grid">
                     <div class="preview-tile"><h3 data-i18n="autoLabel.original">Original Image</h3><div class="preview-placeholder" id="auto-review-original" data-i18n="autoLabel.noDraft">No draft annotations generated yet.</div></div>
                     <div class="preview-tile"><h3 data-i18n="autoLabel.overlay">Draft Overlay</h3><div class="preview-placeholder" id="auto-review-overlay" data-i18n="autoLabel.overlayHelp">Mask / bbox / polygon overlay will appear here.</div></div>
                   </div>
                   <div class="auto-shape-review-grid">
-                    <div class="data-table compact-table"><table><thead><tr><th>ID</th><th>Class</th><th>Type</th><th>Confidence</th><th>Issue</th></tr></thead><tbody id="auto-shape-table-body"><tr><td colspan="5">No selected draft.</td></tr></tbody></table></div>
+                    <div class="data-table compact-table"><table><thead><tr><th>ID</th><th data-i18n="autoLabel.table.class">Class</th><th data-i18n="autoLabel.table.type">Type</th><th data-i18n="autoLabel.confidence">Confidence</th><th data-i18n="autoLabel.table.issue">Issue</th></tr></thead><tbody id="auto-shape-table-body"><tr><td colspan="5" data-i18n="autoLabel.noSelectedDraft">No selected draft.</td></tr></tbody></table></div>
                     <div class="draft-inspector">
                       <div class="summary-row"><span data-i18n="autoLabel.predictionClass">Prediction class</span><code id="auto-review-class">--</code></div>
                       <div class="summary-row"><span data-i18n="autoLabel.confidence">Confidence</span><code id="auto-review-confidence">--</code></div>
@@ -1811,13 +1811,13 @@
                   </div>
                 </div>
                 <aside class="auto-review-action-card">
-                  <div class="review-card-title"><strong>Task info</strong><span id="auto-review-job-status">--</span></div>
+                  <div class="review-card-title"><strong data-i18n="autoLabel.taskInfo">Task info</strong><span id="auto-review-job-status">--</span></div>
                   <div class="draft-inspector compact">
-                    <div class="summary-row"><span>Job ID</span><code id="auto-review-job-id">--</code></div>
-                    <div class="summary-row"><span>Source</span><code id="auto-review-source">--</code></div>
-                    <div class="summary-row"><span>Model</span><code id="auto-review-model">--</code></div>
-                    <div class="summary-row"><span>Draft path</span><code id="auto-review-draft-path">--</code></div>
-                    <div class="summary-row"><span>Protection</span><code>Draft first</code></div>
+                    <div class="summary-row"><span data-i18n="autoLabel.jobId">Job ID</span><code id="auto-review-job-id">--</code></div>
+                    <div class="summary-row"><span data-i18n="autoLabel.source">Source</span><code id="auto-review-source">--</code></div>
+                    <div class="summary-row"><span data-i18n="autoLabel.model">Model</span><code id="auto-review-model">--</code></div>
+                    <div class="summary-row"><span data-i18n="autoLabel.draftPath">Draft path</span><code id="auto-review-draft-path">--</code></div>
+                    <div class="summary-row"><span data-i18n="autoLabel.protection">Protection</span><code data-i18n="autoLabel.draftFirst">Draft first</code></div>
                   </div>
                   <div class="auto-review-toolbar compact-toolbar">
                     <button class="btn btn-secondary success" id="btn-auto-review-accept" disabled><i class="fa-solid fa-check"></i> <span data-i18n="autoLabel.accept">Accept</span></button>
@@ -1832,7 +1832,7 @@
           </div>
 
           <div class="auto-label-bottom-grid redesigned">
-            <section class="panel-section"><div class="section-title"><h2 data-i18n="autoLabel.jobHistory">Job History</h2></div><div class="data-table compact-table"><table><thead><tr><th>Job</th><th>Source</th><th>Model</th><th>Status</th><th>Drafts</th></tr></thead><tbody id="auto-job-history-body"><tr><td colspan="5" data-i18n="autoLabel.emptyJobs">No auto-label job yet. Connected functionality will show job_id, source, model, and draft count.</td></tr></tbody></table></div></section>
+            <section class="panel-section"><div class="section-title"><h2 data-i18n="autoLabel.jobHistory">Job History</h2></div><div class="data-table compact-table"><table><thead><tr><th data-i18n="autoLabel.table.job">Job</th><th data-i18n="autoLabel.source">Source</th><th data-i18n="autoLabel.model">Model</th><th data-i18n="autoLabel.table.status">Status</th><th data-i18n="autoLabel.table.drafts">Drafts</th></tr></thead><tbody id="auto-job-history-body"><tr><td colspan="5" data-i18n="autoLabel.emptyJobs">No auto-label job yet. Connected functionality will show job_id, source, model, and draft count.</td></tr></tbody></table></div></section>
           </div>
         </section>
 

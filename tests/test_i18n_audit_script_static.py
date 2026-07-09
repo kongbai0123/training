@@ -16,6 +16,11 @@ class I18nAuditScriptStaticTests(unittest.TestCase):
         self.assertIn("aria-label", script)
         self.assertIn("alt", script)
         self.assertIn("title", script)
+        self.assertIn("parseAuditTargets", script)
+        self.assertIn("navigateAuditTarget", script)
+        self.assertIn("args.pages || args.nav", script)
+        self.assertIn("data-rnn-nav", script)
+        self.assertIn("data-cnn-nav", script)
 
     def test_dom_audit_runtime_manifest_is_isolated(self):
         manifest = (ROOT / "tools" / "i18n-audit" / "package.json").read_text(encoding="utf-8")

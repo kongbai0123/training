@@ -12,6 +12,7 @@ const args = parseArgs(process.argv.slice(2));
 const url = args.url || "http://127.0.0.1:18080/";
 const lang = args.lang || "zh-TW";
 const failOnIssues = Boolean(args["fail-on-issues"]);
+const auditTargets = parseAuditTargets(args.pages || args.nav || "");
 const englishPattern = /[A-Za-z]{3,}(?:\s+[A-Za-z]{2,})?/;
 const mojibakePattern = /[�]|嚗|銝|撠|蝣|閮|隢||||||/;
 
@@ -44,7 +45,79 @@ try {
   }, lang);
   await page.waitForTimeout(Number(args.settle || 600));
 
-  const snapshot = await page.evaluate(() => {
+  const targets = auditTargets.length ? auditTargets : [{ mode: "", page: "", label: "initial" }];
+  let scanned = 0;
+  for (const target of targets) {
+    await navigateAuditTarget(page, target);
+    await page.waitForTimeout(Number(args.settle || 600));
+    const snapshot = await collectSnapshot(page);
+    scanned += snapshot.length;
+
+    for (const item of snapshot) {
+      const text = item.text || "";
+      const scopedItem = { ...item, page: target.label };
+      if (mojibakePattern.test(text)) {
+        issues.push({ ...scopedItem, issue: "mojibake" });
+      } else if (lang.toLowerCase().startsWith("zh") && englishPattern.test(text) && !allowedEnglish(text)) {
+        issues.push({ ...scopedItem, issue: "english_in_zh_mode" });
+      }
+    }
+  }
+
+  const result = {
+    ok: issues.length === 0,
+    url,
+    lang,
+    pages: targets.map((target) => target.label),
+    scanned,
+    issue_count: issues.length,
+    issues: issues.slice(0, Number(args.limit || 200)),
+  };
+  console.log(JSON.stringify(result, null, 2));
+  if (failOnIssues && issues.length) process.exitCode = 1;
+} finally {
+  await context.close();
+  await browser.close();
+}
+
+function parseAuditTargets(value) {
+  return String(value || "")
+    .split(",")
+    .map((raw) => raw.trim())
+    .filter(Boolean)
+    .map((raw) => {
+      const [maybeMode, maybePage] = raw.includes(":") ? raw.split(":", 2) : ["", raw];
+      const mode = ["cnn", "rnn"].includes(maybeMode) ? maybeMode : "";
+      const page = maybePage || maybeMode || "";
+      return {
+        mode,
+        page,
+        label: mode ? `${mode}:${page}` : page,
+      };
+    });
+}
+
+async function navigateAuditTarget(page, target) {
+  if (target.mode) {
+    await page.locator(`[data-training-mode="${target.mode}"]`).click({ timeout: 5000 });
+  }
+  if (!target.page) return;
+  const selectors = target.mode === "rnn"
+    ? [`[data-rnn-nav="${target.page}"]`, `[data-page="${target.page}"]`]
+    : target.mode === "cnn"
+      ? [`[data-cnn-nav="${target.page}"]`, `[data-page="${target.page}"]`]
+      : [`[data-page="${target.page}"]`, `[data-mode-nav="${target.page}"]`];
+  for (const selector of selectors) {
+    const locator = page.locator(selector).first();
+    if (await locator.count()) {
+      await locator.click({ timeout: 5000 });
+      return;
+    }
+  }
+}
+
+async function collectSnapshot(page) {
+  return page.evaluate(() => {
     const isVisible = (element) => {
       const style = window.getComputedStyle(element);
       const rect = element.getBoundingClientRect();
@@ -79,29 +152,6 @@ try {
     });
     return [...visibleText, ...attrs];
   });
-
-  for (const item of snapshot) {
-    const text = item.text || "";
-    if (mojibakePattern.test(text)) {
-      issues.push({ ...item, issue: "mojibake" });
-    } else if (lang.toLowerCase().startsWith("zh") && englishPattern.test(text) && !allowedEnglish(text)) {
-      issues.push({ ...item, issue: "english_in_zh_mode" });
-    }
-  }
-
-  const result = {
-    ok: issues.length === 0,
-    url,
-    lang,
-    scanned: snapshot.length,
-    issue_count: issues.length,
-    issues: issues.slice(0, Number(args.limit || 200)),
-  };
-  console.log(JSON.stringify(result, null, 2));
-  if (failOnIssues && issues.length) process.exitCode = 1;
-} finally {
-  await context.close();
-  await browser.close();
 }
 
 function parseArgs(argv) {
@@ -163,9 +213,12 @@ function allowedEnglish(text) {
   if (trimmed.includes("LabelMe")) return true;
   if (/^[A-Za-z]:[\\/]/.test(trimmed) || /[A-Za-z]:[\\/]/.test(trimmed) || trimmed.includes(":/")) return true;
   if (/run_YYYYMMDD_HHMMSS/i.test(trimmed)) return true;
-  if (/\b(run|mAP|IoU|bbox|COCO|mask|ZIP|RNN|CNN|CSV|learning rate|mosaic augmentation|Stratified|Group|epoch|checkpoint|VRAM|CUDA|CPU|GPU|Auto|timestep|timestamp|Date Time|time steps|horizon|class_[a-z]|sequence_id|machine_id|batch_id|RoadSeg|builtin|ultralytics_yolo|Instance Segmentation|my_vision_project|defect|scratch|stain)\b/i.test(trimmed)) {
+  if (/\b(run|mAP|IoU|bbox|COCO|mask|ZIP|RNN|CNN|CSV|JSON|ONNX|TensorRT|learning rate|mosaic augmentation|Stratified|Group|epoch|checkpoint|VRAM|CUDA|CPU|GPU|Auto|timestep|timestamp|Date Time|time steps|sequence_length|horizon|class_[a-z]|class_names|sequence_id|machine_id|batch_id|RoadSeg|builtin|ultralytics_yolo|Instance Segmentation|my_vision_project|defect|scratch|stain)\b/i.test(trimmed)) {
     return true;
   }
+  if (/\b(MP4|AVI|MKV|MOV|WMV|FLV|WEBM|P0|best\.pt|last\.pt|\.pt|\.onnx|annotations\/|training\/runs|train\/loss|val\/loss)\b/i.test(trimmed)) return true;
+  if (/\b(Loss|Accuracy|Macro-F1|Precision|Recall|MAE|RMSE|mAP50|Classification|Regression|Sequence|Trainable|Optional|Epochs|Batch Size|Dropout|Schema|Train|Val|Test|Box|Note|Head)\b/.test(trimmed)) return true;
+  if (/\b(normal|abnormal|validation loss|task head|Package registry|adapter|package contract|target|label sequence|residual|transition stability)\b/i.test(trimmed)) return true;
   if (/sequences\/features\.csv/i.test(trimmed)) return true;
   if (/^(RNN|CNN|GPU|RAM|CSV|ZIP|ONNX|TensorRT|XGBoost|LSTM|GRU|BiLSTM|MAE|RMSE|JSON|LabelMe|YOLO)$/i.test(trimmed)) {
     return true;
