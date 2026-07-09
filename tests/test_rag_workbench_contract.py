@@ -1,6 +1,8 @@
 import tempfile
 import unittest
+import json
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -8,6 +10,7 @@ from app import app
 from src.rag_workbench import RagWorkbenchService
 from src.project_assistant import ProjectAssistantService
 from src.project_assistant_service import ProjectAssistantService as ProjectAssistantServiceImpl
+from src.project_layout import ProjectLayout
 
 
 class RagWorkbenchContractTests(unittest.TestCase):
@@ -146,6 +149,66 @@ class RagWorkbenchContractTests(unittest.TestCase):
         self.assertEqual(len(project_a_runs), 1)
         self.assertEqual(project_b_runs, [])
 
+    def test_sync_project_artifacts_indexes_active_project_evidence_without_duplicates(self):
+        project = self._make_sequence_project("project_sync")
+        run_dir = Path(project["dataset_path"]).parent / "training" / "runs" / "run_lstm_1"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "metrics.json").write_text(json.dumps({
+            "architecture": "rnn",
+            "task_type": "sequence_regression",
+            "primary_metric": "val/mae",
+            "best_metrics": {"val/mae": 0.12, "val/rmse": 0.18},
+            "history": [{"epoch": 1, "train/loss": 0.4, "val/loss": 0.3, "val/mae": 0.12}],
+        }), encoding="utf-8")
+        (run_dir / "metric_schema.json").write_text(json.dumps({"primary": "val/mae"}), encoding="utf-8")
+        export_dir = Path(project["dataset_path"]).parent / "exports" / "export_rnn_1"
+        export_dir.mkdir(parents=True, exist_ok=True)
+        (export_dir / "summary.json").write_text(json.dumps({
+            "export_id": "export_rnn_1",
+            "export_type": "rnn_model_package",
+            "run_id": "run_lstm_1",
+            "package_path": "exports/export_rnn_1/rnn_model_package.zip",
+            "files": [{"path": "inference_contract.json", "size_bytes": 128}],
+        }), encoding="utf-8")
+        RagWorkbenchService.ingest_document(
+            "manual-note.md",
+            "Manual note about deployment review.",
+            metadata={"project_id": "project_sync"},
+        )
+
+        first = RagWorkbenchService.sync_project_artifacts(project)
+        second = RagWorkbenchService.sync_project_artifacts(project)
+        kb = RagWorkbenchService.list_documents(project_id="project_sync")
+        documents = kb["documents"]
+        auto_docs = [doc for doc in documents if (doc.get("metadata") or {}).get("auto_indexed")]
+        manual_docs = [doc for doc in documents if not (doc.get("metadata") or {}).get("auto_indexed")]
+        retrieval = RagWorkbenchService.retrieve(
+            "val mae inference contract deployment review",
+            top_k=8,
+            filters={"project_id": "project_sync"},
+        )
+
+        self.assertEqual(first["document_count"], 4)
+        self.assertEqual(second["removed_auto_documents"], 4)
+        self.assertEqual(len(auto_docs), 4)
+        self.assertEqual([doc["filename"] for doc in manual_docs], ["manual-note.md"])
+        self.assertTrue(any(result["source"] == "training-runs-and-metrics.md" for result in retrieval["results"]))
+        self.assertTrue(any(result["source"] == "manual-note.md" for result in retrieval["results"]))
+
+    def test_sync_project_artifacts_api_uses_project_manager_scope(self):
+        client = TestClient(app)
+        project = self._make_sequence_project("project_api_sync")
+
+        with patch("src.api.routes.project_assistant.ProjectManager.get_project", return_value=project):
+            response = client.post("/api/project-assistant/projects/project_api_sync/sync-artifacts")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["project_id"], "project_api_sync")
+        self.assertEqual(payload["document_count"], 4)
+        docs = client.get("/api/project-assistant/knowledge-base?project_id=project_api_sync").json()["documents"]
+        self.assertEqual(len([doc for doc in docs if doc["metadata"].get("auto_indexed")]), 4)
+
     def test_chat_uses_clean_conversation_state_and_saves_agent_run(self):
         RagWorkbenchService.ingest_document(
             "guide.txt",
@@ -226,6 +289,33 @@ class RagWorkbenchContractTests(unittest.TestCase):
         payload = response.json()
         self.assertIn("knowledge_base", payload)
         self.assertIn("chat", payload["navigation"])
+
+    def _make_sequence_project(self, project_id: str):
+        project_dir = self.root / "projects" / project_id
+        project = {
+            "project_id": project_id,
+            "project_name": "Sync Project",
+            "task_type": "sequence_regression",
+            "dataset_path": str((project_dir / "dataset").resolve()),
+            "layout": {"mode": "v3", "version": "v3"},
+            "created_at": "2026-01-01T00:00:00",
+            "updated_at": "2026-01-02T00:00:00",
+            "rnn_config": {
+                "feature_columns": ["pressure", "flow"],
+                "target_column": "temperature",
+                "time_column": "timestamp",
+                "sequence_column": "machine_id",
+                "task_head": "regression",
+            },
+            "training_config": {"architecture": "rnn", "model": "lstm", "epochs": 3},
+            "training_runs": [{"run_id": "run_lstm_1", "status": "completed", "created_at": "2026-01-02T00:00:00"}],
+            "current": {"training_run_id": "run_lstm_1", "export_id": "export_rnn_1"},
+            "imports_history": [{"type": "sequence_csv", "filename": "sensor.csv"}],
+        }
+        ProjectLayout(project_dir, project).ensure_v3_tree()
+        sequence_manifest = project_dir / "sequences" / "sequence_manifest.json"
+        sequence_manifest.write_text(json.dumps({"sequence_count": 8, "columns": ["timestamp", "pressure", "flow"]}), encoding="utf-8")
+        return project
 
 
 if __name__ == "__main__":

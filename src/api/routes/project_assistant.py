@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from src.project_assistant import ProjectAssistantService
+from src.project_manager import ProjectManager
 
 router = APIRouter()
 
@@ -138,6 +139,18 @@ def project_assistant_clear_knowledge_base(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
     return ProjectAssistantService.clear_knowledge_base(project_id=project_id)
+
+
+@router.post("/api/project-assistant/projects/{project_id}/sync-artifacts")
+@router.post("/api/rag-workbench/projects/{project_id}/sync-artifacts")
+def project_assistant_sync_project_artifacts(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        return ProjectAssistantService.sync_project_artifacts(project)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.post("/api/project-assistant/retrieval/query")

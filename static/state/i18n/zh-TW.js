@@ -794,4 +794,7 @@ export const zhTWOverrides = {
 export const zhTW = {
   ...en,
   ...zhTWOverrides,
+  "rag.syncArtifacts": "同步專案產物",
+  "rag.toast.noActiveProject": "請先開啟專案再同步助理產物。",
+  "rag.toast.syncedArtifacts": "已同步 {count} 份專案產物文件、{chunks} 個片段。",
 };

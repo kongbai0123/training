@@ -12,6 +12,9 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 from src.app_paths import USER_DATA_DIR
+from src.project_layout import ProjectLayout
+from src.training.export_service import ExportService
+from src.training.run_registry import ExperimentRunRegistry
 
 
 WORD_RE = re.compile(r"[\w\u4e00-\u9fff]+", re.UNICODE)
@@ -295,6 +298,257 @@ class ProjectAssistantService:
             content=payload.decode("utf-8", errors="replace"),
             metadata=metadata or {},
         )
+
+    @classmethod
+    def sync_project_artifacts(cls, project: Dict[str, Any]) -> Dict[str, Any]:
+        """Index deterministic artifacts for the active project.
+
+        This is intentionally a project-scoped mirror of structured training evidence,
+        not a global document crawler. Manual knowledge-base uploads are preserved; only
+        previously auto-indexed documents for the same project are replaced.
+        """
+        project_id = str(project.get("project_id") or "").strip()
+        if not project_id:
+            raise ValueError("project_id is required to sync project artifacts.")
+
+        cls.ensure()
+        removed = cls._clear_auto_documents(project_id)
+        documents = cls._build_project_artifact_documents(project)
+        results = []
+        for item in documents:
+            result = cls.ingest_document(
+                filename=item["filename"],
+                content=item["content"],
+                metadata={
+                    "project_id": project_id,
+                    "project_name": str(project.get("project_name") or project.get("name") or ""),
+                    "source_type": item["source_type"],
+                    "auto_indexed": True,
+                    "sync_key": item["sync_key"],
+                },
+            )
+            results.append(result["document"])
+
+        return {
+            "project_id": project_id,
+            "status": cls.status(project_id=project_id),
+            "removed_auto_documents": removed,
+            "documents": results,
+            "document_count": len(results),
+            "chunk_count": sum(int(document.get("chunk_count") or 0) for document in results),
+        }
+
+    @classmethod
+    def _clear_auto_documents(cls, project_id: str) -> int:
+        state = cls._state()
+        normalized_project_id = str(project_id or "").strip()
+        removed_documents = [
+            document
+            for document in state.get("documents", [])
+            if cls._project_matches(document.get("metadata") or {}, normalized_project_id)
+            and bool((document.get("metadata") or {}).get("auto_indexed"))
+        ]
+        if not removed_documents:
+            return 0
+        removed_ids = {document.get("document_id") for document in removed_documents}
+        state["documents"] = [
+            document
+            for document in state.get("documents", [])
+            if document.get("document_id") not in removed_ids
+        ]
+        state["chunks"] = [
+            chunk
+            for chunk in state.get("chunks", [])
+            if chunk.get("document_id") not in removed_ids
+        ]
+        removed_paths = {Path(str(document.get("path") or "")).name for document in removed_documents}
+        if cls.DOCS_DIR.exists():
+            for item in cls.DOCS_DIR.iterdir():
+                if item.is_file() and item.name in removed_paths:
+                    item.unlink()
+        cls._save_state(state)
+        return len(removed_documents)
+
+    @classmethod
+    def _build_project_artifact_documents(cls, project: Dict[str, Any]) -> List[Dict[str, str]]:
+        project_id = str(project.get("project_id") or "project").strip()
+        layout = ProjectLayout.from_project(project)
+        registry = cls._safe_call(lambda: ExperimentRunRegistry.build(project), {"runs": [], "run_count": 0})
+        exports = cls._safe_call(lambda: ExportService.list_project_exports(project, limit=24), {"exports": []})
+        docs = [
+            {
+                "filename": "project-summary.md",
+                "source_type": "project_summary",
+                "sync_key": f"{project_id}:project-summary",
+                "content": cls._project_summary_markdown(project, registry, exports),
+            },
+            {
+                "filename": "dataset-and-schema.md",
+                "source_type": "dataset_schema",
+                "sync_key": f"{project_id}:dataset-schema",
+                "content": cls._dataset_schema_markdown(project, layout),
+            },
+            {
+                "filename": "training-runs-and-metrics.md",
+                "source_type": "training_runs",
+                "sync_key": f"{project_id}:training-runs",
+                "content": cls._training_runs_markdown(project, registry, layout),
+            },
+            {
+                "filename": "exports-and-contracts.md",
+                "source_type": "exports",
+                "sync_key": f"{project_id}:exports",
+                "content": cls._exports_markdown(project, exports),
+            },
+        ]
+        return [doc for doc in docs if doc["content"].strip()]
+
+    @staticmethod
+    def _safe_call(callback, fallback):
+        try:
+            return callback()
+        except Exception:
+            return fallback
+
+    @classmethod
+    def _project_summary_markdown(cls, project: Dict[str, Any], registry: Dict[str, Any], exports: Dict[str, Any]) -> str:
+        file_summary = project.get("file_summary") if isinstance(project.get("file_summary"), dict) else {}
+        current = project.get("current") if isinstance(project.get("current"), dict) else {}
+        imports_history = project.get("imports_history") if isinstance(project.get("imports_history"), list) else []
+        classes = project.get("class_names") if isinstance(project.get("class_names"), list) else []
+        lines = [
+            "# Project Summary",
+            "",
+            f"- Project ID: {project.get('project_id') or ''}",
+            f"- Project name: {project.get('project_name') or project.get('name') or ''}",
+            f"- Task type: {project.get('task_type') or ''}",
+            f"- Created at: {project.get('created_at') or ''}",
+            f"- Updated at: {project.get('updated_at') or ''}",
+            f"- Current training run: {current.get('training_run_id') or ''}",
+            f"- Current export: {current.get('export_id') or ''}",
+            f"- Registered training runs: {registry.get('run_count') or 0}",
+            f"- Export artifacts: {len(exports.get('exports') or [])}",
+            "",
+            "## File Summary",
+            cls._compact_json(file_summary),
+            "",
+            "## Classes",
+            ", ".join(str(item) for item in classes) if classes else "No class labels configured for this project.",
+            "",
+            "## Recent Imports",
+            cls._compact_json(imports_history[-8:] if imports_history else []),
+        ]
+        return "\n".join(lines)
+
+    @classmethod
+    def _dataset_schema_markdown(cls, project: Dict[str, Any], layout: ProjectLayout) -> str:
+        sequence_manifest = _read_json(layout.sequence_manifest_path(), {})
+        split_manifest = _read_json(layout.current_split_path, {})
+        rnn_config = project.get("rnn_config") if isinstance(project.get("rnn_config"), dict) else {}
+        training_config = project.get("training_config") if isinstance(project.get("training_config"), dict) else {}
+        split_config = project.get("split_config") if isinstance(project.get("split_config"), dict) else {}
+        lines = [
+            "# Dataset And Schema",
+            "",
+            f"- Task type: {project.get('task_type') or ''}",
+            f"- Dataset path: {project.get('dataset_path') or ''}",
+            f"- Sequence manifest exists: {layout.sequence_manifest_path().exists()}",
+            f"- Current split exists: {layout.current_split_path.exists()}",
+            "",
+            "## RNN Schema Config",
+            cls._compact_json(rnn_config),
+            "",
+            "## Training Config",
+            cls._compact_json(training_config),
+            "",
+            "## Split Config",
+            cls._compact_json(split_config),
+            "",
+            "## Sequence Manifest",
+            cls._compact_json(sequence_manifest),
+            "",
+            "## Current Split Manifest",
+            cls._compact_json(split_manifest),
+        ]
+        return "\n".join(lines)
+
+    @classmethod
+    def _training_runs_markdown(cls, project: Dict[str, Any], registry: Dict[str, Any], layout: ProjectLayout) -> str:
+        lines = [
+            "# Training Runs And Metrics",
+            "",
+            f"- Project ID: {project.get('project_id') or ''}",
+            f"- Run count: {registry.get('run_count') or 0}",
+            "",
+        ]
+        runs = registry.get("runs") if isinstance(registry.get("runs"), list) else []
+        if not runs:
+            lines.append("No registered training runs found.")
+            return "\n".join(lines)
+        for run in runs[:20]:
+            run_id = str(run.get("run_id") or "")
+            run_dir = layout.training_run_dir(run_id)
+            metrics = _read_json(run_dir / "metrics.json", {})
+            metric_schema = _read_json(run_dir / "metric_schema.json", {})
+            summary = _read_json(run_dir / "run_summary.json", {})
+            lines.extend([
+                f"## Run {run_id}",
+                f"- Status: {run.get('status') or ''}",
+                f"- Architecture: {run.get('architecture') or ''}",
+                f"- Backend: {run.get('backend') or ''}",
+                f"- Task type: {run.get('task_type') or ''}",
+                f"- Primary metric: {run.get('primary_metric') or ''}",
+                f"- Primary value: {run.get('primary_value') if run.get('primary_value') is not None else ''}",
+                f"- Diagnostics: {cls._compact_json(run.get('diagnostics') or {})}",
+                f"- Artifact counts: {cls._compact_json(run.get('artifact_counts') or {})}",
+                "",
+                "### Metrics",
+                cls._compact_json(metrics),
+                "",
+                "### Metric Schema",
+                cls._compact_json(metric_schema),
+                "",
+                "### Run Summary",
+                cls._compact_json(summary),
+                "",
+            ])
+        return "\n".join(lines)
+
+    @classmethod
+    def _exports_markdown(cls, project: Dict[str, Any], exports: Dict[str, Any]) -> str:
+        lines = [
+            "# Exports And Contracts",
+            "",
+            f"- Project ID: {project.get('project_id') or ''}",
+            f"- Export count: {len(exports.get('exports') or [])}",
+            "",
+        ]
+        items = exports.get("exports") if isinstance(exports.get("exports"), list) else []
+        if not items:
+            lines.append("No export artifacts found.")
+            return "\n".join(lines)
+        for item in items[:24]:
+            lines.extend([
+                f"## Export {item.get('export_id') or ''}",
+                f"- Type: {item.get('export_type') or ''}",
+                f"- Run ID: {item.get('run_id') or ''}",
+                f"- Created at: {item.get('created_at') or ''}",
+                f"- Primary path: {item.get('primary_path') or ''}",
+                f"- Summary path: {item.get('summary_path') or ''}",
+                f"- Files: {cls._compact_json(item.get('files') or [])}",
+                "",
+            ])
+        return "\n".join(lines)
+
+    @staticmethod
+    def _compact_json(payload: Any, limit: int = 5000) -> str:
+        try:
+            text = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
+        except Exception:
+            text = str(payload)
+        if len(text) > limit:
+            text = text[:limit] + "\n... truncated ..."
+        return f"```json\n{text}\n```"
 
     @classmethod
     def _chunk_document(

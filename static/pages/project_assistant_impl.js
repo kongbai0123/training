@@ -21,6 +21,7 @@ export function initProjectAssistantImpl() {
   qs("#btn-rag-refresh")?.addEventListener("click", () => loadProjectAssistant({ force: true }));
   qs("#btn-rag-ingest")?.addEventListener("click", ingestDocument);
   qs("#btn-rag-upload")?.addEventListener("click", uploadDocumentFile);
+  qs("#btn-rag-sync-artifacts")?.addEventListener("click", syncProjectArtifacts);
   qs("#btn-rag-reindex")?.addEventListener("click", reindexKnowledgeBase);
   qs("#btn-rag-clear-kb")?.addEventListener("click", clearKnowledgeBase);
   qs("#btn-rag-query")?.addEventListener("click", runRetrieval);
@@ -110,6 +111,22 @@ async function uploadDocumentFile() {
   await loadProjectAssistant({ force: true });
   renderStages(result.document?.ingestion || []);
   eventBus.emit("toast", t("rag.toast.ingested", { count: result.document?.chunk_count || 0 }));
+}
+
+async function syncProjectArtifacts() {
+  if (!appState.currentProjectId) {
+    eventBus.emit("toast", t("rag.toast.noActiveProject"));
+    return;
+  }
+  const result = await apiFetch(`/api/project-assistant/projects/${encodeURIComponent(appState.currentProjectId)}/sync-artifacts`, {
+    method: "POST",
+  });
+  assistantState.status = result.status;
+  await loadProjectAssistant({ force: true });
+  eventBus.emit("toast", t("rag.toast.syncedArtifacts", {
+    count: result.document_count || 0,
+    chunks: result.chunk_count || 0,
+  }));
 }
 
 async function reindexKnowledgeBase() {

@@ -19,6 +19,7 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
         self.assertIn('id="rag-document-list"', html)
         self.assertIn('id="rag-upload-file"', html)
         self.assertIn('id="btn-rag-upload"', html)
+        self.assertIn('id="btn-rag-sync-artifacts"', html)
         self.assertIn('id="rag-retrieval-results"', html)
         self.assertIn('id="rag-chat-sources"', html)
         self.assertIn('id="rag-agent-trace"', html)
@@ -41,6 +42,7 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
         self.assertIn('"rag-workbench": "project-assistant"', router)
         self.assertIn("/api/project-assistant", module)
         self.assertIn('assistantApi("/settings")', module)
+        self.assertIn("/sync-artifacts", module)
         self.assertNotIn("/api/rag-workbench", module)
         self.assertIn("project_id", module)
         self.assertIn("conversation_state: assistantState.conversationState", module)
@@ -65,6 +67,8 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
         self.assertIn('"rag.noRawThought"', zh)
         self.assertIn('"rag.uploadFile"', en)
         self.assertIn('"rag.uploadFile"', zh)
+        self.assertIn('"rag.syncArtifacts"', en)
+        self.assertIn('"rag.syncArtifacts"', zh)
 
     def test_project_assistant_context_is_available_on_decision_pages(self):
         right_panel = (ROOT / "static" / "core" / "right_panel.js").read_text(encoding="utf-8")
