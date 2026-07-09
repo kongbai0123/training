@@ -27,7 +27,6 @@ export const zhTWOverrides = {
   "navExport": "匯出",
   "navHistory": "歷史紀錄",
   "navSettings": "設定",
-  "navRagWorkbench": "專案助理",
   "projectAssistant.open": "助理",
   "projectAssistant.contextTitle": "專案助理",
   "rag.title": "專案助理",

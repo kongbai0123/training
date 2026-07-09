@@ -22,7 +22,6 @@
     navExport: "Export",
     navHistory: "History",
     navSettings: "Settings",
-    navRagWorkbench: "Project Assistant",
     "projectAssistant.open": "Assistant",
     "projectAssistant.contextTitle": "Project Assistant",
     "projectAssistant.syncArtifacts": "Sync",
