@@ -13,6 +13,8 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
         self.assertIn('id="page-rag-workbench"', html)
         self.assertIn('id="rag-status-model"', html)
         self.assertIn('id="rag-document-list"', html)
+        self.assertIn('id="rag-upload-file"', html)
+        self.assertIn('id="btn-rag-upload"', html)
         self.assertIn('id="rag-retrieval-results"', html)
         self.assertIn('id="rag-chat-sources"', html)
         self.assertIn('id="rag-agent-trace"', html)
@@ -29,6 +31,7 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
         self.assertIn("renderRagWorkbenchPage", registry)
         self.assertIn("/api/rag-workbench/status", module)
         self.assertIn("/api/rag-workbench/knowledge-base/documents", module)
+        self.assertIn("/api/rag-workbench/knowledge-base/upload", module)
         self.assertIn("/api/rag-workbench/retrieval/query", module)
         self.assertIn("/api/rag-workbench/chat", module)
         self.assertIn("/api/rag-workbench/sandbox/files", module)
@@ -48,6 +51,8 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
         self.assertIn('"rag.title"', zh)
         self.assertIn('"rag.noRawThought"', en)
         self.assertIn('"rag.noRawThought"', zh)
+        self.assertIn('"rag.uploadFile"', en)
+        self.assertIn('"rag.uploadFile"', zh)
 
 
 if __name__ == "__main__":

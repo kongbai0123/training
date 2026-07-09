@@ -238,7 +238,11 @@
                 </div>
               </div>
               <textarea id="rag-doc-content" class="rag-textarea" rows="5" placeholder="Paste Markdown, TXT, or extracted document text here." data-i18n-placeholder="rag.contentPlaceholder"></textarea>
-              <button class="btn btn-primary" id="btn-rag-ingest"><i class="fa-solid fa-file-import"></i> <span data-i18n="rag.ingest">Ingest Document</span></button>
+              <div class="rag-upload-row">
+                <input id="rag-upload-file" type="file" accept=".txt,.md,.markdown,.csv,.json,.log">
+                <button class="btn btn-secondary" id="btn-rag-upload"><i class="fa-solid fa-upload"></i> <span data-i18n="rag.uploadFile">Upload File</span></button>
+                <button class="btn btn-primary" id="btn-rag-ingest"><i class="fa-solid fa-file-import"></i> <span data-i18n="rag.ingest">Ingest Text</span></button>
+              </div>
               <div id="rag-ingestion-stages" class="rag-stage-list"></div>
               <div id="rag-document-list" class="rag-document-list"></div>
             </section>

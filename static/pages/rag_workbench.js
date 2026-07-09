@@ -19,6 +19,7 @@ const ragState = {
 export function initRagWorkbench() {
   qs("#btn-rag-refresh")?.addEventListener("click", () => loadRagWorkbench({ force: true }));
   qs("#btn-rag-ingest")?.addEventListener("click", ingestDocument);
+  qs("#btn-rag-upload")?.addEventListener("click", uploadDocumentFile);
   qs("#btn-rag-reindex")?.addEventListener("click", reindexKnowledgeBase);
   qs("#btn-rag-clear-kb")?.addEventListener("click", clearKnowledgeBase);
   qs("#btn-rag-query")?.addEventListener("click", runRetrieval);
@@ -80,6 +81,25 @@ async function ingestDocument() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ filename, content }),
+  });
+  ragState.status = result.status;
+  await loadRagWorkbench({ force: true });
+  renderStages(result.document?.ingestion || []);
+  eventBus.emit("toast", t("rag.toast.ingested", { count: result.document?.chunk_count || 0 }));
+}
+
+async function uploadDocumentFile() {
+  const input = qs("#rag-upload-file");
+  const file = input?.files?.[0];
+  if (!file) {
+    eventBus.emit("toast", t("rag.toast.noFile"));
+    return;
+  }
+  const formData = new FormData();
+  formData.append("file", file);
+  const result = await apiFetch("/api/rag-workbench/knowledge-base/upload", {
+    method: "POST",
+    body: formData,
   });
   ragState.status = result.status;
   await loadRagWorkbench({ force: true });
@@ -172,7 +192,7 @@ function renderStatus() {
   setText("#rag-status-mode", workspace.rag_enabled ? "ON" : "OFF");
   setText("#rag-status-documents", kb.document_count ?? 0);
   setText("#rag-status-chunks", `${kb.indexed_chunk_count ?? 0}/${kb.chunk_count ?? 0}`);
-  setText("#rag-status-index", kb.index_state || "--");
+  setText("#rag-status-index", formatIndexState(kb.index_state));
   setText("#rag-kb-badge", t("rag.docCount", { count: kb.document_count ?? 0 }));
   setText("#rag-agent-count", t("rag.runCount", { count: ragState.agentRuns.length }));
 }
@@ -184,11 +204,23 @@ function renderKnowledgeBase() {
       <article class="rag-document-card">
         <strong>${escapeHtml(doc.filename)}</strong>
         <span>${escapeHtml(t("rag.chunkCount", { count: doc.chunk_count || 0 }))}</span>
-        <code>${escapeHtml(doc.index_state || "unknown")}</code>
+        <code>${escapeHtml(formatIndexState(doc.index_state))}</code>
       </article>
     `).join("")
     : `<div class="empty-state">${escapeHtml(t("rag.noDocuments"))}</div>`;
   setHTML("#rag-document-list", html);
+}
+
+function formatIndexState(state) {
+  const normalized = String(state || "unknown").toLowerCase();
+  const labels = {
+    empty: t("rag.indexState.empty"),
+    indexed: t("rag.indexState.indexed"),
+    ready: t("rag.indexState.ready"),
+    stale: t("rag.indexState.stale"),
+    unknown: t("rag.indexState.unknown"),
+  };
+  return labels[normalized] || state || "--";
 }
 
 function renderStages(stages = []) {

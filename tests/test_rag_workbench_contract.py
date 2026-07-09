@@ -113,11 +113,33 @@ class RagWorkbenchContractTests(unittest.TestCase):
         RagWorkbenchService.chat("How do we evaluate RAG?")
         RagWorkbenchService.chat("No matching phrase qwertyuiop")
 
-        report = RagWorkbenchService.evaluation_report()
+        report = RagWorkbenchService.evaluation_report(golden_set=[
+            {"query": "How do we evaluate RAG?", "expected_source": "eval.md", "expected_answer": "source hit rate"}
+        ])
 
         self.assertEqual(report["run_count"], 2)
+        self.assertEqual(report["golden_case_count"], 1)
+        self.assertEqual(report["golden_source_hits"], 1)
         self.assertIn("source_hit_rate", report)
         self.assertTrue(Path(report["report_path"]).exists())
+
+    def test_file_upload_and_sse_stream_contracts(self):
+        client = TestClient(app)
+        upload = client.post(
+            "/api/rag-workbench/knowledge-base/upload",
+            files={"file": ("upload.md", b"Streamed RAG answers send sources events.", "text/markdown")},
+        )
+        self.assertEqual(upload.status_code, 200)
+        self.assertGreaterEqual(upload.json()["document"]["chunk_count"], 1)
+
+        stream = client.post(
+            "/api/rag-workbench/chat/stream",
+            json={"message": "What does streamed RAG send?", "conversation_state": []},
+        )
+        self.assertEqual(stream.status_code, 200)
+        body = stream.text
+        self.assertIn("event: sources", body)
+        self.assertIn("event: final", body)
 
     def test_api_routes_expose_workbench_contract(self):
         client = TestClient(app)
@@ -131,4 +153,3 @@ class RagWorkbenchContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

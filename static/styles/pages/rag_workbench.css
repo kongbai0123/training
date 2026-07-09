@@ -63,7 +63,8 @@
 
 .rag-form-grid,
 .rag-query-row,
-.rag-sandbox-editor {
+.rag-sandbox-editor,
+.rag-upload-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
@@ -73,6 +74,10 @@
 
 .rag-query-row {
   grid-template-columns: minmax(180px, 1fr) minmax(160px, 220px) auto;
+}
+
+.rag-upload-row {
+  grid-template-columns: minmax(180px, 1fr) auto auto;
 }
 
 .rag-actions-inline {
@@ -214,6 +219,7 @@
   .rag-status-strip,
   .rag-query-row,
   .rag-form-grid,
+  .rag-upload-row,
   .rag-eval-grid {
     grid-template-columns: 1fr;
   }
@@ -224,4 +230,3 @@
     grid-template-columns: 1fr;
   }
 }
-

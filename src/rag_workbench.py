@@ -96,6 +96,7 @@ class RagWorkbenchService:
             ],
             "agent_runs": [],
             "evaluation_reports": [],
+            "golden_set": [],
             "bad_retrieval_marks": [],
         }
 
@@ -189,6 +190,21 @@ class RagWorkbenchService:
         state["workspace"]["index_state"] = "ready" if chunks else state["workspace"].get("index_state", "empty")
         cls._save_state(state)
         return {"document": document, "chunks": chunks, "status": cls.status()}
+
+    @classmethod
+    def ingest_file_bytes(cls, filename: str, payload: bytes, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        suffix = Path(filename or "").suffix.lower()
+        if suffix not in {".txt", ".md", ".markdown", ".csv", ".json", ".log"}:
+            return cls.ingest_document(
+                filename=f"{Path(filename or 'document').stem or 'document'}.txt",
+                content=payload.decode("utf-8", errors="replace"),
+                metadata={**(metadata or {}), "original_filename": filename, "parse_warning": "Parsed as UTF-8 text fallback."},
+            )
+        return cls.ingest_document(
+            filename=filename,
+            content=payload.decode("utf-8", errors="replace"),
+            metadata=metadata or {},
+        )
 
     @classmethod
     def _chunk_document(cls, document_id: str, filename: str, content: str, chunk_size: int = 700, overlap: int = 120) -> List[Dict[str, Any]]:
@@ -359,6 +375,16 @@ class RagWorkbenchService:
         return run
 
     @classmethod
+    def chat_stream_events(cls, message: str, conversation_state: Optional[List[Dict[str, Any]]] = None, profile_id: str = "lexical_default") -> List[Dict[str, Any]]:
+        run = cls.chat(message=message, conversation_state=conversation_state or [], profile_id=profile_id)
+        return [
+            {"event": "plan", "data": {"steps": run["agent_trace"]}},
+            {"event": "sources", "data": {"sources": run["sources"]}},
+            {"event": "final", "data": {"answer": run["answer"], "run_id": run["run_id"], "metrics": run["metrics"]}},
+            {"event": "done", "data": {"run_id": run["run_id"]}},
+        ]
+
+    @classmethod
     def _clean_conversation(cls, items: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
         clean = []
         for item in items:
@@ -443,16 +469,44 @@ class RagWorkbenchService:
         return artifact
 
     @classmethod
-    def evaluation_report(cls) -> Dict[str, Any]:
+    def set_golden_set(cls, items: List[Dict[str, Any]]) -> Dict[str, Any]:
+        normalized = []
+        for item in items:
+            query = str(item.get("query") or "").strip()
+            expected_source = str(item.get("expected_source") or "").strip()
+            expected_answer = str(item.get("expected_answer") or "").strip()
+            if not query:
+                continue
+            normalized.append({
+                "case_id": item.get("case_id") or _safe_id("golden"),
+                "query": query,
+                "expected_source": expected_source,
+                "expected_answer": expected_answer,
+                "created_at": item.get("created_at") or _now(),
+            })
         state = cls._state()
+        state["golden_set"] = normalized
+        cls._save_state(state)
+        return {"golden_set": normalized, "count": len(normalized)}
+
+    @classmethod
+    def evaluation_report(cls, golden_set: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+        state = cls._state()
+        if golden_set is not None:
+            state["golden_set"] = cls.set_golden_set(golden_set)["golden_set"]
+            state = cls._state()
         runs = state.get("agent_runs", [])
+        golden_items = state.get("golden_set", [])
         total = len(runs)
         source_hits = sum(1 for run in runs if run.get("metrics", {}).get("source_hit"))
         avg_latency = round(sum(float(run.get("metrics", {}).get("latency_ms") or 0) for run in runs) / total, 2) if total else 0
         failures = Counter(run.get("failure_type") or "none" for run in runs)
+        golden_hits = cls._evaluate_golden_hits(runs, golden_items)
         report = {
             "report_id": _safe_id("rag_eval"),
             "run_count": total,
+            "golden_case_count": len(golden_items),
+            "golden_source_hits": golden_hits,
             "citation_coverage": round(source_hits / total, 4) if total else 0,
             "source_hit_rate": round(source_hits / total, 4) if total else 0,
             "average_latency_ms": avg_latency,
@@ -462,6 +516,8 @@ class RagWorkbenchService:
         markdown = (
             "# RAG Workbench Evaluation Report\n\n"
             f"- Runs: {report['run_count']}\n"
+            f"- Golden cases: {report['golden_case_count']}\n"
+            f"- Golden source hits: {report['golden_source_hits']}\n"
             f"- Citation coverage: {report['citation_coverage']}\n"
             f"- Source hit rate: {report['source_hit_rate']}\n"
             f"- Average latency ms: {report['average_latency_ms']}\n"
@@ -475,3 +531,22 @@ class RagWorkbenchService:
         state.setdefault("evaluation_reports", []).insert(0, report)
         cls._save_state(state)
         return report
+
+    @staticmethod
+    def _evaluate_golden_hits(runs: List[Dict[str, Any]], golden_items: List[Dict[str, Any]]) -> int:
+        if not runs or not golden_items:
+            return 0
+        hits = 0
+        for case in golden_items:
+            query = str(case.get("query") or "").lower()
+            expected_source = str(case.get("expected_source") or "").lower()
+            for run in runs:
+                if query and query not in str(run.get("query") or "").lower():
+                    continue
+                if not expected_source:
+                    hits += 1
+                    break
+                if any(expected_source in str(src.get("source") or "").lower() for src in run.get("sources", [])):
+                    hits += 1
+                    break
+        return hits

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from src.rag_workbench import RagWorkbenchService
@@ -41,6 +43,10 @@ class RagSandboxFileRequest(BaseModel):
     content: str
 
 
+class RagGoldenSetRequest(BaseModel):
+    items: List[Dict[str, Any]]
+
+
 @router.get("/api/rag-workbench/status")
 def rag_workbench_status():
     return RagWorkbenchService.status()
@@ -57,6 +63,16 @@ def rag_ingest_document(request: RagDocumentRequest):
         filename=request.filename,
         content=request.content,
         metadata=request.metadata or {},
+    )
+
+
+@router.post("/api/rag-workbench/knowledge-base/upload")
+async def rag_upload_document(file: UploadFile = File(...)):
+    payload = await file.read()
+    return RagWorkbenchService.ingest_file_bytes(
+        filename=file.filename or "document.txt",
+        payload=payload,
+        metadata={"content_type": file.content_type or ""},
     )
 
 
@@ -99,6 +115,22 @@ def rag_chat(request: RagChatRequest):
     )
 
 
+@router.post("/api/rag-workbench/chat/stream")
+def rag_chat_stream(request: RagChatRequest):
+    events = RagWorkbenchService.chat_stream_events(
+        message=request.message,
+        conversation_state=request.conversation_state or [],
+        profile_id=request.profile_id,
+    )
+
+    def iter_events():
+        for item in events:
+            yield f"event: {item['event']}\n"
+            yield f"data: {json.dumps(item['data'], ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(iter_events(), media_type="text/event-stream")
+
+
 @router.get("/api/rag-workbench/agent-runs")
 def rag_agent_runs():
     return RagWorkbenchService.list_agent_runs()
@@ -123,6 +155,10 @@ def rag_export_sandbox():
 
 
 @router.post("/api/rag-workbench/evaluation/report")
-def rag_evaluation_report():
-    return RagWorkbenchService.evaluation_report()
+def rag_evaluation_report(request: Optional[RagGoldenSetRequest] = None):
+    return RagWorkbenchService.evaluation_report(golden_set=request.items if request else None)
 
+
+@router.post("/api/rag-workbench/evaluation/golden-set")
+def rag_set_golden_set(request: RagGoldenSetRequest):
+    return RagWorkbenchService.set_golden_set(request.items)

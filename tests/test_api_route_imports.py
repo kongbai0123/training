@@ -47,10 +47,13 @@ EXPECTED_ROUTE_PATHS = {
     "/api/projects/{project_id}/monitor",
     "/api/rag-workbench/status",
     "/api/rag-workbench/knowledge-base",
+    "/api/rag-workbench/knowledge-base/upload",
     "/api/rag-workbench/retrieval/query",
     "/api/rag-workbench/chat",
+    "/api/rag-workbench/chat/stream",
     "/api/rag-workbench/sandbox",
     "/api/rag-workbench/evaluation/report",
+    "/api/rag-workbench/evaluation/golden-set",
 }
 
 
