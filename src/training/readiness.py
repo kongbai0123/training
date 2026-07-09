@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from typing import Dict, Any, List
+from src.auto_label_review_gate import auto_label_training_errors
 from src.model_store import ModelStore
 
 def validate_training_readiness(project: Dict[str, Any], config_data: Dict[str, Any]) -> List[str]:
@@ -187,4 +188,5 @@ def validate_training_readiness(project: Dict[str, Any], config_data: Dict[str, 
     if device not in {"cpu", "gpu"}:
         errors.append("Device 設定值無效，僅支援 'cpu' 或 'gpu'。")
         
+    errors.extend(auto_label_training_errors(project))
     return errors

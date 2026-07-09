@@ -14,7 +14,7 @@ import {
 import { initEvaluation, renderEvaluationPage } from "../pages/evaluation.js?v=20260702-cnn-eval-polish2";
 import { initModelCompare, renderModelComparePage } from "../pages/model_compare.js?v=20260708-compare-scope-artifacts";
 import { initInference, renderInferencePage } from "../pages/inference.js?v=20260702-model-scroll-bounds";
-import { initAutoLabeling, renderAutoLabelingPage } from "../pages/auto_labeling.js?v=20260709-review-first-auto-label";
+import { initAutoLabeling, renderAutoLabelingPage } from "../pages/auto_labeling.js?v=20260709-review-gate";
 import { initExport, renderExportPage } from "../pages/export.js?v=20260701-xgb-eval-final";
 import { initSettings, renderSettingsPage } from "../pages/settings.js";
 

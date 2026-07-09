@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+from src.auto_label_review_gate import build_auto_label_review_gate
 from src.config import PROJECTS_DIR
 from src.project_layout import ProjectLayout
 
@@ -290,6 +291,23 @@ class ProjectManager:
                 ProjectManager.save_project(project_id, data)
 
             data["_layout_report"] = ProjectLayout.from_project(data).get_layout_report()
+            try:
+                data["auto_label_review_gate"] = build_auto_label_review_gate(data)
+            except Exception as exc:
+                data["auto_label_review_gate"] = {
+                    "mode": "strict",
+                    "blocked": True,
+                    "total_drafts": 0,
+                    "accepted": 0,
+                    "rejected": 0,
+                    "skipped": 0,
+                    "hard_case": 0,
+                    "pending": 0,
+                    "jobs_with_pending": [],
+                    "unsafe_current": [],
+                    "warnings": [f"Unable to verify auto-label review gate: {exc}"],
+                    "message": "Auto-label review gate could not be verified.",
+                }
             return data
         except Exception as e:
             print(f"Error loading project {project_id}: {e}")
@@ -307,6 +325,7 @@ class ProjectManager:
         try:
             data_to_save = dict(data)
             data_to_save.pop("_layout_report", None)
+            data_to_save.pop("auto_label_review_gate", None)
             with open(json_path, "w", encoding="utf-8") as f:
                 json.dump(data_to_save, f, indent=2, ensure_ascii=False)
             return True

@@ -747,7 +747,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         tooltip_js = (ROOT / "static" / "core" / "tooltip.js").read_text(encoding="utf-8")
         project_lifecycle_js = (ROOT / "static" / "core" / "project_lifecycle.js").read_text(encoding="utf-8")
 
-        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260709-review-first-auto-label";', app_js)
+        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260709-review-gate";', app_js)
         self.assertIn("bootstrapApp().catch", app_js)
         self.assertNotIn("bindGlobalNavigation", app_js)
         self.assertNotIn("function navigate", app_js)
@@ -762,7 +762,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn('from "./right_panel.js?v=20260708-rnn-feature-wizard"', bootstrap_js)
         self.assertIn('from "./tooltip.js"', bootstrap_js)
         self.assertIn('from "./project_lifecycle.js"', bootstrap_js)
-        self.assertIn('from "./page_registry.js?v=20260709-review-first-auto-label"', bootstrap_js)
+        self.assertIn('from "./page_registry.js?v=20260709-review-gate"', bootstrap_js)
         self.assertIn("createProjectLifecycle({ renderAll, navigate });", bootstrap_js)
         self.assertIn("export async function bootstrapApp()", bootstrap_js)
         self.assertIn("initPageModules();", bootstrap_js)

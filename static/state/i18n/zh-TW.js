@@ -100,6 +100,7 @@ export const zhTW = {
   "status.blocker.noImages": "請先匯入圖片後再繼續。",
   "status.blocker.labelmeNotSynced": "請先同步 LabelMe 標註後再繼續。",
   "status.blocker.splitIncomplete": "請先建立 Train / Val / Test 分割後再訓練。",
+  "status.blocker.autoLabelReview": "訓練前請先完成自動標註草稿審查。",
 
   "dashboard.title": "總覽控制中心",
   "dashboard.subtitle": "管理目前專案流程，並快速前往下一個操作。",
@@ -1117,4 +1118,8 @@ export const zhTW = {
   "rnn.evaluation.runHistory": "Run 歷史",
   "rnn.evaluation.sequence": "序列",
   "rnn.evaluation.noSequenceRuns": "尚無序列 run。"
+  ,
+  "status.blocker.autoLabelReview": "訓練前請先完成自動標註草稿審查。",
+  "training.blocker.autoLabelReview": "自動標註審查尚未完成。待審草稿：{pending}。",
+  "training.action.reviewAutoLabel": "前往審查草稿"
 };

@@ -964,6 +964,14 @@ function getTrainingBlockers(status) {
   if (!status.splitComplete) {
     blockers.push({ text: t("training.blocker.split"), action: t("training.action.createSplit"), nav: "split" });
   }
+  if (status.autoLabelReviewGate?.blocked) {
+    const pending = status.autoLabelReviewGate.pending || 0;
+    blockers.push({
+      text: t("training.blocker.autoLabelReview", { pending }),
+      action: t("training.action.reviewAutoLabel"),
+      nav: "auto-labeling"
+    });
+  }
   if (isSegTask && !isSegModel) {
     blockers.push({ text: t("training.blocker.model"), action: t("training.action.chooseSegModel"), nav: null });
   }

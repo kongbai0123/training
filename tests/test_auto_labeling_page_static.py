@@ -36,7 +36,7 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         page_registry_js = (ROOT / "static" / "core" / "page_registry.js").read_text(encoding="utf-8")
 
         self.assertIn(
-            "./pages/auto_labeling.js?v=20260709-review-first-auto-label",
+            "./pages/auto_labeling.js?v=20260709-review-gate",
             page_registry_js,
         )
 
@@ -51,7 +51,7 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
         auto_labeling_css = (ROOT / "static" / "styles" / "pages" / "auto_labeling.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/style.css?v=20260709-review-first-auto-label3", index_html)
+        self.assertIn("/static/style.css?v=20260709-review-gate", index_html)
         self.assertIn('data-i18n="autoLabel.executionConsole"', index_html)
         self.assertIn('data-i18n="autoLabel.executionConsoleHelp"', index_html)
         self.assertIn('data-i18n="autoLabel.reviewWorkspaceHelp"', index_html)
@@ -83,6 +83,10 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         self.assertIn(".review-preview-grid .preview-tile > div", auto_labeling_css)
         self.assertIn("min-height: 560px", auto_labeling_css)
         self.assertIn("min-height: 260px", auto_labeling_css)
+        self.assertIn("#auto-review-overlay img", auto_labeling_css)
+        self.assertIn("width: auto;", auto_labeling_css)
+        self.assertIn("max-height: 100%;", auto_labeling_css)
+        self.assertIn("border: 0;", auto_labeling_css)
 
     def test_draft_rules_are_editable_and_sent_to_job_request(self):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")

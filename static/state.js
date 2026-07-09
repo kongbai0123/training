@@ -252,12 +252,14 @@ export function getProjectStatus(project) {
   const trainingLabel = training.status || "idle";
   const bestModelExists = Boolean(training.best_model || project?.best_model);
   const labelme = appState.labelme;
+  const autoLabelReviewGate = project?.auto_label_review_gate || { blocked: false, pending: 0 };
   const blockers = [];
   if (!project) blockers.push(t("status.blocker.noProject"));
   if (project && rawImages.length === 0) blockers.push(t("status.blocker.noImages"));
   if (project && !labelme.synced) blockers.push(t("status.blocker.labelmeNotSynced"));
   if (project && !splitComplete) blockers.push(t("status.blocker.splitIncomplete"));
-  const trainReady = Boolean(project && rawImages.length > 0 && labelme.synced && splitComplete);
+  if (project && autoLabelReviewGate.blocked) blockers.push(t("status.blocker.autoLabelReview"));
+  const trainReady = Boolean(project && rawImages.length > 0 && labelme.synced && splitComplete && !autoLabelReviewGate.blocked);
 
   return {
     hasProject: Boolean(project),
@@ -280,6 +282,7 @@ export function getProjectStatus(project) {
     bestModelExists,
     trainReady,
     blockers,
-    labelme
+    labelme,
+    autoLabelReviewGate
   };
 }

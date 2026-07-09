@@ -21,7 +21,7 @@ import {
   initPageModules,
   renderPrimaryPageModules,
   renderSecondaryPageModules,
-} from "./page_registry.js?v=20260709-review-first-auto-label";
+} from "./page_registry.js?v=20260709-review-gate";
 
 const {
   bootstrapSession,
