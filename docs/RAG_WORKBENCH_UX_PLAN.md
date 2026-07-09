@@ -257,6 +257,19 @@ Acceptance evidence:
 - Do not bury project knowledge state behind settings or secondary modals.
 - Do not mix this work with CNN/RNN training UI fixes unless a shared shell change is explicitly required.
 
+## LLM Mode Decision
+
+The assistant must not be a dependency of the training platform.
+
+Modes:
+
+- `disabled`: no assistant generation.
+- `local_search_only`: default mode; local project search with cited sources, no GGUF or external LLM required.
+- `local_gguf`: optional future local LLM backend.
+- `cloud_api`: optional future external LLM backend, only after explicit user configuration.
+
+The deterministic evaluation engine remains responsible for metrics and best-model decisions. The assistant can explain and summarize evidence but must not override model evaluation results.
+
 ## Recommended First Execution Slice
 
 The branch now contains an offline-first MVP that implements the full major-phase surface without depending on external embedding providers or hosted LLM APIs.
@@ -264,9 +277,11 @@ The branch now contains an offline-first MVP that implements the full major-phas
 Implemented evidence:
 
 - Backend service: `src/rag_workbench.py`
+- Project Assistant service alias: `src/project_assistant.py`
 - API route module: `src/api/routes/rag_workbench.py`
 - App route registration: `app.py`
-- Frontend page: `static/pages/rag_workbench.js`
+- Frontend page alias: `static/pages/project_assistant.js`
+- Frontend implementation: `static/pages/rag_workbench.js`
 - Workbench shell: `static/index.html`
 - Page CSS: `static/styles/pages/rag_workbench.css`
 - i18n entries: `static/state/i18n/en.js`, `static/state/i18n/zh-TW.js`
@@ -275,15 +290,16 @@ Implemented evidence:
 
 Verification evidence:
 
-- `scripts\test.bat` passes: 268 tests.
+- `scripts\test.bat` passes: 272 tests.
 - `scripts\build.bat` passes.
-- Browser DOM smoke confirms `?page=rag-workbench` opens the active page with 5 status cards and 6 workbench panels.
+- Browser DOM smoke confirms `?page=project-assistant` renders cleanly in `zh-TW` with no visible text, placeholder, title, aria-label, or tooltip issues.
+- API smoke confirms assistant settings can switch to `disabled`, block chat with `assistant_disabled`, then reset to `local_search_only`.
 - Browser interaction smoke confirms document ingestion, retrieval results, grounded answer sources, and agent steps render in the UI.
 
 Implemented phase coverage:
 
 - Phase 0: repository fit documented; implementation stays isolated from CNN/RNN project flows.
-- Phase 1: dedicated workbench page, navigation entry, and RAG status strip.
+- Phase 1: Project Assistant page with header/context entry points, no primary sidebar navigation entry, and compatibility alias for legacy `rag-workbench` URLs.
 - Phase 2: text document ingestion with upload / parse / chunk / embed / index stages, document list, re-index, and clear KB.
 - Phase 3: frontend keeps `conversationState`; backend sanitizes accepted roles and ignores UI-only state.
 - Phase 4: chat returns structured sources separately from answer text and renders source cards.

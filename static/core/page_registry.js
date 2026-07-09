@@ -1,5 +1,5 @@
 import { initDashboard, renderDashboard } from "../pages/dashboard.js";
-import { initRagWorkbench, renderRagWorkbenchPage } from "../pages/rag_workbench.js?v=20260709-rag-workbench";
+import { initProjectAssistant, renderProjectAssistantPage } from "../pages/project_assistant.js?v=20260710-project-assistant";
 import { initProjects, renderProjectsPage } from "../pages/projects.js?v=20260709-project-open-delegation";
 import { initDataset, renderDatasetPage } from "../pages/dataset.js?v=20260630-progress-hud";
 import { initLabelMe, renderLabelMeManager } from "../pages/labelme.js";
@@ -21,7 +21,7 @@ import { initSettings, renderSettingsPage } from "../pages/settings.js";
 
 export function initPageModules() {
   initDashboard();
-  initRagWorkbench();
+  initProjectAssistant();
   initProjects();
   initDataset();
   initLabelMe();
@@ -55,7 +55,7 @@ export function renderSecondaryPageModules(status) {
   renderAutoLabelingPage(status);
   renderExportPage(status);
   renderSettingsPage();
-  renderRagWorkbenchPage();
+  renderProjectAssistantPage();
   renderProjectsPage();
 }
 

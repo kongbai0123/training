@@ -13,6 +13,7 @@ const ragState = {
   sandbox: null,
   activeSandboxFile: "index.html",
   evaluation: null,
+  settings: null,
   conversationState: [],
 };
 
@@ -27,6 +28,7 @@ export function initRagWorkbench() {
   qs("#btn-rag-save-file")?.addEventListener("click", saveSandboxFile);
   qs("#btn-rag-export-artifact")?.addEventListener("click", exportSandboxArtifact);
   qs("#btn-rag-eval-report")?.addEventListener("click", generateEvaluationReport);
+  qs("#btn-rag-save-settings")?.addEventListener("click", saveAssistantSettings);
   qs("#rag-sandbox-file")?.addEventListener("change", (event) => {
     ragState.activeSandboxFile = event.target.value || "index.html";
     renderSandboxEditor();
@@ -42,6 +44,7 @@ export function renderRagWorkbenchPage() {
   renderStatus();
   renderKnowledgeBase();
   renderProfiles();
+  renderSettings();
   renderRetrievalResults();
   renderChatResult();
   renderAgentRuns();
@@ -53,13 +56,15 @@ async function loadRagWorkbench({ force = false } = {}) {
   if (ragState.loading && !force) return;
   ragState.loading = true;
   try {
-    const [status, kb, sandbox, runs] = await Promise.all([
+    const [status, settings, kb, sandbox, runs] = await Promise.all([
       apiFetch(assistantApi("/status")),
+      apiFetch(assistantApi("/settings")),
       apiFetch(assistantApi("/knowledge-base")),
       apiFetch(assistantApi("/sandbox")),
       apiFetch(assistantApi("/agent-runs")),
     ]);
     ragState.status = status;
+    ragState.settings = settings;
     ragState.kb = kb;
     ragState.profiles = status.retrieval_profiles || [];
     ragState.sandbox = sandbox;
@@ -184,6 +189,22 @@ async function generateEvaluationReport() {
   eventBus.emit("toast", t("rag.toast.reportReady"));
 }
 
+async function saveAssistantSettings() {
+  const payload = {
+    mode: qs("#rag-settings-mode")?.value || "local_search_only",
+    local_model_path: qs("#rag-settings-local-model")?.value || "",
+    cloud_model: qs("#rag-settings-cloud-model")?.value || "",
+    allow_external_requests: Boolean(qs("#rag-settings-external")?.checked),
+  };
+  ragState.settings = await apiFetch(assistantApi("/settings"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  await loadRagWorkbench({ force: true });
+  eventBus.emit("toast", t("rag.toast.settingsSaved"));
+}
+
 function renderStatus() {
   const status = ragState.status || {};
   const workspace = status.workspace || {};
@@ -195,6 +216,35 @@ function renderStatus() {
   setText("#rag-status-index", formatIndexState(kb.index_state));
   setText("#rag-kb-badge", t("rag.docCount", { count: kb.document_count ?? 0 }));
   setText("#rag-agent-count", t("rag.runCount", { count: ragState.agentRuns.length }));
+}
+
+function renderSettings() {
+  const settings = ragState.settings || ragState.status?.assistant_settings || {};
+  const mode = settings.mode || "local_search_only";
+  const modeSelect = qs("#rag-settings-mode");
+  if (modeSelect && !modeSelect.matches(":focus")) modeSelect.value = mode;
+  const localModel = qs("#rag-settings-local-model");
+  if (localModel && !localModel.matches(":focus")) localModel.value = settings.local_model_path || "";
+  const cloudModel = qs("#rag-settings-cloud-model");
+  if (cloudModel && !cloudModel.matches(":focus")) cloudModel.value = settings.cloud_model || "";
+  const external = qs("#rag-settings-external");
+  if (external) external.checked = Boolean(settings.allow_external_requests);
+
+  const badge = qs("#rag-settings-badge");
+  if (badge) {
+    badge.textContent = formatAssistantMode(mode);
+    badge.className = `summary-badge badge-${mode === "disabled" ? "neutral" : mode === "local_search_only" ? "success" : "warning"}`;
+  }
+}
+
+function formatAssistantMode(mode) {
+  const labels = {
+    disabled: t("rag.settings.mode.disabled"),
+    local_search_only: t("rag.settings.mode.localSearch"),
+    local_gguf: t("rag.settings.mode.localGguf"),
+    cloud_api: t("rag.settings.mode.cloudApi"),
+  };
+  return labels[mode] || mode || "--";
 }
 
 function renderKnowledgeBase() {

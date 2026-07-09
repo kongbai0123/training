@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app import app
 from src.rag_workbench import RagWorkbenchService
+from src.project_assistant import ProjectAssistantService
 
 
 class RagWorkbenchContractTests(unittest.TestCase):
@@ -50,6 +51,20 @@ class RagWorkbenchContractTests(unittest.TestCase):
         )
         self.assertGreater(result["document"]["chunk_count"], 0)
         self.assertEqual(result["status"]["knowledge_base"]["index_state"], "ready")
+
+    def test_project_assistant_settings_default_to_local_search_and_can_disable(self):
+        self.assertIs(ProjectAssistantService, RagWorkbenchService)
+        settings = RagWorkbenchService.get_settings()
+
+        self.assertEqual(settings["mode"], "local_search_only")
+        self.assertFalse(settings["requires_llm"])
+        self.assertTrue(settings["generation_enabled"])
+
+        updated = RagWorkbenchService.update_settings({"mode": "disabled"})
+        self.assertEqual(updated["mode"], "disabled")
+        run = RagWorkbenchService.chat("Should not search while disabled")
+        self.assertEqual(run["failure_type"], "assistant_disabled")
+        self.assertFalse(run["sources"])
 
     def test_retrieval_returns_structured_sources_and_mark_feedback(self):
         RagWorkbenchService.ingest_document(

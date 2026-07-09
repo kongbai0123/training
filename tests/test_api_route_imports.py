@@ -46,6 +46,7 @@ EXPECTED_ROUTE_PATHS = {
     "/api/projects/{project_id}/train/status",
     "/api/projects/{project_id}/monitor",
     "/api/project-assistant/status",
+    "/api/project-assistant/settings",
     "/api/project-assistant/knowledge-base",
     "/api/project-assistant/knowledge-base/upload",
     "/api/project-assistant/retrieval/query",

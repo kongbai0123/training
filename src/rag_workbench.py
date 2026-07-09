@@ -15,6 +15,7 @@ from src.app_paths import USER_DATA_DIR
 
 
 WORD_RE = re.compile(r"[\w\u4e00-\u9fff]+", re.UNICODE)
+ASSISTANT_MODES = {"disabled", "local_search_only", "local_gguf", "cloud_api"}
 
 
 def _now() -> str:
@@ -98,6 +99,14 @@ class RagWorkbenchService:
             "evaluation_reports": [],
             "golden_set": [],
             "bad_retrieval_marks": [],
+            "assistant_settings": {
+                "mode": "local_search_only",
+                "local_model_path": "",
+                "cloud_provider": "",
+                "cloud_model": "",
+                "allow_external_requests": False,
+                "updated_at": _now(),
+            },
         }
 
     @classmethod
@@ -106,6 +115,7 @@ class RagWorkbenchService:
         state = _read_json(cls.STATE_PATH, cls._empty_state())
         if not isinstance(state, dict):
             state = cls._empty_state()
+        state.setdefault("assistant_settings", cls._empty_state()["assistant_settings"])
         return state
 
     @classmethod
@@ -150,12 +160,50 @@ class RagWorkbenchService:
             "retrieval_profiles": state.get("retrieval_profiles", []),
             "agent_run_count": len(state.get("agent_runs", [])),
             "evaluation_report_count": len(state.get("evaluation_reports", [])),
+            "assistant_settings": cls.get_settings(),
             "guardrails": {
                 "raw_thought_visible": False,
                 "conversation_from_dom": False,
                 "sandbox_os_isolation": False,
             },
         }
+
+    @classmethod
+    def get_settings(cls) -> Dict[str, Any]:
+        state = cls._state()
+        settings = state.setdefault("assistant_settings", cls._empty_state()["assistant_settings"])
+        mode = str(settings.get("mode") or "local_search_only")
+        if mode not in ASSISTANT_MODES:
+            mode = "local_search_only"
+        return {
+            "mode": mode,
+            "local_model_path": str(settings.get("local_model_path") or ""),
+            "cloud_provider": str(settings.get("cloud_provider") or ""),
+            "cloud_model": str(settings.get("cloud_model") or ""),
+            "allow_external_requests": bool(settings.get("allow_external_requests", False)),
+            "requires_llm": mode in {"local_gguf", "cloud_api"},
+            "generation_enabled": mode != "disabled",
+            "updated_at": settings.get("updated_at") or "",
+        }
+
+    @classmethod
+    def update_settings(cls, payload: Dict[str, Any]) -> Dict[str, Any]:
+        state = cls._state()
+        current = state.setdefault("assistant_settings", cls._empty_state()["assistant_settings"])
+        requested_mode = str(payload.get("mode") or current.get("mode") or "local_search_only")
+        if requested_mode not in ASSISTANT_MODES:
+            raise ValueError(f"Unsupported assistant mode: {requested_mode}")
+        current.update({
+            "mode": requested_mode,
+            "local_model_path": str(payload.get("local_model_path", current.get("local_model_path", "")) or ""),
+            "cloud_provider": str(payload.get("cloud_provider", current.get("cloud_provider", "")) or ""),
+            "cloud_model": str(payload.get("cloud_model", current.get("cloud_model", "")) or ""),
+            "allow_external_requests": bool(payload.get("allow_external_requests", current.get("allow_external_requests", False))),
+            "updated_at": _now(),
+        })
+        state["assistant_settings"] = current
+        cls._save_state(state)
+        return cls.get_settings()
 
     @classmethod
     def ingest_document(cls, filename: str, content: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -353,6 +401,35 @@ class RagWorkbenchService:
         filters: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         start_time = time.perf_counter()
+        settings = cls.get_settings()
+        if settings["mode"] == "disabled":
+            sources = []
+            latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            answer = "Project Assistant is disabled. Enable Local Search Only to search project reports and logs."
+            run = {
+                "run_id": _safe_id("assistant_run"),
+                "query": message,
+                "answer": answer,
+                "sources": sources,
+                "agent_trace": [
+                    cls._agent_step("parse", "done", "Parsed user request."),
+                    cls._agent_step("settings", "failed", "Assistant mode is disabled."),
+                    cls._agent_step("final", "done", "Returned disabled-mode response."),
+                ],
+                "conversation_state": cls._clean_conversation(conversation_state or []) + [
+                    {"role": "user", "content": message, "meta": {"source": "clean_state"}},
+                    {"role": "assistant", "content": answer, "meta": {"source_count": 0}},
+                ],
+                "retrieval_config": {"profile_id": profile_id, "top_k": 0, "filters": filters or {}, "mode": settings["mode"]},
+                "metrics": cls._run_metrics(sources, latency_ms, "assistant_disabled"),
+                "failure_type": "assistant_disabled",
+                "created_at": _now(),
+            }
+            state = cls._state()
+            state.setdefault("agent_runs", []).insert(0, run)
+            state["agent_runs"] = state["agent_runs"][:100]
+            cls._save_state(state)
+            return run
         conversation = cls._clean_conversation(conversation_state or [])
         retrieval = cls.retrieve(message, top_k=5, profile_id=profile_id, filters=filters or {})
         sources = retrieval["results"]

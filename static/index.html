@@ -234,6 +234,38 @@
             <div><span data-i18n="rag.indexState">Index</span><strong id="rag-status-index">--</strong></div>
           </section>
 
+          <section class="panel-section rag-panel rag-settings-panel">
+            <div class="section-title">
+              <h2 data-i18n="rag.settingsTitle">Assistant Mode</h2>
+              <span class="summary-badge" id="rag-settings-badge" data-i18n="rag.mode.localSearch">Local Search</span>
+            </div>
+            <p class="section-help" data-i18n="rag.settingsHelp">Core training never depends on LLM. The assistant defaults to local project search; GGUF and cloud API modes are optional future generation backends.</p>
+            <div class="rag-settings-grid">
+              <label>
+                <span data-i18n="rag.settingsMode">Mode</span>
+                <select id="rag-settings-mode">
+                  <option value="disabled" data-i18n="rag.settings.mode.disabled">Disabled</option>
+                  <option value="local_search_only" data-i18n="rag.settings.mode.localSearch">Local Search Only</option>
+                  <option value="local_gguf" data-i18n="rag.settings.mode.localGguf">Local GGUF</option>
+                  <option value="cloud_api" data-i18n="rag.settings.mode.cloudApi">Cloud API</option>
+                </select>
+              </label>
+              <label>
+                <span data-i18n="rag.settingsLocalModel">Local model path</span>
+                <input id="rag-settings-local-model" type="text" placeholder="models/assistant/model.gguf" data-i18n-placeholder="rag.settingsLocalModelPlaceholder">
+              </label>
+              <label>
+                <span data-i18n="rag.settingsCloudModel">Cloud model</span>
+                <input id="rag-settings-cloud-model" type="text" placeholder="provider/model" data-i18n-placeholder="rag.settingsCloudModelPlaceholder">
+              </label>
+              <label class="checkbox-row">
+                <input id="rag-settings-external" type="checkbox">
+                <span data-i18n="rag.settingsAllowExternal">Allow external requests</span>
+              </label>
+              <button class="btn btn-secondary" id="btn-rag-save-settings"><i class="fa-solid fa-sliders"></i> <span data-i18n="rag.settingsSave">Save assistant mode</span></button>
+            </div>
+          </section>
+
           <div class="rag-workbench-grid">
             <section class="panel-section rag-panel rag-kb-panel">
               <div class="section-title">

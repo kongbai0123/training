@@ -227,7 +227,7 @@ function allowedEnglish(text) {
   if (/^[a-z0-9][a-z0-9_.-]*[_0-9.-][a-z0-9_.-]*$/i.test(trimmed)) return true;
   if (/^[A-Za-z]:[\\/]/.test(trimmed) || /[A-Za-z]:[\\/]/.test(trimmed) || trimmed.includes(":/")) return true;
   if (/run_YYYYMMDD_HHMMSS/i.test(trimmed)) return true;
-  if (/\b(run|mAP|IoU|bbox|COCO|mask|ZIP|RAG|RNN|CNN|CSV|XML|JSON|HTML|CSS|JS|ONNX|TensorRT|PyTorch|Ultralytics|Python|Markdown|schema|learning rate|mosaic augmentation|Stratified|Group|epoch|checkpoint|VRAM|CUDA|CPU|GPU|Auto|timestep|timestamp|Date Time|time steps|sequence_length|stride|horizon|class_[a-z]|class_names|sequence_id|machine_id|batch_id|RoadSeg|builtin|ultralytics_yolo|Instance Segmentation|my_vision_project|defect|scratch|stain)\b/i.test(trimmed)) {
+  if (/\b(run|mAP|IoU|bbox|COCO|mask|ZIP|RAG|RNN|CNN|CSV|XML|JSON|HTML|CSS|JS|API|LLM|GGUF|ONNX|TensorRT|PyTorch|Ultralytics|Python|Markdown|schema|learning rate|mosaic augmentation|Stratified|Group|epoch|checkpoint|VRAM|CUDA|CPU|GPU|Auto|timestep|timestamp|Date Time|time steps|sequence_length|stride|horizon|class_[a-z]|class_names|sequence_id|machine_id|batch_id|RoadSeg|builtin|ultralytics_yolo|Instance Segmentation|my_vision_project|defect|scratch|stain)\b/i.test(trimmed)) {
     return true;
   }
   if (/\b(MP4|AVI|MKV|MOV|WMV|FLV|WEBM|P0|best\.pt|last\.pt|\.pt|\.onnx|annotations\/|training\/runs|train\/loss|val\/loss)\b/i.test(trimmed)) return true;
@@ -235,13 +235,14 @@ function allowedEnglish(text) {
   if (/\b(normal|abnormal|validation loss|task head|Package registry|adapter|package contract|target|label sequence|residual|transition stability|sequence_regression|sequence_classification|semantic_segmentation|classification|regression|road|T \(degC\)|target_reg|Features \/ X)\b/i.test(trimmed)) return true;
   if (/sequences\/features\.csv/i.test(trimmed)) return true;
   if (/^[A-Za-z]\s*\([^)]+\)$/.test(trimmed)) return true;
-  if (/^(RAG|RNN|CNN|GPU|RAM|CSV|ZIP|ONNX|TensorRT|XGBoost|LSTM|GRU|BiLSTM|MAE|RMSE|JSON|HTML|CSS|JS|LabelMe|YOLO)$/i.test(trimmed)) {
+  if (/^(RAG|RNN|CNN|GPU|RAM|CSV|ZIP|API|LLM|GGUF|ONNX|TensorRT|XGBoost|LSTM|GRU|BiLSTM|MAE|RMSE|JSON|HTML|CSS|JS|LabelMe|YOLO)$/i.test(trimmed)) {
     return true;
   }
-  if (/^(RAG|RNN|CNN|GPU|RAM|CSV|ZIP|ONNX|TensorRT|XGBoost|LSTM|GRU|BiLSTM|MAE|RMSE|JSON|HTML|CSS|JS|LabelMe|YOLO)\b/i.test(trimmed)) {
+  if (/^(RAG|RNN|CNN|GPU|RAM|CSV|ZIP|API|LLM|GGUF|ONNX|TensorRT|XGBoost|LSTM|GRU|BiLSTM|MAE|RMSE|JSON|HTML|CSS|JS|LabelMe|YOLO)\b/i.test(trimmed)) {
     return true;
   }
   if (/^[A-Z0-9_\-./:]+$/.test(trimmed)) return true;
+  if (/^[a-z0-9_.-]+(?:\/[a-z0-9_.-]+)+$/i.test(trimmed)) return true;
   if (/^[\w.-]+\.(json|csv|pt|onnx|zip|yaml|yml|md)$/i.test(trimmed)) return true;
   return false;
 }
