@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-class RagWorkbenchPageStaticTests(unittest.TestCase):
+class ProjectAssistantPageStaticTests(unittest.TestCase):
     def test_project_assistant_is_not_primary_sidebar_navigation(self):
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
 
@@ -53,7 +53,7 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
         self.assertIn("project_id", module)
         self.assertIn("conversation_state: assistantState.conversationState", module)
 
-    def test_rag_workbench_i18n_and_css_are_wired(self):
+    def test_project_assistant_i18n_and_legacy_css_are_wired(self):
         style = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
         css = (ROOT / "static" / "styles" / "pages" / "rag_workbench.css").read_text(encoding="utf-8")
         en = (ROOT / "static" / "state" / "i18n" / "en.js").read_text(encoding="utf-8")
@@ -80,6 +80,17 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
         self.assertNotIn('"rag.mode": "Mode"', en)
         self.assertNotIn("RAG answer", en)
         self.assertNotIn("RAG artifact", en)
+
+    def test_project_assistant_product_plan_replaces_rag_workbench_plan(self):
+        plan_path = ROOT / "docs" / "PROJECT_ASSISTANT_UX_PLAN.md"
+        self.assertTrue(plan_path.exists())
+        self.assertFalse((ROOT / "docs" / "RAG_WORKBENCH_UX_PLAN.md").exists())
+        plan = plan_path.read_text(encoding="utf-8")
+
+        self.assertIn("Vision Training Studio is not a RAG product", plan)
+        self.assertIn("Project Assistant is an auxiliary layer", plan)
+        self.assertIn("Legacy compatibility components", plan)
+        self.assertIn("Visible UI copy no longer presents this as RAG Workbench", plan)
 
     def test_project_assistant_context_is_available_on_decision_pages(self):
         right_panel = (ROOT / "static" / "core" / "right_panel.js").read_text(encoding="utf-8")
