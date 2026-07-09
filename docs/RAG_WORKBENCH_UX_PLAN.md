@@ -276,12 +276,14 @@ The branch now contains an offline-first MVP that implements the full major-phas
 
 Implemented evidence:
 
-- Backend service: `src/rag_workbench.py`
+- Backend service: `src/project_assistant_service.py`
 - Project Assistant service alias: `src/project_assistant.py`
-- API route module: `src/api/routes/rag_workbench.py`
+- API route module: `src/api/routes/project_assistant.py`
+- Legacy compatibility wrappers: `src/rag_workbench.py`, `src/api/routes/rag_workbench.py`
 - App route registration: `app.py`
 - Frontend page alias: `static/pages/project_assistant.js`
-- Frontend implementation: `static/pages/rag_workbench.js`
+- Frontend implementation: `static/pages/project_assistant_impl.js`
+- Legacy frontend wrapper: `static/pages/rag_workbench.js`
 - Workbench shell: `static/index.html`
 - Page CSS: `static/styles/pages/rag_workbench.css`
 - i18n entries: `static/state/i18n/en.js`, `static/state/i18n/zh-TW.js`

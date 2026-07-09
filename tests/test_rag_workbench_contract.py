@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from app import app
 from src.rag_workbench import RagWorkbenchService
 from src.project_assistant import ProjectAssistantService
+from src.project_assistant_service import ProjectAssistantService as ProjectAssistantServiceImpl
 
 
 class RagWorkbenchContractTests(unittest.TestCase):
@@ -54,6 +55,8 @@ class RagWorkbenchContractTests(unittest.TestCase):
 
     def test_project_assistant_settings_default_to_local_search_and_can_disable(self):
         self.assertIs(ProjectAssistantService, RagWorkbenchService)
+        self.assertIs(ProjectAssistantServiceImpl, ProjectAssistantService)
+        self.assertEqual(ProjectAssistantService.__module__, "src.project_assistant_service")
         settings = RagWorkbenchService.get_settings()
 
         self.assertEqual(settings["mode"], "local_search_only")

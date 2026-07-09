@@ -17,6 +17,7 @@ ROUTE_MODULES = [
     "src.api.routes.models",
     "src.api.routes.monitor",
     "src.api.routes.project_layout",
+    "src.api.routes.project_assistant",
     "src.api.routes.projects",
     "src.api.routes.rag_workbench",
     "src.api.routes.rnn_config",

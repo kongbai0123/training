@@ -25,23 +25,25 @@ class RagWorkbenchPageStaticTests(unittest.TestCase):
         self.assertIn('id="rag-sandbox-preview"', html)
         self.assertIn('id="rag-evaluation-summary"', html)
 
-    def test_rag_workbench_module_is_registered_and_calls_contract_apis(self):
+    def test_project_assistant_module_is_registered_and_calls_contract_apis(self):
         bootstrap = (ROOT / "static" / "core" / "bootstrap.js").read_text(encoding="utf-8")
         router = (ROOT / "static" / "core" / "router.js").read_text(encoding="utf-8")
         registry = (ROOT / "static" / "core" / "page_registry.js").read_text(encoding="utf-8")
         project_assistant_module = (ROOT / "static" / "pages" / "project_assistant.js").read_text(encoding="utf-8")
-        module = (ROOT / "static" / "pages" / "rag_workbench.js").read_text(encoding="utf-8")
+        legacy_module = (ROOT / "static" / "pages" / "rag_workbench.js").read_text(encoding="utf-8")
+        module = (ROOT / "static" / "pages" / "project_assistant_impl.js").read_text(encoding="utf-8")
 
         self.assertIn('navigate(params.get("page") || "dashboard")', bootstrap)
         self.assertIn("initProjectAssistant", registry)
         self.assertIn("renderProjectAssistantPage", registry)
-        self.assertIn("initRagWorkbench as initProjectAssistant", project_assistant_module)
+        self.assertIn("initProjectAssistantImpl as initProjectAssistant", project_assistant_module)
+        self.assertIn("initProjectAssistantImpl as initRagWorkbench", legacy_module)
         self.assertIn('"rag-workbench": "project-assistant"', router)
         self.assertIn("/api/project-assistant", module)
         self.assertIn('assistantApi("/settings")', module)
         self.assertNotIn("/api/rag-workbench", module)
         self.assertIn("project_id", module)
-        self.assertIn("conversation_state: ragState.conversationState", module)
+        self.assertIn("conversation_state: assistantState.conversationState", module)
 
     def test_rag_workbench_i18n_and_css_are_wired(self):
         style = (ROOT / "static" / "style.css").read_text(encoding="utf-8")

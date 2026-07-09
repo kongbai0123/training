@@ -26,7 +26,7 @@ from src.api.routes.inference import router as inference_router
 from src.api.routes.models import router as models_router
 from src.api.routes.monitor import router as monitor_router
 from src.api.routes.project_layout import router as project_layout_router
-from src.api.routes.rag_workbench import router as rag_workbench_router
+from src.api.routes.project_assistant import router as project_assistant_router
 from src.api.routes.rnn_config import router as rnn_config_router
 from src.api.routes.projects import router as projects_router
 from src.api.routes.system import router as system_router
@@ -39,7 +39,7 @@ app = FastAPI(title="Vision Training Studio API")
 app.include_router(system_router)
 app.include_router(diagnostics_router)
 app.include_router(project_layout_router)
-app.include_router(rag_workbench_router)
+app.include_router(project_assistant_router)
 app.include_router(projects_router)
 app.include_router(rnn_config_router)
 app.include_router(models_router)

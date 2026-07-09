@@ -1,4 +1,4 @@
 export {
-  initRagWorkbench as initProjectAssistant,
-  renderRagWorkbenchPage as renderProjectAssistantPage,
-} from "./rag_workbench.js?v=20260710-project-assistant";
+  initProjectAssistantImpl as initProjectAssistant,
+  renderProjectAssistantImplPage as renderProjectAssistantPage,
+} from "./project_assistant_impl.js?v=20260710-project-assistant-impl";
