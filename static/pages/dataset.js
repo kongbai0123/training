@@ -10,7 +10,7 @@ const ANNO_RE = /\.(json|txt)$/i;
 export function initDataset() {
   qs("#btn-dataset-add-class")?.addEventListener("click", addDatasetClass);
   qs("#input-dataset-new-class")?.addEventListener("keydown", (event) => {
-    if (!["Enter", ",", ";"].includes(event.key)) return;
+    if (event.key !== "Enter") return;
     event.preventDefault();
     addDatasetClass();
   });

@@ -14,6 +14,8 @@ class ProjectsPageStaticTests(unittest.TestCase):
         self.assertIn('const classes = isSequence ? [] : [...appState.newProjectClasses];', projects_js)
         self.assertIn('input.disabled = isSequence;', projects_js)
         self.assertNotIn('isSequence ? "Target labels" : "Class list"', projects_js)
+        self.assertIn('if (event.key !== "Enter") return;', projects_js)
+        self.assertNotIn('["Enter", ",", ";"].includes(event.key)', projects_js)
 
     def test_history_uses_rnn_specific_project_metrics(self):
         projects_js = (ROOT / "static" / "pages" / "projects.js").read_text(encoding="utf-8")

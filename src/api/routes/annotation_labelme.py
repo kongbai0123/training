@@ -25,6 +25,51 @@ from src.project_manager import ProjectManager
 
 router = APIRouter()
 
+
+def _normalize_labelme_class_names(class_names: List[str]) -> List[str]:
+    normalized: List[str] = []
+    seen = set()
+    for raw_name in class_names or []:
+        name = str(raw_name).strip()
+        if not name:
+            continue
+        key = name.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(name)
+    return normalized
+
+
+def write_labelme_labels_file(labelme_dir: Path, class_names: List[str]) -> Optional[Path]:
+    labels = _normalize_labelme_class_names(class_names)
+    if not labels:
+        return None
+    labelme_dir.mkdir(parents=True, exist_ok=True)
+    labels_file = labelme_dir / "_project_labels.txt"
+    labels_file.write_text("\n".join(labels) + "\n", encoding="utf-8")
+    return labels_file
+
+
+def build_labelme_open_command(
+    executable: Optional[str],
+    images_dir: Path,
+    labelme_dir: Path,
+    class_names: List[str],
+) -> List[str]:
+    command = [executable, str(images_dir), "--output", str(labelme_dir)] if executable else [
+        sys.executable,
+        "-m",
+        "labelme",
+        str(images_dir),
+        "--output",
+        str(labelme_dir),
+    ]
+    labels_file = write_labelme_labels_file(labelme_dir, class_names)
+    if labels_file:
+        command.extend(["--labels", str(labels_file), "--validatelabel", "exact"])
+    return command
+
 class AnnotationSave(BaseModel):
     filename: str
     status: str # annotated, flagged, skipped
@@ -124,15 +169,13 @@ def open_labelme(project_id: str):
     labelme_dir.mkdir(parents=True, exist_ok=True)
     normalized_jsons = normalize_labelme_image_paths(images_dir, labelme_dir)
 
-    executable = find_labelme_executable()
-    if executable:
-        command = [executable, str(images_dir), "--output", str(labelme_dir)]
-    else:
-        command = [sys.executable, "-m", "labelme", str(images_dir), "--output", str(labelme_dir)]
-
     class_names = project.get("class_names") or []
-    if class_names:
-        command.extend(["--labels", ",".join(class_names)])
+    command = build_labelme_open_command(
+        find_labelme_executable(),
+        images_dir,
+        labelme_dir,
+        class_names,
+    )
 
     try:
         subprocess.Popen(

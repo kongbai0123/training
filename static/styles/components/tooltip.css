@@ -1,15 +1,16 @@
 /* Shared tooltip trigger and floating tooltip styles. */
 
 .info-icon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   display: inline-grid;
   place-items: center;
-  background: #263140;
-  border: 1px solid var(--border-strong);
-  color: var(--text-soft);
-  font-size: 0.7rem;
+  background: #2b3544;
+  border: 1px solid #3d4a5c;
+  color: #8fa0b4;
+  font-size: 0.68rem;
+  font-weight: 700;
   line-height: 1;
   position: relative;
   cursor: help;
@@ -18,8 +19,8 @@
 }
 
 body[data-theme="light"] .info-icon {
-  background: #ffffff;
-  color: #334155;
+  background: #e2e8f0;
+  color: #64748b;
   border-color: #cbd5e1;
 }
 

@@ -26,7 +26,7 @@ export function initProjects() {
 
   qs("#btn-add-project-class")?.addEventListener("click", addProjectClassFromInput);
   qs("#new-project-class-input")?.addEventListener("keydown", (event) => {
-    if (!["Enter", ",", ";"].includes(event.key)) return;
+    if (event.key !== "Enter") return;
     event.preventDefault();
     addProjectClassFromInput();
   });
