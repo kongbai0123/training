@@ -54,9 +54,10 @@ be rewritten as part of this objective.
 | --- | --- | --- | --- | --- | --- | --- |
 | EXEC-001 | Related | Packaging | The validated full runtime folder is 4.11 GiB because it includes CUDA PyTorch, Ultralytics, ONNX, OpenCV, and desktop runtime dependencies. | Direct repository or release-asset delivery is impractical without an installer or external artifact store. | Keep the validated full runtime as the offline artifact; design a thin installer/component delivery strategy separately. | Open |
 | EXEC-002 | Related | i18n | Historical catalog overrides may still exist outside the release navigation set. | Rare or unvisited states may still expose stale copy. | The 15-page release DOM audit now passes with zero visible issues; retain the automated audit as a release gate. | Mitigated |
-| EXEC-003 | Related | Packaging | The optional offline LabelMe component is 96.5 MB compressed and 238.3 MB installed. | Bundling it into the already-large main package would penalize users who do not need manual CNN annotation. | Publish it as a separate optional component artifact and keep local ZIP installation in the first-run manager. | Open |
+| EXEC-003 | Related | Packaging | The validated LabelMe 6.3.1 component is 153.1 MiB compressed and 379.1 MiB installed. | Bundling it into the already-large main package would penalize users who do not need manual CNN annotation. | Keep it as a separate optional component artifact and retain local ZIP installation in the first-run manager. | Resolved |
 | EXEC-004 | Related | Development environment | The shared developer Python installation contains unrelated packages with conflicting pins (`opencv-python-headless` consumers and an old `autodistill-yolov8` Ultralytics pin). | `pip check` on the shared machine cannot represent the clean application lock set. | Phase 8 used an isolated runtime-only release environment and a separate test dependency file. | Resolved |
 | EXEC-005 | Blocker | Packaged paths | A package launched from the repository `dist` folder initially adopted an ancestor `version.json` and exposed source projects. | A nominally clean release could display developer projects and write logs into the source checkout. | Portable storage now requires an explicit `portable.mode` marker beside the EXE; the default package uses `%LOCALAPPDATA%`. | Resolved |
+| EXEC-006 | Blocker | LabelMe runtime | LabelMe 4.6.0 crashed while opening an image, and LabelMe 6.3.1 initially loaded older VC runtime DLLs from the PyQt directory before ONNX Runtime. | The optional component could report installed while its primary GUI workflow was unusable. | Upgraded to the newest stable Python 3.11-compatible LabelMe, removed three conflicting duplicate VC runtime DLLs, and added an installed-archive lifecycle smoke. | Resolved |
 
 ## Phase Evidence
 
@@ -123,11 +124,21 @@ runtime checks, and compatibility result are recorded here.
   validation plus atomic replacement and rollback.
 - Missing LabelMe now returns a clear 503 component-required response instead of
   trying to execute `python -m labelme` through the frozen application executable.
-- Added an isolated build script for a standalone manual-annotation LabelMe 4.6.0
-  component and displayed component status/install entry in first-run setup.
-- Built `labelme-runtime-windows-x64.zip`: 96.5 MB compressed / 238.3 MB installed.
-- Verified both the build output and a clean temporary managed installation with
-  `LabelMe.exe --version` exit code 0; installed status reported `offline_ready`.
+- Added an isolated build script for a standalone manual-annotation component and
+  displayed component status/install entry in first-run setup.
+- Upgraded the component to LabelMe 6.3.1, the newest stable release compatible
+  with the application's Python 3.11 runtime. LabelMe 7 requires Python 3.12.
+- The component includes the OSAM/ONNX execution libraries required by LabelMe's
+  GUI imports, but includes no SAM, YOLO-World, or other AI model weights.
+- Removed duplicate PyQt VC runtime DLLs that shadowed the runtime required by
+  ONNX Runtime in the frozen application.
+- Built `labelme-runtime-windows-x64.zip`: 153.1 MiB compressed / 379.1 MiB installed.
+- Installed the final ZIP into a clean temporary managed-component directory with
+  an empty user config and an outbound-blocking proxy. The packaged EXE initialized
+  the Qt GUI, opened an image, saved and reloaded LabelMe JSON, synchronized one
+  annotation, and converted it to YOLO segmentation without unknown labels.
+- Final component SHA-256:
+  `21949B5AFCAD905FA034F5FFBEE48ADD124DF5E2F7C58D8F65913B0BCF18B782`.
 - Added `pytest.ini` to prevent build-only environments from being collected as
   application tests.
 - Full suite result after Phase 4: 318 tests and 66 subtests passed.
@@ -204,8 +215,30 @@ runtime checks, and compatibility result are recorded here.
   portable storage. Portable storage now requires `portable.mode` beside the EXE.
 - Packaged smoke used an isolated `%LOCALAPPDATA%`, verified production health,
   NVIDIA RTX 3060 / CUDA PyTorch, OpenCV 5.0.0.93, and zero factory projects.
+- Installed and portable EXE smokes used black-hole HTTP/HTTPS proxies and inspected
+  packaged-process TCP connections: zero external connections and zero automatic
+  model downloads were observed.
+- Built the current portable ZIP with an explicit `portable.mode`, manifest, ZIP64,
+  CRC validation, and factory-clean directory checks. The ZIP was extracted to a
+  new directory and its own EXE passed the portable offline smoke.
+- Portable ZIP: 2,765,607,128 bytes; SHA-256
+  `D72157EB63369CA3798AD6F3F170AE1DEB02BD8396E6D46D46E28BAE2082AC8E`.
 - Package contents contain no `projects`, `logs`, `cache`, `exports`, or temporary
   user-data directories. The final one-folder runtime is 4.11 GiB.
 - Browser smoke confirmed the dashboard renders without horizontal overflow after
   the release build changes.
-- Full suite result after Phase 8: 329 tests and 66 subtests passed.
+- Final completion-audit suite: 334 tests and 70 subtests passed.
+
+## Completion Audit
+
+| Requirement | Authoritative evidence | Result |
+| --- | --- | --- |
+| Phase 0 baseline and isolation | Baseline commit `bb91d5f`, phase commits listed on the task branch, and reproducible baseline/full-suite results above. | Passed |
+| Hardware and real model state | Project-independent capability/catalog endpoints plus checksum, corruption, compatibility, and template tests. | Passed |
+| Explicit first-run consent | Download manager tests cover explicit confirmation, progress, cancellation, retry, checksum, and atomic replacement; offline EXE smoke observed zero automatic model files. | Passed |
+| Supported model sources | Catalog and package-manifest tests cover official YOLO families, custom PT/YAML, project checkpoints, RNN templates, and external package validation. | Passed |
+| Offline LabelMe component | Final ZIP was installed into a clean temporary component root; its packaged EXE initialized Qt, opened an image, saved/reloaded JSON, synchronized, and converted a YOLO label behind a blocked proxy. | Passed |
+| Simplified task-aware assistant | Static contracts, retrieval filter tests, browser smoke, and the 15-page DOM audit cover three-tab UX and CNN/RNN page/task isolation. | Passed |
+| OpenCV 5 gate | Compatibility script exercised 24 application symbols and integrations; isolated/source/package runtime reported OpenCV 5.0.0.93. | Passed |
+| EXE and portable delivery | Installed and portable black-hole-proxy smokes passed; current ZIP was CRC-tested, extracted, and launched with zero projects, downloads, or external connections. | Passed |
+| Forbidden scope | Only `codex/offline-model-assistant-release` was used; no remote task branch exists, `main` remains at `bb91d5f`, and no tracked project/log/cache/model/release artifact was introduced. | Passed |

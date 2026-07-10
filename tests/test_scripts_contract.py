@@ -13,7 +13,11 @@ class ScriptsContractTests(unittest.TestCase):
             "test.bat",
             "build.bat",
             "package.bat",
+            "package_portable.bat",
             "smoke_dist.bat",
+            "smoke_dist_portable.bat",
+            "smoke_dist_offline.ps1",
+            "smoke_labelme_component.py",
             "audit_pyinstaller_warnings.bat",
         ]:
             with self.subTest(script=script):
@@ -64,14 +68,27 @@ class ScriptsContractTests(unittest.TestCase):
         self.assertIn("return 1", audit_script)
 
     def test_dist_smoke_uses_clean_user_data_and_checks_runtime(self):
-        smoke_script = (ROOT / "scripts" / "smoke_dist.bat").read_text(encoding="utf-8")
+        smoke_script = (ROOT / "scripts" / "smoke_dist_offline.ps1").read_text(encoding="utf-8")
 
-        self.assertIn("dist-smoke-local-app-data", smoke_script)
-        self.assertIn("$env:LOCALAPPDATA=$smokeRoot", smoke_script)
+        self.assertIn("dist-smoke-", smoke_script)
+        self.assertIn('$env:LOCALAPPDATA = $smokeRoot', smoke_script)
         self.assertIn("/api/system/capabilities", smoke_script)
         self.assertIn("/api/projects", smoke_script)
         self.assertIn("Factory-clean package exposed", smoke_script)
         self.assertIn("Get-CimInstance Win32_Process", smoke_script)
+        self.assertIn('HTTP_PROXY = "http://127.0.0.1:9"', smoke_script)
+        self.assertIn("externalConnections", smoke_script)
+        self.assertIn('New-Item -ItemType File -Path $portableMarker', smoke_script)
+        self.assertIn('[string]$ExePath', smoke_script)
+        self.assertIn('$portableMarkerPreexisting', smoke_script)
+
+    def test_portable_packager_enforces_factory_clean_contract(self):
+        packager = (ROOT / "scripts" / "package_portable.py").read_text(encoding="utf-8")
+
+        self.assertIn("FORBIDDEN_ROOTS", packager)
+        self.assertIn('archive.writestr(f"{archive_root}/portable.mode"', packager)
+        self.assertIn("allowZip64=True", packager)
+        self.assertIn("archive.testzip()", packager)
 
 
 if __name__ == "__main__":
