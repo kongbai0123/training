@@ -42,13 +42,17 @@ export function initTraining() {
   loadTrainingModelCatalog(true);
 
   qs("#tab-config-simple")?.addEventListener("click", () => {
-    qs("#tab-config-simple").className = "btn btn-sm btn-primary";
-    qs("#tab-config-advanced").className = "btn btn-sm btn-secondary";
+    qs("#tab-config-simple")?.classList.add("active");
+    qs("#tab-config-simple")?.setAttribute("aria-selected", "true");
+    qs("#tab-config-advanced")?.classList.remove("active");
+    qs("#tab-config-advanced")?.setAttribute("aria-selected", "false");
     qs("#config-advanced-fields")?.classList.add("hidden");
   });
   qs("#tab-config-advanced")?.addEventListener("click", () => {
-    qs("#tab-config-simple").className = "btn btn-sm btn-secondary";
-    qs("#tab-config-advanced").className = "btn btn-sm btn-primary";
+    qs("#tab-config-simple")?.classList.remove("active");
+    qs("#tab-config-simple")?.setAttribute("aria-selected", "false");
+    qs("#tab-config-advanced")?.classList.add("active");
+    qs("#tab-config-advanced")?.setAttribute("aria-selected", "true");
     qs("#config-advanced-fields")?.classList.remove("hidden");
   });
 
@@ -729,7 +733,7 @@ export function renderTrainingMonitor() {
   configFields.forEach((selector) => {
     const el = qs(selector);
     if (!el) return;
-    if (selector === "#config-advanced-fields" && isReady && qs("#tab-config-advanced")?.classList.contains("btn-primary")) {
+    if (selector === "#config-advanced-fields" && isReady && qs("#tab-config-advanced")?.classList.contains("active")) {
       el.classList.remove("hidden");
     } else if (selector === "#config-advanced-fields") {
       el.classList.add("hidden");
@@ -1541,7 +1545,9 @@ function updateReportTabImage() {
   if (resultsImg) {
     resultsImg.src = resultsPngUrl;
     resultsImg.onerror = () => {
-      resultsImg.src = "https://raw.githubusercontent.com/ultralytics/assets/main/yolov8/banner-yolov8.png";
+      resultsImg.removeAttribute("src");
+      resultsImg.alt = t("training.reportImageUnavailable");
+      resultsImg.classList.add("hidden");
     };
   }
   if (downloadPngBtn) downloadPngBtn.href = resultsPngUrl;

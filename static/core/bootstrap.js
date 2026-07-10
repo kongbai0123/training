@@ -21,7 +21,7 @@ import {
   initPageModules,
   renderPrimaryPageModules,
   renderSecondaryPageModules,
-} from "./page_registry.js?v=20260709-rnn-export-workbench";
+} from "./page_registry.js?v=20260710-training-i18n-ux";
 
 const {
   bootstrapSession,

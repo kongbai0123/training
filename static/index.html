@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260709-export-layout">
+  <link rel="stylesheet" href="/static/style.css?v=20260710-training-i18n-ux">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -687,9 +687,9 @@
                 </select>
               </label>
               <div class="ratio-grid">
-                <label><span>Train</span><input type="number" id="input-ratio-train" value="70" min="10" max="90"></label>
-                <label><span>Val</span><input type="number" id="input-ratio-val" value="20" min="5" max="45"></label>
-                <label><span>Test</span><input type="number" id="input-ratio-test" value="10" min="5" max="45"></label>
+                <label><span data-i18n="split.train">Train</span><input type="number" id="input-ratio-train" value="70" min="10" max="90"></label>
+                <label><span data-i18n="split.val">Val</span><input type="number" id="input-ratio-val" value="20" min="5" max="45"></label>
+                <label><span data-i18n="split.test">Test</span><input type="number" id="input-ratio-test" value="10" min="5" max="45"></label>
               </div>
               <div class="split-ratio-total"><span data-i18n="split.total">Total</span> <strong id="split-ratio-total">100%</strong></div>
               <button type="submit" class="btn btn-primary guarded" data-requires="dataset" id="btn-run-split"><i class="fa-solid fa-code-branch"></i> <span data-i18n="split.run">Run Split</span></button>
@@ -727,7 +727,7 @@
               <div class="augmentation-policy-column">
                 <section class="panel-section">
                   <div class="section-title compact">
-                    <h2>策略設定 / Augmentation Policy</h2>
+                    <h2 data-i18n="augmentation.policyTitle">策略設定</h2>
                   </div>
                   <div class="preset-list compact" aria-label="Recommended augmentation presets" data-i18n-aria-label="augmentation.presetAria">
                     <button type="button" class="preset-item active" data-aug-preset="clear_day"><strong><i class="fa-regular fa-sun"></i>晴天基準</strong><span>少量亮度與對比變化。</span></button>
@@ -744,8 +744,8 @@
                   </div>
                   <div class="aug-preset-detail" id="aug-preset-detail">
                     <strong>策略說明</strong>
-                    <div><span>Purpose</span><p id="aug-preset-purpose">建立低風險晴天基準，微調亮度與對比。</p></div>
-                    <div><span>Affected parameters</span><p id="aug-preset-params">亮度、對比</p></div>
+                    <div><span data-i18n="augmentation.purpose">用途</span><p id="aug-preset-purpose">建立低風險晴天基準，微調亮度與對比。</p></div>
+                    <div><span data-i18n="augmentation.affectedParameters">影響參數</span><p id="aug-preset-params">亮度、對比</p></div>
                     <div><span>Risk level</span><p id="aug-preset-risk">Low</p></div>
                   </div>
                 </section>
@@ -768,12 +768,12 @@
                     </details>
                     <details class="aug-setting-group" data-aug-group="geometry">
                       <summary>幾何</summary>
-                      <div class="custom-setting-item slider-item is-disabled" data-aug-setting="perspective"><div class="slider-header"><span><strong>Perspective</strong><small>Phase 2：需先驗證 polygon / bbox 重映射後啟用</small></span><span class="slider-value" id="val-camera-perspective">0.00</span></div><input type="range" id="aug-camera-perspective" min="0.0" max="0.1" step="0.01" value="0" disabled></div>
+                      <div class="custom-setting-item slider-item is-disabled" data-aug-setting="perspective"><div class="slider-header"><span><strong data-i18n="augmentation.perspective">透視變形</strong><small data-i18n="augmentation.perspectiveHelp">Phase 2：需先驗證 polygon / bbox 重映射後啟用</small></span><span class="slider-value" id="val-camera-perspective">0.00</span></div><input type="range" id="aug-camera-perspective" min="0.0" max="0.1" step="0.01" value="0" disabled></div>
                     </details>
                     <div class="custom-setting-item custom-setting-count"><span><strong>生成倍數</strong><small>每張 Train 圖片產生的擴充副本數</small></span><input type="number" id="aug-multiplier" value="1" min="1" max="5"></div>
                     <div class="aug-output-summary">
-                      <span>Generated copies <strong id="aug-scope-output">+0</strong></span>
-                      <span>Final train count <strong id="aug-final-count">0 → 0</strong></span>
+                      <span><span data-i18n="augmentation.generatedCopies">Generated copies</span> <strong id="aug-scope-output">+0</strong></span>
+                      <span><span data-i18n="augmentation.finalTrainCount">Final train count</span> <strong id="aug-final-count">0 → 0</strong></span>
                     </div>
                   </div>
                 </section>
@@ -785,9 +785,9 @@
                   <div class="aug-preview-toolbar">
                     <label class="form-stack"><span>預覽圖片</span><select id="aug-preview-select-img"></select></label>
                     <div class="aug-overlay-buttons" aria-label="Preview overlay options" data-i18n-aria-label="augmentation.overlayOptionsAria">
-                      <button type="button" class="btn btn-secondary btn-sm active" data-aug-overlay="overlay"><i class="fa-regular fa-eye"></i> Overlay</button>
+                      <button type="button" class="btn btn-secondary btn-sm active" data-aug-overlay="overlay"><i class="fa-regular fa-eye"></i> <span data-i18n="augmentation.overlay">Overlay</span></button>
                       <button type="button" class="btn btn-secondary btn-sm active" data-aug-overlay="mask"><i class="fa-regular fa-square"></i> Mask</button>
-                      <button type="button" class="btn btn-secondary btn-sm active" data-aug-overlay="polygon"><i class="fa-solid fa-draw-polygon"></i> Polygon</button>
+                      <button type="button" class="btn btn-secondary btn-sm active" data-aug-overlay="polygon"><i class="fa-solid fa-draw-polygon"></i> <span data-i18n="augmentation.polygon">Polygon</span></button>
                     </div>
                   </div>
                   <div class="aug-preview-container">
@@ -898,11 +898,20 @@
 
           <div class="training-main-grid">
             <section class="panel-section training-config-panel">
-              <div class="section-title">
-                <h2 data-i18n="training.config.title">Training Configuration</h2>
-                <div class="config-tabs-nav">
-                  <button type="button" class="btn btn-sm btn-primary" id="tab-config-simple" data-i18n="training.tab.simple">Simple</button>
-                  <button type="button" class="btn btn-sm btn-secondary" id="tab-config-advanced" data-i18n="training.tab.advanced">Advanced</button>
+              <div class="training-config-header">
+                <div class="training-config-heading">
+                  <h2 data-i18n="training.config.title">Training Configuration</h2>
+                  <p data-i18n="training.config.subtitle">Choose the model and core resources first. Open advanced tuning only when the baseline needs adjustment.</p>
+                </div>
+                <div class="config-tabs-nav" role="tablist" aria-label="Training configuration level" data-i18n-aria-label="training.tab.aria">
+                  <button type="button" class="config-mode-button active" id="tab-config-simple" role="tab" aria-selected="true">
+                    <strong data-i18n="training.tab.simple">Simple</strong>
+                    <small data-i18n="training.tab.simpleHelp">Core settings</small>
+                  </button>
+                  <button type="button" class="config-mode-button" id="tab-config-advanced" role="tab" aria-selected="false">
+                    <strong data-i18n="training.tab.advanced">Advanced</strong>
+                    <small data-i18n="training.tab.advancedHelp">Fine tuning</small>
+                  </button>
                 </div>
               </div>
 
@@ -913,10 +922,29 @@
 
               <form id="form-training-config" class="form-stack">
                 <div id="config-simple-fields">
-                  <label>
-                    <span data-i18n="training.runName">Run Name</span>
-                    <input type="text" id="train-run-id-input" placeholder="Optional, for example run_YYYYMMDD_HHMMSS" data-i18n-placeholder="training.runNamePlaceholder">
-                  </label>
+                  <section class="training-config-group training-identity-group">
+                    <div class="training-config-group-heading">
+                      <div>
+                        <strong data-i18n="training.group.identity">Run and profile</strong>
+                        <span data-i18n="training.group.identityHelp">Name this experiment and choose the intended training balance.</span>
+                      </div>
+                    </div>
+                    <div class="training-field-grid training-field-grid-2">
+                      <label>
+                        <span data-i18n="training.runName">Run Name</span>
+                        <input type="text" id="train-run-id-input" placeholder="Optional, for example run_YYYYMMDD_HHMMSS" data-i18n-placeholder="training.runNamePlaceholder">
+                      </label>
+                      <label>
+                        <span data-i18n="training.profile">Training Profile</span>
+                        <select id="train-profile">
+                          <option value="balanced" selected data-i18n="training.profileBalanced">Balanced</option>
+                          <option value="quick" data-i18n="training.profileQuick">Quick Test</option>
+                          <option value="accuracy" data-i18n="training.profileAccuracy">High Accuracy</option>
+                          <option value="custom" data-i18n="training.profileCustom">Custom</option>
+                        </select>
+                      </label>
+                    </div>
+                  </section>
                   <div class="training-model-registry-shell">
                     <div class="model-registry-header">
                       <div>
@@ -930,77 +958,84 @@
                     <label>
                       <span><span data-i18n="training.model">Model</span> <span class="info-icon" data-tooltip="Select a model compatible with the current project task. Segmentation projects should use a segmentation model." data-i18n-tooltip="training.modelTooltip">i</span></span>
                       <select id="train-model">
-                        <option value="yolov8n-seg.pt">YOLOv8n Segmentation (Recommended)</option>
-                        <option value="yolov8s-seg.pt">YOLOv8s Segmentation</option>
-                        <option value="yolov8m-seg.pt">YOLOv8m Segmentation</option>
-                        <option value="yolov8n.pt">YOLOv8n (Detection only)</option>
-                        <option value="yolov8s.pt">YOLOv8s (Detection only)</option>
+                        <option value="yolov8n-seg.pt" data-i18n="training.modelOption.yolov8nSeg">YOLOv8n Segmentation (Recommended)</option>
+                        <option value="yolov8s-seg.pt" data-i18n="training.modelOption.yolov8sSeg">YOLOv8s Segmentation</option>
+                        <option value="yolov8m-seg.pt" data-i18n="training.modelOption.yolov8mSeg">YOLOv8m Segmentation</option>
+                        <option value="yolov8n.pt" data-i18n="training.modelOption.yolov8nDet">YOLOv8n (Detection only)</option>
+                        <option value="yolov8s.pt" data-i18n="training.modelOption.yolov8sDet">YOLOv8s (Detection only)</option>
                       </select>
                     </label>
-                    <div class="training-model-registry-card" id="training-model-registry-card">
-                      <div class="model-registry-main">
+                    <details class="training-model-details">
+                      <summary>
                         <span data-i18n="training.modelRegistry.selected">Selected</span>
                         <strong id="training-model-selected-name">--</strong>
+                        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                      </summary>
+                      <div class="training-model-registry-card" id="training-model-registry-card">
+                        <div class="model-registry-meta-grid">
+                          <div><span data-i18n="training.modelRegistry.source">Source</span><code data-i18n="training.modelRegistry.sourceBuiltIn">Built-in candidate</code></div>
+                          <div><span data-i18n="training.modelRegistry.backend">Backend</span><code>Ultralytics</code></div>
+                          <div><span data-i18n="training.modelRegistry.task">Task</span><code id="training-model-task">--</code></div>
+                          <div><span data-i18n="training.modelRegistry.license">License status</span><code data-i18n="training.modelRegistry.licenseReview">Commercial license review required</code></div>
+                        </div>
+                        <div class="model-registry-note" id="training-model-compatibility">--</div>
+                        <div class="form-hint" data-i18n="training.modelRegistry.hubPending">模型匯入會存放在目前專案的 models/imports 底下，不會放進 exe 或全域資料夾。</div>
+                        <div class="model-import-supported-types">
+                          <span><strong>可訓練</strong> YOLO .pt</span>
+                          <span><strong>架構</strong> YOLO .yaml</span>
+                          <span><strong>推論</strong> ONNX .onnx</span>
+                          <span><strong>預覽</strong> RNN package .zip</span>
+                          <span><strong>檢查</strong> Custom package .zip</span>
+                        </div>
                       </div>
-                      <div class="model-registry-meta-grid">
-                        <div><span data-i18n="training.modelRegistry.source">Source</span><code data-i18n="training.modelRegistry.sourceBuiltIn">Built-in candidate</code></div>
-                        <div><span data-i18n="training.modelRegistry.backend">Backend</span><code>Ultralytics</code></div>
-                        <div><span data-i18n="training.modelRegistry.task">Task</span><code id="training-model-task">--</code></div>
-                        <div><span data-i18n="training.modelRegistry.license">License status</span><code data-i18n="training.modelRegistry.licenseReview">Commercial license review required</code></div>
-                      </div>
-                      <div class="model-registry-note" id="training-model-compatibility">--</div>
-                      <div class="form-hint" data-i18n="training.modelRegistry.hubPending">模型匯入會存放在目前專案的 models/imports 底下，不會放進 exe 或全域資料夾。</div>
-                      <div class="model-import-supported-types">
-                        <span><strong>可訓練</strong> YOLO .pt</span>
-                        <span><strong>架構</strong> YOLO .yaml</span>
-                        <span><strong>推論</strong> ONNX .onnx</span>
-                        <span><strong>預覽</strong> RNN package .zip</span>
-                        <span><strong>檢查</strong> Custom package .zip</span>
+                    </details>
+                  </div>
+                  <section class="training-config-group training-resource-group">
+                    <div class="training-config-group-heading">
+                      <div>
+                        <strong data-i18n="training.group.resources">Core resources</strong>
+                        <span data-i18n="training.group.resourcesHelp">Set training duration, memory load, input resolution, and compute device.</span>
                       </div>
                     </div>
-                  </div>
-                  <label>
-                    <span data-i18n="training.profile">Training Profile</span>
-                    <select id="train-profile">
-                      <option value="balanced" selected data-i18n="training.profileBalanced">Balanced</option>
-                      <option value="quick" data-i18n="training.profileQuick">Quick Test</option>
-                      <option value="accuracy" data-i18n="training.profileAccuracy">High Accuracy</option>
-                      <option value="custom" data-i18n="training.profileCustom">Custom</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span><span data-i18n="training.epochs">Epochs</span> <span class="info-icon" data-tooltip="One epoch means the model has seen the full training dataset once. More epochs can improve learning but can also overfit." data-i18n-tooltip="training.epochsTooltip">i</span></span>
-                    <input type="number" id="train-epochs" value="50" min="5" max="300">
-                  </label>
-                  <label>
-                    <span><span data-i18n="training.batch">Batch Size</span> <span class="info-icon" data-tooltip="Number of images processed at once. Larger batches use more VRAM." data-i18n-tooltip="training.batchTooltip">i</span></span>
-                    <select id="train-batch">
-                      <option value="2">2</option>
-                      <option value="4">4</option>
-                      <option value="8" selected>8</option>
-                      <option value="16">16</option>
-                      <option value="32">32</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span><span data-i18n="training.imgsz">Image Size</span> <span class="info-icon" data-tooltip="Input image size for training. Higher sizes may improve detail but use more memory." data-i18n-tooltip="training.imgszTooltip">i</span></span>
-                    <select id="train-imgsz">
-                      <option value="320">320</option>
-                      <option value="640" selected>640</option>
-                      <option value="768">768</option>
-                      <option value="960">960</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span><span data-i18n="training.device">Hardware Device</span> <span class="info-icon" data-tooltip="Use GPU when CUDA is available. CPU training is possible but much slower." data-i18n-tooltip="training.deviceTooltip">i</span></span>
-                    <select id="train-device">
-                      <option value="gpu">GPU (CUDA)</option>
-                      <option value="cpu">CPU</option>
-                    </select>
-                  </label>
+                    <div class="training-field-grid training-field-grid-4">
+                      <label>
+                        <span><span data-i18n="training.epochs">Epochs</span> <span class="info-icon" data-tooltip="One epoch means the model has seen the full training dataset once. More epochs can improve learning but can also overfit." data-i18n-tooltip="training.epochsTooltip">i</span></span>
+                        <input type="number" id="train-epochs" value="50" min="5" max="300">
+                      </label>
+                      <label>
+                        <span><span data-i18n="training.batch">Batch Size</span> <span class="info-icon" data-tooltip="Number of images processed at once. Larger batches use more VRAM." data-i18n-tooltip="training.batchTooltip">i</span></span>
+                        <select id="train-batch">
+                          <option value="2">2</option>
+                          <option value="4">4</option>
+                          <option value="8" selected>8</option>
+                          <option value="16">16</option>
+                          <option value="32">32</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span><span data-i18n="training.imgsz">Image Size</span> <span class="info-icon" data-tooltip="Input image size for training. Higher sizes may improve detail but use more memory." data-i18n-tooltip="training.imgszTooltip">i</span></span>
+                        <select id="train-imgsz">
+                          <option value="320">320</option>
+                          <option value="640" selected>640</option>
+                          <option value="768">768</option>
+                          <option value="960">960</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span><span data-i18n="training.device">Hardware Device</span> <span class="info-icon" data-tooltip="Use GPU when CUDA is available. CPU training is possible but much slower." data-i18n-tooltip="training.deviceTooltip">i</span></span>
+                        <select id="train-device">
+                          <option value="gpu">GPU (CUDA)</option>
+                          <option value="cpu">CPU</option>
+                        </select>
+                      </label>
+                    </div>
+                  </section>
                 </div>
 
                 <div id="config-advanced-fields" class="hidden">
+                  <section class="training-config-group">
+                    <div class="training-config-group-heading"><div><strong data-i18n="training.group.optimization">Optimization</strong><span data-i18n="training.group.optimizationHelp">Control convergence and early stopping.</span></div></div>
+                    <div class="training-field-grid training-field-grid-3">
                   <label>
                     <span><span data-i18n="training.lr">Learning Rate</span> <span class="info-icon" data-tooltip="Initial optimizer learning rate. Keep default unless you know why it should change." data-i18n-tooltip="training.lrTooltip">i</span></span>
                     <input type="number" id="train-lr0" value="0.01" step="0.001" min="0.0001" max="0.1">
@@ -1008,7 +1043,7 @@
                   <label>
                     <span><span data-i18n="training.optimizer">Optimizer</span> <span class="info-icon" data-tooltip="Optimizer used during training. Auto is recommended for most projects." data-i18n-tooltip="training.optimizerTooltip">i</span></span>
                     <select id="train-optimizer">
-                      <option value="auto" selected>auto (Recommended)</option>
+                      <option value="auto" selected data-i18n="training.optimizerAuto">Auto（Recommended）</option>
                       <option value="SGD">SGD</option>
                       <option value="Adam">Adam</option>
                       <option value="AdamW">AdamW</option>
@@ -1018,6 +1053,11 @@
                     <span><span data-i18n="training.patience">Patience</span> <span class="info-icon" data-tooltip="Early stopping patience. Training stops if validation quality does not improve for this many epochs." data-i18n-tooltip="training.patienceTooltip">i</span></span>
                     <input type="number" id="train-patience" value="20" min="0">
                   </label>
+                    </div>
+                  </section>
+                  <section class="training-config-group">
+                    <div class="training-config-group-heading"><div><strong data-i18n="training.group.runtime">Runtime and reproducibility</strong><span data-i18n="training.group.runtimeHelp">Tune data loading, repeatability, and checkpoint frequency.</span></div></div>
+                    <div class="training-field-grid training-field-grid-3">
                   <label>
                     <span><span data-i18n="training.workers">Workers</span> <span class="info-icon" data-tooltip="Number of data loading worker processes. Higher values may speed loading but use more CPU and memory." data-i18n-tooltip="training.workersTooltip">i</span></span>
                     <input type="number" id="train-workers" value="4" min="0" max="16">
@@ -1030,18 +1070,25 @@
                     <span><span data-i18n="training.savePeriod">Save Period</span> <span class="info-icon" data-tooltip="Save a checkpoint every N epochs." data-i18n-tooltip="training.savePeriodTooltip">i</span></span>
                     <input type="number" id="train-save-period" value="5" min="1">
                   </label>
+                    </div>
+                  </section>
+                  <section class="training-config-group">
+                    <div class="training-config-group-heading"><div><strong data-i18n="training.group.precision">Precision and data strategy</strong><span data-i18n="training.group.precisionHelp">Adjust late-stage augmentation, mixed precision, and image caching.</span></div></div>
+                    <div class="training-field-grid training-field-grid-3 training-toggle-grid">
                   <label>
                     <span><span data-i18n="training.closeMosaic">Close Mosaic Epochs</span> <span class="info-icon" data-tooltip="Disable mosaic augmentation near the end of training to improve convergence." data-i18n-tooltip="training.closeMosaicTooltip">i</span></span>
                     <input type="number" id="train-close-mosaic" value="10" min="0">
                   </label>
                   <label class="checkbox-row">
                     <input type="checkbox" id="train-amp" checked>
-                    <span>AMP (Mixed Precision) <span class="info-icon" data-tooltip="Mixed precision can reduce VRAM usage and speed up GPU training." data-i18n-tooltip="training.ampTooltip">i</span></span>
+                    <span><span data-i18n="training.amp">AMP（混合精度）</span> <span class="info-icon" data-tooltip="Mixed precision can reduce VRAM usage and speed up GPU training." data-i18n-tooltip="training.ampTooltip">i</span></span>
                   </label>
                   <label class="checkbox-row">
                     <input type="checkbox" id="train-cache">
-                    <span>Cache Images <span class="info-icon" data-tooltip="Cache images in memory or disk to speed data loading. Requires enough system resources." data-i18n-tooltip="training.cacheTooltip">i</span></span>
+                    <span><span data-i18n="training.cache">快取圖片</span> <span class="info-icon" data-tooltip="Cache images in memory or disk to speed data loading. Requires enough system resources." data-i18n-tooltip="training.cacheTooltip">i</span></span>
                   </label>
+                    </div>
+                  </section>
                 </div>
 
                 <div id="training-start-blocker" class="training-start-blocker hidden"></div>
@@ -1133,8 +1180,8 @@
               <div id="chart-report-container" class="hidden chart-report-container">
                 <img id="static-report-img" alt="YOLO results.png" data-i18n-alt="evaluation.staticReportAlt">
                 <div class="action-bar">
-                  <a class="btn btn-secondary btn-sm" id="btn-download-results-png" target="_blank"><i class="fa-solid fa-download"></i> Download results.png</a>
-                  <a class="btn btn-secondary btn-sm" id="btn-download-results-csv" target="_blank"><i class="fa-solid fa-file-csv"></i> Download results.csv</a>
+                  <a class="btn btn-secondary btn-sm" id="btn-download-results-png" target="_blank"><i class="fa-solid fa-download"></i> <span data-i18n="training.report.downloadPng">Download results.png</span></a>
+                  <a class="btn btn-secondary btn-sm" id="btn-download-results-csv" target="_blank"><i class="fa-solid fa-file-csv"></i> <span data-i18n="training.report.downloadCsv">Download results.csv</span></a>
                 </div>
               </div>
             </div>
@@ -1153,13 +1200,13 @@
                 <table class="data-table epoch-history-table">
                   <thead>
                     <tr>
-                      <th>Epoch</th>
-                      <th id="epoch-loss-header">Loss</th>
+                      <th data-i18n="training.logs.epoch">Epoch</th>
+                      <th id="epoch-loss-header" data-i18n="training.logs.loss">Loss</th>
                       <th id="epoch-primary-header">mAP50(M)</th>
                       <th id="epoch-secondary-header">mAP50-95(M)</th>
                       <th id="epoch-tertiary-header">Precision(M)</th>
                       <th id="epoch-quaternary-header">Recall(M)</th>
-                      <th>Note</th>
+                      <th data-i18n="training.logs.note">Note</th>
                     </tr>
                   </thead>
                   <tbody id="epoch-history-rows">
@@ -2497,7 +2544,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260709-rnn-export-workbench"></script>
+  <script type="module" src="/static/app.js?v=20260710-training-i18n-ux"></script>
 </body>
 </html>
 

@@ -29,7 +29,231 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-panel);
-  box-shadow: var(--shadow-soft);
+  box-shadow: none;
+}
+
+.project-status-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0;
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.project-status-heading {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.project-status-heading h2,
+.project-status-empty h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.project-status-heading h2 i,
+.project-status-empty h2 i {
+  color: var(--primary);
+}
+
+.project-status-heading p,
+.project-status-empty p {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.project-status-summary {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  color: var(--text-soft);
+  font-size: 0.72rem;
+}
+
+.project-status-summary strong,
+.project-status-summary span {
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--bg-panel-soft);
+  white-space: nowrap;
+}
+
+.project-status-summary strong {
+  color: var(--text);
+}
+
+.project-status-summary span {
+  color: var(--warning);
+}
+
+.project-status-phases {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.project-status-phase {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 12px;
+  padding: 14px 16px 12px;
+}
+
+.project-status-phase + .project-status-phase {
+  border-left: 1px solid var(--border);
+}
+
+.project-status-phase > header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.project-status-phase-icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--primary);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.project-status-phase h3 {
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+  font-size: 0.84rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.project-status-state {
+  justify-self: end;
+  padding: 4px 7px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  font-size: 0.66rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.project-status-phase.status-ready .project-status-state {
+  color: var(--success);
+  background: rgba(22, 163, 74, 0.14);
+}
+
+.project-status-phase.status-active .project-status-state {
+  color: var(--primary);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.project-status-phase.status-attention .project-status-state {
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.13);
+}
+
+.project-status-phase dl {
+  display: grid;
+  align-content: start;
+  gap: 0;
+  margin: 0;
+}
+
+.project-status-phase dl > div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 30px;
+  border-bottom: 1px solid var(--border);
+}
+
+.project-status-phase dt,
+.project-status-phase dd {
+  min-width: 0;
+  margin: 0;
+  font-size: 0.76rem;
+}
+
+.project-status-phase dt {
+  color: var(--text-muted);
+}
+
+.project-status-phase dd {
+  color: var(--text);
+  font-weight: 750;
+  text-align: right;
+}
+
+.project-status-phase dd.is-truncated {
+  max-width: 58%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-status-action {
+  width: 100%;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 9px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-soft);
+  background: transparent;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 750;
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-status-action:hover,
+.project-status-action:focus-visible {
+  color: var(--primary);
+  background: rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.project-status-action i {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+}
+
+.project-status-empty {
+  min-height: 74px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+}
+
+body[data-theme="light"] .project-status-strip {
+  background: #fff;
 }
 
 #rnn-training-flow-guide {
@@ -517,13 +741,10 @@ body[data-theme="light"] .workflow-card {
   .guided-step-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
 }
 
 @media (max-width: 1180px) {
-  .training-flow-phases {
-    grid-template-columns: 1fr;
-  }
-
   .training-flow-heading {
     display: grid;
   }
@@ -546,9 +767,46 @@ body[data-theme="light"] .workflow-card {
     grid-template-columns: 1fr;
     display: grid;
   }
+
+  .project-status-heading {
+    display: grid;
+  }
+
+  .project-status-phases {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-status-phase:nth-child(3) {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .project-status-phase:nth-child(4) {
+    border-top: 1px solid var(--border);
+  }
 }
 
 @media (max-width: 640px) {
+  .training-flow-phases {
+    grid-template-columns: 1fr;
+  }
+
+  .project-status-phases,
+  .project-status-empty {
+    grid-template-columns: 1fr;
+  }
+
+  .project-status-phase + .project-status-phase,
+  .project-status-phase:nth-child(3),
+  .project-status-phase:nth-child(4) {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .project-status-summary {
+    flex-wrap: wrap;
+  }
+
   .training-flow-stage-row {
     display: grid;
     grid-template-columns: 1fr;

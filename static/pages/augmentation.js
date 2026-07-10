@@ -1,5 +1,5 @@
 ﻿import { eventBus } from "../event_bus.js";
-import { appState, augmentationPresets } from "../state.js";
+import { appState, augmentationPresets, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, escapeHtml } from "../utils.js";
 
@@ -719,10 +719,16 @@ function renderAugmentationJobHistory() {
     const sourceTrain = Number(job.source_train_count || 0);
     const multiplier = Number(job.multiplier || 1);
     const status = job.status || "completed";
-    const risk = job.val_test_policy === "excluded" ? "Val/Test excluded" : "Check output policy";
+    const statusKey = ["completed", "running", "failed"].includes(status)
+      ? `augmentation.job.status.${status}`
+      : "";
+    const statusLabel = statusKey ? t(statusKey) : status;
+    const risk = job.val_test_policy === "excluded"
+      ? t("augmentation.job.valTestExcluded")
+      : t("augmentation.job.checkPolicy");
     const params = Array.isArray(job.applied_parameters) && job.applied_parameters.length
       ? job.applied_parameters.join(", ")
-      : "default";
+      : t("augmentation.job.default");
     const outputPath = job.outputs?.images || "-";
     return `
       <article class="aug-job-card">
@@ -731,17 +737,17 @@ function renderAugmentationJobHistory() {
             <strong>${escapeHtml(job.job_id || "augmentation_job")}</strong>
             <span>${escapeHtml(created)}</span>
           </div>
-          <span class="summary-badge ${status === "completed" ? "badge-success" : "badge-warning"}">${escapeHtml(status)}</span>
+          <span class="summary-badge ${status === "completed" ? "badge-success" : "badge-warning"}">${escapeHtml(statusLabel)}</span>
         </div>
         <div class="aug-job-stats">
-          <span><b>+${generated}</b><small>generated</small></span>
-          <span><b>${sourceTrain}</b><small>train source</small></span>
-          <span><b>${multiplier}x</b><small>multiplier</small></span>
+          <span><b>+${generated}</b><small>${escapeHtml(t("augmentation.job.generated"))}</small></span>
+          <span><b>${sourceTrain}</b><small>${escapeHtml(t("augmentation.job.trainSource"))}</small></span>
+          <span><b>${multiplier}x</b><small>${escapeHtml(t("augmentation.job.multiplier"))}</small></span>
         </div>
         <dl class="aug-job-meta">
-          <div><dt>Policy</dt><dd>${escapeHtml(risk)}</dd></div>
-          <div><dt>Params</dt><dd>${escapeHtml(params)}</dd></div>
-          <div><dt>Output</dt><dd title="${escapeHtml(outputPath)}">${escapeHtml(outputPath)}</dd></div>
+          <div><dt>${escapeHtml(t("augmentation.job.policy"))}</dt><dd>${escapeHtml(risk)}</dd></div>
+          <div><dt>${escapeHtml(t("augmentation.job.parameters"))}</dt><dd>${escapeHtml(params)}</dd></div>
+          <div><dt>${escapeHtml(t("augmentation.job.output"))}</dt><dd title="${escapeHtml(outputPath)}">${escapeHtml(outputPath)}</dd></div>
         </dl>
       </article>
     `;

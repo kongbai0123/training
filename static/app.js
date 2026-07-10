@@ -1,5 +1,5 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js?v=20260709-rnn-export-workbench";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260710-training-i18n-ux";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

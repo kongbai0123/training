@@ -235,54 +235,244 @@
   text-overflow: ellipsis;
 }
 
-#config-simple-fields,
-#config-advanced-fields:not(.hidden) {
+.training-config-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.training-config-heading {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  align-items: start;
-}
-
-#config-simple-fields > label:first-child,
-#config-simple-fields > .training-model-registry-shell,
-#config-simple-fields > .training-recommendation-card {
-  grid-column: 1 / -1;
-}
-
-#config-simple-fields > .training-model-registry-shell {
-  order: 10;
-}
-
-#config-simple-fields > .training-recommendation-card {
-  order: 20;
-}
-
-#config-simple-fields > label,
-#config-advanced-fields > label {
+  gap: 4px;
   min-width: 0;
 }
 
-#config-simple-fields > label input,
-#config-simple-fields > label select,
-#config-advanced-fields > label input,
-#config-advanced-fields > label select {
+.training-config-heading h2,
+.training-config-heading p {
+  margin: 0;
+}
+
+.training-config-heading p {
+  max-width: 680px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.config-tabs-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(112px, 1fr));
+  gap: 4px;
+  min-width: 250px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-subtle);
+}
+
+.config-mode-button {
+  display: grid;
+  gap: 1px;
+  min-height: 48px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.config-mode-button strong {
+  color: inherit;
+  font-size: 0.84rem;
+}
+
+.config-mode-button small {
+  color: var(--text-soft);
+  font-size: 0.7rem;
+}
+
+.config-mode-button:hover {
+  background: var(--bg-panel);
+  color: var(--text);
+}
+
+.config-mode-button.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+#config-simple-fields,
+#config-advanced-fields:not(.hidden) {
+  display: grid;
+  gap: 0;
+  align-items: start;
+}
+
+#config-advanced-fields:not(.hidden) {
+  margin-top: 2px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.training-config-group,
+.training-model-registry-shell {
+  padding: 16px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-soft);
+  border-radius: 0;
+  background: transparent;
+}
+
+.training-config-group-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.training-config-group-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.training-config-group-heading strong {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.training-config-group-heading span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.training-field-grid {
+  display: grid;
+  gap: 12px;
+  align-items: end;
+}
+
+.training-field-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.training-field-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.training-field-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.training-field-grid > label {
+  min-width: 0;
+}
+
+.training-field-grid > label input,
+.training-field-grid > label select,
+.training-model-registry-shell > label select {
   width: 100%;
 }
 
-#config-advanced-fields > .checkbox-row {
-  align-self: center;
+.training-model-registry-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.training-model-details {
+  border-top: 1px solid var(--border-soft);
+}
+
+.training-model-details summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.training-model-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.training-model-details summary strong {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.training-model-details summary i {
+  transition: transform 0.18s ease;
+}
+
+.training-model-details[open] summary i {
+  transform: rotate(180deg);
+}
+
+.training-model-details .training-model-registry-card {
+  margin-top: 10px;
+}
+
+.training-toggle-grid .checkbox-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-subtle);
+}
+
+.training-toggle-grid .checkbox-row > span {
+  order: 1;
+  min-width: 0;
+}
+
+.training-toggle-grid .checkbox-row > input {
+  order: 2;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+  .training-field-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 980px) {
-  #config-simple-fields,
-  #config-advanced-fields:not(.hidden) {
-    grid-template-columns: 1fr;
+  .training-config-header {
+    display: grid;
   }
 
-  #config-simple-fields > label:first-child,
-  #config-simple-fields > .training-model-registry-shell,
-  #config-simple-fields > .training-recommendation-card {
-    grid-column: auto;
+  .config-tabs-nav {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .training-field-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .training-field-grid-2,
+  .training-field-grid-3,
+  .training-field-grid-4 {
+    grid-template-columns: 1fr;
   }
 }
 .training-config-panel .status-guard {
@@ -360,7 +550,7 @@
   font-size: 0.82rem;
   margin-bottom: 4px;
 }
-.config-tabs-nav, .chart-tabs {
+.chart-tabs {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
