@@ -4,6 +4,7 @@ import { qs, setHTML, escapeHtml } from "../utils.js";
 import { getDirtyFormSummaries } from "../core/dirty_forms.js";
 import { getStaleResources } from "../core/resource_freshness.js";
 import { buildCnnGuidedWizard, renderCnnGuidedWizard } from "../core/cnn_guided_wizard.js";
+import { renderTrainingFlowGuide } from "../core/training_flow_guide.js";
 
 export function initDashboard() {
   qs("#btn-dashboard-refresh")?.addEventListener("click", () => {
@@ -14,7 +15,7 @@ export function initDashboard() {
 export function renderDashboard(status) {
   setHTML("#dashboard-kpis", "");
   renderDashboardAlerts();
-  renderWorkflowMap(status);
+  renderTrainingFlow();
   renderRecentProjects(appState.projects);
   renderActivity(status);
 }
@@ -44,6 +45,10 @@ function renderDashboardAlerts() {
   qs("#dashboard-alerts")?.querySelectorAll("[data-refresh-project]").forEach((button) => {
     button.addEventListener("click", () => eventBus.emit("refresh-project"));
   });
+}
+
+function renderTrainingFlow() {
+  setHTML("#control-cards", renderTrainingFlowGuide({ mode: appState.currentProject ? "cnn" : null }));
 }
 
 function renderWorkflowMap(status) {

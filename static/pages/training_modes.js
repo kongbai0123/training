@@ -1,7 +1,8 @@
 ﻿import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { apiFetch } from "../api.js";
-import { qs, qsa, escapeHtml, setText } from "../utils.js";
+import { qs, qsa, escapeHtml, setHTML, setText } from "../utils.js";
+import { renderTrainingFlowGuide } from "../core/training_flow_guide.js";
 import {
   formatSequenceMetric,
   sequenceBackendDisplayLabel
@@ -264,6 +265,8 @@ export function renderTrainingWorkspace() {
     const isActive = panel.dataset.cnnPanel === trainingModeState.activeCnnPanel;
     panel.classList.toggle("active", isActive);
   });
+
+  setHTML("#rnn-training-flow-guide", renderTrainingFlowGuide({ mode: appState.currentProject ? "rnn" : null }));
 
   renderRnnReadiness();
   if (!isCnn
@@ -1033,7 +1036,7 @@ function renderRnnReadiness() {
   } = summarizeRnnReadiness(readiness);
 
   setText("#rnn-manifest-status", manifest.exists ? t("rnn.sequenceCountValue", { count: manifest.sequence_count || 0 }) : t("rnn.readiness.manifestNotConnected"));
-  setText("#rnn-source-status", source === "manifest" ? "sequence_manifest.json" : source === "csv" ? `${csvFiles} CSV feature file(s)` : "No sequence source");
+  setText("#rnn-source-status", source === "manifest" ? "sequence_manifest.json" : source === "csv" ? `${csvFiles} CSV feature file(s)` : t("rnn.readiness.noSequenceSource"));
   setText("#rnn-split-status", splitText);
   setText("#rnn-feature-columns-status", csv.feature_dim
     ? t("rnn.readiness.csvFeatureColumns", { count: csv.feature_dim })

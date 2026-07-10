@@ -237,7 +237,7 @@ function allowedEnglish(text) {
   if (/^[a-z0-9][a-z0-9_.-]*[_0-9.-][a-z0-9_.-]*$/i.test(trimmed)) return true;
   if (/^[A-Za-z]:[\\/]/.test(trimmed) || /[A-Za-z]:[\\/]/.test(trimmed) || trimmed.includes(":/")) return true;
   if (/run_YYYYMMDD_HHMMSS/i.test(trimmed)) return true;
-  if (/\b(run|mAP|IoU|bbox|COCO|mask|ZIP|RAG|RNN|CNN|CSV|XML|JSON|HTML|CSS|JS|API|LLM|GGUF|ONNX|TensorRT|PyTorch|Ultralytics|Python|Markdown|schema|learning rate|mosaic augmentation|Stratified|Group|epoch|checkpoint|VRAM|CUDA|CPU|GPU|Auto|timestep|timestamp|Date Time|time steps|sequence_length|stride|horizon|class_[a-z]|class_names|sequence_id|machine_id|batch_id|RoadSeg|builtin|ultralytics_yolo|Instance Segmentation|my_vision_project|defect|scratch|stain)\b/i.test(trimmed)) {
+  if (/\b(run|mAP|IoU|bbox|COCO|mask|ZIP|TXT|RAG|RNN|CNN|CSV|XML|JSON|HTML|CSS|JS|API|LLM|GGUF|ONNX|TensorRT|PyTorch|Ultralytics|YOLO|LSTM|GRU|BiLSTM|XGBoost|Window|Python|Markdown|schema|learning rate|mosaic augmentation|Stratified|Group|epoch|checkpoint|VRAM|CUDA|CPU|GPU|Auto|timestep|timestamp|Date Time|time steps|sequence_length|stride|horizon|class_[a-z]|class_names|sequence_id|machine_id|batch_id|RoadSeg|builtin|ultralytics_yolo|Instance Segmentation|my_vision_project|defect|scratch|stain)\b/i.test(trimmed)) {
     return true;
   }
   if (/\b(MP4|AVI|MKV|MOV|WMV|FLV|WEBM|P0|best\.pt|last\.pt|\.pt|\.onnx|annotations\/|training\/runs|train\/loss|val\/loss)\b/i.test(trimmed)) return true;

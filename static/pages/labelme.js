@@ -288,8 +288,8 @@ function failedTxtDeleteButton(item) {
       type="button"
       class="btn btn-danger btn-xs btn-delete-failed-txt"
       data-failed-txt="${escapeHtml(file)}"
-      title="Delete this staged TXT from the import draft"
-    >刪除此 TXT</button>
+      title="${escapeHtml(t("labelme.deleteStagedTxtTitle"))}"
+    >${escapeHtml(t("labelme.deleteThisTxt"))}</button>
   `;
 }
 
