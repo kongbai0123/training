@@ -55,6 +55,7 @@ be rewritten as part of this objective.
 | EXEC-001 | Related | Packaging | Existing portable ZIP is approximately 2.73 GB before managed LabelMe or optional model components. | Full offline package may become impractically large. | Compare thin installer, component cache, and full-offline package sizes in Phase 8. | Open |
 | EXEC-002 | Related | i18n | The legacy `zh-TW.js` override block still contains historical mojibake entries, although the reviewed catalog and new model-preparation strings render correctly. | Untouched pages may still expose corrupted legacy strings. | Run the scoped assistant and release-page DOM audit in Phases 5, 6, and 8; do not rebuild the entire catalog during model preparation. | Open |
 | EXEC-003 | Related | Packaging | The optional offline LabelMe component is 96.5 MB compressed and 238.3 MB installed. | Bundling it into the already-large main package would penalize users who do not need manual CNN annotation. | Publish it as a separate optional component artifact and keep local ZIP installation in the first-run manager. | Open |
+| EXEC-004 | Related | Development environment | The shared developer Python installation contains unrelated packages with conflicting pins (`opencv-python-headless` consumers and an old `autodistill-yolov8` Ultralytics pin). | `pip check` on the shared machine cannot represent the clean application lock set. | Keep release builds isolated from global Python packages and run dependency checks inside the release environment in Phase 8. | Open |
 
 ## Phase Evidence
 
@@ -164,3 +165,23 @@ runtime checks, and compatibility result are recorded here.
 - Temporary RNN smoke project was removed after verification.
 - Targeted Phase 6 result: 30 tests and 5 subtests passed.
 - Full suite result after Phase 6: 324 tests and 66 subtests passed.
+
+### Phase 7
+
+- Confirmed the official Windows x64 `opencv-python==5.0.0.93` wheel is available.
+- Added `scripts/check_opencv_compatibility.py` to exercise all 24 OpenCV symbols
+  used by the application plus image round trips, contours, transforms, encoding,
+  augmentation, dataset utilities, and inference polygon conversion.
+- OpenCV 4.13 baseline compatibility check passed before changing the requirement.
+- Created an isolated OpenCV 5 environment instead of mutating the application
+  runtime before validation.
+- OpenCV 5.0.0 with NumPy 2.1.3 passed the compatibility gate and full suite.
+- The locked release combination OpenCV 5.0.0 with NumPy 2.4.6 passed the same
+  compatibility gate and full suite.
+- Updated `requirements.txt` to `opencv-python==5.0.0.93` only after both gates passed.
+- Isolated OpenCV 5 result: 325 tests and 66 subtests passed.
+- Updated the source runtime to OpenCV 5.0.0 / NumPy 2.4.6; the health endpoint
+  remained healthy and the capabilities endpoint reported `opencv=5.0.0.93`.
+- Browser smoke verified the dashboard and active CNN project still render after the
+  runtime upgrade.
+- Full suite result after Phase 7: 326 tests and 66 subtests passed.
