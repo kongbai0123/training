@@ -44,12 +44,16 @@ class ModelPreparationTests(unittest.TestCase):
                 "installation_required": True,
                 "min_vram_mb": 6144,
                 "download_size": 20_000_000,
+                "task_family": "segmentation",
+                "generation_rank": 26,
             },
             {
                 "model_id": "oversized",
                 "installation_required": True,
                 "min_vram_mb": 16384,
                 "download_size": 20_000_000,
+                "task_family": "segmentation",
+                "generation_rank": 26,
             },
         ], capabilities)
 
@@ -143,6 +147,21 @@ class ModelPreparationApiTests(unittest.TestCase):
         response = self.client.get("/api/models/catalog?usage=all")
         self.assertEqual(response.status_code, 200)
         self.assertTrue(all("hardware_fit" in item for item in response.json()["models"]))
+        self.assertEqual({source["source_id"] for source in response.json()["sources"]}, {
+            "official_ultralytics",
+            "custom_yolo",
+            "project_checkpoints",
+            "rnn_templates",
+            "external_pytorch_package",
+        })
+
+    def test_catalog_exposes_current_official_model_families(self):
+        response = self.client.get("/api/models/catalog?architecture=cnn&usage=train")
+        self.assertEqual(response.status_code, 200)
+        models = response.json()["models"]
+        families = {model.get("model_family") for model in models}
+        self.assertTrue({"yolo26", "yolo11", "yolov8"}.issubset(families))
+        self.assertEqual(sum(model.get("hardware_fit") == "recommended" for model in models), 2)
 
     def test_install_requires_explicit_confirmation(self):
         response = self.client.post("/api/models/install", json={

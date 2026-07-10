@@ -17,6 +17,7 @@ export function initModelSetup() {
     if (event.target.id === "model-setup-modal") closeModelSetup(true);
   });
   qs("#model-setup-list")?.addEventListener("click", handleModelAction);
+  qs("#model-setup-family-filter")?.addEventListener("change", () => renderModels(catalogPayload?.models || []));
   eventBus.on("open-model-setup", openModelSetup);
 }
 
@@ -52,6 +53,7 @@ async function refreshModelSetup({ force = false } = {}) {
     catalogPayload = await loadCatalog(force);
     renderHardware(catalogPayload.hardware || {});
     renderModels(catalogPayload.models || []);
+    renderSources(catalogPayload.sources || []);
     await renderModelSetupSettings();
   } catch (error) {
     if (list) list.innerHTML = `<div class="empty-state">${escapeHtml(t("modelSetup.loadFailed", { message: error.message }))}</div>`;
@@ -89,11 +91,27 @@ function renderHardware(hardware) {
 function renderModels(models) {
   const list = qs("#model-setup-list");
   if (!list) return;
-  const installable = models.filter((model) => model.architecture === "cnn" && model.installation_required);
+  const filter = qs("#model-setup-family-filter")?.value || "recommended";
+  const installable = models.filter((model) => {
+    if (model.architecture !== "cnn" || !model.installation_required) return false;
+    if (filter === "all") return true;
+    if (filter === "recommended") return model.installed || model.hardware_fit === "recommended";
+    return model.model_family === filter;
+  });
   const readyTemplates = models.filter((model) => model.architecture === "rnn" && model.usable).length;
   const rnnSummary = qs("#model-setup-rnn-summary");
   if (rnnSummary) rnnSummary.textContent = t("modelSetup.rnnReady", { count: readyTemplates });
   list.innerHTML = installable.map(renderModelCard).join("") || `<div class="empty-state">${escapeHtml(t("modelSetup.noInstallableModels"))}</div>`;
+}
+
+function renderSources(sources) {
+  const target = qs("#model-setup-sources");
+  if (!target) return;
+  target.innerHTML = sources.map((source) => `
+    <div class="model-source-row">
+      <span class="model-source-icon"><i class="fa-solid ${source.network_required ? "fa-cloud-arrow-down" : "fa-folder-open"}"></i></span>
+      <span><strong>${escapeHtml(t(`modelSetup.source.${source.source_id}`))}</strong><small>${escapeHtml(t(`modelSetup.availability.${source.availability}`))}</small></span>
+    </div>`).join("");
 }
 
 function renderModelCard(model) {

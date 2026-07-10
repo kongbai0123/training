@@ -11,6 +11,7 @@ from src.model_store import ModelStore
 from src.model_system import ModelCatalog
 from src.model_install_manager import MODEL_INSTALL_MANAGER
 from src.model_recommendation import annotate_hardware_fit
+from src.model_sources import list_model_sources
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
 from src.system_capabilities import get_system_capabilities
@@ -46,6 +47,7 @@ def list_system_model_catalog(
         "architecture": architecture,
         "usage": usage,
         "models": models,
+        "sources": list_model_sources(),
         "hardware": capabilities,
         "summary": {
             "total": len(models),
@@ -54,6 +56,11 @@ def list_system_model_catalog(
             "not_installed": sum(1 for model in models if model.get("install_state") == "not_installed"),
         },
     }
+
+
+@router.get("/api/models/sources")
+def get_system_model_sources():
+    return {"sources": list_model_sources()}
 
 
 @router.post("/api/models/install")

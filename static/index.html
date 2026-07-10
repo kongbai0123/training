@@ -2304,9 +2304,23 @@
           <h3 data-i18n="modelSetup.cnnModels">CNN / YOLO Models</h3>
           <p data-i18n="modelSetup.cnnHelp">Only selected models are downloaded from the approved official source.</p>
         </div>
-        <span class="badge badge-info" id="model-setup-rnn-summary">--</span>
+        <div class="model-setup-heading-tools">
+          <span class="badge badge-info" id="model-setup-rnn-summary">--</span>
+          <select id="model-setup-family-filter" aria-label="Model family" data-i18n-aria-label="modelSetup.familyFilter">
+            <option value="recommended" data-i18n="modelSetup.filterRecommended">Recommended</option>
+            <option value="yolo26">YOLO26</option>
+            <option value="yolo11">YOLO11</option>
+            <option value="yolov8">YOLOv8</option>
+            <option value="all" data-i18n="common.all">All</option>
+          </select>
+        </div>
       </div>
       <div class="model-setup-list" id="model-setup-list"></div>
+
+      <details class="model-source-summary">
+        <summary data-i18n="modelSetup.otherSources">Other Model Sources</summary>
+        <div class="model-source-list" id="model-setup-sources"></div>
+      </details>
 
       <div class="model-setup-consent">
         <i class="fa-solid fa-shield-halved"></i>

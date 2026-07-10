@@ -46,11 +46,6 @@ def annotate_hardware_fit(models: Iterable[Dict[str, Any]], capabilities: Dict[s
         if any(reason in reasons for reason in ("insufficient_ram", "insufficient_disk")):
             fit = "incompatible"
 
-        if fit == "compatible" and minimum_vram:
-            recommended_floor = 6144 if vram_mb >= 6144 else 2048
-            if minimum_vram == recommended_floor:
-                fit = "recommended"
-
         model.update({
             "hardware_fit": fit,
             "hardware_reasons": reasons,
@@ -62,4 +57,23 @@ def annotate_hardware_fit(models: Iterable[Dict[str, Any]], capabilities: Dict[s
             },
         })
         annotated.append(model)
+
+    recommendation_limit = int(vram_mb * 0.75) if vram_mb else 0
+    task_families = {str(model.get("task_family") or "") for model in annotated}
+    for task_family in task_families:
+        candidates = [
+            model for model in annotated
+            if model.get("task_family") == task_family
+            and model.get("installation_required")
+            and not model.get("installed")
+            and model.get("hardware_fit") == "compatible"
+            and (not recommendation_limit or int(model.get("min_vram_mb") or 0) <= recommendation_limit)
+        ]
+        if not candidates:
+            continue
+        candidates.sort(
+            key=lambda model: (int(model.get("generation_rank") or 0), int(model.get("min_vram_mb") or 0)),
+            reverse=True,
+        )
+        candidates[0]["hardware_fit"] = "recommended"
     return annotated

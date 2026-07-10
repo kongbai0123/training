@@ -92,3 +92,19 @@ runtime checks, and compatibility result are recorded here.
   RNN templates, skip flow, Settings reopen flow, and Traditional Chinese rendering.
 - Targeted Phase 2 result: 17 tests passed.
 - Full suite result after Phase 2: 309 tests and 66 subtests passed.
+
+### Phase 3
+
+- Added official YOLO26, YOLO11, and YOLOv8 Detection / Instance Segmentation
+  families with n/s choices; retained YOLOv8m segmentation for existing projects.
+- Download sizes and SHA-256 digests were verified against the official Ultralytics
+  assets `v8.4.0` release manifest.
+- Hardware recommendation now selects one latest compatible model per task instead
+  of marking every compatible model as recommended.
+- Added source contracts for custom YOLO PT/YAML, managed project best/last
+  checkpoints, built-in LSTM/GRU/BiLSTM/XGBoost templates, and external PyTorch
+  packages. External packages remain manifest-validation-only with code execution
+  disabled.
+- Browser smoke verified the default recommendation view, family filter, YOLO11
+  model list, and the collapsed source summary.
+- Full suite result after Phase 3: 310 tests and 66 subtests passed.
