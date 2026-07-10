@@ -19,6 +19,10 @@ let weightManagerModels = [];
 let cleanupRunCandidates = [];
 let selectedCleanupRunIds = new Set();
 let pendingCleanupRunIds = [];
+let autoClassFilterValues = [];
+let autoClassFilterProjectId = null;
+let creatingAutoLabelJob = false;
+let autoLabelStartReasonKey = "autoLabel.startReason.noProject";
 
 const AUTO_SOURCE_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".bmp"]);
 const AUTO_SOURCE_ZIP_EXTENSIONS = new Set([".zip"]);
@@ -50,7 +54,7 @@ export function classifyAutoLabelSourceFiles(files) {
 }
 
 export function initAutoLabeling() {
-  qs("#btn-refresh-auto-label-models")?.addEventListener("click", () => loadAutoLabelModels(true));
+  qs("#btn-refresh-auto-label-models")?.addEventListener("click", refreshAutoLabelModelsFromAction);
   qs("#btn-start-auto-label")?.addEventListener("click", createAutoLabelJob);
   qs("#btn-auto-review-accept-next")?.addEventListener("click", () => reviewSelectedAutoLabelItem("accept", { moveNext: true }));
   qs("#btn-auto-review-reject-next")?.addEventListener("click", () => reviewSelectedAutoLabelItem("reject", { moveNext: true }));
@@ -63,11 +67,48 @@ export function initAutoLabeling() {
   initModelImportDropZone();
   initSourceDropZone();
   initSourceOptions();
+  initAutoClassFilter();
+  initAutoLabelPageGuide();
   eventBus.on("language-changed", () => renderAutoLabelingPage());
+}
+
+function initAutoLabelPageGuide() {
+  qsa("[data-auto-scroll-target]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = qs(button.dataset.autoScrollTarget || "");
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      target.focus({ preventScroll: true });
+    });
+  });
+}
+
+async function refreshAutoLabelModelsFromAction() {
+  if (!appState.currentProjectId) {
+    showAutoLabelWarning("autoLabel.startReason.noProject");
+    return;
+  }
+  if (loadingModels) {
+    showAutoLabelWarning("autoLabel.modelLoading");
+    return;
+  }
+  await loadAutoLabelModels(true);
+}
+
+function showAutoLabelWarning(messageKey) {
+  showToast({ message: t(messageKey), severity: "warning" });
 }
 
 export function renderAutoLabelingPage(status) {
   if (!qs("#page-auto-labeling")) return;
+
+  const currentProjectId = appState.currentProjectId || null;
+  if (autoClassFilterProjectId !== currentProjectId) {
+    autoClassFilterProjectId = currentProjectId;
+    autoClassFilterValues = [];
+    const classFilterInput = qs("#auto-class-filter");
+    if (classFilterInput) classFilterInput.value = "";
+  }
 
   renderAutoLabelStats(status);
 
@@ -78,6 +119,7 @@ export function renderAutoLabelingPage(status) {
   loadAutoLabelStatus(status);
   renderAutoLabelModelList(status);
   renderStartReason(status);
+  renderAutoClassFilterChips();
   renderAutoLabelJobHistory();
   renderAutoLabelReviewQueue();
 }
@@ -90,6 +132,56 @@ function initSourceOptions() {
       button.classList.add("active");
     });
   });
+}
+
+function initAutoClassFilter() {
+  const input = qs("#auto-class-filter");
+  const addButton = qs("#btn-add-auto-class-filter");
+  const chips = qs("#auto-class-filter-chips");
+  if (!input || !addButton || !chips) return;
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    commitAutoClassFilterInput();
+  });
+  addButton.addEventListener("click", commitAutoClassFilterInput);
+  chips.addEventListener("click", (event) => {
+    const removeButton = event.target.closest("[data-remove-auto-class-filter]");
+    if (!removeButton) return;
+    const value = removeButton.dataset.removeAutoClassFilter || "";
+    autoClassFilterValues = autoClassFilterValues.filter((item) => item !== value);
+    renderAutoClassFilterChips();
+  });
+}
+
+function commitAutoClassFilterInput() {
+  const input = qs("#auto-class-filter");
+  if (!input) return;
+  const candidates = String(input.value || "")
+    .split(/[,;\n]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (!candidates.length) return;
+
+  const seen = new Set(autoClassFilterValues.map((item) => item.toLocaleLowerCase()));
+  candidates.forEach((candidate) => {
+    const key = candidate.toLocaleLowerCase();
+    if (seen.has(key)) return;
+    autoClassFilterValues.push(candidate);
+    seen.add(key);
+  });
+  input.value = "";
+  renderAutoClassFilterChips();
+}
+
+function renderAutoClassFilterChips() {
+  setHTML("#auto-class-filter-chips", autoClassFilterValues.map((className) => `
+    <span class="class-chip">
+      ${escapeHtml(className)}
+      <button type="button" data-remove-auto-class-filter="${escapeHtml(className)}" aria-label="${escapeHtml(t("autoLabel.removeClassFilter", { class: className }))}">&times;</button>
+    </span>
+  `).join(""));
 }
 
 function initSourceDropZone() {
@@ -184,7 +276,7 @@ function initWeightManager() {
 
 async function openWeightManager() {
   if (!appState.currentProjectId) {
-    showToast(t("autoLabel.startReason.noProject"));
+    showAutoLabelWarning("autoLabel.startReason.noProject");
     return;
   }
   selectedWeightIds = new Set();
@@ -568,11 +660,14 @@ async function loadAutoLabelStatus(status = null) {
 }
 
 async function createAutoLabelJob() {
-  if (!appState.currentProjectId) return showToast(t("autoLabel.startReason.noProject"));
-  if (!selectedAutoLabelModelId) return showToast(t("autoLabel.startReason.noModel"));
+  if (creatingAutoLabelJob) return showAutoLabelWarning("autoLabel.startReason.busy");
+  if (autoLabelStartReasonKey !== "autoLabel.startReason.ready") {
+    return showAutoLabelWarning(autoLabelStartReasonKey);
+  }
   const button = qs("#btn-start-auto-label");
   const draftRules = readAutoDraftRules();
-  button?.setAttribute("disabled", "disabled");
+  creatingAutoLabelJob = true;
+  button?.setAttribute("aria-busy", "true");
   try {
     const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/auto-labeling/jobs`, {
       method: "POST",
@@ -591,7 +686,8 @@ async function createAutoLabelJob() {
   } catch (err) {
     showToast(t("autoLabel.toast.jobFailed", { message: err.message }));
   } finally {
-    button?.removeAttribute("disabled");
+    creatingAutoLabelJob = false;
+    button?.removeAttribute("aria-busy");
     renderStartReason();
   }
 }
@@ -601,10 +697,8 @@ function readAutoDraftRules() {
     const value = Number(qs(selector)?.value);
     return Number.isFinite(value) ? value : fallback;
   };
-  const classFilter = String(qs("#auto-class-filter")?.value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+  commitAutoClassFilterInput();
+  const classFilter = [...autoClassFilterValues];
   return {
     conf: Math.max(0.01, Math.min(1, parseNumber("#auto-confidence", 0.35))),
     iou: Math.max(0.01, Math.min(1, parseNumber("#auto-iou", 0.5))),
@@ -734,24 +828,30 @@ function renderStartReason(status = null) {
   const hasDataset = Boolean(status?.hasDataset ?? (appState.currentProject?.images || []).length);
   const hasModel = Boolean(selectedAutoLabelModelId || (appState.models || []).length);
   const canStart = hasProject && hasDataset && hasModel;
-  if (button) {
-    button.disabled = !canStart;
-    button.classList.toggle("btn-disabled", !canStart);
-  }
-  if (!reason) return;
+  let reasonText = "";
   if (!hasProject) {
-    reason.textContent = t("autoLabel.startReason.noProject");
-    return;
+    autoLabelStartReasonKey = "autoLabel.startReason.noProject";
+  } else if (!hasDataset) {
+    autoLabelStartReasonKey = "autoLabel.startReason.noDataset";
+  } else if (!hasModel) {
+    autoLabelStartReasonKey = "autoLabel.startReason.noModel";
+  } else {
+    autoLabelStartReasonKey = "autoLabel.startReason.ready";
   }
-  if (!hasDataset) {
-    reason.textContent = t("autoLabel.startReason.noDataset");
-    return;
+  reasonText = t(autoLabelStartReasonKey);
+  if (reason) reason.textContent = reasonText;
+  if (button) {
+    button.removeAttribute("disabled");
+    button.classList.remove("btn-disabled");
+    button.classList.toggle("action-requires-attention", !canStart);
+    button.title = reasonText;
   }
-  if (!hasModel) {
-    reason.textContent = t("autoLabel.startReason.noModel");
-    return;
-  }
-  reason.textContent = t("autoLabel.startReason.ready");
+  [qs("#btn-refresh-auto-label-models"), qs("#btn-open-weight-manager")].filter(Boolean).forEach((action) => {
+    action.removeAttribute("disabled");
+    action.classList.remove("btn-disabled");
+    action.classList.toggle("action-requires-attention", !hasProject);
+    action.title = hasProject ? "" : t("autoLabel.startReason.noProject");
+  });
 }
 
 function renderAutoLabelModelList(status = null) {

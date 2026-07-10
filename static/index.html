@@ -1910,11 +1910,14 @@
               <p data-i18n="autoLabel.subtitle">Generate draft annotations from project models, review them, and safely apply accepted labels.</p>
             </div>
             <div class="page-actions">
-              <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-auto-label-models">
+              <button class="btn btn-secondary" id="btn-refresh-auto-label-models">
                 <i class="fa-solid fa-rotate"></i> <span data-i18n="autoLabel.refreshModels">Refresh Models</span>
               </button>
-              <button class="btn btn-secondary guarded" data-requires="project" id="btn-open-weight-manager">
+              <button class="btn btn-secondary" id="btn-open-weight-manager">
                 <i class="fa-solid fa-hard-drive"></i> <span data-i18n="autoLabel.manageWeights">Manage Weights</span>
+              </button>
+              <button class="btn btn-primary auto-label-start-action" id="btn-start-auto-label" aria-describedby="auto-start-reason">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="autoLabel.start">Start Auto-Label Job</span>
               </button>
             </div>
           </div>
@@ -1927,27 +1930,42 @@
             <div class="metric-card"><span data-i18n="autoLabel.stat.target">Target</span><strong data-i18n="autoLabel.draftOnly">Draft only</strong></div>
           </div>
 
-          <details class="status-guard info compact-guard auto-label-safety-rail">
-            <summary class="guard-title" data-i18n="autoLabel.principleTitle">Auto-Labeling workflow rules</summary>
-            <ul>
-              <li data-i18n="autoLabel.principle1">This page creates draft annotation jobs. It is not a model test page or a LabelMe replacement.</li>
-              <li data-i18n="autoLabel.principle2">In P0, all outputs are written to drafts and never overwrite annotations/current directly.</li>
-              <li data-i18n="autoLabel.principle3">best.pt and last.pt remain in training/runs/*/weights; the UI only groups recommended weights and checkpoints.</li>
-            </ul>
-          </details>
+          <nav class="auto-label-page-guide" aria-labelledby="auto-label-flow-title">
+            <div class="auto-label-page-guide-heading">
+              <strong id="auto-label-flow-title" data-i18n="autoLabel.flowTitle">Page workflow</strong>
+              <span data-i18n="autoLabel.flowSubtitle">Use the existing sections below to configure, start, and review the task.</span>
+            </div>
+            <div class="auto-label-page-guide-track" aria-label="Auto-labeling page workflow" data-i18n-aria-label="autoLabel.flowAria">
+              <button type="button" class="auto-label-page-guide-step" data-auto-scroll-target="#auto-label-execution-section">
+                <span class="auto-label-page-guide-number">1</span><i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                <span><strong data-i18n="autoLabel.executionConsole">Execution settings</strong><small data-i18n="autoLabel.flow.executionHelp">Choose source, model, and draft rules below.</small></span>
+              </button>
+              <i class="fa-solid fa-chevron-right auto-label-page-guide-arrow" aria-hidden="true"></i>
+              <button type="button" class="auto-label-page-guide-step" data-auto-scroll-target="#btn-start-auto-label">
+                <span class="auto-label-page-guide-number">2</span><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                <span><strong data-i18n="autoLabel.start">Start Auto-Label Job</strong><small data-i18n="autoLabel.flow.startHelp">Use the action in the upper-right to create a draft job.</small></span>
+              </button>
+              <i class="fa-solid fa-chevron-right auto-label-page-guide-arrow" aria-hidden="true"></i>
+              <button type="button" class="auto-label-page-guide-step" data-auto-scroll-target="#auto-label-review-section">
+                <span class="auto-label-page-guide-number">3</span><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <span><strong data-i18n="autoLabel.reviewResults">Review Results</strong><small data-i18n="autoLabel.flow.reviewHelp">Analyze, accept, reject, or edit drafts in the review section.</small></span>
+              </button>
+            </div>
+          </nav>
 
           <div class="auto-label-workbench">
-            <section class="panel-section auto-job-builder auto-task-setup-panel auto-execution-console-panel auto-setup-summary-panel">
+            <section class="panel-section auto-job-builder auto-task-setup-panel auto-execution-console-panel auto-setup-summary-panel" id="auto-label-execution-section" tabindex="-1">
               <div class="section-title auto-setup-summary">
                 <div>
                   <h2 data-i18n="autoLabel.executionConsole">Execution Console</h2>
                   <p class="section-subtitle" data-i18n="autoLabel.executionConsoleHelp">Choose input, model, and draft rules, then run a draft-only auto-label job.</p>
+                  <p class="auto-start-reason-inline" id="auto-start-reason" aria-live="polite">Open a project before creating an auto-label job.</p>
                 </div>
                 <span class="info-icon" data-tooltip="Create draft annotations from input source, model source, and draft rules." data-i18n-tooltip="autoLabel.executionTooltip">i</span>
               </div>
 
               <div class="auto-step-block active">
-                <div class="auto-step-heading"><span>1</span><strong data-i18n="autoLabel.step.input">Input Source</strong><span class="info-icon" data-tooltip="Unlabeled images are images without valid LabelMe JSON. Invalid annotations include missing JSON, empty annotations, or files that need review. Dropped images and ZIP files are imported before draft generation." data-i18n-tooltip="autoLabel.inputTooltip">i</span></div>
+                <div class="auto-step-heading"><span class="auto-step-number">1</span><strong data-i18n="autoLabel.step.input">Input Source</strong><span class="info-icon" data-tooltip="Unlabeled images are images without valid LabelMe JSON. Invalid annotations include missing JSON, empty annotations, or files that need review. Dropped images and ZIP files are imported before draft generation." data-i18n-tooltip="autoLabel.inputTooltip">i</span></div>
                 <div class="drop-zone auto-source-drop-card" id="auto-source-drop-zone">
                   <div class="auto-source-choice-row">
                     <button type="button" class="source-option active" data-auto-source="unlabeled"><i class="fa-solid fa-image"></i><strong data-i18n="autoLabel.source.unlabeled">Unlabeled images</strong></button>
@@ -1960,7 +1978,7 @@
               </div>
 
               <div class="auto-step-block">
-                <div class="auto-step-heading"><span>2</span><strong data-i18n="autoLabel.step.model">Model Source</strong></div>
+                <div class="auto-step-heading"><span class="auto-step-number">2</span><strong data-i18n="autoLabel.step.model">Model Source</strong></div>
                 <div class="auto-model-source-grid">
                   <section class="auto-model-source-card project-model-source">
                     <label>
@@ -1983,35 +2001,32 @@
                 </div>
               </div>
 
-              <div class="output-target-block">
-                <div class="target-card safe-target"><i class="fa-solid fa-shield-halved"></i><div><strong data-i18n="autoLabel.draftOnly">Draft only</strong><span data-i18n="autoLabel.targetHelp">Save to annotations/drafts/auto_label/{job_id}. Do not write to current annotations.</span></div></div>
-                <button class="btn btn-primary btn-disabled" id="btn-start-auto-label" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="autoLabel.start">Start Auto-Label Job</span></button>
-                <p class="muted-note" id="auto-start-reason">Open a project before creating an auto-label job.</p>
-              </div>
-
               <div class="auto-step-block auto-rules-step-block">
-                <div class="auto-step-heading"><span>3</span><strong data-i18n="autoLabel.step.rules">Draft Rules</strong></div>
+                <div class="auto-step-heading"><span class="auto-step-number">3</span><strong data-i18n="autoLabel.step.rules">Draft Rules</strong></div>
                 <div class="auto-basic-settings expanded auto-rule-settings-grid">
                   <label><span data-i18n="autoLabel.confidence">Confidence</span><input type="number" id="auto-confidence" value="0.35" min="0.01" max="1" step="0.01"></label>
                   <label><span>IoU</span><input type="number" id="auto-iou" value="0.50" min="0.01" max="1" step="0.01"></label>
                   <label><span data-i18n="autoLabel.maxDetections">Max detections</span><input type="number" id="auto-max-detections" value="20" min="1" max="300" step="1"></label>
                   <label><span data-i18n="autoLabel.minMaskArea">Minimum mask area</span><input type="number" id="auto-min-mask-area" value="400" min="0"></label>
                   <label class="auto-output-mode-field"><span data-i18n="autoLabel.outputMode">Output mode</span><select id="auto-output-mode"><option value="mask_polygon" data-i18n="autoLabel.output.maskPolygon">Mask / Polygon draft</option><option value="bbox" data-i18n="autoLabel.output.bbox">BBox draft</option></select></label>
-                  <label class="auto-class-filter-field"><span data-i18n="autoLabel.classFilter">Class filter</span><input type="text" id="auto-class-filter" placeholder="class_a, class_b" data-i18n-placeholder="autoLabel.classFilterPlaceholder"></label>
+                  <label class="auto-class-filter-field">
+                    <span data-i18n="autoLabel.classFilter">Class filter</span>
+                    <span class="auto-class-filter-entry">
+                      <input type="text" id="auto-class-filter" placeholder="class_a, class_b" data-i18n-placeholder="autoLabel.classFilterPlaceholder">
+                      <button class="btn btn-secondary" id="btn-add-auto-class-filter" type="button"><i class="fa-solid fa-plus"></i><span data-i18n="common.add">Add</span></button>
+                    </span>
+                    <span class="auto-class-filter-help" data-i18n="autoLabel.classFilterHelp">Enter comma-separated classes, then press Enter or Add.</span>
+                    <span class="auto-class-filter-chips" id="auto-class-filter-chips" aria-live="polite"></span>
+                  </label>
                 </div>
-                <details class="advanced-collapse auto-review-priority-collapse">
-                  <summary data-i18n="autoLabel.reviewRules">Review priority rules</summary>
-                  <div class="compact-strategy-list">
-                    <div><strong data-i18n="autoLabel.lowConfidence">Low-confidence policy</strong><span data-i18n="autoLabel.lowConfidenceHelp">Predictions below threshold enter the review queue and are not accepted directly.</span></div>
-                    <div><strong data-i18n="autoLabel.unknownClass">Unknown class policy</strong><span data-i18n="autoLabel.unknownClassHelp">Labels outside class_names are marked unknown and require manual review.</span></div>
-                    <div><strong data-i18n="autoLabel.maskQuality">Mask quality filter</strong><span data-i18n="autoLabel.maskQualityHelp">Tiny, huge, fragmented, or almost full-image masks are marked for review.</span></div>
-                    <div><strong data-i18n="autoLabel.draftProtection">Draft only protection</strong><span data-i18n="autoLabel.draftProtectionHelp">Auto-labeling writes first to annotations/drafts/auto_label/{job_id}.</span></div>
-                  </div>
-                </details>
+                <div class="auto-review-policy-summary">
+                  <span class="auto-review-policy-copy"><i class="fa-solid fa-filter" aria-hidden="true"></i><span data-i18n="autoLabel.reviewPolicySummary">Review priority: low confidence · unknown class · abnormal mask</span></span>
+                  <button type="button" class="info-icon" aria-label="Review priority rules" data-i18n-aria-label="autoLabel.reviewRules" data-tooltip="Review priority conditions: below the confidence threshold; class not in the project class list; mask is too small, too large, or fragmented; all results are written to drafts first." data-i18n-tooltip="autoLabel.reviewPolicyTooltip">i</button>
+                </div>
               </div>
             </section>
 
-            <section class="panel-section auto-review-panel auto-review-workspace-panel auto-review-first-panel">
+            <section class="panel-section auto-review-panel auto-review-workspace-panel auto-review-first-panel" id="auto-label-review-section" tabindex="-1">
               <div class="section-title">
                 <div>
                   <h2 data-i18n="autoLabel.reviewResults">Review Results</h2>

@@ -10,6 +10,7 @@ tools/i18n-audit/node_modules/
 
 # Project Data (large images, videos, checkpoints, exports)
 projects/
+project_assistant/
 models/
 logs/
 config/
