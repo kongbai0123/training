@@ -18,6 +18,7 @@ import { initWorkspaceContextPanel, renderRightPanel as renderRightPanelCore } f
 import { initInfoTooltips } from "./tooltip.js";
 import { createProjectLifecycle } from "./project_lifecycle.js";
 import { initModelSetup, maybeOpenModelSetup } from "./model_setup.js?v=20260710-model-preparation";
+import { initModelSelectionCenter } from "./model_selection_center.js?v=20260710-model-selection";
 import {
   initPageModules,
   renderPrimaryPageModules,
@@ -44,6 +45,7 @@ export async function bootstrapApp() {
   initWorkspaceContextPanel();
   initInfoTooltips();
   initModelSetup();
+  initModelSelectionCenter();
 
   initPageModules();
 

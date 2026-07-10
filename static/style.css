@@ -7,6 +7,7 @@
 @import "./styles/components/media_preview.css";
 @import "./styles/components/data_inputs.css";
 @import "./styles/components/tooltip.css";
+@import "./styles/components/model_selection_center.css";
 @import "./styles/pages/dashboard.css";
 @import "./styles/pages/history.css";
 @import "./styles/pages/dataset.css";

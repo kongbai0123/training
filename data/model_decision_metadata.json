@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "families": {
+    "yolo26": {
+      "license": "AGPL-3.0 / Enterprise",
+      "decision_profile": {
+        "summary": {
+          "en": "Latest end-to-end YOLO family with strong accuracy and simplified deployment.",
+          "zh-TW": "較新的端到端 YOLO 家族，兼顧精度並簡化部署後處理。"
+        },
+        "best_for": {
+          "en": ["New production projects", "Accuracy-speed balance", "ONNX and TensorRT deployment"],
+          "zh-TW": ["新建正式專案", "兼顧精度與速度", "ONNX 與 TensorRT 部署"]
+        },
+        "tradeoffs": {
+          "en": ["Requires a recent Ultralytics runtime", "Newer deployment path needs compatibility testing"],
+          "zh-TW": ["需要較新的 Ultralytics 執行環境", "新部署路徑仍需做相容性驗證"]
+        }
+      }
+    },
+    "yolo11": {
+      "license": "AGPL-3.0 / Enterprise",
+      "decision_profile": {
+        "summary": {
+          "en": "Mature efficient YOLO family with broad task and export support.",
+          "zh-TW": "成熟且高效率的 YOLO 家族，任務與匯出支援完整。"
+        },
+        "best_for": {
+          "en": ["Stable production baseline", "Edge and GPU deployment", "Teams upgrading from YOLOv8"],
+          "zh-TW": ["穩定的正式基準模型", "邊緣裝置與 GPU 部署", "由 YOLOv8 升級的專案"]
+        },
+        "tradeoffs": {
+          "en": ["Not the newest end-to-end head", "Larger variants increase VRAM demand"],
+          "zh-TW": ["不是最新的端到端偵測頭", "較大尺寸模型會提高 VRAM 需求"]
+        }
+      }
+    },
+    "yolov8": {
+      "license": "AGPL-3.0 / Enterprise",
+      "decision_profile": {
+        "summary": {
+          "en": "Widely adopted compatibility baseline with extensive ecosystem support.",
+          "zh-TW": "生態成熟、相容性廣泛的基準 YOLO 家族。"
+        },
+        "best_for": {
+          "en": ["Legacy compatibility", "Established deployment pipelines", "Reproducing older experiments"],
+          "zh-TW": ["既有系統相容", "成熟部署流程", "重現既有實驗"]
+        },
+        "tradeoffs": {
+          "en": ["Lower efficiency than newer families at similar scale", "Use newer families for greenfield projects"],
+          "zh-TW": ["同尺寸下效率通常低於新家族", "全新專案通常應優先評估較新模型"]
+        }
+      }
+    },
+    "lstm": {
+      "license": "Project implementation",
+      "decision_profile": {
+        "summary": {"en": "General-purpose recurrent baseline for long temporal dependencies.", "zh-TW": "適合長期時間依賴的通用循環序列基準。"},
+        "best_for": {"en": ["Sequence classification", "Sequence regression", "Longer temporal context"], "zh-TW": ["序列分類", "序列回歸", "較長時間脈絡"]},
+        "tradeoffs": {"en": ["Slower than GRU", "Sensitive to window and hidden-size choices"], "zh-TW": ["速度通常慢於 GRU", "對視窗與隱藏層大小較敏感"]},
+        "profile_scores": {"speed": 62, "efficiency": 64, "temporal_context": 90, "baseline_strength": 84}
+      }
+    },
+    "gru": {
+      "license": "Project implementation",
+      "decision_profile": {
+        "summary": {"en": "Simpler gated recurrent model that is often faster than LSTM.", "zh-TW": "門控結構較精簡，通常比 LSTM 更快。"},
+        "best_for": {"en": ["Fast sequence baseline", "Moderate temporal context", "Limited training budget"], "zh-TW": ["快速序列基準", "中等長度時間脈絡", "訓練資源有限"]},
+        "tradeoffs": {"en": ["May trail LSTM on very long dependencies", "Still sequential to train"], "zh-TW": ["極長依賴可能不如 LSTM", "訓練仍具有序列性"]},
+        "profile_scores": {"speed": 76, "efficiency": 78, "temporal_context": 80, "baseline_strength": 82}
+      }
+    },
+    "bilstm": {
+      "license": "Project implementation",
+      "decision_profile": {
+        "summary": {"en": "Bidirectional recurrent model for offline sequences with past and future context.", "zh-TW": "同時利用前後文的雙向循環模型，適合離線序列。"},
+        "best_for": {"en": ["Offline sequence analysis", "Context from both directions", "Post-event classification"], "zh-TW": ["離線序列分析", "需要雙向上下文", "事件後分類"]},
+        "tradeoffs": {"en": ["Not suitable for causal real-time prediction", "Higher compute and memory cost"], "zh-TW": ["不適合因果即時預測", "運算與記憶體成本較高"]},
+        "profile_scores": {"speed": 48, "efficiency": 50, "temporal_context": 96, "baseline_strength": 88}
+      }
+    },
+    "xgboost": {
+      "license": "Apache-2.0",
+      "decision_profile": {
+        "summary": {"en": "Strong tree-based baseline for engineered sequence features and smaller datasets.", "zh-TW": "適合工程化序列特徵與較小資料集的樹模型基準。"},
+        "best_for": {"en": ["Small and medium datasets", "Fast CPU training", "Interpretable feature importance"], "zh-TW": ["中小型資料集", "快速 CPU 訓練", "可解釋特徵重要度"]},
+        "tradeoffs": {"en": ["Does not learn raw temporal order directly", "Requires useful aggregated features"], "zh-TW": ["不會直接學習原始時間順序", "需要有效的彙整特徵"]},
+        "profile_scores": {"speed": 94, "efficiency": 92, "temporal_context": 38, "baseline_strength": 86}
+      }
+    },
+    "fastrnn": {
+      "license": "Planned",
+      "decision_profile": {
+        "summary": {"en": "Planned lightweight recurrent baseline; training backend is not enabled.", "zh-TW": "規劃中的輕量循環模型，目前尚未啟用訓練後端。"},
+        "best_for": {"en": ["Future CPU-friendly recurrent workloads"], "zh-TW": ["未來偏 CPU 的輕量循環任務"]},
+        "tradeoffs": {"en": ["Not trainable in the current release"], "zh-TW": ["目前版本尚不可訓練"]},
+        "profile_scores": {"speed": 88, "efficiency": 90, "temporal_context": 68, "baseline_strength": 60}
+      }
+    },
+    "isolation_forest": {
+      "license": "BSD-3-Clause",
+      "decision_profile": {
+        "summary": {"en": "Planned unsupervised anomaly-detection baseline.", "zh-TW": "規劃中的非監督式異常偵測基準。"},
+        "best_for": {"en": ["Unlabeled anomaly exploration"], "zh-TW": ["無標籤異常探索"]},
+        "tradeoffs": {"en": ["Not trainable in the current release", "Not a temporal neural model"], "zh-TW": ["目前版本尚不可訓練", "不是時間序列神經網路"]},
+        "profile_scores": {"speed": 96, "efficiency": 94, "temporal_context": 20, "baseline_strength": 58}
+      }
+    }
+  },
+  "models": {
+    "builtin.yolo26n-seg": {"model_family": "yolo26", "decision_profile": {"scale": "nano", "resource_tier": "low"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "mask_map50_95", "label": "Mask mAP50-95", "value": 33.9}, "secondary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 39.6}, "latency": {"cpu_onnx_ms": 53.3, "gpu_ms": 2.1, "gpu_runtime": "T4 TensorRT10"}, "parameters_m": 2.7, "flops_b": 9.1, "source_url": "https://docs.ultralytics.com/tasks/segment/"}},
+    "builtin.yolo26s-seg": {"model_family": "yolo26", "decision_profile": {"scale": "small", "resource_tier": "medium"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "mask_map50_95", "label": "Mask mAP50-95", "value": 40.0}, "secondary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 47.3}, "latency": {"cpu_onnx_ms": 118.4, "gpu_ms": 3.3, "gpu_runtime": "T4 TensorRT10"}, "parameters_m": 10.4, "flops_b": 34.2, "source_url": "https://docs.ultralytics.com/tasks/segment/"}},
+    "builtin.yolo26n-det": {"model_family": "yolo26", "decision_profile": {"scale": "nano", "resource_tier": "low"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 40.9}, "latency": {"cpu_onnx_ms": 38.9, "gpu_ms": 1.7, "gpu_runtime": "T4 TensorRT10"}, "parameters_m": 2.4, "flops_b": 5.4, "source_url": "https://docs.ultralytics.com/models/yolo26/"}},
+    "builtin.yolo26s-det": {"model_family": "yolo26", "decision_profile": {"scale": "small", "resource_tier": "medium"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 48.6}, "latency": {"cpu_onnx_ms": 87.2, "gpu_ms": 2.5, "gpu_runtime": "T4 TensorRT10"}, "parameters_m": 9.5, "flops_b": 20.7, "source_url": "https://docs.ultralytics.com/models/yolo26/"}},
+    "builtin.yolo11n-seg": {"model_family": "yolo11", "decision_profile": {"scale": "nano", "resource_tier": "low"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "mask_map50_95", "label": "Mask mAP50-95", "value": 32.0}, "secondary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 38.9}, "latency": {"cpu_onnx_ms": 65.9, "gpu_ms": 1.8, "gpu_runtime": "T4 TensorRT10"}, "parameters_m": 2.9, "flops_b": 9.7, "source_url": "https://docs.ultralytics.com/models/yolo11/"}},
+    "builtin.yolo11s-seg": {"model_family": "yolo11", "decision_profile": {"scale": "small", "resource_tier": "medium"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "mask_map50_95", "label": "Mask mAP50-95", "value": 37.8}, "secondary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 46.6}, "latency": {"cpu_onnx_ms": 117.6, "gpu_ms": 2.9, "gpu_runtime": "T4 TensorRT10"}, "parameters_m": 10.1, "flops_b": 33.0, "source_url": "https://docs.ultralytics.com/models/yolo11/"}},
+    "builtin.yolo11n-det": {"model_family": "yolo11", "decision_profile": {"scale": "nano", "resource_tier": "low"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 39.5}, "latency": {"cpu_onnx_ms": 56.1, "gpu_ms": 1.5, "gpu_runtime": "T4 TensorRT10"}, "parameters_m": 2.6, "flops_b": 6.5, "source_url": "https://docs.ultralytics.com/models/yolo11/"}},
+    "builtin.yolo11s-det": {"model_family": "yolo11", "decision_profile": {"scale": "small", "resource_tier": "medium"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 47.0}, "latency": {"cpu_onnx_ms": 90.0, "gpu_ms": 2.5, "gpu_runtime": "T4 TensorRT10"}, "parameters_m": 9.4, "flops_b": 21.5, "source_url": "https://docs.ultralytics.com/models/yolo11/"}},
+    "builtin.yolov8n-seg": {"model_family": "yolov8", "decision_profile": {"scale": "nano", "resource_tier": "low"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "mask_map50_95", "label": "Mask mAP50-95", "value": 30.5}, "secondary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 36.7}, "latency": {"cpu_onnx_ms": 96.1, "gpu_ms": 1.21, "gpu_runtime": "A100 TensorRT"}, "parameters_m": 3.4, "flops_b": 12.6, "source_url": "https://docs.ultralytics.com/models/yolov8/"}},
+    "builtin.yolov8s-seg": {"model_family": "yolov8", "decision_profile": {"scale": "small", "resource_tier": "medium"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "mask_map50_95", "label": "Mask mAP50-95", "value": 36.8}, "secondary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 44.6}, "latency": {"cpu_onnx_ms": 155.7, "gpu_ms": 1.47, "gpu_runtime": "A100 TensorRT"}, "parameters_m": 11.8, "flops_b": 42.6, "source_url": "https://docs.ultralytics.com/models/yolov8/"}},
+    "builtin.yolov8m-seg": {"model_family": "yolov8", "decision_profile": {"scale": "medium", "resource_tier": "high"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "mask_map50_95", "label": "Mask mAP50-95", "value": 40.8}, "secondary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 49.9}, "latency": {"cpu_onnx_ms": 317.0, "gpu_ms": 2.18, "gpu_runtime": "A100 TensorRT"}, "parameters_m": 27.3, "flops_b": 110.2, "source_url": "https://docs.ultralytics.com/models/yolov8/"}},
+    "builtin.yolov8n-det": {"model_family": "yolov8", "decision_profile": {"scale": "nano", "resource_tier": "low"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 37.3}, "latency": {"cpu_onnx_ms": 80.4, "gpu_ms": 0.99, "gpu_runtime": "A100 TensorRT"}, "parameters_m": 3.2, "flops_b": 8.7, "source_url": "https://docs.ultralytics.com/models/yolov8/"}},
+    "builtin.yolov8s-det": {"model_family": "yolov8", "decision_profile": {"scale": "small", "resource_tier": "medium"}, "benchmark": {"kind": "official", "dataset": "COCO val2017", "input_size": 640, "primary_metric": {"key": "box_map50_95", "label": "Box mAP50-95", "value": 44.9}, "latency": {"cpu_onnx_ms": 128.4, "gpu_ms": 1.2, "gpu_runtime": "A100 TensorRT"}, "parameters_m": 11.2, "flops_b": 28.6, "source_url": "https://docs.ultralytics.com/models/yolov8/"}},
+    "template.rnn.lstm-classifier": {"model_family": "lstm", "decision_profile": {"scale": "standard", "resource_tier": "medium"}},
+    "template.rnn.lstm-regressor": {"model_family": "lstm", "decision_profile": {"scale": "standard", "resource_tier": "medium"}},
+    "template.rnn.gru-classifier": {"model_family": "gru", "decision_profile": {"scale": "standard", "resource_tier": "low"}},
+    "template.rnn.gru-regressor": {"model_family": "gru", "decision_profile": {"scale": "standard", "resource_tier": "low"}},
+    "template.rnn.bilstm-classifier": {"model_family": "bilstm", "decision_profile": {"scale": "standard", "resource_tier": "high"}},
+    "template.rnn.bilstm-regressor": {"model_family": "bilstm", "decision_profile": {"scale": "standard", "resource_tier": "high"}},
+    "template.rnn.fastrnn-classifier": {"model_family": "fastrnn", "decision_profile": {"scale": "planned", "resource_tier": "low"}},
+    "template.rnn.fastrnn-regressor": {"model_family": "fastrnn", "decision_profile": {"scale": "planned", "resource_tier": "low"}},
+    "template.xgboost.classifier": {"model_family": "xgboost", "decision_profile": {"scale": "standard", "resource_tier": "low"}},
+    "template.xgboost.regressor": {"model_family": "xgboost", "decision_profile": {"scale": "standard", "resource_tier": "low"}},
+    "template.isolation_forest.classifier": {"model_family": "isolation_forest", "decision_profile": {"scale": "planned", "resource_tier": "low"}}
+  }
+}

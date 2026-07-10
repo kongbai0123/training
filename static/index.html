@@ -966,9 +966,14 @@
                         <strong data-i18n="training.modelRegistry.title">Model Registry Preview</strong>
                         <span data-i18n="training.modelRegistry.subtitle">Catalog-driven model selector. Imported YOLO .pt / .yaml models can be used for CNN/YOLO training.</span>
                       </div>
-                      <button type="button" class="btn btn-primary btn-sm" id="btn-training-open-model-hub" data-i18n="training.modelRegistry.openHub">
-                        <i class="fa-solid fa-file-import"></i> 匯入模型
-                      </button>
+                      <div class="model-registry-actions">
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-open-model-selection-center">
+                          <i class="fa-solid fa-chart-simple"></i> <span data-i18n="modelSelection.open">選擇與比較</span>
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-training-open-model-hub" data-i18n="training.modelRegistry.openHub">
+                          <i class="fa-solid fa-file-import"></i> 匯入模型
+                        </button>
+                      </div>
                     </div>
                     <label>
                       <span><span data-i18n="training.model">Model</span> <span class="info-icon" data-tooltip="Select a model compatible with the current project task. Segmentation projects should use a segmentation model." data-i18n-tooltip="training.modelTooltip">i</span></span>
@@ -1392,7 +1397,13 @@
                 <div id="rnn-training-panel" class="rnn-panel" data-rnn-panel="training">
                   <div class="rnn-training-layout">
                     <section class="rnn-preview-card rnn-training-config-section">
-                      <div class="section-title"><h2 data-i18n="rnn.training.setupTitle">訓練設定</h2><span class="summary-badge badge-warning" id="rnn-training-state-badge">Readiness required</span></div>
+                      <div class="section-title">
+                        <h2 data-i18n="rnn.training.setupTitle">訓練設定</h2>
+                        <div class="button-row">
+                          <button type="button" class="btn btn-secondary btn-sm" id="btn-rnn-open-model-selection-center"><i class="fa-solid fa-chart-simple"></i> <span data-i18n="modelSelection.open">選擇與比較</span></button>
+                          <span class="summary-badge badge-warning" id="rnn-training-state-badge">Readiness required</span>
+                        </div>
+                      </div>
                       <p class="rnn-section-note" data-i18n="rnn.training.setupNote">選擇通用 RNN / XGBoost 模板並設定訓練參數；已訓練的 best.pt / last.pt 會在評估、測試與匯出頁使用。</p>
                       <div class="rnn-training-setup-grid">
                         <div class="rnn-training-form-stack">
@@ -2294,6 +2305,60 @@
         </section>
       </main>
 
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="model-selection-modal" hidden>
+    <div class="modal-content model-selection-modal-content" role="dialog" aria-modal="true" aria-labelledby="model-selection-title">
+      <div class="modal-header model-selection-header">
+        <div>
+          <h2 id="model-selection-title" data-i18n="modelSelection.title">模型選擇中心</h2>
+          <p data-i18n="modelSelection.subtitle">只比較符合目前專案任務的模型，並區分官方 benchmark 與本機實測。</p>
+        </div>
+        <button class="icon-btn" id="btn-close-model-selection" type="button" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
+      </div>
+
+      <section class="model-selection-context" aria-label="Decision context" data-i18n-aria-label="modelSelection.contextAria">
+        <div><span data-i18n="modelSelection.projectTask">專案任務</span><strong id="model-selection-task">--</strong></div>
+        <div><span data-i18n="modelSelection.datasetSize">資料規模</span><strong id="model-selection-samples">--</strong></div>
+        <div><span data-i18n="modelSelection.hardware">硬體</span><strong id="model-selection-hardware">--</strong></div>
+        <label><span data-i18n="modelSelection.objective">優先目標</span><select id="model-selection-objective"><option value="balanced" data-i18n="modelSelection.objective.balanced">平衡</option><option value="speed" data-i18n="modelSelection.objective.speed">速度</option><option value="accuracy" data-i18n="modelSelection.objective.accuracy">精度</option></select></label>
+      </section>
+
+      <div class="model-selection-tabs" role="tablist" aria-label="Model scope" data-i18n-aria-label="modelSelection.scopeAria">
+        <button type="button" class="active" data-model-selection-tab="recommended" role="tab" aria-selected="true" data-i18n="modelSelection.tab.recommended">推薦</button>
+        <button type="button" data-model-selection-tab="all" role="tab" aria-selected="false" data-i18n="modelSelection.tab.all">全部相容模型</button>
+        <button type="button" data-model-selection-tab="custom" role="tab" aria-selected="false" data-i18n="modelSelection.tab.custom">自訂與匯入</button>
+      </div>
+
+      <div class="model-selection-workspace">
+        <section class="model-selection-chart-panel">
+          <div class="model-selection-section-heading"><strong data-i18n="modelSelection.chartTitle">效能與成本</strong><span class="badge badge-info" id="model-selection-benchmark-kind">--</span></div>
+          <div class="model-selection-chart-wrap"><canvas id="model-selection-chart"></canvas><div class="empty-state" id="model-selection-chart-empty" hidden></div></div>
+          <p class="form-hint" id="model-selection-chart-note"></p>
+        </section>
+
+        <section class="model-selection-list-panel">
+          <div class="model-selection-section-heading"><strong data-i18n="modelSelection.candidates">候選模型</strong><span class="badge badge-muted" id="model-selection-count">0</span></div>
+          <div class="model-selection-table-wrap">
+            <table class="data-table model-selection-table">
+              <thead><tr><th></th><th data-i18n="modelSelection.model">模型</th><th data-i18n="modelSelection.quality">品質</th><th data-i18n="modelSelection.latency">CPU 延遲</th><th data-i18n="modelSelection.params">參數量</th><th data-i18n="modelSelection.fit">硬體適配</th></tr></thead>
+              <tbody id="model-selection-list"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside class="model-selection-detail" id="model-selection-detail">
+          <div class="empty-state" data-i18n="modelSelection.selectPrompt">選擇候選模型以查看推薦原因與限制。</div>
+        </aside>
+      </div>
+
+      <div class="model-selection-footnote" data-i18n="modelSelection.benchmarkDisclaimer">官方 benchmark 只供同任務、同資料集與同執行環境下比較；不代表目前專案的預期精度。</div>
+      <div class="modal-actions model-selection-actions">
+        <button class="btn btn-secondary" id="btn-model-selection-import" type="button"><i class="fa-solid fa-file-arrow-up"></i> <span data-i18n="modelSelection.import">匯入自訂模型</span></button>
+        <button class="btn btn-secondary" id="btn-model-selection-manage" type="button"><i class="fa-solid fa-download"></i> <span data-i18n="modelSelection.manage">安裝與管理</span></button>
+        <button class="btn btn-primary" id="btn-model-selection-apply" type="button"><i class="fa-solid fa-check"></i> <span data-i18n="modelSelection.apply">使用選取模型</span></button>
+      </div>
     </div>
   </div>
 

@@ -77,3 +77,109 @@ def annotate_hardware_fit(models: Iterable[Dict[str, Any]], capabilities: Dict[s
         )
         candidates[0]["hardware_fit"] = "recommended"
     return annotated
+
+
+def rank_models_for_project(
+    models: Iterable[Dict[str, Any]],
+    capabilities: Dict[str, Any],
+    project: Dict[str, Any],
+    objective: str = "balanced",
+) -> List[Dict[str, Any]]:
+    """Rank task-compatible models with deterministic, inspectable criteria."""
+    normalized_objective = objective if objective in {"balanced", "speed", "accuracy"} else "balanced"
+    sample_count = _project_sample_count(project)
+    ranked: List[Dict[str, Any]] = []
+
+    for source in models:
+        model = dict(source)
+        profile = model.get("decision_profile") or {}
+        benchmark = model.get("benchmark") or {}
+        fit = str(model.get("hardware_fit") or "unavailable")
+        status = str(model.get("status") or "")
+        scale = str(profile.get("scale") or "")
+        score = {
+            "ready": 34,
+            "recommended": 34,
+            "compatible": 27,
+            "not_recommended": 4,
+            "unavailable": -70,
+            "incompatible": -100,
+        }.get(fit, 0)
+        reasons: List[str] = []
+
+        if model.get("usable"):
+            score += 14
+            reasons.append("available_now")
+        elif model.get("installation_required") and fit not in {"incompatible", "unavailable"}:
+            score += 5
+            reasons.append("install_required")
+
+        if status == "planned" or not model.get("trainable"):
+            score -= 100
+            reasons.append("training_unavailable")
+
+        if sample_count:
+            if sample_count <= 500 and scale in {"nano", "standard"}:
+                score += 12
+                reasons.append("fits_small_dataset")
+            elif 500 < sample_count <= 5000 and scale in {"small", "standard"}:
+                score += 10
+                reasons.append("fits_medium_dataset")
+            elif sample_count > 5000 and scale in {"small", "medium", "standard"}:
+                score += 8
+                reasons.append("fits_large_dataset")
+
+        primary_value = float((benchmark.get("primary_metric") or {}).get("value") or 0)
+        latency_value = float((benchmark.get("latency") or {}).get("cpu_onnx_ms") or 0)
+        params_m = float(benchmark.get("parameters_m") or 0)
+        generation_rank = int(model.get("generation_rank") or 0)
+
+        if normalized_objective == "accuracy":
+            score += primary_value * 0.9
+            reasons.append("quality_priority")
+        elif normalized_objective == "speed":
+            if latency_value:
+                score += max(0, 32 - min(latency_value / 5, 32))
+            if params_m:
+                score += max(0, 16 - min(params_m, 16))
+            reasons.append("speed_priority")
+        else:
+            score += primary_value * 0.55
+            if latency_value:
+                score += max(0, 18 - min(latency_value / 10, 18))
+            score += min(generation_rank / 3, 9)
+            reasons.append("balanced_priority")
+
+        model["decision_score"] = round(score, 2)
+        model["decision_reasons"] = reasons
+        model["decision_context"] = {
+            "objective": normalized_objective,
+            "sample_count": sample_count,
+            "task_type": project.get("task_type"),
+        }
+        ranked.append(model)
+
+    ranked.sort(key=lambda item: (float(item.get("decision_score") or -999), bool(item.get("usable"))), reverse=True)
+    for index, model in enumerate(ranked, start=1):
+        model["recommendation_rank"] = index
+        model["recommended_for_project"] = index <= 3 and float(model.get("decision_score") or -999) > -50
+    return ranked
+
+
+def _project_sample_count(project: Dict[str, Any]) -> int:
+    images = project.get("images") or []
+    if images:
+        return len([
+            item for item in images
+            if not isinstance(item, dict) or not item.get("is_augmented")
+        ])
+    for container_key in ("rnn_dataset", "sequence_dataset", "dataset_summary"):
+        container = project.get(container_key) or {}
+        for key in ("sequence_count", "sample_count", "row_count", "total_rows"):
+            value = container.get(key)
+            if value is not None:
+                try:
+                    return max(0, int(value))
+                except (TypeError, ValueError):
+                    continue
+    return 0

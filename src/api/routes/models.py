@@ -10,7 +10,7 @@ from src.model_registry import ModelRegistry
 from src.model_store import ModelStore
 from src.model_system import ModelCatalog
 from src.model_install_manager import MODEL_INSTALL_MANAGER
-from src.model_recommendation import annotate_hardware_fit
+from src.model_recommendation import annotate_hardware_fit, rank_models_for_project
 from src.model_sources import list_model_sources
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
@@ -182,6 +182,7 @@ def list_project_model_catalog(
     project_id: str,
     architecture: Optional[str] = Query(None),
     usage: str = Query("train"),
+    objective: str = Query("balanced"),
 ):
     project = ProjectManager.get_project(project_id)
     if not project:
@@ -193,12 +194,21 @@ def list_project_model_catalog(
         models = ModelCatalog.list_all(project=project, architecture=architecture)
     else:
         models = ModelCatalog.list_trainable(project=project, task_family=task_family, architecture=architecture)
+    capabilities = get_system_capabilities()
+    models = annotate_hardware_fit(models, capabilities)
+    models = rank_models_for_project(models, capabilities, project, objective)
     return {
         "project_id": project_id,
         "architecture": architecture,
         "usage": usage,
         "task_family": task_family,
+        "objective": objective if objective in {"balanced", "speed", "accuracy"} else "balanced",
         "models": models,
+        "hardware": capabilities,
+        "decision_summary": {
+            "sample_count": (models[0].get("decision_context") or {}).get("sample_count", 0) if models else 0,
+            "recommended": [model.get("model_id") for model in models if model.get("recommended_for_project")],
+        },
     }
 
 

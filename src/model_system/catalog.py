@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from src.model_registry import ModelRegistry
 from src.model_system.constants import (
     BUILTIN_MODEL_CATALOG_PATH,
+    MODEL_DECISION_METADATA_PATH,
     IMPORTED_MODELS_RELATIVE_DIR,
     MODEL_MANIFEST_NAME,
     MODEL_STATUS_MISSING_FILE,
@@ -557,11 +558,45 @@ class ModelCatalog:
         except Exception:
             return []
         models = data if isinstance(data, list) else []
+        decision_metadata = ModelCatalog._load_decision_metadata()
         return [
-            resolve_builtin_install_state(ModelCatalog._normalize_entry(item))
+            resolve_builtin_install_state(ModelCatalog._normalize_entry(
+                ModelCatalog._merge_decision_metadata(item, decision_metadata)
+            ))
             for item in models
             if isinstance(item, dict)
         ]
+
+    @staticmethod
+    def _load_decision_metadata() -> Dict[str, Any]:
+        if not MODEL_DECISION_METADATA_PATH.exists():
+            return {"families": {}, "models": {}}
+        try:
+            payload = json.loads(MODEL_DECISION_METADATA_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            return {"families": {}, "models": {}}
+        return payload if isinstance(payload, dict) else {"families": {}, "models": {}}
+
+    @staticmethod
+    def _merge_decision_metadata(entry: Dict[str, Any], metadata: Dict[str, Any]) -> Dict[str, Any]:
+        merged = dict(entry)
+        model_meta = (metadata.get("models") or {}).get(str(entry.get("model_id") or ""), {})
+        family_id = str(model_meta.get("model_family") or entry.get("model_family") or "")
+        family_meta = (metadata.get("families") or {}).get(family_id, {})
+        if family_id:
+            merged["model_family"] = family_id
+        decision_profile = {
+            **(family_meta.get("decision_profile") or {}),
+            **(model_meta.get("decision_profile") or {}),
+        }
+        if decision_profile:
+            merged["decision_profile"] = decision_profile
+        if isinstance(model_meta.get("benchmark"), dict):
+            merged["benchmark"] = model_meta["benchmark"]
+        license_name = model_meta.get("license") or family_meta.get("license")
+        if license_name:
+            merged["license"] = license_name
+        return merged
 
     @staticmethod
     def _load_imported_models(project: Dict[str, Any]) -> List[Dict[str, Any]]:
