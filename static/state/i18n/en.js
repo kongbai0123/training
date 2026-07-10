@@ -1,4 +1,11 @@
 ﻿export const en = {
+    "assistant.activeProject": "Active project",
+    "assistant.context": "Context",
+    "assistant.noActiveProject": "No active project",
+    "assistant.tabsAria": "Assistant sections",
+    "assistant.tab.qa": "Q&A",
+    "assistant.tab.sources": "Sources",
+    "assistant.tab.settings": "Settings",
     "modelSetup.title": "Environment & Model Preparation",
     "modelSetup.subtitle": "Review hardware-compatible model components. No download starts without your confirmation.",
     "modelSetup.hardwareSummary": "Hardware summary",

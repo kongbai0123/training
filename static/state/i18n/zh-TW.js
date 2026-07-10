@@ -3,6 +3,13 @@ import { en } from "./en.js";
 // zh-TW uses the validated English catalog as the key baseline.
 // Only reviewed Traditional Chinese strings live here; untranslated keys safely fall back to English.
 export const zhTWOverrides = {
+  "assistant.activeProject": "目前專案",
+  "assistant.context": "目前內容",
+  "assistant.noActiveProject": "尚未開啟專案",
+  "assistant.tabsAria": "助理功能分頁",
+  "assistant.tab.qa": "問答",
+  "assistant.tab.sources": "來源",
+  "assistant.tab.settings": "設定",
   "modelSetup.title": "環境與模型準備",
   "modelSetup.subtitle": "依目前硬體檢視可安裝的模型元件；未經確認不會開始下載。",
   "modelSetup.hardwareSummary": "硬體摘要",

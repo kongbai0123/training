@@ -8,7 +8,7 @@
   right: 0;
   bottom: 0;
   z-index: 1000;
-  width: min(720px, calc(100vw - 240px));
+  width: min(780px, calc(100vw - 240px));
   min-width: min(420px, 100vw);
   overflow: auto;
   padding: 18px;
@@ -23,9 +23,11 @@
 
 .assistant-status-strip {
   display: grid;
-  grid-template-columns: repeat(5, minmax(130px, 1fr));
-  gap: 10px;
-  margin: 12px 0 16px;
+  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(100px, 0.8fr));
+  gap: 1px;
+  margin: 10px 0 12px;
+  border: 1px solid var(--border);
+  background: var(--border);
 }
 
 .assistant-status-strip > div,
@@ -40,9 +42,47 @@
 }
 
 .assistant-status-strip > div {
-  padding: 12px;
+  padding: 9px 10px;
   display: grid;
   gap: 4px;
+  border: 0;
+  border-radius: 0;
+}
+
+.assistant-tab-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 14px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel-soft);
+}
+
+.assistant-tab-list button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.assistant-tab-list button:last-child {
+  border-right: 0;
+}
+
+.assistant-tab-list button.active {
+  background: var(--primary);
+  color: white;
+}
+
+[data-assistant-tab-panel][hidden],
+.assistant-legacy-panel {
+  display: none;
 }
 
 .assistant-status-strip span,
@@ -102,7 +142,7 @@
 
 .assistant-settings-grid {
   display: grid;
-  grid-template-columns: minmax(160px, 0.9fr) minmax(220px, 1.2fr) minmax(200px, 1.1fr) auto auto;
+  grid-template-columns: minmax(160px, 0.8fr) minmax(0, 1.2fr);
   gap: 10px;
   align-items: end;
 }
@@ -120,6 +160,10 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   align-items: start;
+}
+
+.assistant-settings-grid button {
+  justify-self: start;
 }
 
 .assistant-panel {
@@ -197,6 +241,10 @@
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg-panel-soft);
+}
+
+.assistant-chat-panel .assistant-query-row {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .assistant-stage.done,
@@ -281,7 +329,7 @@
 
 @media (max-width: 1200px) {
   .assistant-drawer {
-    width: min(640px, calc(100vw - 220px));
+    width: min(720px, calc(100vw - 220px));
     min-width: 0;
   }
 

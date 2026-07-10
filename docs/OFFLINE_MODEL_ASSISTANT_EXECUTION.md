@@ -129,3 +129,18 @@ runtime checks, and compatibility result are recorded here.
 - Added `pytest.ini` to prevent build-only environments from being collected as
   application tests.
 - Full suite result after Phase 4: 318 tests and 66 subtests passed.
+
+### Phase 5
+
+- Replaced the all-at-once workbench layout with three user-facing tabs: Q&A,
+  Sources, and Settings.
+- Reframed the status strip around active project, page context, assistant mode,
+  and source count instead of internal model/chunk implementation details.
+- Q&A now contains only the question, answer, citations, and relevant page guidance.
+- Source ingestion and retrieval inspection are isolated in Sources; generation and
+  external-request controls are isolated in Settings.
+- Internal agent traces, sandbox editing, and assistant evaluation remain available
+  in code but are removed from the primary user interface.
+- Browser smoke verified exclusive panel visibility for all three tabs and confirmed
+  no legacy panel is displayed.
+- Full suite result after Phase 5: 322 tests and 66 subtests passed.

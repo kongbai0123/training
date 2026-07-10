@@ -18,6 +18,7 @@ const assistantState = {
   conversationState: [],
   drawerOpen: false,
   activeScope: "",
+  activeTab: "qa",
 };
 
 export function initProjectAssistantImpl() {
@@ -37,6 +38,10 @@ export function initProjectAssistantImpl() {
   qs("#btn-rag-export-artifact")?.addEventListener("click", exportSandboxArtifact);
   qs("#btn-rag-eval-report")?.addEventListener("click", generateEvaluationReport);
   qs("#btn-rag-save-settings")?.addEventListener("click", saveAssistantSettings);
+  qs(".assistant-tab-list")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-assistant-tab]");
+    if (button) activateAssistantTab(button.dataset.assistantTab);
+  });
   qs("#rag-sandbox-file")?.addEventListener("change", (event) => {
     assistantState.activeSandboxFile = event.target.value || "index.html";
     renderSandboxEditor();
@@ -73,6 +78,21 @@ export function renderProjectAssistantImplPage() {
   renderAgentRuns();
   renderSandbox();
   renderEvaluation();
+  activateAssistantTab(assistantState.activeTab);
+}
+
+function activateAssistantTab(tabId) {
+  const valid = new Set(["qa", "sources", "settings"]);
+  assistantState.activeTab = valid.has(tabId) ? tabId : "qa";
+  document.querySelectorAll("[data-assistant-tab]").forEach((button) => {
+    const active = button.dataset.assistantTab === assistantState.activeTab;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  document.querySelectorAll("[data-assistant-tab-panel]").forEach((panel) => {
+    const unavailableContext = panel.id === "project-assistant-page-context" && panel.dataset.contextAvailable !== "true";
+    panel.hidden = panel.dataset.assistantTabPanel !== assistantState.activeTab || unavailableContext;
+  });
 }
 
 function renderPageContext() {
@@ -80,6 +100,7 @@ function renderPageContext() {
   if (!section) return;
   const status = buildAssistantStatusSnapshot();
   const config = buildProjectAssistantContext(appState.currentPage, status);
+  section.dataset.contextAvailable = config ? "true" : "false";
   section.hidden = !config;
   if (!config) {
     assistantState.activeScope = "";
@@ -345,12 +366,11 @@ function renderStatus() {
   const status = assistantState.status || {};
   const workspace = status.workspace || {};
   const kb = status.knowledge_base || {};
-  setText("#rag-status-model", workspace.model_state || "--");
+  setText("#rag-status-project", appState.currentProject?.name || t("assistant.noActiveProject"));
+  setText("#rag-status-context", getPageContextBadge(appState.currentPage));
   const assistantEnabled = workspace.assistant_enabled ?? workspace.rag_enabled ?? true;
   setText("#rag-status-mode", assistantEnabled ? t("assistant.mode.localSearch") : t("assistant.mode.disabled"));
   setText("#rag-status-documents", kb.document_count ?? 0);
-  setText("#rag-status-chunks", `${kb.indexed_chunk_count ?? 0}/${kb.chunk_count ?? 0}`);
-  setText("#rag-status-index", formatIndexState(kb.index_state));
   setText("#rag-kb-badge", t("assistant.docCount", { count: kb.document_count ?? 0 }));
   setText("#rag-agent-count", t("assistant.runCount", { count: assistantState.agentRuns.length }));
 }

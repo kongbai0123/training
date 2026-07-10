@@ -232,14 +232,19 @@
           </div>
 
           <section class="assistant-status-strip" aria-label="Project assistant status" data-i18n-aria-label="assistant.statusAria">
-            <div><span data-i18n="assistant.modelState">Model</span><strong id="rag-status-model">--</strong></div>
+            <div><span data-i18n="assistant.activeProject">Active project</span><strong id="rag-status-project">--</strong></div>
+            <div><span data-i18n="assistant.context">Context</span><strong id="rag-status-context">--</strong></div>
             <div><span data-i18n="assistant.mode">Assistant</span><strong id="rag-status-mode">--</strong></div>
-            <div><span data-i18n="assistant.documents">Documents</span><strong id="rag-status-documents">0</strong></div>
-            <div><span data-i18n="assistant.chunks">Chunks</span><strong id="rag-status-chunks">0</strong></div>
-            <div><span data-i18n="assistant.indexState">Index</span><strong id="rag-status-index">--</strong></div>
+            <div><span data-i18n="assistant.sources">Sources</span><strong id="rag-status-documents">0</strong></div>
           </section>
 
-          <section class="panel-section assistant-panel assistant-context-panel" id="project-assistant-page-context" hidden>
+          <nav class="assistant-tab-list" role="tablist" aria-label="Assistant sections" data-i18n-aria-label="assistant.tabsAria">
+            <button type="button" class="active" role="tab" aria-selected="true" data-assistant-tab="qa"><i class="fa-regular fa-comments"></i><span data-i18n="assistant.tab.qa">Q&amp;A</span></button>
+            <button type="button" role="tab" aria-selected="false" data-assistant-tab="sources"><i class="fa-solid fa-folder-tree"></i><span data-i18n="assistant.tab.sources">Sources</span></button>
+            <button type="button" role="tab" aria-selected="false" data-assistant-tab="settings"><i class="fa-solid fa-sliders"></i><span data-i18n="assistant.tab.settings">Settings</span></button>
+          </nav>
+
+          <section class="panel-section assistant-panel assistant-context-panel" id="project-assistant-page-context" data-assistant-tab-panel="qa" hidden>
             <div class="section-title">
               <h2 data-i18n="projectAssistant.pageContextTitle">Current Page Guidance</h2>
               <span class="summary-badge" id="project-assistant-page-context-badge">--</span>
@@ -257,7 +262,7 @@
             </div>
           </section>
 
-          <section class="panel-section assistant-panel assistant-settings-panel">
+          <section class="panel-section assistant-panel assistant-settings-panel" data-assistant-tab-panel="settings" hidden>
             <div class="section-title">
               <h2 data-i18n="assistant.settingsTitle">Assistant Mode</h2>
               <span class="summary-badge" id="rag-settings-badge" data-i18n="assistant.mode.localSearch">Local Search</span>
@@ -290,7 +295,7 @@
           </section>
 
           <div class="project-assistant-grid">
-            <section class="panel-section assistant-panel assistant-kb-panel">
+            <section class="panel-section assistant-panel assistant-kb-panel" data-assistant-tab-panel="sources" hidden>
               <div class="section-title">
                 <h2 data-i18n="assistant.kbTitle">Project Knowledge</h2>
                 <span class="summary-badge" id="rag-kb-badge">0 docs</span>
@@ -317,7 +322,7 @@
               <div id="rag-document-list" class="assistant-document-list"></div>
             </section>
 
-            <section class="panel-section assistant-panel assistant-retrieval-panel">
+            <section class="panel-section assistant-panel assistant-retrieval-panel" data-assistant-tab-panel="sources" hidden>
               <div class="section-title">
                 <h2 data-i18n="assistant.retrievalTitle">Source Search</h2>
                 <span class="summary-badge" data-i18n="assistant.profileBadge">profiles</span>
@@ -331,7 +336,7 @@
               <div id="rag-retrieval-results" class="assistant-source-list"></div>
             </section>
 
-            <section class="panel-section assistant-panel assistant-chat-panel">
+            <section class="panel-section assistant-panel assistant-chat-panel" data-assistant-tab-panel="qa" hidden>
               <div class="section-title">
                 <h2 data-i18n="assistant.chatTitle">Project Q&A</h2>
                 <span class="summary-badge" data-i18n="assistant.noRawThought">no raw thought</span>
@@ -349,7 +354,7 @@
               </article>
             </section>
 
-            <section class="panel-section assistant-panel assistant-agent-panel">
+            <section class="panel-section assistant-panel assistant-agent-panel assistant-legacy-panel" data-assistant-tab-panel="qa" hidden>
               <div class="section-title">
                 <h2 data-i18n="assistant.agentTitle">Agent Execution</h2>
                 <span class="summary-badge" id="rag-agent-count">0 runs</span>
@@ -358,7 +363,7 @@
               <div id="rag-agent-runs" class="assistant-run-list"></div>
             </section>
 
-            <section class="panel-section assistant-panel assistant-sandbox-panel">
+            <section class="panel-section assistant-panel assistant-sandbox-panel assistant-legacy-panel" data-assistant-tab-panel="settings" hidden>
               <div class="section-title">
                 <h2 data-i18n="assistant.sandboxTitle">Sandbox Artifacts</h2>
                 <span class="summary-badge" data-i18n="assistant.sandboxPolicy">preview only</span>
@@ -373,7 +378,7 @@
               <iframe id="rag-sandbox-preview" title="Project assistant artifact preview" data-i18n-title="assistant.previewTitle" sandbox="allow-scripts"></iframe>
             </section>
 
-            <section class="panel-section assistant-panel assistant-evaluation-panel">
+            <section class="panel-section assistant-panel assistant-evaluation-panel assistant-legacy-panel" data-assistant-tab-panel="settings" hidden>
               <div class="section-title">
                 <h2 data-i18n="assistant.evaluationTitle">Evaluation Registry</h2>
                 <span class="summary-badge" data-i18n="assistant.reportBadge">report</span>
