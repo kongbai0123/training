@@ -11,6 +11,7 @@ from src.model_store import ModelStore
 from src.model_system import ModelCatalog
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
+from src.system_capabilities import get_system_capabilities
 
 
 router = APIRouter()
@@ -19,6 +20,32 @@ router = APIRouter()
 class DeleteModelWeightsRequest(BaseModel):
     model_ids: List[str]
     confirm: bool = False
+
+
+@router.get("/api/models/catalog")
+def list_system_model_catalog(
+    architecture: Optional[str] = Query(None),
+    usage: str = Query("all"),
+):
+    if usage == "inference":
+        models = ModelCatalog.list_inference_supported(project=None, architecture=architecture)
+    elif usage == "train":
+        models = ModelCatalog.list_trainable(project=None, architecture=architecture)
+    else:
+        models = ModelCatalog.list_all(project=None, architecture=architecture)
+    capabilities = get_system_capabilities()
+    return {
+        "architecture": architecture,
+        "usage": usage,
+        "models": models,
+        "hardware": capabilities,
+        "summary": {
+            "total": len(models),
+            "installed": sum(1 for model in models if model.get("installed")),
+            "usable": sum(1 for model in models if model.get("usable")),
+            "not_installed": sum(1 for model in models if model.get("install_state") == "not_installed"),
+        },
+    }
 
 
 @router.get("/api/projects/{project_id}/models")

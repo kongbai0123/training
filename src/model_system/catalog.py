@@ -24,6 +24,7 @@ from src.model_system.manifest import (
     read_manifest,
     write_manifest,
 )
+from src.model_system.install_state import resolve_builtin_install_state
 from src.model_system.validators import (
     copy_onnx_to_import,
     copy_yolo_pt_to_import,
@@ -556,7 +557,11 @@ class ModelCatalog:
         except Exception:
             return []
         models = data if isinstance(data, list) else []
-        return [ModelCatalog._normalize_entry(item) for item in models if isinstance(item, dict)]
+        return [
+            resolve_builtin_install_state(ModelCatalog._normalize_entry(item))
+            for item in models
+            if isinstance(item, dict)
+        ]
 
     @staticmethod
     def _load_imported_models(project: Dict[str, Any]) -> List[Dict[str, Any]]:

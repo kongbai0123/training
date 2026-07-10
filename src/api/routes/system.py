@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from src.config import APP_ENV, APP_VERSION, BASE_DIR, PROJECTS_DIR, STATIC_DIR, VERSION_INFO
 from src.license_manager import build_license_report
 from src.local_session import current_bootstrap
+from src.system_capabilities import get_system_capabilities
 
 
 router = APIRouter()
@@ -19,6 +20,11 @@ def get_version():
 @router.get("/api/bootstrap")
 def bootstrap():
     return current_bootstrap(APP_VERSION, APP_ENV)
+
+
+@router.get("/api/system/capabilities")
+def system_capabilities():
+    return get_system_capabilities()
 
 
 @router.get("/api/health")

@@ -66,3 +66,14 @@ runtime checks, and compatibility result are recorded here.
 - Baseline test command: `python -m unittest discover -s tests`.
 - Baseline result: 295 tests passed.
 - Static diff check: passed; only Git line-ending notices were reported.
+
+### Phase 1
+
+- Added project-independent `GET /api/system/capabilities`.
+- Added project-independent `GET /api/models/catalog`.
+- Verified local hardware detection: NVIDIA GeForce RTX 3060, 12287 MB VRAM,
+  CUDA 12.1, system RAM, user-data disk, and runtime package versions.
+- Built-in weight states now come from local file existence and optional SHA-256.
+- RNN templates explicitly report `installation_required: false`.
+- Model catalog regression: 29 tests passed.
+- Full suite result after Phase 1: 301 tests passed.
