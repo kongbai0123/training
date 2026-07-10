@@ -5,6 +5,8 @@ All notable changes to Vision Training Studio are tracked here.
 ## [Unreleased]
 
 ### Changed
+- Reworked the repository landing page around Windows EXE delivery, real UI screenshots, task-aware CNN/RNN workflows, privacy boundaries, and concise user-first documentation.
+- Replaced the shared generic training map with separate CNN image and RNN sequence workflow guides plus a neutral no-project preview.
 - Documented packaged Auto-Labeling layout validation in `docs/CLEAN_MACHINE_VALIDATION.md`, including the packaged runtime command, viewport, CSS cache key, and stacked workbench assertions.
 
 ## [0.1.0] - 2026-06-24

@@ -1,8 +1,16 @@
 # 安裝指南
 
-本文說明 Vision Training Studio 的開發安裝、packaged runtime 執行與 installer 建置方式。
+本文說明 Vision Training Studio 的 Windows Portable EXE、開發安裝與 installer 建置方式。
 
-## 1. 開發模式安裝
+## 1. 一般使用者：Windows Portable EXE
+
+1. 從 [GitHub Releases](https://github.com/kongbai0123/training/releases) 下載 `VisionTrainingStudio_<version>_Windows_x64_portable.zip`。
+2. 將 ZIP 完整解壓縮到可寫入的資料夾。
+3. 執行 `VisionTrainingStudio.exe`。
+
+Portable EXE 已包含必要 runtime，一般使用者不需要安裝 Python 或 Node.js。`VisionTrainingStudio.exe` 必須與 `_internal` 位於同一套件目錄，不可只移動單一 EXE。
+
+## 2. 開發模式安裝
 
 需求：
 
@@ -33,7 +41,7 @@ scripts\start_dev.bat
 http://127.0.0.1:18080/
 ```
 
-## 2. Packaged Runtime
+## 3. 建立 Packaged Runtime
 
 建立 PyInstaller onedir package：
 
@@ -66,7 +74,7 @@ http://127.0.0.1:18105/api/health
 http://127.0.0.1:18105/api/version
 ```
 
-## 3. Installer
+## 4. Installer
 
 installer 設定檔：
 
@@ -88,7 +96,7 @@ installer 輸出預期位於：
 installer\output\
 ```
 
-## 4. Runtime Data
+## 5. Runtime Data
 
 以下資料夾是使用者資料或執行期資料，不應提交到 Git：
 
@@ -111,7 +119,7 @@ scripts\clean_runtime.bat
 
 清理前請確認腳本不會移除需要保留的使用者專案資料。
 
-## 5. 常見安裝問題
+## 6. 常見安裝問題
 
 - `python` 找不到：確認 Python 3.11 已安裝並加入 PATH，或使用 `.venv\Scripts\python.exe`。
 - `PyInstaller` 找不到：執行 `python -m pip install -r requirements-build.txt`。

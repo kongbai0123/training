@@ -1,0 +1,48 @@
+name: Bug report
+description: 回報 Vision Training Studio 的操作、訓練、評估、匯出或封裝問題。
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        請勿附上私有資料集、模型權重、API key、token 或未清理的完整 log。
+  - type: input
+    id: version
+    attributes:
+      label: 軟體版本
+      placeholder: 例如 0.1.0 / Windows Portable EXE
+    validations:
+      required: true
+  - type: dropdown
+    id: workflow
+    attributes:
+      label: 工作流程
+      options:
+        - CNN / YOLO
+        - RNN / Sequence
+        - 啟動與安裝
+        - 專案管理
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 重現步驟
+      description: 請列出操作順序、預期結果與實際結果。
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 執行環境
+      placeholder: Windows 版本、CPU、RAM、GPU、是否使用 Portable EXE
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: 已清理的診斷資訊
+      description: 可附截圖或移除敏感資訊後的錯誤摘要，請勿直接貼完整專案與資料路徑。

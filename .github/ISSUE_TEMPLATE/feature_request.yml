@@ -1,0 +1,33 @@
+name: Feature request
+description: 提出通用訓練、資料處理、評估、比較或匯出功能建議。
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 功能範圍
+      options:
+        - CNN / YOLO
+        - RNN / Sequence
+        - 共用資料與專案管理
+        - 評估與模型比較
+        - 匯出與部署
+        - 介面與可用性
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解決的問題
+      description: 說明目前工作流程中的具體限制，不要只描述按鈕或畫面。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建議行為
+      description: 說明輸入、操作流程、預期輸出及驗收方式。
+    validations:
+      required: true
