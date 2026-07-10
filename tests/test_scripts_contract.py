@@ -44,6 +44,8 @@ class ScriptsContractTests(unittest.TestCase):
         spec = (ROOT / "packaging" / "vision_training_studio.spec").read_text(encoding="utf-8")
 
         self.assertIn("filter_submodules=keep_hidden_import", spec)
+        for optional_runtime in ("tensorflow", "diffusers", "transformers", "gradio", "yt_dlp"):
+            self.assertIn(f'"{optional_runtime}"', spec)
         self.assertIn("collect_submodules(package_name, filter=keep_hidden_import)", spec)
         self.assertIn('copy_metadata("opencv-python")', spec)
         self.assertIn('"xgboost.dask"', spec)
@@ -65,6 +67,8 @@ class ScriptsContractTests(unittest.TestCase):
         self.assertIn("unclassified", audit_script)
         self.assertIn("watchfiles", audit_script)
         self.assertIn("OpenSSL", audit_script)
+        self.assertIn("scipy\\.optimize", audit_script)
+        self.assertIn("numba\\.", audit_script)
         self.assertIn("return 1", audit_script)
 
     def test_dist_smoke_uses_clean_user_data_and_checks_runtime(self):

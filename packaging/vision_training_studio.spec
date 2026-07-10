@@ -68,6 +68,33 @@ EXCLUDES = [
     "openvino",
     "tensorrt",
     "coremltools",
+    # Optional ecosystems pulled in by broad third-party package hooks. Vision
+    # Training Studio does not expose these runtimes and must not inherit them
+    # from the build machine's global Python environment.
+    "tensorflow",
+    "tensorflow_probability",
+    "keras",
+    "tf_keras",
+    "jax",
+    "flax",
+    "diffusers",
+    "transformers",
+    "gradio",
+    "altair",
+    "openai",
+    "huggingface_hub",
+    "hf_xet",
+    "yt_dlp",
+    "imageio",
+    "pyarrow",
+    "h5py",
+    "IPython",
+    "watchdog",
+    "strawberry",
+    "sentry_sdk",
+    "django",
+    "opentelemetry",
+    "ddtrace",
 ]
 
 

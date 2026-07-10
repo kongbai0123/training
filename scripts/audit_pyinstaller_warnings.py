@@ -28,6 +28,12 @@ WATCH_PATTERNS = [
 ]
 
 EXPECTED_PATTERNS = [
+    r"missing module named ['\"]?numba\.(extending|core)\b",
+    r"missing module named ['\"]?(_dbm|_gdbm)\b",
+    r"missing module named ['\"]?scipy\.optimize\.(root_scalar|OptimizeResult|minimize_scalar)\b",
+    r"missing module named ['\"]?jax\.(typing|_src)\b",
+    r"missing module named ['\"]?backports\.zstd\._zstd_cffi\b",
+    r"missing module named ['\"]?sklearn\.(externals\.array_api_compat\.common\.array_namespace|__file__)\b",
     r"\((?:[^)]*,\s*)?(optional|conditional|delayed)(?:,\s*[^)]*)?\)",
     r"missing module named (pwd|grp|fcntl|termios|resource|posix|_posix|_scproxy)\b",
     r"missing module named ['\"]?(org\.python|java|vms_lib|_winreg)",
