@@ -63,13 +63,14 @@ CONFIG_DIR = USER_DATA_DIR / "config"
 LICENSES_DIR = USER_DATA_DIR / "licenses"
 CACHE_DIR = USER_DATA_DIR / "cache"
 TMP_DIR = USER_DATA_DIR / "tmp"
+COMPONENTS_DIR = USER_DATA_DIR / "components"
 
 def _ensure_dirs(*paths: Path) -> None:
     for p in paths:
         p.mkdir(parents=True, exist_ok=True)
 
 
-_ensure_dirs(PROJECTS_DIR, MODELS_DIR, LOGS_DIR, CONFIG_DIR, LICENSES_DIR, CACHE_DIR, TMP_DIR)
+_ensure_dirs(PROJECTS_DIR, MODELS_DIR, LOGS_DIR, CONFIG_DIR, LICENSES_DIR, CACHE_DIR, TMP_DIR, COMPONENTS_DIR)
 
 # Backward compatible legacy directory for UI assets.
 STATIC_DIR = APP_HOME / "static"

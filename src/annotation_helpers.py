@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
+from src.managed_labelme import get_managed_labelme_executable
 
 
 def should_auto_convert_yolo_to_labelme(project: Dict[str, Any]) -> bool:
@@ -14,6 +15,9 @@ def should_auto_convert_yolo_to_labelme(project: Dict[str, Any]) -> bool:
 
 
 def find_labelme_executable() -> Optional[str]:
+    managed = get_managed_labelme_executable()
+    if managed:
+        return managed
     executable = shutil.which("labelme")
     if executable:
         return executable
@@ -24,7 +28,6 @@ def find_labelme_executable() -> Optional[str]:
         candidates.extend(
             [
                 scripts_dir / "labelme.exe",
-                Path.home() / "AppData" / "Local" / "hermes" / "hermes-agent" / "venv" / "Scripts" / "labelme.exe",
             ]
         )
     else:

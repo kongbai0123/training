@@ -24,6 +24,7 @@ from src.api.routes.augmentation import router as augmentation_router
 from src.api.routes.auto_labeling import router as auto_labeling_router
 from src.api.routes.inference import router as inference_router
 from src.api.routes.models import router as models_router
+from src.api.routes.components import router as components_router
 from src.api.routes.monitor import router as monitor_router
 from src.api.routes.project_layout import router as project_layout_router
 from src.api.routes.project_assistant import router as project_assistant_router
@@ -43,6 +44,7 @@ app.include_router(project_assistant_router)
 app.include_router(projects_router)
 app.include_router(rnn_config_router)
 app.include_router(models_router)
+app.include_router(components_router)
 app.include_router(training_runs_router)
 app.include_router(training_orchestration_router)
 app.include_router(training_recommendation_router)

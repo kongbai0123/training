@@ -18,6 +18,8 @@ export function initModelSetup() {
   });
   qs("#model-setup-list")?.addEventListener("click", handleModelAction);
   qs("#model-setup-family-filter")?.addEventListener("change", () => renderModels(catalogPayload?.models || []));
+  qs("#btn-select-labelme-component")?.addEventListener("click", () => qs("#labelme-component-file")?.click());
+  qs("#labelme-component-file")?.addEventListener("change", installLabelMeComponent);
   eventBus.on("open-model-setup", openModelSetup);
 }
 
@@ -54,9 +56,53 @@ async function refreshModelSetup({ force = false } = {}) {
     renderHardware(catalogPayload.hardware || {});
     renderModels(catalogPayload.models || []);
     renderSources(catalogPayload.sources || []);
+    await refreshLabelMeComponent();
     await renderModelSetupSettings();
   } catch (error) {
     if (list) list.innerHTML = `<div class="empty-state">${escapeHtml(t("modelSetup.loadFailed", { message: error.message }))}</div>`;
+  }
+}
+
+async function refreshLabelMeComponent() {
+  const statusNode = qs("#labelme-component-status");
+  const detailNode = qs("#labelme-component-detail");
+  const button = qs("#btn-select-labelme-component");
+  try {
+    const status = await apiFetch("/api/components/labelme", { suppressToast: true });
+    if (statusNode) statusNode.textContent = t(`modelSetup.labelme.status.${status.status}`);
+    if (detailNode) detailNode.textContent = status.offline_ready
+      ? t("modelSetup.labelme.offlineReady", { version: status.version || "--" })
+      : t("modelSetup.labelme.optionalHelp");
+    if (button) button.textContent = status.offline_ready ? t("modelSetup.labelme.replace") : t("modelSetup.labelme.install");
+  } catch (error) {
+    if (statusNode) statusNode.textContent = t("modelSetup.statusUnavailable");
+    if (detailNode) detailNode.textContent = error.message;
+  }
+}
+
+async function installLabelMeComponent(event) {
+  const input = event.currentTarget;
+  const file = input.files?.[0];
+  if (!file) return;
+  const confirmed = window.confirm(t("modelSetup.labelme.confirm", { file: file.name }));
+  if (!confirmed) {
+    input.value = "";
+    return;
+  }
+  const button = qs("#btn-select-labelme-component");
+  if (button) button.disabled = true;
+  try {
+    const form = new FormData();
+    form.append("confirm", "true");
+    form.append("file", file);
+    const status = await apiFetch("/api/components/labelme/install", { method: "POST", body: form });
+    eventBus.emit("toast", t("modelSetup.labelme.installed", { version: status.version || "--" }));
+    await refreshLabelMeComponent();
+  } catch (error) {
+    eventBus.emit("toast", t("modelSetup.labelme.installFailed", { message: error.message }));
+  } finally {
+    if (button) button.disabled = false;
+    input.value = "";
   }
 }
 

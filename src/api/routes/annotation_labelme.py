@@ -57,14 +57,9 @@ def build_labelme_open_command(
     labelme_dir: Path,
     class_names: List[str],
 ) -> List[str]:
-    command = [executable, str(images_dir), "--output", str(labelme_dir)] if executable else [
-        sys.executable,
-        "-m",
-        "labelme",
-        str(images_dir),
-        "--output",
-        str(labelme_dir),
-    ]
+    if not executable:
+        return []
+    command = [executable, str(images_dir), "--output", str(labelme_dir)]
     labels_file = write_labelme_labels_file(labelme_dir, class_names)
     if labels_file:
         command.extend(["--labels", str(labels_file), "--validatelabel", "exact"])
@@ -170,8 +165,14 @@ def open_labelme(project_id: str):
     normalized_jsons = normalize_labelme_image_paths(images_dir, labelme_dir)
 
     class_names = project.get("class_names") or []
+    executable = find_labelme_executable()
+    if not executable:
+        raise HTTPException(
+            status_code=503,
+            detail="LabelMe is not installed. Install the optional offline LabelMe component from Settings.",
+        )
     command = build_labelme_open_command(
-        find_labelme_executable(),
+        executable,
         images_dir,
         labelme_dir,
         class_names,

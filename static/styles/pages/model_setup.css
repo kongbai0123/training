@@ -41,6 +41,33 @@
   white-space: nowrap;
 }
 
+.model-setup-component {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel-soft);
+}
+
+.model-setup-component h3,
+.model-setup-component p {
+  margin: 0;
+}
+
+.model-setup-component p {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.model-component-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .model-setup-hardware span {
   color: var(--text-muted);
   font-size: 0.78rem;
@@ -251,5 +278,13 @@
 
   .model-setup-hardware > div:last-child {
     border-bottom: 0;
+  }
+
+  .model-setup-component {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .model-setup-component button {
+    grid-column: 1 / -1;
   }
 }

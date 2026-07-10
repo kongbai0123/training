@@ -2299,6 +2299,19 @@
         <div><span data-i18n="modelSetup.disk">Free disk</span><strong id="model-setup-disk">--</strong></div>
       </section>
 
+      <section class="model-setup-component">
+        <span class="model-setup-icon"><i class="fa-solid fa-pen-to-square"></i></span>
+        <div>
+          <div class="model-component-title-row">
+            <h3 data-i18n="modelSetup.labelme.title">Offline LabelMe Editor</h3>
+            <span class="badge badge-muted" id="labelme-component-status">--</span>
+          </div>
+          <p id="labelme-component-detail" data-i18n="modelSetup.labelme.optionalHelp">Optional managed editor component. Install once, then annotate without internet or system Python.</p>
+        </div>
+        <input type="file" id="labelme-component-file" accept=".zip" hidden>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-select-labelme-component" data-i18n="modelSetup.labelme.install">Install Component ZIP</button>
+      </section>
+
       <div class="model-setup-section-heading">
         <div>
           <h3 data-i18n="modelSetup.cnnModels">CNN / YOLO Models</h3>

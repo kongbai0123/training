@@ -54,6 +54,7 @@ be rewritten as part of this objective.
 | --- | --- | --- | --- | --- | --- | --- |
 | EXEC-001 | Related | Packaging | Existing portable ZIP is approximately 2.73 GB before managed LabelMe or optional model components. | Full offline package may become impractically large. | Compare thin installer, component cache, and full-offline package sizes in Phase 8. | Open |
 | EXEC-002 | Related | i18n | The legacy `zh-TW.js` override block still contains historical mojibake entries, although the reviewed catalog and new model-preparation strings render correctly. | Untouched pages may still expose corrupted legacy strings. | Run the scoped assistant and release-page DOM audit in Phases 5, 6, and 8; do not rebuild the entire catalog during model preparation. | Open |
+| EXEC-003 | Related | Packaging | The optional offline LabelMe component is 96.5 MB compressed and 238.3 MB installed. | Bundling it into the already-large main package would penalize users who do not need manual CNN annotation. | Publish it as a separate optional component artifact and keep local ZIP installation in the first-run manager. | Open |
 
 ## Phase Evidence
 
@@ -108,3 +109,23 @@ runtime checks, and compatibility result are recorded here.
 - Browser smoke verified the default recommendation view, family filter, YOLO11
   model list, and the collapsed source summary.
 - Full suite result after Phase 3: 310 tests and 66 subtests passed.
+
+### Phase 4
+
+- Removed the development-agent-specific LabelMe executable path.
+- Added a managed LabelMe component directory under user data and made it the
+  preferred launch source; a system `labelme` executable remains a compatibility
+  fallback only.
+- Added project-independent component status and explicit-confirmation ZIP install
+  APIs with traversal, symlink, expanded-size, platform, entrypoint, and SHA-256
+  validation plus atomic replacement and rollback.
+- Missing LabelMe now returns a clear 503 component-required response instead of
+  trying to execute `python -m labelme` through the frozen application executable.
+- Added an isolated build script for a standalone manual-annotation LabelMe 4.6.0
+  component and displayed component status/install entry in first-run setup.
+- Built `labelme-runtime-windows-x64.zip`: 96.5 MB compressed / 238.3 MB installed.
+- Verified both the build output and a clean temporary managed installation with
+  `LabelMe.exe --version` exit code 0; installed status reported `offline_ready`.
+- Added `pytest.ini` to prevent build-only environments from being collected as
+  application tests.
+- Full suite result after Phase 4: 318 tests and 66 subtests passed.
