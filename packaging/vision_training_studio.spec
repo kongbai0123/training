@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_submodules
+from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_submodules, copy_metadata
 
 
 ROOT = Path(SPECPATH).resolve().parent
@@ -90,6 +90,11 @@ hiddenimports = [
     "pydantic_core",
 ]
 binaries = []
+
+try:
+    datas += copy_metadata("opencv-python")
+except Exception:
+    pass
 
 for package_name in [
     "fastapi",

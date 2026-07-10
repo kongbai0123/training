@@ -19,6 +19,18 @@ def _package_version(distribution: str) -> str:
         return "unknown"
 
 
+def _opencv_version() -> str:
+    installed_version = _package_version("opencv-python")
+    if installed_version != "not_installed":
+        return installed_version
+    try:
+        import cv2
+
+        return str(cv2.__version__)
+    except Exception:
+        return "not_installed"
+
+
 def _memory_capability() -> Dict[str, Any]:
     try:
         import psutil
@@ -110,7 +122,7 @@ def get_system_capabilities() -> Dict[str, Any]:
         "disk": _disk_capability(USER_DATA_DIR),
         "gpu": _gpu_capability(),
         "runtime": {
-            "opencv": _package_version("opencv-python"),
+            "opencv": _opencv_version(),
             "ultralytics": _package_version("ultralytics"),
             "xgboost": _package_version("xgboost"),
         },

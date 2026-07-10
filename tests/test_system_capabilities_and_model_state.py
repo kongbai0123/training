@@ -91,6 +91,7 @@ class SystemCapabilitiesContractTests(unittest.TestCase):
         self.assertIn("available_gb", payload["disk"])
         self.assertIn("cuda_available", payload["gpu"])
         self.assertIn("opencv", payload["runtime"])
+        self.assertTrue(payload["runtime"]["opencv"].startswith("5."))
 
     def test_system_capabilities_endpoint_needs_no_project(self):
         response = self.client.get("/api/system/capabilities")

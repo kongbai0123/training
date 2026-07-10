@@ -13,9 +13,12 @@ class OpenCvCompatibilityTests(unittest.TestCase):
         self.assertGreaterEqual(result["polygon_points"], 3)
 
     def test_release_requirements_pin_validated_opencv_five_wheel(self):
-        requirements = (Path(__file__).resolve().parents[1] / "requirements.txt").read_text(encoding="utf-8")
+        requirements = (Path(__file__).resolve().parents[1] / "requirements.txt").read_text(encoding="utf-8").splitlines()
 
-        self.assertIn("opencv-python==5.0.0.93", requirements.splitlines())
+        self.assertIn("opencv-python==5.0.0.93", requirements)
+        self.assertIn("torch==2.5.1+cu121", requirements)
+        self.assertIn("torchvision==0.20.1+cu121", requirements)
+        self.assertIn("onnx==1.21.0", requirements)
 
 
 if __name__ == "__main__":

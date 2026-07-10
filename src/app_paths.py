@@ -17,9 +17,11 @@ def _resolve_app_home() -> Path:
 
 
 def _find_portable_root(start: Path) -> Path | None:
-    for candidate_root in [start, *start.parents]:
-        if (candidate_root / "version.json").exists() or (candidate_root / "run.bat").exists():
-            return candidate_root.resolve()
+    # Portable storage must be explicitly enabled beside the executable.
+    # Scanning parent folders can accidentally adopt a source checkout and leak
+    # its projects or logs into a packaged release.
+    if (start / "portable.mode").is_file():
+        return start.resolve()
     return None
 
 

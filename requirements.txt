@@ -1,11 +1,16 @@
+--extra-index-url https://download.pytorch.org/whl/cu121
 fastapi==0.133.1
 uvicorn==0.41.0
+websockets==16.1
 python-multipart==0.0.27
 sse-starlette==3.3.2
 pydantic==2.13.4
 ultralytics==8.4.68
 lap==0.5.13
 opencv-python==5.0.0.93
+torch==2.5.1+cu121
+torchvision==0.20.1+cu121
+onnx==1.21.0
 pillow==12.2.0
 psutil==7.2.2
 nvidia-ml-py==13.610.43

@@ -52,10 +52,11 @@ be rewritten as part of this objective.
 
 | ID | Class | Area | Observation | Impact | Proposed follow-up | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| EXEC-001 | Related | Packaging | Existing portable ZIP is approximately 2.73 GB before managed LabelMe or optional model components. | Full offline package may become impractically large. | Compare thin installer, component cache, and full-offline package sizes in Phase 8. | Open |
-| EXEC-002 | Related | i18n | The legacy `zh-TW.js` override block still contains historical mojibake entries, although the reviewed catalog and new model-preparation strings render correctly. | Untouched pages may still expose corrupted legacy strings. | Run the scoped assistant and release-page DOM audit in Phases 5, 6, and 8; do not rebuild the entire catalog during model preparation. | Open |
+| EXEC-001 | Related | Packaging | The validated full runtime folder is 4.11 GiB because it includes CUDA PyTorch, Ultralytics, ONNX, OpenCV, and desktop runtime dependencies. | Direct repository or release-asset delivery is impractical without an installer or external artifact store. | Keep the validated full runtime as the offline artifact; design a thin installer/component delivery strategy separately. | Open |
+| EXEC-002 | Related | i18n | Historical catalog overrides may still exist outside the release navigation set. | Rare or unvisited states may still expose stale copy. | The 15-page release DOM audit now passes with zero visible issues; retain the automated audit as a release gate. | Mitigated |
 | EXEC-003 | Related | Packaging | The optional offline LabelMe component is 96.5 MB compressed and 238.3 MB installed. | Bundling it into the already-large main package would penalize users who do not need manual CNN annotation. | Publish it as a separate optional component artifact and keep local ZIP installation in the first-run manager. | Open |
-| EXEC-004 | Related | Development environment | The shared developer Python installation contains unrelated packages with conflicting pins (`opencv-python-headless` consumers and an old `autodistill-yolov8` Ultralytics pin). | `pip check` on the shared machine cannot represent the clean application lock set. | Keep release builds isolated from global Python packages and run dependency checks inside the release environment in Phase 8. | Open |
+| EXEC-004 | Related | Development environment | The shared developer Python installation contains unrelated packages with conflicting pins (`opencv-python-headless` consumers and an old `autodistill-yolov8` Ultralytics pin). | `pip check` on the shared machine cannot represent the clean application lock set. | Phase 8 used an isolated runtime-only release environment and a separate test dependency file. | Resolved |
+| EXEC-005 | Blocker | Packaged paths | A package launched from the repository `dist` folder initially adopted an ancestor `version.json` and exposed source projects. | A nominally clean release could display developer projects and write logs into the source checkout. | Portable storage now requires an explicit `portable.mode` marker beside the EXE; the default package uses `%LOCALAPPDATA%`. | Resolved |
 
 ## Phase Evidence
 
@@ -185,3 +186,26 @@ runtime checks, and compatibility result are recorded here.
 - Browser smoke verified the dashboard and active CNN project still render after the
   runtime upgrade.
 - Full suite result after Phase 7: 326 tests and 66 subtests passed.
+
+### Phase 8
+
+- Rebuilt the release dependency contract around a runtime-only environment:
+  CUDA PyTorch 2.5.1, torchvision 0.20.1, ONNX 1.21.0, OpenCV 5.0.0.93,
+  Ultralytics 8.4.68, and the production web runtime.
+- Moved pytest and the Starlette test transport into `requirements-test.txt` so
+  test-only packages are not collected into the distributable application.
+- The isolated release environment passed dependency consistency checks, the
+  OpenCV compatibility gate, and the complete application suite.
+- Traditional Chinese DOM audit covered 15 CNN, RNN, assistant, settings, and
+  history pages: 3,309 visible nodes, zero unresolved issues.
+- PyInstaller warning audit reported 0 blockers, 0 unclassified warnings, 6
+  reviewed optional watches, and 931 expected optional-platform imports.
+- Fixed packaged path discovery so source checkout markers cannot be mistaken for
+  portable storage. Portable storage now requires `portable.mode` beside the EXE.
+- Packaged smoke used an isolated `%LOCALAPPDATA%`, verified production health,
+  NVIDIA RTX 3060 / CUDA PyTorch, OpenCV 5.0.0.93, and zero factory projects.
+- Package contents contain no `projects`, `logs`, `cache`, `exports`, or temporary
+  user-data directories. The final one-folder runtime is 4.11 GiB.
+- Browser smoke confirmed the dashboard renders without horizontal overflow after
+  the release build changes.
+- Full suite result after Phase 8: 329 tests and 66 subtests passed.

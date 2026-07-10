@@ -1267,6 +1267,15 @@ export const zhTWOverrides = {
   "projectAssistant.context.rnnExportPackagePrompt": "說明 {task} 部署用的 RNN 模型封裝、schema、scaler、推論合約與報告。",
   "projectAssistant.context.cnnExportVerifyPrompt": "交付前驗證 CNN 格式、類別、影像前處理、runtime 相容性與報告。",
   "projectAssistant.context.rnnExportVerifyPrompt": "交付前驗證 RNN schema、scaler、視窗合約、模型檔、runtime 相容性與報告。",
+  "rnn.features.noConfig": "尚未設定",
+  "rnn.featureSummary.rows": "資料筆數",
+  "rnn.featureSummary.task": "建議任務",
+  "rnn.featureSummary.featureCount": "{count} 個特徵",
+  "rnn.schemaWizard.excludeTargetTime": "排除目標與時間欄",
+  "rnn.schemaWizard.timeColumn": "時間欄位",
+  "rnn.window.estimatedWindows": "預估視窗數",
+  "rnn.window.minMaxLength": "最短／最長序列",
+  "settings.phase1Ui": "第一階段介面重構",
 };
 
 export const zhTW = {

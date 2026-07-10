@@ -1370,9 +1370,9 @@
                       <label><span>horizon <span class="info-icon" data-tooltip="預測距離。horizon=1 代表預測下一步；數值越大代表預測更遠的未來。">i</span></span><input id="rnn-horizon" type="number" min="1" value="1"></label>
                     </div>
                     <div class="rnn-window-summary" id="rnn-window-summary">
-                      <div><span>Estimated windows</span><strong>--</strong></div>
+                      <div><span data-i18n="rnn.window.estimatedWindows">Estimated windows</span><strong>--</strong></div>
                       <div><span>Sequence count</span><strong>--</strong></div>
-                      <div><span>Min / Max length</span><strong>-- / --</strong></div>
+                      <div><span data-i18n="rnn.window.minMaxLength">Min / Max length</span><strong>-- / --</strong></div>
                     </div>
                     <div class="rnn-config-warning hidden" id="rnn-window-warning"></div>
                     <p class="form-hint">sequence_length 決定每個訓練樣本要看幾個 time steps；stride 決定滑動間隔；horizon 決定預測目標距離。</p>
