@@ -81,6 +81,28 @@ class ManagedLabelMeComponentTests(unittest.TestCase):
         source = (Path(__file__).resolve().parents[1] / "src" / "annotation_helpers.py").read_text(encoding="utf-8")
         self.assertNotIn("hermes-agent", source)
 
+    def test_component_entry_is_resilient_to_empty_user_config(self):
+        source = (
+            Path(__file__).resolve().parents[1] / "packaging" / "labelme_component_entry.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('if "--config" not in sys.argv', source)
+        self.assertIn('sys.argv.extend(["--config", "{}"]', source)
+        self.assertIn('if "--component-smoke" in sys.argv', source)
+        self.assertIn("_run_component_smoke(smoke_root)", source)
+
+    def test_component_build_uses_latest_python_311_compatible_labelme(self):
+        build_script = (
+            Path(__file__).resolve().parents[1] / "scripts" / "build_labelme_component.bat"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('"labelme==6.3.1"', build_script)
+        self.assertNotIn('"labelme==4.6.0"', build_script)
+        self.assertIn('"osam==0.4.0"', build_script)
+        self.assertIn('"onnxruntime>=1.23.2,<2"', build_script)
+        self.assertIn("msvcp140.dll", build_script)
+        self.assertIn("vcruntime140_1.dll", build_script)
+
 
 class ManagedLabelMeApiTests(unittest.TestCase):
     @classmethod

@@ -26,12 +26,27 @@ def main() -> None:
     entrypoint = dist / "LabelMe.exe"
     if not entrypoint.is_file():
         raise SystemExit(f"LabelMe.exe not found in {dist}")
+    conflicting_qt_runtimes = [
+        dist / "_internal" / "PyQt5" / "Qt5" / "bin" / name
+        for name in ("msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll")
+    ]
+    present_conflicts = [path.name for path in conflicting_qt_runtimes if path.exists()]
+    if present_conflicts:
+        raise SystemExit(
+            "Conflicting PyQt VC runtime copies must be removed before packaging: "
+            + ", ".join(present_conflicts)
+        )
     manifest = {
         "component_id": "labelme",
         "version": args.version,
         "platforms": ["windows-x64"],
         "entrypoint": "LabelMe/LabelMe.exe",
         "sha256": {"LabelMe/LabelMe.exe": sha256(entrypoint)},
+        "capabilities": {
+            "manual_annotation": True,
+            "offline_ready": True,
+            "ai_model_weights_bundled": False,
+        },
     }
     output = Path(args.output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)

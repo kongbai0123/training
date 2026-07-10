@@ -14,9 +14,9 @@ if errorlevel 1 exit /b %errorlevel%
 
 "%BUILD_PYTHON%" -m pip install --disable-pip-version-check --upgrade "pip<26" >nul
 if errorlevel 1 exit /b %errorlevel%
-"%BUILD_PYTHON%" -m pip install --disable-pip-version-check "pyinstaller==6.21.0" "numpy==1.26.4" "Pillow>=10,<13" "PyYAML>=6,<7" "qtpy>=2.4,<3" "termcolor>=2,<4" "colorama>=0.4,<1" "PyQt5==5.15.11" "imgviz==1.7.5"
+"%BUILD_PYTHON%" -m pip install --disable-pip-version-check "pyinstaller==6.21.0" "numpy==1.26.4" "Pillow>=10,<13" "PyYAML>=6,<7" "PyQt5==5.15.11" "imgviz>=2,<3" "loguru>=0.7,<1" "natsort>=8,<9" "scikit-image>=0.21,<1" "scipy>=1.11,<2" "tifffile>=2024.1.30" "osam==0.4.0" "onnxruntime>=1.23.2,<2"
 if errorlevel 1 exit /b %errorlevel%
-"%BUILD_PYTHON%" -m pip install --disable-pip-version-check --no-deps "labelme==4.6.0"
+"%BUILD_PYTHON%" -m pip install --disable-pip-version-check --no-deps "labelme==6.3.1"
 if errorlevel 1 exit /b %errorlevel%
 
 set "LABELME_VERSION="
@@ -28,8 +28,14 @@ if not defined LABELME_VERSION (
 set "DIST_DIR=%CD%\release_artifacts\components\LabelMe"
 set "OUTPUT_ZIP=%CD%\release_artifacts\components\labelme-runtime-windows-x64.zip"
 
-"%BUILD_PYTHON%" -m PyInstaller --noconfirm --clean --windowed --name LabelMe --distpath "%CD%\release_artifacts\components" --workpath "%CD%\build\labelme-component" --specpath "%CD%\build\labelme-component" --collect-all labelme --collect-all qtpy --collect-all PyQt5 packaging\labelme_component_entry.py
+"%BUILD_PYTHON%" -m PyInstaller --noconfirm --clean --windowed --name LabelMe --distpath "%CD%\release_artifacts\components" --workpath "%CD%\build\labelme-component" --specpath "%CD%\build\labelme-component" --collect-all labelme --collect-all osam --collect-all PyQt5 packaging\labelme_component_entry.py
 if errorlevel 1 exit /b %errorlevel%
+
+rem PyQt5 ships older VC runtime copies that shadow the newer runtime required by
+rem ONNX Runtime. The root PyInstaller runtime already includes compatible copies.
+del /q "%DIST_DIR%\_internal\PyQt5\Qt5\bin\msvcp140.dll" 2>nul
+del /q "%DIST_DIR%\_internal\PyQt5\Qt5\bin\vcruntime140.dll" 2>nul
+del /q "%DIST_DIR%\_internal\PyQt5\Qt5\bin\vcruntime140_1.dll" 2>nul
 
 "%BUILD_PYTHON%" scripts\package_labelme_component.py --dist "%DIST_DIR%" --output "%OUTPUT_ZIP%" --version "%LABELME_VERSION%"
 if errorlevel 1 exit /b %errorlevel%
