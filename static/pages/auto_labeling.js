@@ -5,7 +5,6 @@ import { qs, qsa, setHTML, setText, escapeHtml, showToast, collectDroppedFiles }
 
 let selectedAutoLabelModelId = "";
 let selectedAutoSource = "unlabeled";
-let selectedModelSource = "project";
 let loadedProjectId = null;
 let loadingModels = false;
 let autoLabelJobs = [];
@@ -53,8 +52,6 @@ export function classifyAutoLabelSourceFiles(files) {
 export function initAutoLabeling() {
   qs("#btn-refresh-auto-label-models")?.addEventListener("click", () => loadAutoLabelModels(true));
   qs("#btn-start-auto-label")?.addEventListener("click", createAutoLabelJob);
-  qs("#btn-auto-review-accept")?.addEventListener("click", () => reviewSelectedAutoLabelItem("accept"));
-  qs("#btn-auto-review-reject")?.addEventListener("click", () => reviewSelectedAutoLabelItem("reject"));
   qs("#btn-auto-review-accept-next")?.addEventListener("click", () => reviewSelectedAutoLabelItem("accept", { moveNext: true }));
   qs("#btn-auto-review-reject-next")?.addEventListener("click", () => reviewSelectedAutoLabelItem("reject", { moveNext: true }));
   qs("#btn-auto-review-skip")?.addEventListener("click", () => reviewSelectedAutoLabelItem("skip"));
@@ -66,7 +63,6 @@ export function initAutoLabeling() {
   initModelImportDropZone();
   initSourceDropZone();
   initSourceOptions();
-  initModelSourceTabs();
   eventBus.on("language-changed", () => renderAutoLabelingPage());
 }
 
@@ -141,26 +137,6 @@ function initSourceDropZone() {
   dropZone.addEventListener("drop", async (event) => {
     await uploadAutoLabelSourceFiles(await collectDroppedFiles(event.dataTransfer));
   }, true);
-}
-
-function initModelSourceTabs() {
-  qsa("[data-model-source]").forEach((button) => {
-    button.addEventListener("click", () => {
-      selectedModelSource = button.dataset.modelSource || "project";
-      qsa("[data-model-source]").forEach((item) => item.classList.remove("active"));
-      button.classList.add("active");
-      renderModelSourceVisibility();
-    });
-  });
-  renderModelSourceVisibility();
-}
-
-function renderModelSourceVisibility() {
-  const importPanel = qs(".model-import-collapse");
-  const modelList = qs("#auto-label-model-list");
-  if (!importPanel || !modelList) return;
-  importPanel.open = selectedModelSource === "external";
-  modelList.classList.toggle("dimmed", selectedModelSource !== "project");
 }
 
 function initWeightManager() {
@@ -806,37 +782,35 @@ function renderAutoLabelModelList(status = null) {
   }
 
   const projectTask = status?.taskType || appState.currentProject?.task_type || "";
-  const groups = [
-    ["best", t("autoLabel.model.best"), t("autoLabel.model.bestHelp")],
-    ["other", t("autoLabel.model.other"), t("autoLabel.model.otherHelp")],
-  ];
-
-  const groupedHtml = groups.map(([type, title, description]) => {
-    const groupModels = models.filter((model) => {
-      const weightType = String(model.weight_type || "").toLowerCase();
-      return type === "other" ? !["best", "last"].includes(weightType) : weightType === type;
-    });
-    if (!groupModels.length) return "";
-    const scrollClass = groupModels.length > 5 ? " model-registry-scroll" : "";
-    return `
-      <div class="model-registry-group${scrollClass}">
-        <div class="model-registry-group-title">
-          <strong>${escapeHtml(title)}</strong>
-          <span>${description}</span>
-        </div>
-        ${groupModels.map((model) => renderModelButton(model, projectTask)).join("")}
-      </div>
-    `;
+  const selectedModel = models.find((model) => model.model_id === selectedAutoLabelModelId) || models[0];
+  const optionHtml = models.map((model) => {
+    const weightType = String(model.weight_type || "").toLowerCase();
+    const compatible = isModelCompatible(projectTask, model.task_type || model.task || "");
+    const badgeText = compatible ? t("common.ready") : t("autoLabel.model.incompatible");
+    const labelParts = [
+      model.run_id || model.name || model.model_id,
+      weightType || "weight",
+      model.task_type || model.task || "",
+      compatible ? "" : badgeText,
+    ].filter(Boolean);
+    return `<option value="${escapeHtml(model.model_id)}" ${model.model_id === selectedAutoLabelModelId ? "selected" : ""}>${escapeHtml(labelParts.join(" / "))}</option>`;
   }).join("");
+  const selectedCompatible = isModelCompatible(projectTask, selectedModel?.task_type || selectedModel?.task || "");
+  setHTML("#auto-label-model-list", `
+    <select id="auto-label-model-select" aria-label="${escapeHtml(t("autoLabel.model.project"))}">
+      ${optionHtml}
+    </select>
+    <div class="model-select-meta">
+      <strong>${escapeHtml(selectedModel?.run_id || selectedModel?.name || selectedModel?.model_id || "--")}</strong>
+      <span>${escapeHtml(selectedModel?.task_type || selectedModel?.task || "--")} / ${escapeHtml(selectedModel?.weight_type || "weight")} / ${escapeHtml(formatBytes(selectedModel?.file_size || 0))}</span>
+      <span>mAP50(M): ${escapeHtml(formatMetric(selectedModel?.best_map50_m))} · mAP50-95(M): ${escapeHtml(formatMetric(selectedModel?.best_map50_95_m))} · ${escapeHtml(selectedCompatible ? t("common.ready") : t("autoLabel.model.incompatible"))}</span>
+    </div>
+  `);
 
-  setHTML("#auto-label-model-list", groupedHtml);
-
-  qsa("[data-auto-model-id]").forEach((button) => {
-    button.addEventListener("click", () => {
-      selectedAutoLabelModelId = button.dataset.autoModelId;
+  qs("#auto-label-model-select")?.addEventListener("change", (event) => {
+    selectedAutoLabelModelId = event.target.value;
       renderAutoLabelModelList(status);
       renderStartReason(status);
-    });
   });
 }
 
@@ -938,7 +912,6 @@ function showAutoLabelPreview(item) {
   setText("#auto-review-confidence", summary.average_confidence === undefined ? "--" : Number(summary.average_confidence).toFixed(2));
   setText("#auto-review-issue", item?.review_status || (item?.shape_count ? t("autoLabel.reviewStatus.needsReview") : t("autoLabel.reviewStatus.emptyDraft")));
   setText("#auto-review-state", item?.draft_labelme_url ? t("autoLabel.reviewStatus.selected", { filename: item?.filename || "--" }) : t("autoLabel.reviewStatus.draftJsonMissing"));
-  renderAutoShapeTable(item);
   renderAutoReviewTaskInfo(item);
   renderAutoReviewPosition();
 }
@@ -958,34 +931,9 @@ function clearAutoLabelPreview() {
   setText("#auto-review-confidence", "--");
   setText("#auto-review-issue", "--");
   setText("#auto-review-state", "--");
-  setHTML("#auto-shape-table-body", `<tr><td colspan="5">${escapeHtml(t("autoLabel.noSelectedDraft"))}</td></tr>`);
   renderAutoReviewTaskInfo(null);
   renderAutoReviewPosition();
   updateAutoReviewToolbar();
-}
-
-function renderAutoShapeTable(item) {
-  const predictions = item?.inference_summary?.predictions || item?.predictions || [];
-  const shapeCount = Number(item?.shape_count || 0);
-  if (!Array.isArray(predictions) || !predictions.length) {
-    setHTML("#auto-shape-table-body", `<tr><td colspan="5">${escapeHtml(shapeCount ? t("autoLabel.shapeCount", { count: shapeCount }) : t("autoLabel.noShapeDetails"))}</td></tr>`);
-    return;
-  }
-  setHTML("#auto-shape-table-body", predictions.slice(0, 12).map((row, index) => {
-    const label = row.class_name || row.label || row.name || row.class_id || "--";
-    const confidence = row.confidence ?? row.score ?? "";
-    const shapeType = row.type || (row.polygon ? "polygon" : row.bbox ? "bbox" : "--");
-    const issue = row.issue || row.warning || "--";
-    return `
-      <tr>
-        <td>${index + 1}</td>
-        <td>${escapeHtml(label)}</td>
-        <td>${escapeHtml(shapeType)}</td>
-        <td>${confidence === "" ? "--" : Number(confidence).toFixed(2)}</td>
-        <td>${escapeHtml(issue)}</td>
-      </tr>
-    `;
-  }).join(""));
 }
 
 function renderAutoReviewTaskInfo(item) {
@@ -1067,8 +1015,6 @@ function updateAutoReviewToolbar() {
 
 function setAutoReviewToolbarDisabled(disabled) {
   [
-    "#btn-auto-review-accept",
-    "#btn-auto-review-reject",
     "#btn-auto-review-accept-next",
     "#btn-auto-review-reject-next",
     "#btn-auto-review-skip",

@@ -1937,60 +1937,69 @@
           </details>
 
           <div class="auto-label-workbench">
-            <details class="panel-section auto-job-builder auto-task-setup-panel auto-execution-console-panel auto-setup-summary-panel">
-              <summary class="section-title auto-setup-summary">
+            <section class="panel-section auto-job-builder auto-task-setup-panel auto-execution-console-panel auto-setup-summary-panel">
+              <div class="section-title auto-setup-summary">
                 <div>
                   <h2 data-i18n="autoLabel.executionConsole">Execution Console</h2>
                   <p class="section-subtitle" data-i18n="autoLabel.executionConsoleHelp">Choose input, model, and draft rules, then run a draft-only auto-label job.</p>
                 </div>
                 <span class="info-icon" data-tooltip="Create draft annotations from input source, model source, and draft rules." data-i18n-tooltip="autoLabel.executionTooltip">i</span>
-              </summary>
+              </div>
 
               <div class="auto-step-block active">
-                <div class="auto-step-heading"><span>1</span><strong data-i18n="autoLabel.step.input">Input Source</strong></div>
-                <div class="source-option-grid auto-source-grid">
-                  <button type="button" class="source-option active" data-auto-source="unlabeled"><i class="fa-solid fa-image"></i><strong data-i18n="autoLabel.source.unlabeled">Unlabeled images</strong><span data-i18n="autoLabel.source.unlabeledHelp">Images without valid LabelMe JSON</span></button>
-                  <button type="button" class="source-option" data-auto-source="invalid-json"><i class="fa-solid fa-triangle-exclamation"></i><strong data-i18n="autoLabel.source.invalid">Invalid annotations</strong><span data-i18n="autoLabel.source.invalidHelp">Missing JSON, empty annotations, or items that need review</span></button>
-                  <button type="button" class="source-option disabled" disabled><i class="fa-solid fa-folder-open"></i><strong data-i18n="autoLabel.source.folder">Selected folder</strong><span data-i18n="common.phase2">Phase 2</span></button>
+                <div class="auto-step-heading"><span>1</span><strong data-i18n="autoLabel.step.input">Input Source</strong><span class="info-icon" data-tooltip="Unlabeled images are images without valid LabelMe JSON. Invalid annotations include missing JSON, empty annotations, or files that need review. Dropped images and ZIP files are imported before draft generation." data-i18n-tooltip="autoLabel.inputTooltip">i</span></div>
+                <div class="drop-zone auto-source-drop-card" id="auto-source-drop-zone">
+                  <div class="auto-source-choice-row">
+                    <button type="button" class="source-option active" data-auto-source="unlabeled"><i class="fa-solid fa-image"></i><strong data-i18n="autoLabel.source.unlabeled">Unlabeled images</strong></button>
+                    <button type="button" class="source-option" data-auto-source="invalid-json"><i class="fa-solid fa-triangle-exclamation"></i><strong data-i18n="autoLabel.source.invalid">Invalid annotations</strong></button>
+                  </div>
+                  <i class="fa-solid fa-cloud-arrow-up auto-source-drop-icon"></i>
+                  <strong data-i18n="autoLabel.dropSourceTitle">Drop images or ZIP</strong>
+                  <span data-i18n="autoLabel.dropSourceHelp">Drop images or a dataset ZIP here, or click to choose files.</span>
                 </div>
-                <div class="drop-zone compact source-drop-preview" id="auto-source-drop-zone"><i class="fa-solid fa-cloud-arrow-up"></i><strong data-i18n="autoLabel.dropSourceTitle">Drop images or ZIP</strong><span data-i18n="autoLabel.dropSourceHelp">Drop images or a dataset ZIP here, or click to choose files.</span></div>
               </div>
 
               <div class="auto-step-block">
                 <div class="auto-step-heading"><span>2</span><strong data-i18n="autoLabel.step.model">Model Source</strong></div>
-                <div class="model-source-tabs">
-                  <button type="button" class="model-source-tab active" data-model-source="project" data-i18n="autoLabel.model.project">Project model</button>
-                  <button type="button" class="model-source-tab" data-model-source="external" data-i18n="autoLabel.model.external">External model</button>
-                  <button type="button" class="model-source-tab" disabled data-i18n="autoLabel.model.foundation">Foundation model - Phase 2</button>
+                <div class="auto-model-source-grid">
+                  <section class="auto-model-source-card project-model-source">
+                    <label>
+                      <span data-i18n="autoLabel.model.project">Project model</span>
+                      <div id="auto-label-model-list" class="model-select-shell"></div>
+                    </label>
+                  </section>
+                  <section class="auto-model-source-card external-model-source">
+                    <label class="drop-zone model-drop-zone" id="auto-model-drop-zone" for="auto-model-file-input">
+                      <input type="file" id="auto-model-file-input" accept=".pt,.onnx" hidden>
+                      <i class="fa-solid fa-cloud-arrow-up"></i>
+                      <strong data-i18n="autoLabel.model.external">External model</strong>
+                      <span id="auto-model-drop-status" data-i18n="autoLabel.dropModelHelp">Drop a model file here, or click to choose a model file.</span>
+                    </label>
+                    <div class="model-import-actions">
+                      <button class="btn btn-secondary btn-sm" id="btn-browse-auto-model" type="button" data-i18n="autoLabel.browseModel">Browse Model</button>
+                      <button class="btn btn-secondary btn-sm" id="btn-register-auto-model" type="button" disabled data-i18n="autoLabel.registerModel">Register Model</button>
+                    </div>
+                  </section>
                 </div>
-                <div id="auto-label-model-list" class="model-registry-list grouped"></div>
-                <details class="advanced-collapse model-import-collapse">
-                  <summary data-i18n="autoLabel.importExternal">External model import</summary>
-                  <label class="drop-zone model-drop-zone" id="auto-model-drop-zone" for="auto-model-file-input">
-                    <input type="file" id="auto-model-file-input" accept=".pt,.onnx" hidden>
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <strong data-i18n="autoLabel.dropModel">Drop .pt / .onnx model here</strong>
-                    <span id="auto-model-drop-status" data-i18n="autoLabel.dropModelHelp">Drop a model file here, or click to choose a model file.</span>
-                  </label>
-                  <div class="model-import-actions">
-                    <button class="btn btn-secondary btn-sm" id="btn-browse-auto-model" type="button" data-i18n="autoLabel.browseModel">Browse Model</button>
-                    <button class="btn btn-secondary btn-sm" id="btn-register-auto-model" type="button" disabled data-i18n="autoLabel.registerModel">Register Model</button>
-                  </div>
-                  <p class="muted-note" data-i18n="autoLabel.importNote">External models require task type, class map, and weight safety checks. P0 keeps UI only.</p>
-                </details>
               </div>
 
-              <div class="auto-step-block">
+              <div class="output-target-block">
+                <div class="target-card safe-target"><i class="fa-solid fa-shield-halved"></i><div><strong data-i18n="autoLabel.draftOnly">Draft only</strong><span data-i18n="autoLabel.targetHelp">Save to annotations/drafts/auto_label/{job_id}. Do not write to current annotations.</span></div></div>
+                <button class="btn btn-primary btn-disabled" id="btn-start-auto-label" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="autoLabel.start">Start Auto-Label Job</span></button>
+                <p class="muted-note" id="auto-start-reason">Open a project before creating an auto-label job.</p>
+              </div>
+
+              <div class="auto-step-block auto-rules-step-block">
                 <div class="auto-step-heading"><span>3</span><strong data-i18n="autoLabel.step.rules">Draft Rules</strong></div>
-                <div class="auto-basic-settings expanded">
+                <div class="auto-basic-settings expanded auto-rule-settings-grid">
                   <label><span data-i18n="autoLabel.confidence">Confidence</span><input type="number" id="auto-confidence" value="0.35" min="0.01" max="1" step="0.01"></label>
                   <label><span>IoU</span><input type="number" id="auto-iou" value="0.50" min="0.01" max="1" step="0.01"></label>
                   <label><span data-i18n="autoLabel.maxDetections">Max detections</span><input type="number" id="auto-max-detections" value="20" min="1" max="300" step="1"></label>
-                  <label><span data-i18n="autoLabel.classFilter">Class filter</span><input type="text" id="auto-class-filter" placeholder="class_a, class_b" data-i18n-placeholder="autoLabel.classFilterPlaceholder"></label>
                   <label><span data-i18n="autoLabel.minMaskArea">Minimum mask area</span><input type="number" id="auto-min-mask-area" value="400" min="0"></label>
-                  <label><span data-i18n="autoLabel.outputMode">Output mode</span><select id="auto-output-mode"><option value="mask_polygon" data-i18n="autoLabel.output.maskPolygon">Mask / Polygon draft</option><option value="bbox" data-i18n="autoLabel.output.bbox">BBox draft</option></select></label>
+                  <label class="auto-output-mode-field"><span data-i18n="autoLabel.outputMode">Output mode</span><select id="auto-output-mode"><option value="mask_polygon" data-i18n="autoLabel.output.maskPolygon">Mask / Polygon draft</option><option value="bbox" data-i18n="autoLabel.output.bbox">BBox draft</option></select></label>
+                  <label class="auto-class-filter-field"><span data-i18n="autoLabel.classFilter">Class filter</span><input type="text" id="auto-class-filter" placeholder="class_a, class_b" data-i18n-placeholder="autoLabel.classFilterPlaceholder"></label>
                 </div>
-                <details class="advanced-collapse">
+                <details class="advanced-collapse auto-review-priority-collapse">
                   <summary data-i18n="autoLabel.reviewRules">Review priority rules</summary>
                   <div class="compact-strategy-list">
                     <div><strong data-i18n="autoLabel.lowConfidence">Low-confidence policy</strong><span data-i18n="autoLabel.lowConfidenceHelp">Predictions below threshold enter the review queue and are not accepted directly.</span></div>
@@ -2000,14 +2009,7 @@
                   </div>
                 </details>
               </div>
-
-              <div class="auto-step-block output-target-block">
-                <div class="auto-step-heading"><span>4</span><strong data-i18n="autoLabel.step.target">Output Target</strong></div>
-                <div class="target-card safe-target"><i class="fa-solid fa-shield-halved"></i><div><strong data-i18n="autoLabel.draftOnly">Draft only</strong><span data-i18n="autoLabel.targetHelp">Save to annotations/drafts/auto_label/{job_id}. Do not write to current annotations.</span></div></div>
-                <button class="btn btn-primary btn-disabled" id="btn-start-auto-label" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="autoLabel.start">Start Auto-Label Job</span></button>
-                <p class="muted-note" id="auto-start-reason">Open a project before creating an auto-label job.</p>
-              </div>
-            </details>
+            </section>
 
             <section class="panel-section auto-review-panel auto-review-workspace-panel auto-review-first-panel">
               <div class="section-title">
@@ -2018,26 +2020,21 @@
                 <span class="info-icon" data-tooltip="Use this area to review whether draft annotations are acceptable." data-i18n-tooltip="autoLabel.previewTooltip">i</span>
               </div>
               <div class="auto-review-workstation">
-                <aside class="auto-review-queue-card">
-                  <div class="review-card-title"><strong data-i18n="autoLabel.reviewQueue">Draft Review Queue</strong><span id="auto-review-queue-count">0</span></div>
-                  <div class="data-table compact-table auto-review-queue-table"><table><thead><tr><th data-i18n="autoLabel.table.image">Image</th><th data-i18n="autoLabel.table.class">Class</th><th data-i18n="autoLabel.table.issue">Issue</th></tr></thead><tbody id="auto-review-queue-body"><tr><td colspan="3" data-i18n="autoLabel.emptyQueue">No drafts waiting for review. Draft jobs will list review items here.</td></tr></tbody></table></div>
-                </aside>
                 <div class="auto-review-preview-card">
                   <div class="review-preview-toolbar">
                     <span data-i18n="autoLabel.imageReview">Image review</span>
-                    <div><span class="status-badge" id="auto-review-position">0 / 0</span><button class="btn-small secondary" type="button" disabled>100%</button><button class="btn-small secondary" type="button" disabled data-i18n="autoLabel.fit">Fit</button></div>
+                    <div><span class="status-badge" id="auto-review-position">0 / 0</span></div>
                   </div>
                   <div class="review-preview-grid">
-                    <div class="preview-tile original-reference-tile"><h3 data-i18n="autoLabel.original">Original Image</h3><div class="preview-placeholder" id="auto-review-original">No draft annotations generated yet.</div></div>
                     <div class="preview-tile result-overlay-tile">
                       <h3 data-i18n="autoLabel.overlay">Draft Overlay</h3>
                       <button class="review-nav-button review-nav-prev" id="btn-auto-review-prev" type="button" disabled title="Previous draft" data-i18n-title="autoLabel.previousDraft"><i class="fa-solid fa-chevron-left"></i></button>
                       <div class="preview-placeholder" id="auto-review-overlay">Mask / bbox / polygon overlay will appear here.</div>
                       <button class="review-nav-button review-nav-next" id="btn-auto-review-next" type="button" disabled title="Next draft" data-i18n-title="autoLabel.nextDraft"><i class="fa-solid fa-chevron-right"></i></button>
                     </div>
+                    <div class="preview-tile original-reference-tile"><h3 data-i18n="autoLabel.original">Original Image</h3><div class="preview-placeholder" id="auto-review-original">No draft annotations generated yet.</div></div>
                   </div>
                   <div class="auto-shape-review-grid">
-                    <div class="data-table compact-table"><table><thead><tr><th>ID</th><th data-i18n="autoLabel.table.class">Class</th><th data-i18n="autoLabel.table.type">Type</th><th data-i18n="autoLabel.confidence">Confidence</th><th data-i18n="autoLabel.table.issue">Issue</th></tr></thead><tbody id="auto-shape-table-body"><tr><td colspan="5" data-i18n="autoLabel.noSelectedDraft">No selected draft.</td></tr></tbody></table></div>
                     <div class="draft-inspector">
                       <div class="summary-row"><span data-i18n="autoLabel.predictionClass">Prediction class</span><code id="auto-review-class">--</code></div>
                       <div class="summary-row"><span data-i18n="autoLabel.confidence">Confidence</span><code id="auto-review-confidence">--</code></div>
@@ -2046,13 +2043,16 @@
                     </div>
                   </div>
                 </div>
+                <div class="auto-review-side-column">
+                <aside class="auto-review-queue-card">
+                  <div class="review-card-title"><strong data-i18n="autoLabel.reviewQueue">Draft Review Queue</strong><span id="auto-review-queue-count">0</span></div>
+                  <div class="data-table compact-table auto-review-queue-table"><table><thead><tr><th data-i18n="autoLabel.table.image">Image</th><th data-i18n="autoLabel.table.class">Class</th><th data-i18n="autoLabel.table.issue">Issue</th></tr></thead><tbody id="auto-review-queue-body"><tr><td colspan="3" data-i18n="autoLabel.emptyQueue">No drafts waiting for review. Draft jobs will list review items here.</td></tr></tbody></table></div>
+                </aside>
                 <aside class="auto-review-action-card">
                   <div class="review-card-title"><strong data-i18n="autoLabel.reviewDecision">Review decision</strong><span id="auto-review-job-status">--</span></div>
                   <div class="auto-review-toolbar compact-toolbar">
                     <button class="btn btn-secondary success" id="btn-auto-review-accept-next" disabled><i class="fa-solid fa-check"></i> <span data-i18n="autoLabel.acceptNext">Accept & Next</span></button>
                     <button class="btn btn-secondary danger" id="btn-auto-review-reject-next" disabled><i class="fa-solid fa-xmark"></i> <span data-i18n="autoLabel.rejectNext">Reject & Next</span></button>
-                    <button class="btn btn-secondary success subtle" id="btn-auto-review-accept" disabled><i class="fa-solid fa-check"></i> <span data-i18n="autoLabel.accept">Accept</span></button>
-                    <button class="btn btn-secondary danger subtle" id="btn-auto-review-reject" disabled><i class="fa-solid fa-xmark"></i> <span data-i18n="autoLabel.reject">Reject</span></button>
                     <button class="btn btn-secondary" id="btn-auto-review-skip" disabled><i class="fa-solid fa-forward-step"></i> <span data-i18n="autoLabel.skip">Skip</span></button>
                     <button class="btn btn-secondary warning" id="btn-auto-review-hard-case" disabled><i class="fa-solid fa-flag"></i> <span data-i18n="autoLabel.hardCase">Hard Case</span></button>
                     <button class="btn btn-secondary" id="btn-auto-review-edit" disabled><i class="fa-solid fa-pen-nib"></i> <span data-i18n="autoLabel.editLabelMe">Edit in LabelMe</span></button>
@@ -2068,6 +2068,7 @@
                     </div>
                   </details>
                 </aside>
+                </div>
               </div>
             </section>
           </div>

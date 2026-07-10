@@ -1001,6 +1001,12 @@ export const zhTW = {
   "compare.toast.rnnOutputDisabled": "此檢視不適用 RNN 輸出比較。",
   "compare.toast.uploadTestImage": "請上傳一張測試圖片進行輸出比較。",
   "compare.toast.outputCompareFailed": "輸出比較失敗：{message}",
+  "autoLabel.principleTitle": "自動標註流程規則",
+  "autoLabel.principle1": "此頁用於建立草稿標註任務，不是模型測試頁，也不是 LabelMe 替代品。",
+  "autoLabel.principle2": "所有輸出會先寫入草稿，不會直接覆蓋 annotations/current。",
+  "autoLabel.principle3": "best.pt 與 last.pt 保留在 training/runs/*/weights；介面只負責分組顯示推薦權重與 checkpoint。",
+  "autoLabel.inputTooltip": "未標註圖片是沒有有效 LabelMe JSON 的圖片；無效標註包含缺少 JSON、空標註或需要審查的項目。拖曳圖片或 ZIP 後會先匯入，再產生草稿標註。",
+  "autoLabel.model.incompatible": "任務不相容",
 };
 for (const key of Object.keys(zhTW)) {
   if (!key.startsWith("rag.")) continue;
