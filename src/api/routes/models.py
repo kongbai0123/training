@@ -9,6 +9,8 @@ from pydantic import BaseModel
 from src.model_registry import ModelRegistry
 from src.model_store import ModelStore
 from src.model_system import ModelCatalog
+from src.model_install_manager import MODEL_INSTALL_MANAGER
+from src.model_recommendation import annotate_hardware_fit
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
 from src.system_capabilities import get_system_capabilities
@@ -19,6 +21,11 @@ router = APIRouter()
 
 class DeleteModelWeightsRequest(BaseModel):
     model_ids: List[str]
+    confirm: bool = False
+
+
+class InstallModelRequest(BaseModel):
+    model_id: str
     confirm: bool = False
 
 
@@ -34,6 +41,7 @@ def list_system_model_catalog(
     else:
         models = ModelCatalog.list_all(project=None, architecture=architecture)
     capabilities = get_system_capabilities()
+    models = annotate_hardware_fit(models, capabilities)
     return {
         "architecture": architecture,
         "usage": usage,
@@ -46,6 +54,47 @@ def list_system_model_catalog(
             "not_installed": sum(1 for model in models if model.get("install_state") == "not_installed"),
         },
     }
+
+
+@router.post("/api/models/install")
+def install_system_model(request: InstallModelRequest):
+    if not request.confirm:
+        raise HTTPException(status_code=400, detail="Model installation requires explicit confirmation")
+    model = ModelCatalog.get_model(None, request.model_id)
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+    if not model.get("installation_required"):
+        raise HTTPException(status_code=400, detail="This model does not require installation")
+    try:
+        return MODEL_INSTALL_MANAGER.start(model)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/api/models/install/jobs/{job_id}")
+def get_model_install_job(job_id: str):
+    try:
+        return MODEL_INSTALL_MANAGER.get(job_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Model install job not found") from exc
+
+
+@router.post("/api/models/install/jobs/{job_id}/cancel")
+def cancel_model_install_job(job_id: str):
+    try:
+        return MODEL_INSTALL_MANAGER.cancel(job_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Model install job not found") from exc
+
+
+@router.post("/api/models/install/jobs/{job_id}/retry")
+def retry_model_install_job(job_id: str):
+    try:
+        return MODEL_INSTALL_MANAGER.retry(job_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Model install job not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/api/projects/{project_id}/models")

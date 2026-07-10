@@ -17,6 +17,7 @@ import { setActivePage } from "./router.js";
 import { initWorkspaceContextPanel, renderRightPanel as renderRightPanelCore } from "./right_panel.js?v=20260708-rnn-feature-wizard";
 import { initInfoTooltips } from "./tooltip.js";
 import { createProjectLifecycle } from "./project_lifecycle.js";
+import { initModelSetup, maybeOpenModelSetup } from "./model_setup.js?v=20260710-model-preparation";
 import {
   initPageModules,
   renderPrimaryPageModules,
@@ -42,10 +43,12 @@ export async function bootstrapApp() {
   bindGlobalNavigation();
   initWorkspaceContextPanel();
   initInfoTooltips();
+  initModelSetup();
 
   initPageModules();
 
   await bootstrapSession();
+  void maybeOpenModelSetup();
 
   // Fetch system health before the first render.
   fetchSystemHealth();

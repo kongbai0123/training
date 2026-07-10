@@ -53,6 +53,7 @@ be rewritten as part of this objective.
 | ID | Class | Area | Observation | Impact | Proposed follow-up | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | EXEC-001 | Related | Packaging | Existing portable ZIP is approximately 2.73 GB before managed LabelMe or optional model components. | Full offline package may become impractically large. | Compare thin installer, component cache, and full-offline package sizes in Phase 8. | Open |
+| EXEC-002 | Related | i18n | The legacy `zh-TW.js` override block still contains historical mojibake entries, although the reviewed catalog and new model-preparation strings render correctly. | Untouched pages may still expose corrupted legacy strings. | Run the scoped assistant and release-page DOM audit in Phases 5, 6, and 8; do not rebuild the entire catalog during model preparation. | Open |
 
 ## Phase Evidence
 
@@ -77,3 +78,17 @@ runtime checks, and compatibility result are recorded here.
 - RNN templates explicitly report `installation_required: false`.
 - Model catalog regression: 29 tests passed.
 - Full suite result after Phase 1: 301 tests passed.
+
+### Phase 2
+
+- Added explicit-consent first-run model preparation and a persistent Settings entry.
+- The first-run screen reads only local hardware and model catalog endpoints before
+  confirmation; download POST requests are emitted only by the install button.
+- Added allowlisted HTTPS downloads, redirected-host validation, `.part` staging,
+  SHA-256 verification, atomic replacement, progress, cancellation, retry, and
+  duplicate-install protection.
+- Added hardware-aware recommendation labels using CUDA, VRAM, RAM, and disk data.
+- Browser smoke verified the RTX 3060 summary, 5 optional YOLO components, 8 ready
+  RNN templates, skip flow, Settings reopen flow, and Traditional Chinese rendering.
+- Targeted Phase 2 result: 17 tests passed.
+- Full suite result after Phase 2: 309 tests and 66 subtests passed.

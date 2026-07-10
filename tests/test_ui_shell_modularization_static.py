@@ -29,6 +29,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         auto_labeling_css = (ROOT / "static" / "styles" / "pages" / "auto_labeling.css").read_text(encoding="utf-8")
         evaluation_css = (ROOT / "static" / "styles" / "pages" / "evaluation.css").read_text(encoding="utf-8")
         project_assistant_css = (ROOT / "static" / "styles" / "pages" / "project_assistant.css").read_text(encoding="utf-8")
+        model_setup_css = (ROOT / "static" / "styles" / "pages" / "model_setup.css").read_text(encoding="utf-8")
         shared_css = (ROOT / "static" / "styles" / "shared.css").read_text(encoding="utf-8")
 
         self.assertTrue(
@@ -54,6 +55,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/auto_labeling.css";\n'
                 '@import "./styles/pages/evaluation.css";\n'
                 '@import "./styles/pages/project_assistant.css";\n'
+                '@import "./styles/pages/model_setup.css";\n'
                 '@import "./styles/shared.css";'
             )
         )
@@ -423,6 +425,10 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(project_assistant_css, r"(?m)^\.assistant-status-strip \{")
         self.assertRegex(project_assistant_css, r"(?m)^\.project-assistant-grid \{")
         self.assertIn("@media (max-width: 1200px) {", project_assistant_css)
+
+        self.assertRegex(model_setup_css, r"(?m)^\.model-setup-modal-content \{")
+        self.assertRegex(model_setup_css, r"(?m)^\.model-setup-list \{")
+        self.assertIn("@media (max-width: 760px) {", model_setup_css)
 
         self.assertIn(".dashboard-lower-grid,\n.two-column-layout", shared_css)
         self.assertRegex(shared_css, r"(?m)^\.compact-table \{")

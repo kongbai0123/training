@@ -2245,6 +2245,18 @@
               <div class="path-row"><span data-i18n="settings.conversionBackend">Conversion backend</span><code data-i18n="common.connected">Connected</code></div>
             </div>
           </section>
+          <section class="panel-section narrow-form settings-system-panel model-components-settings">
+            <div class="section-title">
+              <div>
+                <h2 data-i18n="modelSetup.settingsTitle">Hardware &amp; Model Components</h2>
+                <p class="section-help" id="settings-model-setup-summary" data-i18n="modelSetup.statusLoading">Reading local model status...</p>
+              </div>
+              <button class="btn btn-secondary" id="btn-open-model-setup" type="button">
+                <i class="fa-solid fa-cubes"></i>
+                <span data-i18n="modelSetup.manage">Manage Models</span>
+              </button>
+            </div>
+          </section>
           <section class="panel-section narrow-form settings-system-panel">
             <div class="section-title">
               <h2 data-i18n="settings.dataMigration">Project Data Migration</h2>
@@ -2267,6 +2279,46 @@
         </section>
       </main>
 
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="model-setup-modal" hidden>
+    <div class="modal-content model-setup-modal-content" role="dialog" aria-modal="true" aria-labelledby="model-setup-title">
+      <div class="modal-header model-setup-header">
+        <div>
+          <h2 id="model-setup-title" data-i18n="modelSetup.title">Environment &amp; Model Preparation</h2>
+          <p data-i18n="modelSetup.subtitle">Review hardware-compatible model components. No download starts without your confirmation.</p>
+        </div>
+        <button class="icon-btn" id="btn-close-model-setup" type="button" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
+      </div>
+
+      <section class="model-setup-hardware" aria-label="Hardware summary" data-i18n-aria-label="modelSetup.hardwareSummary">
+        <div><span data-i18n="modelSetup.gpu">GPU</span><strong id="model-setup-gpu">--</strong></div>
+        <div><span data-i18n="modelSetup.vram">VRAM</span><strong id="model-setup-vram">--</strong></div>
+        <div><span data-i18n="modelSetup.memory">RAM</span><strong id="model-setup-memory">--</strong></div>
+        <div><span data-i18n="modelSetup.disk">Free disk</span><strong id="model-setup-disk">--</strong></div>
+      </section>
+
+      <div class="model-setup-section-heading">
+        <div>
+          <h3 data-i18n="modelSetup.cnnModels">CNN / YOLO Models</h3>
+          <p data-i18n="modelSetup.cnnHelp">Only selected models are downloaded from the approved official source.</p>
+        </div>
+        <span class="badge badge-info" id="model-setup-rnn-summary">--</span>
+      </div>
+      <div class="model-setup-list" id="model-setup-list"></div>
+
+      <div class="model-setup-consent">
+        <i class="fa-solid fa-shield-halved"></i>
+        <p data-i18n="modelSetup.consent">Downloads require this explicit action. Files are checksum-verified before becoming available.</p>
+      </div>
+      <div class="modal-actions model-setup-actions">
+        <button class="btn btn-secondary" id="btn-skip-model-setup" type="button" data-i18n="modelSetup.skip">Skip for now</button>
+        <button class="btn btn-primary" id="btn-install-selected-models" type="button">
+          <i class="fa-solid fa-download"></i>
+          <span data-i18n="modelSetup.installSelected">Install Selected Models</span>
+        </button>
+      </div>
     </div>
   </div>
 

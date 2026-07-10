@@ -2,6 +2,7 @@ import { eventBus } from "../event_bus.js";
 import { appState, applyTheme, applyLanguage, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, setHTML, escapeHtml } from "../utils.js";
+import { renderModelSetupSettings } from "../core/model_setup.js?v=20260710-model-preparation";
 
 let migrationScan = null;
 
@@ -32,6 +33,7 @@ export function renderSettingsPage() {
   const themeSelect = qs("#settings-theme");
   if (themeSelect) themeSelect.value = appState.settings.theme;
   renderProjectDataMigration();
+  void renderModelSetupSettings();
 }
 
 async function scanProjectDataMigration() {
