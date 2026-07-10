@@ -2,6 +2,7 @@ import { apiFetch } from "../api.js";
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { buildProjectAssistantContext } from "../core/right_panel.js?v=20260708-rnn-feature-wizard";
+import { trainingModeState } from "./training_modes.js?v=20260708-i18n-tooltips";
 import { escapeHtml, qs, setHTML, setText } from "../utils.js";
 
 const assistantState = {
@@ -111,7 +112,7 @@ function renderPageContext() {
   }
 
   assistantState.activeScope = config.scope || "";
-  setText("#project-assistant-page-context-badge", getPageContextBadge(appState.currentPage));
+  setText("#project-assistant-page-context-badge", getPageContextBadge(getActiveAssistantPageId()));
   setText("#project-assistant-page-context-help", config.help || "");
   setHTML("#project-assistant-page-context-facts", (config.facts || []).map((fact) => `
     <div class="path-row">
@@ -140,8 +141,9 @@ function buildAssistantStatusSnapshot() {
   const annotatedCount = images.filter((image) => image.annotated || image.annotation_status === "annotated").length;
   return {
     hasProject: Boolean(appState.currentProjectId),
-    projectName: project.name || appState.currentProjectId || "",
+    projectName: project.project_name || project.name || appState.currentProjectId || "",
     taskType: project.task_type || project.task || "",
+    architecture: resolveAssistantArchitecture(project),
     hasDataset: images.length > 0 || Boolean(project.dataset_manifest || project.sequence_manifest),
     imageCount: images.length,
     annotatedCount,
@@ -152,12 +154,49 @@ function buildAssistantStatusSnapshot() {
 function getPageContextBadge(pageId) {
   const labels = {
     dashboard: t("navDashboard"),
+    dataset: t("navDataset"),
+    labelme: t("navLabelMe"),
+    split: t("navSplit"),
+    augmentation: t("navAugmentation"),
+    training: t("navTraining"),
     evaluation: t("navEvaluation"),
+    inference: t("navInference"),
+    "auto-labeling": t("navAutoLabeling"),
+    sequence_dataset: t("rnn.training.sequenceCsv"),
+    features_labels: t("rnn.training.featureConfig"),
+    windowing: t("rnn.training.windowing"),
+    sequence_test: t("rnn.training.openSequenceTest"),
     "model-compare": t("compare.title"),
+    model_compare: t("compare.title"),
     export: t("navExport"),
     history: t("navHistory"),
+    settings: t("navSettings"),
   };
   return labels[pageId] || pageId || "--";
+}
+
+function resolveAssistantArchitecture(project = {}) {
+  const taskType = String(project.task_type || project.task || "").toLowerCase();
+  const explicit = String(project.architecture || project.training_mode || project.training_config?.architecture || "").toLowerCase();
+  if (["cnn", "rnn"].includes(explicit)) return explicit;
+  return ["sequence", "time_series", "timeseries", "rnn"].some((token) => taskType.includes(token)) ? "rnn" : "cnn";
+}
+
+function getActiveAssistantPageId() {
+  const architecture = resolveAssistantArchitecture(appState.currentProject || {});
+  if (architecture !== "rnn" || appState.currentPage !== "training") return appState.currentPage;
+  const panel = String(trainingModeState.activeRnnPanel || "training").replace(/-/g, "_");
+  if (panel === "overview") return "dashboard";
+  return panel === "model_compare" ? "model-compare" : panel;
+}
+
+function getActiveAssistantFilters() {
+  const project = appState.currentProject || {};
+  const taskType = String(project.task_type || project.task || "").trim().toLowerCase();
+  return {
+    architecture: resolveAssistantArchitecture(project),
+    ...(taskType ? { task_type: taskType } : {}),
+  };
 }
 
 async function openProjectAssistantDrawer() {
@@ -294,6 +333,7 @@ async function runRetrieval() {
       query,
       profile_id: qs("#rag-retrieval-profile")?.value || "lexical_default",
       scope: getActiveAssistantScope(),
+      filters: getActiveAssistantFilters(),
       top_k: 5,
     }),
   });
@@ -315,6 +355,7 @@ async function runProjectAssistantChat() {
       conversation_state: assistantState.conversationState,
       profile_id: qs("#rag-retrieval-profile")?.value || "lexical_default",
       scope: getActiveAssistantScope(),
+      filters: getActiveAssistantFilters(),
     }),
   });
   assistantState.conversationState = assistantState.lastRun.conversation_state || [];
@@ -366,8 +407,10 @@ function renderStatus() {
   const status = assistantState.status || {};
   const workspace = status.workspace || {};
   const kb = status.knowledge_base || {};
-  setText("#rag-status-project", appState.currentProject?.name || t("assistant.noActiveProject"));
-  setText("#rag-status-context", getPageContextBadge(appState.currentPage));
+  setText("#rag-status-project", appState.currentProject?.project_name || appState.currentProject?.name || t("assistant.noActiveProject"));
+  const architecture = resolveAssistantArchitecture(appState.currentProject || {}).toUpperCase();
+  const pageContext = getPageContextBadge(getActiveAssistantPageId());
+  setText("#rag-status-context", appState.currentProjectId ? `${architecture} · ${pageContext}` : pageContext);
   const assistantEnabled = workspace.assistant_enabled ?? workspace.rag_enabled ?? true;
   setText("#rag-status-mode", assistantEnabled ? t("assistant.mode.localSearch") : t("assistant.mode.disabled"));
   setText("#rag-status-documents", kb.document_count ?? 0);

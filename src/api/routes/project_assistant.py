@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from src.project_assistant import ProjectAssistantService
+from src.project_assistant_service import resolve_assistant_project_context
 from src.project_manager import ProjectManager
 
 router = APIRouter()
@@ -65,6 +66,11 @@ def _project_metadata(project_id: str = "", project_name: str = "") -> Dict[str,
         metadata["project_id"] = project_id
     if project_name:
         metadata["project_name"] = project_name
+    project = ProjectManager.get_project(project_id) if project_id else None
+    if project:
+        metadata.update(resolve_assistant_project_context(project))
+        if not metadata.get("project_name"):
+            metadata["project_name"] = str(project.get("project_name") or project.get("name") or "")
     return metadata
 
 

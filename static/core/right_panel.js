@@ -286,40 +286,57 @@ export function buildProjectAssistantContext(pageId, status) {
   const exportItems = Array.isArray(appState.currentProject?.exports) ? appState.currentProject.exports : [];
   const imports = Array.isArray(appState.currentProject?.imports_history) ? appState.currentProject.imports_history : [];
   const projectType = normalizeTaskLabel(status.taskType || appState.currentProject?.task_type || "--");
+  const architecture = String(status.architecture || resolveAssistantArchitecture(appState.currentProject)).toLowerCase();
+  const assistantPageId = resolveAssistantContextPage(pageId, architecture);
+  const architectureLabel = architecture === "rnn" ? "RNN" : "CNN";
   const latestRunId = latestRun?.run_id || bestModel?.run_id || "--";
   const latestRunStatus = latestRun?.status || "--";
 
   const pageConfigs = {
     dashboard: {
       scope: "dashboard",
-      help: t("projectAssistant.context.dashboardHelp"),
+      help: t(architecture === "rnn" ? "projectAssistant.context.rnnDashboardHelp" : "projectAssistant.context.cnnDashboardHelp"),
       facts: [
         { label: t("projectAssistant.context.fact.project"), value: status.projectName || "--" },
+        { label: t("projectAssistant.context.fact.architecture"), value: architectureLabel },
         { label: t("projectAssistant.context.fact.task"), value: projectType },
         { label: t("projectAssistant.context.fact.latestRun"), value: `${latestRunId} / ${latestRunStatus}` },
       ],
       prompts: [
-        { label: t("projectAssistant.context.prompt.summary"), text: t("projectAssistant.context.dashboardSummaryPrompt", { task: projectType }) },
-        { label: t("projectAssistant.context.prompt.nextStep"), text: t("projectAssistant.context.dashboardNextPrompt") },
+        { label: t("projectAssistant.context.prompt.summary"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnDashboardSummaryPrompt" : "projectAssistant.context.cnnDashboardSummaryPrompt", { task: projectType }) },
+        { label: t("projectAssistant.context.prompt.nextStep"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnDashboardNextPrompt" : "projectAssistant.context.cnnDashboardNextPrompt") },
       ],
     },
+    dataset: buildDataAssistantConfig("dataset", architecture, projectType),
+    labelme: buildDataAssistantConfig("labelme", architecture, projectType),
+    split: buildDataAssistantConfig("split", architecture, projectType),
+    augmentation: buildDataAssistantConfig("augmentation", architecture, projectType),
+    training: buildTrainingAssistantConfig(architecture, projectType, latestRunId, latestRunStatus),
     evaluation: {
       scope: "evaluation",
       help: t("projectAssistant.context.evaluationHelp"),
       facts: [
+        { label: t("projectAssistant.context.fact.architecture"), value: architectureLabel },
         { label: t("projectAssistant.context.fact.task"), value: projectType },
         { label: t("projectAssistant.context.fact.bestModel"), value: bestModel ? `${bestModel.weight_type || "model"} / ${bestModel.run_id || "--"}` : t("projectAssistant.context.value.noModel") },
         { label: t("projectAssistant.context.fact.completedRuns"), value: String(completedRuns.length) },
       ],
       prompts: [
-        { label: t("projectAssistant.context.prompt.metric"), text: t("projectAssistant.context.evaluationMetricPrompt", { task: projectType, run: latestRunId }) },
-        { label: t("projectAssistant.context.prompt.risk"), text: t("projectAssistant.context.evaluationRiskPrompt") },
+        { label: t("projectAssistant.context.prompt.metric"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnEvaluationMetricPrompt" : "projectAssistant.context.cnnEvaluationMetricPrompt", { task: projectType, run: latestRunId }) },
+        { label: t("projectAssistant.context.prompt.risk"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnEvaluationRiskPrompt" : "projectAssistant.context.cnnEvaluationRiskPrompt") },
       ],
     },
+    inference: buildInferenceAssistantConfig(architecture, projectType, latestRunId),
+    "auto-labeling": buildAutoLabelAssistantConfig(architecture, projectType),
+    sequence_dataset: buildRnnWorkflowAssistantConfig("sequence_dataset", projectType),
+    features_labels: buildRnnWorkflowAssistantConfig("features_labels", projectType),
+    windowing: buildRnnWorkflowAssistantConfig("windowing", projectType),
+    sequence_test: buildRnnWorkflowAssistantConfig("sequence_test", projectType),
     "model-compare": {
       scope: "model_compare",
       help: t("projectAssistant.context.compareHelp"),
       facts: [
+        { label: t("projectAssistant.context.fact.architecture"), value: architectureLabel },
         { label: t("projectAssistant.context.fact.comparableRuns"), value: String(completedRuns.length) },
         { label: t("projectAssistant.context.fact.latestRun"), value: `${latestRunId} / ${latestRunStatus}` },
         { label: t("projectAssistant.context.fact.task"), value: projectType },
@@ -333,13 +350,14 @@ export function buildProjectAssistantContext(pageId, status) {
       scope: "export",
       help: t("projectAssistant.context.exportHelp"),
       facts: [
+        { label: t("projectAssistant.context.fact.architecture"), value: architectureLabel },
         { label: t("projectAssistant.context.fact.models"), value: String(models.length) },
         { label: t("projectAssistant.context.fact.exports"), value: String(exportItems.length) },
         { label: t("projectAssistant.context.fact.bestModel"), value: bestModel ? `${bestModel.weight_type || "model"} / ${bestModel.run_id || "--"}` : t("projectAssistant.context.value.noModel") },
       ],
       prompts: [
-        { label: t("projectAssistant.context.prompt.package"), text: t("projectAssistant.context.exportPackagePrompt", { task: projectType }) },
-        { label: t("projectAssistant.context.prompt.verify"), text: t("projectAssistant.context.exportVerifyPrompt") },
+        { label: t("projectAssistant.context.prompt.package"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnExportPackagePrompt" : "projectAssistant.context.cnnExportPackagePrompt", { task: projectType }) },
+        { label: t("projectAssistant.context.prompt.verify"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnExportVerifyPrompt" : "projectAssistant.context.cnnExportVerifyPrompt") },
       ],
     },
     history: {
@@ -356,7 +374,95 @@ export function buildProjectAssistantContext(pageId, status) {
       ],
     },
   };
-  return pageConfigs[pageId] || null;
+  return pageConfigs[assistantPageId] || null;
+}
+
+function resolveAssistantArchitecture(project = {}) {
+  const taskType = String(project?.task_type || project?.task || "").toLowerCase();
+  const explicit = String(project?.architecture || project?.training_mode || project?.training_config?.architecture || "").toLowerCase();
+  if (["cnn", "rnn"].includes(explicit)) return explicit;
+  return ["sequence", "time_series", "timeseries", "rnn"].some((token) => taskType.includes(token)) ? "rnn" : "cnn";
+}
+
+function resolveAssistantContextPage(pageId, architecture) {
+  if (architecture !== "rnn" || pageId !== "training") return pageId;
+  const panel = String(trainingModeState.activeRnnPanel || "training").replace(/-/g, "_");
+  if (panel === "overview") return "dashboard";
+  return panel === "model_compare" ? "model-compare" : panel;
+}
+
+function buildDataAssistantConfig(scope, architecture, projectType) {
+  const isRnn = architecture === "rnn";
+  return {
+    scope,
+    help: t(isRnn ? "projectAssistant.context.rnnDataHelp" : "projectAssistant.context.cnnDataHelp"),
+    facts: [
+      { label: t("projectAssistant.context.fact.architecture"), value: isRnn ? "RNN" : "CNN" },
+      { label: t("projectAssistant.context.fact.task"), value: projectType },
+    ],
+    prompts: [
+      { label: t("projectAssistant.context.prompt.readiness"), text: t(isRnn ? "projectAssistant.context.rnnDataPrompt" : "projectAssistant.context.cnnDataPrompt") },
+      { label: t("projectAssistant.context.prompt.risk"), text: t(isRnn ? "projectAssistant.context.rnnDataRiskPrompt" : "projectAssistant.context.cnnDataRiskPrompt") },
+    ],
+  };
+}
+
+function buildTrainingAssistantConfig(architecture, projectType, latestRunId, latestRunStatus) {
+  const isRnn = architecture === "rnn";
+  return {
+    scope: "training",
+    help: t(isRnn ? "projectAssistant.context.rnnTrainingHelp" : "projectAssistant.context.cnnTrainingHelp"),
+    facts: [
+      { label: t("projectAssistant.context.fact.architecture"), value: isRnn ? "RNN" : "CNN" },
+      { label: t("projectAssistant.context.fact.task"), value: projectType },
+      { label: t("projectAssistant.context.fact.latestRun"), value: `${latestRunId} / ${latestRunStatus}` },
+    ],
+    prompts: [
+      { label: t("projectAssistant.context.prompt.readiness"), text: t(isRnn ? "projectAssistant.context.rnnTrainingPrompt" : "projectAssistant.context.cnnTrainingPrompt") },
+      { label: t("projectAssistant.context.prompt.risk"), text: t(isRnn ? "projectAssistant.context.rnnTrainingRiskPrompt" : "projectAssistant.context.cnnTrainingRiskPrompt") },
+    ],
+  };
+}
+
+function buildInferenceAssistantConfig(architecture, projectType, latestRunId) {
+  return {
+    scope: "inference",
+    help: t("projectAssistant.context.inferenceHelp"),
+    facts: [
+      { label: t("projectAssistant.context.fact.architecture"), value: architecture === "rnn" ? "RNN" : "CNN" },
+      { label: t("projectAssistant.context.fact.task"), value: projectType },
+      { label: t("projectAssistant.context.fact.latestRun"), value: latestRunId },
+    ],
+    prompts: [{ label: t("projectAssistant.context.prompt.verify"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnInferencePrompt" : "projectAssistant.context.cnnInferencePrompt") }],
+  };
+}
+
+function buildAutoLabelAssistantConfig(architecture, projectType) {
+  if (architecture === "rnn") return buildDataAssistantConfig("dataset", architecture, projectType);
+  return {
+    scope: "auto_labeling",
+    help: t("projectAssistant.context.autoLabelHelp"),
+    facts: [
+      { label: t("projectAssistant.context.fact.architecture"), value: "CNN" },
+      { label: t("projectAssistant.context.fact.task"), value: projectType },
+    ],
+    prompts: [
+      { label: t("projectAssistant.context.prompt.readiness"), text: t("projectAssistant.context.autoLabelReadinessPrompt") },
+      { label: t("projectAssistant.context.prompt.risk"), text: t("projectAssistant.context.autoLabelReviewPrompt") },
+    ],
+  };
+}
+
+function buildRnnWorkflowAssistantConfig(scope, projectType) {
+  return {
+    scope,
+    help: t(`projectAssistant.context.${scope}Help`),
+    facts: [
+      { label: t("projectAssistant.context.fact.architecture"), value: "RNN" },
+      { label: t("projectAssistant.context.fact.task"), value: projectType },
+    ],
+    prompts: [{ label: t("projectAssistant.context.prompt.readiness"), text: t(`projectAssistant.context.${scope}Prompt`) }],
+  };
 }
 
 function normalizeTaskLabel(value) {

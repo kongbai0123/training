@@ -150,6 +150,52 @@ class ProjectAssistantContractTests(unittest.TestCase):
         self.assertIn("exports-and-contracts.md", [item["source"] for item in export["results"]])
         self.assertTrue(all(item["source_type"] in {"exports", "training_runs", "dataset_schema"} for item in export["results"]))
 
+    def test_project_assistant_isolates_cnn_and_rnn_evidence(self):
+        ProjectAssistantService.ingest_document(
+            "cnn-training.md",
+            "Shared evidence reports image mAP and bounding box precision.",
+            metadata={
+                "project_id": "project_architecture",
+                "source_type": "training_runs",
+                "architecture": "cnn",
+                "task_type": "object_detection",
+            },
+        )
+        ProjectAssistantService.ingest_document(
+            "rnn-training.md",
+            "Shared evidence reports sequence MAE and residual outliers.",
+            metadata={
+                "project_id": "project_architecture",
+                "source_type": "training_runs",
+                "architecture": "rnn",
+                "task_type": "sequence_regression",
+            },
+        )
+
+        cnn = ProjectAssistantService.retrieve(
+            "shared evidence reports",
+            filters={
+                "project_id": "project_architecture",
+                "scope": "training",
+                "architecture": "CNN",
+                "task_type": "OBJECT_DETECTION",
+            },
+        )
+        rnn = ProjectAssistantService.retrieve(
+            "shared evidence reports",
+            filters={
+                "project_id": "project_architecture",
+                "scope": "training",
+                "architecture": "rnn",
+                "task_type": "sequence_regression",
+            },
+        )
+
+        self.assertEqual([item["source"] for item in cnn["results"]], ["cnn-training.md"])
+        self.assertEqual([item["source"] for item in rnn["results"]], ["rnn-training.md"])
+        self.assertEqual(cnn["filters"]["architecture"], "cnn")
+        self.assertEqual(rnn["results"][0]["task_type"], "sequence_regression")
+
     def test_project_assistant_scope_contract_is_available_through_api_and_chat(self):
         client = TestClient(app)
         client.post(
@@ -187,6 +233,36 @@ class ProjectAssistantContractTests(unittest.TestCase):
         run = chat.json()
         self.assertEqual(run["retrieval_config"]["filters"]["scope"], "export")
         self.assertEqual(run["sources"][0]["source"], "exports-and-contracts.md")
+
+    def test_project_assistant_api_preserves_architecture_and_task_filters(self):
+        client = TestClient(app)
+        client.post(
+            "/api/project-assistant/knowledge-base/documents?project_id=project_filter_api",
+            json={
+                "filename": "rnn-evaluation.md",
+                "content": "Sequence regression residual diagnostics explain the outlier.",
+                "metadata": {
+                    "source_type": "evaluation_report",
+                    "architecture": "rnn",
+                    "task_type": "sequence_regression",
+                },
+            },
+        )
+        response = client.post(
+            "/api/project-assistant/chat?project_id=project_filter_api",
+            json={
+                "message": "Explain sequence regression residual diagnostics",
+                "scope": "evaluation",
+                "filters": {"architecture": "rnn", "task_type": "sequence_regression"},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        run = response.json()
+        filters = run["retrieval_config"]["filters"]
+        self.assertEqual(filters["architecture"], "rnn")
+        self.assertEqual(filters["task_type"], "sequence_regression")
+        self.assertEqual(run["sources"][0]["architecture"], "rnn")
 
     def test_project_assistant_api_requires_active_project_scope(self):
         client = TestClient(app)
@@ -305,6 +381,8 @@ class ProjectAssistantContractTests(unittest.TestCase):
         self.assertEqual(first["document_count"], 8)
         self.assertEqual(second["removed_auto_documents"], 8)
         self.assertEqual(len(auto_docs), 8)
+        self.assertTrue(all(doc["metadata"].get("architecture") == "rnn" for doc in auto_docs))
+        self.assertTrue(all(doc["metadata"].get("task_type") == "sequence_regression" for doc in auto_docs))
         self.assertEqual(auto_source_types, [
             "dataset_schema",
             "error_logs",

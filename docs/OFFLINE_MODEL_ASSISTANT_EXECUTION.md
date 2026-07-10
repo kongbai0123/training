@@ -144,3 +144,23 @@ runtime checks, and compatibility result are recorded here.
 - Browser smoke verified exclusive panel visibility for all three tabs and confirmed
   no legacy panel is displayed.
 - Full suite result after Phase 5: 322 tests and 66 subtests passed.
+
+### Phase 6
+
+- Added deterministic project context metadata for assistant sources:
+  `architecture` (`cnn` / `rnn`) and normalized `task_type`.
+- Automatic artifact sync and manual project document ingestion now attach the
+  active project's architecture and task metadata.
+- Retrieval and chat now apply project, page scope, architecture, and task filters;
+  chunks without an exact architecture/task match are excluded when those filters
+  are active.
+- Added source scopes for CNN dataset, LabelMe, split, augmentation, inference,
+  auto-labeling and RNN sequence dataset, feature roles, windowing, and sequence test.
+- Assistant page guidance now distinguishes CNN image/annotation workflows from RNN
+  schema/window/task-aware workflows, including evaluation and export prompts.
+- Browser smoke verified `CNN · 模型訓練`, `RNN · 總覽`, and
+  `RNN · 序列視窗`; the live RNN request preserved
+  `architecture=rnn`, `task_type=sequence_regression`, and `scope=windowing`.
+- Temporary RNN smoke project was removed after verification.
+- Targeted Phase 6 result: 30 tests and 5 subtests passed.
+- Full suite result after Phase 6: 324 tests and 66 subtests passed.

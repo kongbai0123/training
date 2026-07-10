@@ -22,13 +22,40 @@ ASSISTANT_MODES = {"disabled", "local_search_only", "local_gguf", "cloud_api"}
 ASSISTANT_SCOPE_SOURCE_TYPES = {
     "dashboard": {"project_summary", "dataset_schema", "training_runs", "exports"},
     "dataset": {"dataset_schema", "project_summary"},
+    "labelme": {"dataset_schema", "project_summary"},
+    "split": {"dataset_schema", "project_summary"},
+    "augmentation": {"dataset_schema", "training_runs", "project_summary"},
     "training": {"dataset_schema", "training_runs", "project_summary"},
     "evaluation": {"training_runs", "evaluation_report", "diagnostics", "project_summary"},
+    "inference": {"training_runs", "evaluation_report", "exports", "project_summary"},
+    "auto_labeling": {"dataset_schema", "training_runs", "project_summary"},
+    "auto-labeling": {"dataset_schema", "training_runs", "project_summary"},
+    "sequence_dataset": {"dataset_schema", "project_summary"},
+    "features_labels": {"dataset_schema", "project_summary"},
+    "windowing": {"dataset_schema", "project_summary"},
+    "sequence_test": {"training_runs", "evaluation_report", "dataset_schema", "project_summary"},
     "model_compare": {"training_runs", "model_comparison", "project_summary"},
     "model-compare": {"training_runs", "model_comparison", "project_summary"},
     "export": {"exports", "training_runs", "dataset_schema"},
     "history": {"project_summary", "dataset_schema", "training_runs", "exports", "history", "error_logs"},
 }
+
+
+def resolve_assistant_project_context(project: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+    project = project if isinstance(project, dict) else {}
+    task_type = str(project.get("task_type") or project.get("task") or "").strip().lower()
+    training_config = project.get("training_config") if isinstance(project.get("training_config"), dict) else {}
+    explicit_architecture = str(
+        project.get("architecture")
+        or project.get("training_mode")
+        or training_config.get("architecture")
+        or ""
+    ).strip().lower()
+    if explicit_architecture not in {"cnn", "rnn"}:
+        explicit_architecture = "rnn" if any(
+            token in task_type for token in ("sequence", "time_series", "timeseries", "rnn")
+        ) else "cnn"
+    return {"architecture": explicit_architecture, "task_type": task_type}
 
 
 def _now() -> str:
@@ -331,6 +358,7 @@ class ProjectAssistantService:
         cls.ensure()
         removed = cls._clear_auto_documents(project_id)
         documents = cls._build_project_artifact_documents(project)
+        project_context = resolve_assistant_project_context(project)
         results = []
         for item in documents:
             result = cls.ingest_document(
@@ -339,6 +367,7 @@ class ProjectAssistantService:
                 metadata={
                     "project_id": project_id,
                     "project_name": str(project.get("project_name") or project.get("name") or ""),
+                    **project_context,
                     "source_type": item["source_type"],
                     "auto_indexed": True,
                     "sync_key": item["sync_key"],
@@ -905,6 +934,16 @@ class ProjectAssistantService:
             normalized["source_types"] = sorted(normalized_source_types)
         else:
             normalized.pop("source_types", None)
+        architecture = str(normalized.get("architecture") or "").strip().lower()
+        if architecture in {"cnn", "rnn"}:
+            normalized["architecture"] = architecture
+        else:
+            normalized.pop("architecture", None)
+        task_type = str(normalized.get("task_type") or "").strip().lower()
+        if task_type:
+            normalized["task_type"] = task_type
+        else:
+            normalized.pop("task_type", None)
         return normalized
 
     @classmethod
@@ -915,6 +954,8 @@ class ProjectAssistantService:
         has_project_filter = "project_id" in filters
         project_id_filter = str(filters.get("project_id") or "").strip()
         source_type_filter = set(filters.get("source_types") or [])
+        architecture_filter = str(filters.get("architecture") or "").strip().lower()
+        task_type_filter = str(filters.get("task_type") or "").strip().lower()
         if not query_tokens:
             return {
                 "query": query,
@@ -936,6 +977,10 @@ class ProjectAssistantService:
             metadata = chunk.get("metadata") or {}
             source_type = str(metadata.get("source_type") or "").strip()
             if source_type_filter and source_type not in source_type_filter:
+                continue
+            if architecture_filter and str(metadata.get("architecture") or "").strip().lower() != architecture_filter:
+                continue
+            if task_type_filter and str(metadata.get("task_type") or "").strip().lower() != task_type_filter:
                 continue
             scoped_candidate_chunks += 1
             token_index = chunk.get("token_index") or {}
@@ -960,6 +1005,8 @@ class ProjectAssistantService:
                 "rerank_score": item["rerank_score"],
                 "content": item["content"],
                 "source_type": (item.get("metadata") or {}).get("source_type", ""),
+                "architecture": (item.get("metadata") or {}).get("architecture", ""),
+                "task_type": (item.get("metadata") or {}).get("task_type", ""),
             }
             for item in scored[:safe_top_k]
         ]
