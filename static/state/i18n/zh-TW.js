@@ -1002,3 +1002,9 @@ export const zhTW = {
   "compare.toast.uploadTestImage": "請上傳一張測試圖片進行輸出比較。",
   "compare.toast.outputCompareFailed": "輸出比較失敗：{message}",
 };
+for (const key of Object.keys(zhTW)) {
+  if (!key.startsWith("rag.")) continue;
+  const assistantKey = `assistant.${key.slice(4)}`;
+  if (Object.prototype.hasOwnProperty.call(zhTWOverrides, assistantKey)) continue;
+  zhTW[assistantKey] = zhTW[key];
+}

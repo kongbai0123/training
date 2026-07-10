@@ -76,7 +76,7 @@ def _require_project_scope(project_id: str) -> str:
 
 
 @router.get("/api/project-assistant/status")
-@router.get("/api/rag-workbench/status")
+@router.get("/api/rag-workbench/status", deprecated=True)
 def project_assistant_status(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
@@ -84,13 +84,13 @@ def project_assistant_status(
 
 
 @router.get("/api/project-assistant/settings")
-@router.get("/api/rag-workbench/settings")
+@router.get("/api/rag-workbench/settings", deprecated=True)
 def project_assistant_settings():
     return ProjectAssistantService.get_settings()
 
 
 @router.post("/api/project-assistant/settings")
-@router.post("/api/rag-workbench/settings")
+@router.post("/api/rag-workbench/settings", deprecated=True)
 def update_project_assistant_settings(request: ProjectAssistantSettingsRequest):
     try:
         return ProjectAssistantService.update_settings(request.model_dump())
@@ -99,7 +99,7 @@ def update_project_assistant_settings(request: ProjectAssistantSettingsRequest):
 
 
 @router.get("/api/project-assistant/knowledge-base")
-@router.get("/api/rag-workbench/knowledge-base")
+@router.get("/api/rag-workbench/knowledge-base", deprecated=True)
 def project_assistant_knowledge_base(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
@@ -107,7 +107,7 @@ def project_assistant_knowledge_base(
 
 
 @router.post("/api/project-assistant/knowledge-base/documents")
-@router.post("/api/rag-workbench/knowledge-base/documents")
+@router.post("/api/rag-workbench/knowledge-base/documents", deprecated=True)
 def project_assistant_ingest_document(
     request: ProjectAssistantDocumentRequest,
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
@@ -122,7 +122,7 @@ def project_assistant_ingest_document(
 
 
 @router.post("/api/project-assistant/knowledge-base/upload")
-@router.post("/api/rag-workbench/knowledge-base/upload")
+@router.post("/api/rag-workbench/knowledge-base/upload", deprecated=True)
 async def project_assistant_upload_document(
     file: UploadFile = File(...),
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
@@ -138,7 +138,7 @@ async def project_assistant_upload_document(
 
 
 @router.post("/api/project-assistant/knowledge-base/reindex")
-@router.post("/api/rag-workbench/knowledge-base/reindex")
+@router.post("/api/rag-workbench/knowledge-base/reindex", deprecated=True)
 def project_assistant_reindex(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
@@ -147,7 +147,7 @@ def project_assistant_reindex(
 
 
 @router.delete("/api/project-assistant/knowledge-base")
-@router.delete("/api/rag-workbench/knowledge-base")
+@router.delete("/api/rag-workbench/knowledge-base", deprecated=True)
 def project_assistant_clear_knowledge_base(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
@@ -156,7 +156,7 @@ def project_assistant_clear_knowledge_base(
 
 
 @router.post("/api/project-assistant/projects/{project_id}/sync-artifacts")
-@router.post("/api/rag-workbench/projects/{project_id}/sync-artifacts")
+@router.post("/api/rag-workbench/projects/{project_id}/sync-artifacts", deprecated=True)
 def project_assistant_sync_project_artifacts(project_id: str):
     project = ProjectManager.get_project(project_id)
     if not project:
@@ -168,7 +168,7 @@ def project_assistant_sync_project_artifacts(project_id: str):
 
 
 @router.post("/api/project-assistant/retrieval/query")
-@router.post("/api/rag-workbench/retrieval/query")
+@router.post("/api/rag-workbench/retrieval/query", deprecated=True)
 def project_assistant_retrieval_query(
     request: ProjectAssistantRetrievalRequest,
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
@@ -185,7 +185,7 @@ def project_assistant_retrieval_query(
 
 
 @router.post("/api/project-assistant/retrieval/marks")
-@router.post("/api/rag-workbench/retrieval/marks")
+@router.post("/api/rag-workbench/retrieval/marks", deprecated=True)
 def project_assistant_mark_retrieval(request: ProjectAssistantRetrievalMarkRequest):
     return ProjectAssistantService.mark_retrieval(
         query=request.query,
@@ -196,7 +196,7 @@ def project_assistant_mark_retrieval(request: ProjectAssistantRetrievalMarkReque
 
 
 @router.post("/api/project-assistant/chat")
-@router.post("/api/rag-workbench/chat")
+@router.post("/api/rag-workbench/chat", deprecated=True)
 def project_assistant_chat(
     request: ProjectAssistantChatRequest,
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
@@ -212,7 +212,7 @@ def project_assistant_chat(
 
 
 @router.post("/api/project-assistant/chat/stream")
-@router.post("/api/rag-workbench/chat/stream")
+@router.post("/api/rag-workbench/chat/stream", deprecated=True)
 def project_assistant_chat_stream(
     request: ProjectAssistantChatRequest,
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
@@ -235,7 +235,7 @@ def project_assistant_chat_stream(
 
 
 @router.get("/api/project-assistant/agent-runs")
-@router.get("/api/rag-workbench/agent-runs")
+@router.get("/api/rag-workbench/agent-runs", deprecated=True)
 def project_assistant_agent_runs(
     project_id: str = Query("", description="Active project id for project-scoped assistant knowledge."),
 ):
@@ -243,13 +243,13 @@ def project_assistant_agent_runs(
 
 
 @router.get("/api/project-assistant/sandbox")
-@router.get("/api/rag-workbench/sandbox")
+@router.get("/api/rag-workbench/sandbox", deprecated=True)
 def project_assistant_sandbox():
     return ProjectAssistantService.get_sandbox()
 
 
 @router.post("/api/project-assistant/sandbox/files")
-@router.post("/api/rag-workbench/sandbox/files")
+@router.post("/api/rag-workbench/sandbox/files", deprecated=True)
 def project_assistant_update_sandbox_file(request: ProjectAssistantSandboxFileRequest):
     try:
         return ProjectAssistantService.update_sandbox_file(path=request.path, content=request.content)
@@ -258,18 +258,18 @@ def project_assistant_update_sandbox_file(request: ProjectAssistantSandboxFileRe
 
 
 @router.post("/api/project-assistant/sandbox/export")
-@router.post("/api/rag-workbench/sandbox/export")
+@router.post("/api/rag-workbench/sandbox/export", deprecated=True)
 def project_assistant_export_sandbox():
     return ProjectAssistantService.export_sandbox()
 
 
 @router.post("/api/project-assistant/evaluation/report")
-@router.post("/api/rag-workbench/evaluation/report")
+@router.post("/api/rag-workbench/evaluation/report", deprecated=True)
 def project_assistant_evaluation_report(request: Optional[ProjectAssistantGoldenSetRequest] = None):
     return ProjectAssistantService.evaluation_report(golden_set=request.items if request else None)
 
 
 @router.post("/api/project-assistant/evaluation/golden-set")
-@router.post("/api/rag-workbench/evaluation/golden-set")
+@router.post("/api/rag-workbench/evaluation/golden-set", deprecated=True)
 def project_assistant_set_golden_set(request: ProjectAssistantGoldenSetRequest):
     return ProjectAssistantService.set_golden_set(request.items)

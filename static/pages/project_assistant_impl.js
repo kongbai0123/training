@@ -97,7 +97,7 @@ function renderPageContext() {
       <span>${escapeHtml(fact.label)}</span>
       <code>${escapeHtml(fact.value)}</code>
     </div>
-  `).join("") || `<div class="empty-state">${escapeHtml(t("rag.noSources"))}</div>`);
+  `).join("") || `<div class="empty-state">${escapeHtml(t("assistant.noSources"))}</div>`);
   setHTML("#project-assistant-page-context-prompts", (config.prompts || []).map((prompt) => `
     <button type="button" class="assistant-prompt-row" data-assistant-prompt="${escapeHtml(prompt.text)}" data-assistant-scope="${escapeHtml(prompt.scope || config.scope || "")}">
       <span>${escapeHtml(prompt.label)}</span>
@@ -163,7 +163,7 @@ function closeProjectAssistantDrawer() {
 
 function requireActiveProject() {
   if (appState.currentProjectId) return true;
-  eventBus.emit("toast", t("rag.toast.noActiveProject"));
+  eventBus.emit("toast", t("assistant.toast.noActiveProject"));
   return false;
 }
 
@@ -195,7 +195,7 @@ async function ingestDocument() {
   const filename = qs("#rag-doc-filename")?.value?.trim() || "rag-note.md";
   const content = qs("#rag-doc-content")?.value || "";
   if (!content.trim()) {
-    eventBus.emit("toast", t("rag.toast.emptyDocument"));
+    eventBus.emit("toast", t("assistant.toast.emptyDocument"));
     return;
   }
   const result = await apiFetch(assistantApi("/knowledge-base/documents"), {
@@ -206,7 +206,7 @@ async function ingestDocument() {
   assistantState.status = result.status;
   await loadProjectAssistant({ force: true });
   renderStages(result.document?.ingestion || []);
-  eventBus.emit("toast", t("rag.toast.ingested", { count: result.document?.chunk_count || 0 }));
+  eventBus.emit("toast", t("assistant.toast.ingested", { count: result.document?.chunk_count || 0 }));
 }
 
 async function uploadDocumentFile() {
@@ -214,7 +214,7 @@ async function uploadDocumentFile() {
   const input = qs("#rag-upload-file");
   const file = input?.files?.[0];
   if (!file) {
-    eventBus.emit("toast", t("rag.toast.noFile"));
+    eventBus.emit("toast", t("assistant.toast.noFile"));
     return;
   }
   const formData = new FormData();
@@ -226,7 +226,7 @@ async function uploadDocumentFile() {
   assistantState.status = result.status;
   await loadProjectAssistant({ force: true });
   renderStages(result.document?.ingestion || []);
-  eventBus.emit("toast", t("rag.toast.ingested", { count: result.document?.chunk_count || 0 }));
+  eventBus.emit("toast", t("assistant.toast.ingested", { count: result.document?.chunk_count || 0 }));
 }
 
 async function syncProjectArtifacts() {
@@ -236,7 +236,7 @@ async function syncProjectArtifacts() {
   });
   assistantState.status = result.status;
   await loadProjectAssistant({ force: true });
-  eventBus.emit("toast", t("rag.toast.syncedArtifacts", {
+  eventBus.emit("toast", t("assistant.toast.syncedArtifacts", {
     count: result.document_count || 0,
     chunks: result.chunk_count || 0,
   }));
@@ -246,12 +246,12 @@ async function reindexKnowledgeBase() {
   if (!requireActiveProject()) return;
   assistantState.status = await apiFetch(assistantApi("/knowledge-base/reindex"), { method: "POST" });
   await loadProjectAssistant({ force: true });
-  eventBus.emit("toast", t("rag.toast.reindexed"));
+  eventBus.emit("toast", t("assistant.toast.reindexed"));
 }
 
 async function clearKnowledgeBase() {
   if (!requireActiveProject()) return;
-  const confirmed = window.confirm(t("rag.confirmClearKb"));
+  const confirmed = window.confirm(t("assistant.confirmClearKb"));
   if (!confirmed) return;
   assistantState.status = await apiFetch(assistantApi("/knowledge-base"), { method: "DELETE" });
   assistantState.retrieval = null;
@@ -263,7 +263,7 @@ async function runRetrieval() {
   if (!requireActiveProject()) return;
   const query = qs("#rag-retrieval-query")?.value || "";
   if (!query.trim()) {
-    eventBus.emit("toast", t("rag.toast.emptyQuery"));
+    eventBus.emit("toast", t("assistant.toast.emptyQuery"));
     return;
   }
   assistantState.retrieval = await apiFetch(assistantApi("/retrieval/query"), {
@@ -283,7 +283,7 @@ async function runProjectAssistantChat() {
   if (!requireActiveProject()) return;
   const message = qs("#rag-chat-input")?.value || "";
   if (!message.trim()) {
-    eventBus.emit("toast", t("rag.toast.emptyQuestion"));
+    eventBus.emit("toast", t("assistant.toast.emptyQuestion"));
     return;
   }
   assistantState.lastRun = await apiFetch(assistantApi("/chat"), {
@@ -311,18 +311,18 @@ async function saveSandboxFile() {
     body: JSON.stringify({ path, content }),
   });
   renderSandbox();
-  eventBus.emit("toast", t("rag.toast.fileSaved"));
+  eventBus.emit("toast", t("assistant.toast.fileSaved"));
 }
 
 async function exportSandboxArtifact() {
   const artifact = await apiFetch(assistantApi("/sandbox/export"), { method: "POST" });
-  eventBus.emit("toast", t("rag.toast.artifactExported", { path: artifact.path || artifact.artifact_id }));
+  eventBus.emit("toast", t("assistant.toast.artifactExported", { path: artifact.path || artifact.artifact_id }));
 }
 
 async function generateEvaluationReport() {
   assistantState.evaluation = await apiFetch(assistantApi("/evaluation/report"), { method: "POST" });
   renderEvaluation();
-  eventBus.emit("toast", t("rag.toast.reportReady"));
+  eventBus.emit("toast", t("assistant.toast.reportReady"));
 }
 
 async function saveAssistantSettings() {
@@ -338,7 +338,7 @@ async function saveAssistantSettings() {
     body: JSON.stringify(payload),
   });
   await loadProjectAssistant({ force: true });
-  eventBus.emit("toast", t("rag.toast.settingsSaved"));
+  eventBus.emit("toast", t("assistant.toast.settingsSaved"));
 }
 
 function renderStatus() {
@@ -347,12 +347,12 @@ function renderStatus() {
   const kb = status.knowledge_base || {};
   setText("#rag-status-model", workspace.model_state || "--");
   const assistantEnabled = workspace.assistant_enabled ?? workspace.rag_enabled ?? true;
-  setText("#rag-status-mode", assistantEnabled ? t("rag.mode.localSearch") : t("rag.mode.disabled"));
+  setText("#rag-status-mode", assistantEnabled ? t("assistant.mode.localSearch") : t("assistant.mode.disabled"));
   setText("#rag-status-documents", kb.document_count ?? 0);
   setText("#rag-status-chunks", `${kb.indexed_chunk_count ?? 0}/${kb.chunk_count ?? 0}`);
   setText("#rag-status-index", formatIndexState(kb.index_state));
-  setText("#rag-kb-badge", t("rag.docCount", { count: kb.document_count ?? 0 }));
-  setText("#rag-agent-count", t("rag.runCount", { count: assistantState.agentRuns.length }));
+  setText("#rag-kb-badge", t("assistant.docCount", { count: kb.document_count ?? 0 }));
+  setText("#rag-agent-count", t("assistant.runCount", { count: assistantState.agentRuns.length }));
 }
 
 function renderSettings() {
@@ -376,10 +376,10 @@ function renderSettings() {
 
 function formatAssistantMode(mode) {
   const labels = {
-    disabled: t("rag.settings.mode.disabled"),
-    local_search_only: t("rag.settings.mode.localSearch"),
-    local_gguf: t("rag.settings.mode.localGguf"),
-    cloud_api: t("rag.settings.mode.cloudApi"),
+    disabled: t("assistant.settings.mode.disabled"),
+    local_search_only: t("assistant.settings.mode.localSearch"),
+    local_gguf: t("assistant.settings.mode.localGguf"),
+    cloud_api: t("assistant.settings.mode.cloudApi"),
   };
   return labels[mode] || mode || "--";
 }
@@ -390,22 +390,22 @@ function renderKnowledgeBase() {
     ? docs.map((doc) => `
       <article class="assistant-document-card">
         <strong>${escapeHtml(doc.filename)}</strong>
-        <span>${escapeHtml(t("rag.chunkCount", { count: doc.chunk_count || 0 }))}</span>
+        <span>${escapeHtml(t("assistant.chunkCount", { count: doc.chunk_count || 0 }))}</span>
         <code>${escapeHtml(formatIndexState(doc.index_state))}</code>
       </article>
     `).join("")
-    : `<div class="empty-state">${escapeHtml(t("rag.noDocuments"))}</div>`;
+    : `<div class="empty-state">${escapeHtml(t("assistant.noDocuments"))}</div>`;
   setHTML("#rag-document-list", html);
 }
 
 function formatIndexState(state) {
   const normalized = String(state || "unknown").toLowerCase();
   const labels = {
-    empty: t("rag.indexState.empty"),
-    indexed: t("rag.indexState.indexed"),
-    ready: t("rag.indexState.ready"),
-    stale: t("rag.indexState.stale"),
-    unknown: t("rag.indexState.unknown"),
+    empty: t("assistant.indexState.empty"),
+    indexed: t("assistant.indexState.indexed"),
+    ready: t("assistant.indexState.ready"),
+    stale: t("assistant.indexState.stale"),
+    unknown: t("assistant.indexState.unknown"),
   };
   return labels[normalized] || state || "--";
 }
@@ -438,13 +438,13 @@ function renderRetrievalResults() {
 
 function renderChatResult() {
   const run = assistantState.lastRun;
-  setHTML("#rag-chat-answer", run?.answer ? escapeHtml(run.answer).replaceAll("\n", "<br>") : escapeHtml(t("rag.noAnswer")));
+  setHTML("#rag-chat-answer", run?.answer ? escapeHtml(run.answer).replaceAll("\n", "<br>") : escapeHtml(t("assistant.noAnswer")));
   setHTML("#rag-chat-sources", renderSourceList(run?.sources || []));
   setHTML("#rag-agent-trace", renderAgentTrace(run?.agent_trace || []));
 }
 
 function renderSourceList(sources = [], { allowMark = false, query = "" } = {}) {
-  if (!sources.length) return `<div class="empty-state">${escapeHtml(t("rag.noSources"))}</div>`;
+  if (!sources.length) return `<div class="empty-state">${escapeHtml(t("assistant.noSources"))}</div>`;
   return sources.map((source) => `
     <article class="assistant-source-card">
       <div class="assistant-source-head">
@@ -453,7 +453,7 @@ function renderSourceList(sources = [], { allowMark = false, query = "" } = {}) 
         <code>${escapeHtml(String(source.score ?? "--"))}</code>
       </div>
       <p>${escapeHtml(source.content || "")}</p>
-      ${allowMark ? `<button class="btn btn-secondary btn-sm" data-rag-mark-bad="${escapeHtml(source.chunk_id)}" data-rag-query="${escapeHtml(query)}">${escapeHtml(t("rag.markBad"))}</button>` : ""}
+      ${allowMark ? `<button class="btn btn-secondary btn-sm" data-rag-mark-bad="${escapeHtml(source.chunk_id)}" data-rag-query="${escapeHtml(query)}">${escapeHtml(t("assistant.markBad"))}</button>` : ""}
     </article>
   `).join("");
 }
@@ -471,7 +471,7 @@ function bindSourceMarkButtons() {
           note: "Marked from Source Search",
         }),
       });
-      eventBus.emit("toast", t("rag.toast.marked"));
+      eventBus.emit("toast", t("assistant.toast.marked"));
     }, { once: true });
   });
 }
@@ -485,7 +485,7 @@ function assistantApi(path) {
 }
 
 function renderAgentTrace(steps = []) {
-  if (!steps.length) return `<div class="empty-state">${escapeHtml(t("rag.noTrace"))}</div>`;
+  if (!steps.length) return `<div class="empty-state">${escapeHtml(t("assistant.noTrace"))}</div>`;
   return steps.map((step) => `
     <div class="assistant-agent-step ${escapeHtml(step.state || "pending")}">
       <strong>${escapeHtml(step.step || "--")}</strong>
@@ -499,9 +499,9 @@ function renderAgentRuns() {
     <article class="assistant-run-card">
       <strong>${escapeHtml(run.run_id)}</strong>
       <span>${escapeHtml(run.query || "")}</span>
-      <code>${escapeHtml(t("rag.sourceCount", { count: run.sources?.length || 0 }))}</code>
+      <code>${escapeHtml(t("assistant.sourceCount", { count: run.sources?.length || 0 }))}</code>
     </article>
-  `).join("") || `<div class="empty-state">${escapeHtml(t("rag.noRuns"))}</div>`);
+  `).join("") || `<div class="empty-state">${escapeHtml(t("assistant.noRuns"))}</div>`);
 }
 
 function renderSandbox() {
@@ -530,16 +530,16 @@ function renderSandboxEditor() {
 function renderEvaluation() {
   const report = assistantState.evaluation;
   if (!report) {
-    setHTML("#rag-evaluation-summary", `<div class="empty-state">${escapeHtml(t("rag.noReport"))}</div>`);
+    setHTML("#rag-evaluation-summary", `<div class="empty-state">${escapeHtml(t("assistant.noReport"))}</div>`);
     return;
   }
   setHTML("#rag-evaluation-summary", `
     <div class="assistant-eval-grid">
-      <div><span>${escapeHtml(t("rag.runs"))}</span><strong>${escapeHtml(report.run_count)}</strong></div>
-      <div><span>${escapeHtml(t("rag.citationCoverage"))}</span><strong>${escapeHtml(report.citation_coverage)}</strong></div>
-      <div><span>${escapeHtml(t("rag.sourceHitRate"))}</span><strong>${escapeHtml(report.source_hit_rate)}</strong></div>
-      <div><span>${escapeHtml(t("rag.latency"))}</span><strong>${escapeHtml(report.average_latency_ms)} ms</strong></div>
+      <div><span>${escapeHtml(t("assistant.runs"))}</span><strong>${escapeHtml(report.run_count)}</strong></div>
+      <div><span>${escapeHtml(t("assistant.citationCoverage"))}</span><strong>${escapeHtml(report.citation_coverage)}</strong></div>
+      <div><span>${escapeHtml(t("assistant.sourceHitRate"))}</span><strong>${escapeHtml(report.source_hit_rate)}</strong></div>
+      <div><span>${escapeHtml(t("assistant.latency"))}</span><strong>${escapeHtml(report.average_latency_ms)} ms</strong></div>
     </div>
-    <div class="path-row"><span>${escapeHtml(t("rag.reportPath"))}</span><code>${escapeHtml(report.report_path || "--")}</code></div>
+    <div class="path-row"><span>${escapeHtml(t("assistant.reportPath"))}</span><code>${escapeHtml(report.report_path || "--")}</code></div>
   `);
 }

@@ -84,6 +84,20 @@ class ApiRouteImportSmokeTests(unittest.TestCase):
         missing = EXPECTED_ROUTE_PATHS - registered_paths
         self.assertEqual(missing, set())
 
+    def test_legacy_rag_workbench_routes_are_deprecated(self):
+        schema = app.app.openapi()
+        paths = schema.get("paths", {})
+        legacy_paths = [path for path in EXPECTED_ROUTE_PATHS if path.startswith("/api/rag-workbench")]
+        self.assertGreater(len(legacy_paths), 0)
+        for path in legacy_paths:
+            with self.subTest(path=path):
+                operations = paths.get(path, {})
+                self.assertTrue(operations, f"{path} missing from OpenAPI schema")
+                self.assertTrue(
+                    all(operation.get("deprecated") is True for operation in operations.values()),
+                    f"{path} should be marked deprecated",
+                )
+
     def test_tests_do_not_patch_app_internal_symbols(self):
         tests_dir = Path(__file__).resolve().parent
         forbidden_patterns = [

@@ -33,6 +33,7 @@ class ScriptsContractTests(unittest.TestCase):
         self.assertIn("filter_submodules=keep_hidden_import", spec)
         self.assertIn("collect_submodules(package_name, filter=keep_hidden_import)", spec)
         self.assertIn('"xgboost.dask"', spec)
+        self.assertIn('"onnx.reference"', spec)
         self.assertIn('"bottle"', spec)
         self.assertNotIn('"bottle",\n    "xgboost"', spec)
 

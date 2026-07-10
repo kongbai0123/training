@@ -29,6 +29,14 @@ class I18nCatalogIntegrityTests(unittest.TestCase):
               console.error(JSON.stringify({ overrideOnly }));
               process.exit(2);
             }
+            if (en["assistant.title"] !== en["rag.title"]) {
+              console.error(JSON.stringify({ alias: "en.assistant.title" }));
+              process.exit(3);
+            }
+            if (zhTW["assistant.title"] !== zhTW["rag.title"]) {
+              console.error(JSON.stringify({ alias: "zhTW.assistant.title" }));
+              process.exit(4);
+            }
         """
         subprocess.run(
             ["node", "--input-type=module", "-e", check_script],

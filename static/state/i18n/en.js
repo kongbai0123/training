@@ -1478,3 +1478,11 @@
     "rnn.evaluation.sequence": "sequence",
     "rnn.evaluation.noSequenceRuns": "No sequence runs."
 };
+
+for (const key of Object.keys(en)) {
+  if (!key.startsWith("rag.")) continue;
+  const assistantKey = `assistant.${key.slice(4)}`;
+  if (!Object.prototype.hasOwnProperty.call(en, assistantKey)) {
+    en[assistantKey] = en[key];
+  }
+}

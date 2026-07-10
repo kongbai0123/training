@@ -18,6 +18,24 @@ function safeCatalogValue(dict, key, fallback) {
   return isSafeTranslationText(value) ? value : fallback;
 }
 
+function i18nAliasKeys(key) {
+  if (key.startsWith("assistant.")) {
+    return [key, `rag.${key.slice("assistant.".length)}`];
+  }
+  if (key.startsWith("rag.")) {
+    return [key, `assistant.${key.slice("rag.".length)}`];
+  }
+  return [key];
+}
+
+function catalogValue(dict, key, fallback) {
+  for (const candidate of i18nAliasKeys(key)) {
+    const value = safeCatalogValue(dict, candidate, undefined);
+    if (value !== undefined) return value;
+  }
+  return fallback;
+}
+
 function scheduleZhFallbackTranslations() {
   if (activeLanguage !== "zh-TW") return;
   if (zhFallbackScheduled) return;
@@ -51,8 +69,8 @@ export const i18n = {
 
 export function translate(key, language = "zh-TW", params = {}) {
   const lang = language === "en" ? "en" : "zh-TW";
-  const fallback = i18n.en?.[key] ?? key;
-  const template = safeCatalogValue(i18n[lang], key, fallback);
+  const fallback = catalogValue(i18n.en, key, key);
+  const template = catalogValue(i18n[lang], key, fallback);
   return String(template).replace(/\{(\w+)\}/g, (_, name) => params[name] ?? "");
 }
 
@@ -67,37 +85,37 @@ export function applyLanguageToDocument({ language, theme, translate }) {
   const dict = i18n[nextLanguage];
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     const key = el.dataset.i18n;
-    const value = safeCatalogValue(dict, key, i18n.en?.[key]);
+    const value = catalogValue(dict, key, catalogValue(i18n.en, key, undefined));
     if (!value) return;
     el.textContent = value;
   });
   document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
     const key = el.dataset.i18nPlaceholder;
-    const value = safeCatalogValue(dict, key, i18n.en?.[key]);
+    const value = catalogValue(dict, key, catalogValue(i18n.en, key, undefined));
     if (!value) return;
     el.setAttribute("placeholder", value);
   });
   document.querySelectorAll("[data-i18n-title]").forEach((el) => {
     const key = el.dataset.i18nTitle;
-    const value = safeCatalogValue(dict, key, i18n.en?.[key]);
+    const value = catalogValue(dict, key, catalogValue(i18n.en, key, undefined));
     if (!value) return;
     el.setAttribute("title", value);
   });
   document.querySelectorAll("[data-i18n-aria-label]").forEach((el) => {
     const key = el.dataset.i18nAriaLabel;
-    const value = safeCatalogValue(dict, key, i18n.en?.[key]);
+    const value = catalogValue(dict, key, catalogValue(i18n.en, key, undefined));
     if (!value) return;
     el.setAttribute("aria-label", value);
   });
   document.querySelectorAll("[data-i18n-alt]").forEach((el) => {
     const key = el.dataset.i18nAlt;
-    const value = safeCatalogValue(dict, key, i18n.en?.[key]);
+    const value = catalogValue(dict, key, catalogValue(i18n.en, key, undefined));
     if (!value) return;
     el.setAttribute("alt", value);
   });
   document.querySelectorAll("[data-i18n-tooltip]").forEach((el) => {
     const key = el.dataset.i18nTooltip;
-    const value = safeCatalogValue(dict, key, i18n.en?.[key]);
+    const value = catalogValue(dict, key, catalogValue(i18n.en, key, undefined));
     if (!value) return;
     el.dataset.tooltip = value;
   });
