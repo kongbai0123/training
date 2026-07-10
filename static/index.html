@@ -598,29 +598,39 @@
               </div>
             </section>
 
-            <section class="panel-section labelme-progress-panel">
-              <div class="section-title"><h2 data-i18n="labelme.progressTitle">Annotation Progress</h2></div>
-              <div class="labelme-progress-hero">
-                <strong id="labelme-completion-text">0%</strong>
-                <span data-i18n="labelme.completionRate">Completion rate</span>
-              </div>
-              <div class="progress-track"><div class="progress-fill" id="labelme-completion-bar"></div></div>
-              <div class="metric-grid labelme-metric-grid" id="labelme-progress-grid"></div>
-            </section>
-
-            <section class="panel-section labelme-import-report-panel">
+            <section class="panel-section labelme-overview-panel">
               <div class="section-title">
-                <h2 data-i18n="labelme.importReportTitle">Annotation Import Report</h2>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-import-report-modal">
-                  <i class="fa-solid fa-table-list"></i>
-                  <span data-i18n="labelme.importReportFull">Full report</span>
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-apply-annotation-import" disabled>
-                  <i class="fa-solid fa-check"></i>
-                  <span data-i18n="labelme.applyImportDraft">Apply valid drafts</span>
-                </button>
+                <div>
+                  <h2 data-i18n="labelme.overviewTitle">Annotation Overview</h2>
+                  <p class="section-help" data-i18n="labelme.overviewHelp">Review current coverage, annotation health, and the latest import outcome together.</p>
+                </div>
+                <div class="button-row labelme-overview-actions">
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-open-import-report-modal">
+                    <i class="fa-solid fa-table-list"></i>
+                    <span data-i18n="labelme.importReportFull">Full report</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-apply-annotation-import" disabled>
+                    <i class="fa-solid fa-check"></i>
+                    <span data-i18n="labelme.applyImportDraft">Apply valid drafts</span>
+                  </button>
+                </div>
               </div>
-              <div id="annotation-import-report" class="annotation-import-report"></div>
+              <div class="labelme-overview-grid">
+                <div class="labelme-overview-completion">
+                  <span class="labelme-overview-kicker" data-i18n="labelme.completionRate">Completion rate</span>
+                  <strong id="labelme-completion-text">0%</strong>
+                  <span id="labelme-completion-count" class="labelme-completion-count">0 / 0</span>
+                  <div class="progress-track"><div class="progress-fill" id="labelme-completion-bar"></div></div>
+                </div>
+                <div class="labelme-overview-summary">
+                  <div class="labelme-overview-group-heading">
+                    <strong data-i18n="labelme.annotationAndImport">Annotation and latest import</strong>
+                    <span class="badge badge-muted" id="labelme-import-status">--</span>
+                  </div>
+                  <div id="annotation-import-report" class="annotation-import-report"></div>
+                  <div class="labelme-health-summary" id="labelme-health-summary"></div>
+                </div>
+              </div>
             </section>
 
             <section class="panel-section labelme-review-panel">

@@ -441,18 +441,24 @@ export function renderLabelMeManager(status) {
   const emptyJsons = labelmeProgress.empty_jsons_list || [];
   const unknownLabelsDetail = labelmeProgress.unknown_labels_detail || {};
 
-  const metrics = [
-    [t("labelme.metric.totalImages"), status.labelme.totalImages],
-    [t("labelme.metric.jsonFiles"), status.labelme.jsonCount],
-    [t("labelme.metric.missingJson"), status.labelme.missingJson],
-    [t("labelme.metric.emptyJson"), labelmeProgress.empty_json || 0],
-    [t("labelme.metric.unknownLabels"), labelmeProgress.unknown_labels ? labelmeProgress.unknown_labels.length : 0],
-    [t("labelme.metric.invalidJson"), labelmeProgress.invalid_json || 0]
-  ];
-  setHTML("#labelme-progress-grid", metrics.map(([label, value]) => `
-    <div class="metric-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
-  `).join(""));
   setText("#labelme-completion-text", `${status.labelme.completionRate}%`);
+  setText("#labelme-completion-count", t("labelme.completionCount", {
+    annotated: status.labelme.jsonCount || 0,
+    total: status.labelme.totalImages || 0
+  }));
+  const healthValues = {
+    missing: Number(status.labelme.missingJson || 0),
+    empty: Number(labelmeProgress.empty_json || 0),
+    unknown: Number(labelmeProgress.unknown_labels?.length || 0),
+    invalid: Number(labelmeProgress.invalid_json || 0)
+  };
+  const hasHealthIssues = Object.values(healthValues).some((value) => value > 0);
+  setHTML("#labelme-health-summary", `
+    <i class="fa-solid ${hasHealthIssues ? "fa-triangle-exclamation" : "fa-circle-check"}"></i>
+    <span>${escapeHtml(t("labelme.healthSummary", healthValues))}</span>
+  `);
+  qs("#labelme-health-summary")?.classList.toggle("is-warning", hasHealthIssues);
+  qs("#labelme-health-summary")?.classList.toggle("is-ready", !hasHealthIssues);
   const bar = qs("#labelme-completion-bar");
   if (bar) bar.style.width = `${status.labelme.completionRate}%`;
   renderAnnotationImportReport();
@@ -585,6 +591,7 @@ function renderAnnotationImportReport() {
   const report = appState.latestAnnotationImport || appState.currentProject?.last_annotation_import;
   const container = qs("#annotation-import-report");
   const applyBtn = qs("#btn-apply-annotation-import");
+  const importStatus = qs("#labelme-import-status");
   if (!container) return;
 
   if (!report?.import_id) {
@@ -593,6 +600,10 @@ function renderAnnotationImportReport() {
         <p>${escapeHtml(t("labelme.importReportEmpty"))}</p>
       </div>
     `);
+    if (importStatus) {
+      importStatus.className = "badge badge-muted";
+      importStatus.textContent = t("labelme.import.none");
+    }
     if (applyBtn) applyBtn.disabled = true;
     return;
   }
@@ -603,76 +614,46 @@ function renderAnnotationImportReport() {
   const errors = report.errors || [];
   if (applyBtn) applyBtn.disabled = converted === 0;
 
-  const metrics = [
+  const overviewMetrics = [
     [t("labelme.import.metric.txt"), report.yolo_txt || 0],
     [t("labelme.import.metric.csv"), report.csv || 0],
     [t("labelme.import.metric.json"), report.labelme_json || 0],
-    ["COCO JSON", report.coco_json || 0],
-    ["VOC XML", report.voc_xml || 0],
-    ["Mask PNG", report.mask_png || 0],
+    [t("labelme.import.metric.coco"), report.coco_json || 0],
+    [t("labelme.import.metric.voc"), report.voc_xml || 0],
+    [t("labelme.import.metric.mask"), report.mask_png || 0],
     [t("labelme.import.metric.converted"), converted],
     [t("labelme.import.metric.failed"), failed],
-    ["Applied shapes", report.applied_count ?? 0],
-    ["Skipped duplicates", report.skipped_duplicates ?? 0]
+    [t("labelme.import.metric.applied"), report.applied_count ?? 0],
+    [t("labelme.import.metric.duplicates"), report.skipped_duplicates ?? 0]
   ];
   const issueRows = [...errors, ...warnings];
-  const convertedFiles = report.converted_files || [];
   const isApplied = !!report.applied_at;
   const scanTime = appState.currentProject?.labelme_progress?.last_sync_at || "";
+  if (importStatus) {
+    importStatus.className = `badge ${failed > 0 || issueRows.length > 0 ? "badge-warning" : isApplied ? "badge-success" : "badge-muted"}`;
+    importStatus.textContent = isApplied ? t("labelme.import.statusApplied") : t("labelme.import.statusDraft");
+  }
 
   setHTML("#annotation-import-report", `
-    <div class="annotation-import-summary">
-      ${metrics.map(([label, value]) => `
-        <div class="project-file-metric">
+    <div class="annotation-overview-metric-grid">
+      ${overviewMetrics.map(([label, value]) => `
+        <div class="annotation-import-metric">
           <span>${escapeHtml(label)}</span>
           <strong>${escapeHtml(value)}</strong>
         </div>
       `).join("")}
     </div>
-    <div class="annotation-import-meta">
-      <span>${escapeHtml(t("labelme.import.status"))}: <strong>${escapeHtml(isApplied ? t("labelme.import.statusApplied") : t("labelme.import.statusDraft"))}</strong></span>
-      <span>${escapeHtml(t("labelme.importReportId"))}: <code>${escapeHtml(report.import_id)}</code></span>
+    <div class="annotation-import-meta compact">
       <span>${escapeHtml(t("labelme.importReportCreated"))}: ${escapeHtml(report.created_at || "--")}</span>
       <span>${escapeHtml(t("labelme.import.lastScan"))}: ${escapeHtml(scanTime || t("labelme.import.notScanned"))}</span>
     </div>
-    <details class="annotation-import-details">
-      <summary>View detailed report</summary>
-      <div class="table-wrap compact-table">
-        <table class="data-table">
-          <thead>
-            <tr><th>Output</th><th>Source</th><th>Format</th><th>Shapes</th><th>Added</th><th>Duplicates</th></tr>
-          </thead>
-          <tbody>
-            ${convertedFiles.length ? convertedFiles.map((item) => `
-              <tr>
-                <td><code>${escapeHtml(item.file || "--")}</code></td>
-                <td>${escapeHtml(item.source_file || "--")}</td>
-                <td>${escapeHtml(item.source_format || "--")}</td>
-                <td>${escapeHtml(item.shape_count ?? "--")}</td>
-                <td>${escapeHtml(item.added_shapes ?? "--")}</td>
-                <td>${escapeHtml(item.duplicate_shapes ?? 0)}</td>
-              </tr>
-            `).join("") : `<tr><td colspan="6">No converted files.</td></tr>`}
-          </tbody>
-        </table>
-      </div>
-    </details>
-    <button type="button" class="btn btn-secondary btn-sm" id="btn-open-import-report-modal-inline">Open full report</button>
-    ${issueRows.length ? `
-      <div class="annotation-import-issues">
-        ${issueRows.slice(0, 12).map((item) => `
-          <div class="summary-warning-item">
-            <strong>${escapeHtml(item.file || "--")}</strong>
-            <span>${escapeHtml(item.message || "")}</span>
-            ${failedTxtDeleteButton(item)}
-          </div>
-        `).join("")}
-        ${issueRows.length > 12 ? `<p class="form-hint">Showing 12 of ${issueRows.length} issues. See import_report.json for the full list.</p>` : ""}
-      </div>
-    ` : `<p class="form-hint ready">${escapeHtml(t("labelme.importReportNoIssues"))}</p>`}
+    <div class="annotation-import-status-line ${issueRows.length ? "is-warning" : "is-ready"}">
+      <i class="fa-solid ${issueRows.length ? "fa-triangle-exclamation" : "fa-circle-check"}"></i>
+      <span>${escapeHtml(issueRows.length
+        ? t("labelme.import.issueSummary", { count: issueRows.length })
+        : t("labelme.importReportNoIssues"))}</span>
+    </div>
   `);
-  qs("#btn-open-import-report-modal-inline")?.addEventListener("click", openImportReportModal);
-  bindDeleteFailedTxtButtons(container);
 }
 
 function draftImportMap() {

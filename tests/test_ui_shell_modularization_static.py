@@ -6,6 +6,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class UIShellModularizationStaticTests(unittest.TestCase):
+    def test_labelme_overview_combines_progress_and_latest_import(self):
+        index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        labelme_js = (ROOT / "static" / "pages" / "labelme.js").read_text(encoding="utf-8")
+        labelme_css = (ROOT / "static" / "styles" / "pages" / "labelme.css").read_text(encoding="utf-8")
+
+        self.assertIn('class="labelme-overview-completion"', index_html)
+        self.assertIn('class="labelme-overview-summary"', index_html)
+        self.assertNotIn('class="labelme-overview-health"', index_html)
+        self.assertIn('class="annotation-overview-metric-grid"', labelme_js)
+        self.assertIn("grid-template-columns: repeat(5, minmax(0, 1fr));", labelme_css)
+
     def test_style_shell_delegates_design_tokens_to_styles_module(self):
         style_css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
         tokens_css = (ROOT / "static" / "styles" / "tokens.css").read_text(encoding="utf-8")
@@ -322,16 +333,17 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(labelme_css, r"(?m)^\.labelme-step-card \{")
         self.assertRegex(labelme_css, r"(?m)^\.labelme-drop-zone \{")
         self.assertRegex(labelme_css, r"(?m)^\.labelme-path-list \.path-row \{")
-        self.assertRegex(labelme_css, r"(?m)^\.labelme-progress-hero \{")
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-overview-grid \{")
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-overview-completion \{")
+        self.assertRegex(labelme_css, r"(?m)^\.labelme-overview-summary \{")
         self.assertRegex(labelme_css, r"(?m)^\.labelme-review-table \{")
         self.assertRegex(labelme_css, r"(?m)^\.labelme-export-details \{")
         self.assertRegex(labelme_css, r"(?m)^\.annotation-import-report \{")
-        self.assertRegex(labelme_css, r"(?m)^\.annotation-import-summary \{")
+        self.assertRegex(labelme_css, r"(?m)^\.annotation-overview-metric-grid \{")
         self.assertRegex(labelme_css, r"(?m)^\.annotation-import-meta \{")
         self.assertRegex(labelme_css, r"(?m)^\.csv-mapping-wizard \{")
         self.assertRegex(labelme_css, r"(?m)^\.csv-file-mapping \{")
         self.assertRegex(labelme_css, r"(?m)^\.csv-map-field \{")
-        self.assertRegex(labelme_css, r"(?m)^\.annotation-import-details \{")
         self.assertRegex(labelme_css, r"(?m)^\.annotation-import-report-modal-content \{")
         self.assertRegex(labelme_css, r"(?m)^\.modal-report-table \{")
         self.assertRegex(labelme_css, r"(?m)^\.labelme-conversion-grid \{")
