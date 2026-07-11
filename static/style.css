@@ -12,6 +12,7 @@
 @import "./styles/pages/history.css";
 @import "./styles/pages/dataset.css";
 @import "./styles/pages/labelme.css";
+@import "./styles/pages/split.css";
 @import "./styles/pages/training.css";
 @import "./styles/pages/rnn_training.css";
 @import "./styles/pages/augmentation.css";

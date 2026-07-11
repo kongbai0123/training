@@ -77,6 +77,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/history.css";\n'
                 '@import "./styles/pages/dataset.css";\n'
                 '@import "./styles/pages/labelme.css";\n'
+                '@import "./styles/pages/split.css";\n'
                 '@import "./styles/pages/training.css";\n'
                 '@import "./styles/pages/rnn_training.css";\n'
                 '@import "./styles/pages/augmentation.css";\n'

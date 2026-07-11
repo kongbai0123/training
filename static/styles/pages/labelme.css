@@ -33,8 +33,10 @@
 .labelme-step-strip,
 .labelme-overview-panel,
 .labelme-review-panel,
+.labelme-preview-card,
 .labelme-export-card {
   grid-column: 1 / -1;
+  min-width: 0;
 }
 
 .labelme-import-panel,
@@ -249,7 +251,8 @@ body[data-theme="light"] .labelme-step-card {
 }
 
 .labelme-preview-card .preview-panel {
-  min-height: 300px;
+  width: 100%;
+  min-height: 320px;
 }
 
 .labelme-export-details {

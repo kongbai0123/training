@@ -104,6 +104,7 @@ class ExportService:
                 "onnx_path": summary["onnx_abs_path"],
                 "summary_path": summary["summary_abs_path"],
                 "export_type": "cnn_onnx",
+                "validation": summary.get("validation", {}),
             }
         if normalized_format == "pt":
             best_pt = cls.resolve_exportable_weight(project, run_id=run_id, model_id=model_id)
@@ -278,6 +279,7 @@ class ExportService:
         export_onnx = exports_onnx_dir / "best.onnx"
         shutil.copy(str(best_pt), str(export_pt))
         shutil.copy(str(best_onnx), str(export_onnx))
+        cls._validate_onnx_graph(export_onnx)
 
         summary = {
             "export_id": export_id,
@@ -289,6 +291,11 @@ class ExportService:
             "pt_abs_path": str(export_pt.resolve().as_posix()),
             "onnx_abs_path": str(export_onnx.resolve().as_posix()),
             "summary_abs_path": str((export_dir / "summary.json").resolve().as_posix()),
+            "validation": {
+                "graph_check": "passed",
+                "precision": "fp32",
+                "numerical_equivalence": "not_run",
+            },
         }
         if run_id:
             summary["run_id"] = run_id
@@ -301,6 +308,16 @@ class ExportService:
         project["current"]["export_id"] = export_id
         ProjectManager.save_project(project_id, project)
         return summary
+
+    @staticmethod
+    def _validate_onnx_graph(onnx_path: Path) -> None:
+        try:
+            import onnx
+
+            model = onnx.load(str(onnx_path))
+            onnx.checker.check_model(model)
+        except Exception as exc:
+            raise ExportServiceError(f"Generated ONNX graph failed validation: {exc}") from exc
 
     @classmethod
     def export_rnn_package(
@@ -600,6 +617,7 @@ class ExportService:
             "summary_abs_path": summary.get("summary_abs_path") or summary_path.resolve().as_posix(),
             "file_count": len(files),
             "files": files[:8],
+            "validation": summary.get("validation") if isinstance(summary.get("validation"), dict) else {},
         }
 
 

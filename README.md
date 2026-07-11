@@ -52,6 +52,19 @@
   </tr>
 </table>
 
+<table>
+  <tr>
+    <td width="50%"><strong>LabelMe 標註與品質審查</strong></td>
+    <td width="50%"><strong>資料分割與分布預覽</strong></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/labelme-workspace.png" alt="LabelMe 標註管理與預覽介面"></td>
+    <td><img src="docs/assets/split-management.png" alt="資料分割管理與樣本分布預覽介面"></td>
+  </tr>
+</table>
+
+ONNX 預設保留 FP32，匯出時會檢查計算圖完整性；模型準確度與資料集指標仍以來源 Run 的「評估」頁為準，避免把格式轉換誤當成重新評估。
+
 ## 使用流程
 
 ```text

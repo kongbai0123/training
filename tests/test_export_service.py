@@ -42,6 +42,7 @@ class ExportServiceTests(unittest.TestCase):
 
     def test_export_project_model_writes_export_summary_and_updates_current(self):
         with patch("src.training.export_service.YOLO", FakeYOLO), \
+             patch.object(ExportService, "_validate_onnx_graph", return_value=None) as validate_graph, \
              patch("src.training.export_service.ProjectManager.save_project", return_value=True) as save_project:
             payload = ExportService.export_project_model("proj_export", self.project, run_id="run_a", export_format="onnx")
 
@@ -52,6 +53,9 @@ class ExportServiceTests(unittest.TestCase):
         self.assertTrue(Path(payload["onnx_path"]).exists())
         self.assertEqual(Path(payload["onnx_path"]).read_bytes(), b"fake-onnx")
         self.assertEqual(self.project["current"]["export_id"], payload["export_id"])
+        self.assertEqual(payload["validation"]["graph_check"], "passed")
+        self.assertEqual(payload["validation"]["precision"], "fp32")
+        validate_graph.assert_called_once()
         save_project.assert_called_once()
 
     def test_export_project_model_can_copy_cnn_pt_without_onnx_conversion(self):

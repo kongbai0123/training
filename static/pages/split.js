@@ -7,10 +7,12 @@ let isBalancingSplitRatios = false;
 
 export function initSplit() {
   ["train", "val", "test"].forEach((key) => {
-    qs(`#input-ratio-${key}`)?.addEventListener("input", () => rebalanceSplitRatios(key));
-    qs(`#input-ratio-${key}`)?.addEventListener("change", () => rebalanceSplitRatios(key));
+    qs(`#input-ratio-${key}`)?.addEventListener("input", () => { rebalanceSplitRatios(key); renderSplitPreview(); });
+    qs(`#input-ratio-${key}`)?.addEventListener("change", () => { rebalanceSplitRatios(key); renderSplitPreview(); });
   });
+  qs("#split-method")?.addEventListener("change", renderSplitPreview);
   updateSplitRatioTotal();
+  renderSplitPreview();
 
   qs("#form-split-dataset")?.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -65,11 +67,41 @@ export function initSplit() {
 }
 
 export function renderSplitPage(status) {
+  renderSplitPreview();
   if (appState.currentProject?.split_report) {
     renderSplitReportUI(appState.currentProject.split_report);
   } else if (!status.splitComplete) {
     setHTML("#split-report-card", "");
   }
+}
+
+function renderSplitPreview() {
+  const project = appState.currentProject || {};
+  const images = Array.isArray(project.images) ? project.images : [];
+  const total = images.length || Number(project.image_count || project.dataset_count || 0);
+  const annotated = images.length
+    ? images.filter((item) => item?.annotated || item?.annotation_path || item?.json_path).length
+    : Number(project.annotated_count || 0);
+  const eligible = annotated || total;
+  const ratios = [
+    ["train", Number(qs("#input-ratio-train")?.value) || 0],
+    ["val", Number(qs("#input-ratio-val")?.value) || 0],
+    ["test", Number(qs("#input-ratio-test")?.value) || 0]
+  ];
+  setHTML("#split-distribution-preview", ratios.map(([key, ratio]) => `
+    <div class="split-distribution-row">
+      <strong>${escapeHtml(t(`split.${key}`))}</strong>
+      <div class="split-distribution-track"><div class="split-distribution-fill" style="width:${Math.min(100, ratio)}%"></div></div>
+      <span class="split-distribution-value">${ratio}% · ${Math.round(eligible * ratio / 100)}</span>
+    </div>
+  `).join(""));
+  const excluded = Math.max(0, total - eligible);
+  const method = qs("#split-method")?.value || "stratified";
+  setHTML("#split-readiness-summary", `
+    <div class="split-readiness-item"><span>${escapeHtml(t("split.eligible"))}</span><strong>${eligible}</strong></div>
+    <div class="split-readiness-item"><span>${escapeHtml(t("split.excluded"))}</span><strong>${excluded}</strong></div>
+    <div class="split-readiness-item"><span>${escapeHtml(t("split.leakageControl"))}</span><strong>${escapeHtml(t(`split.risk.${method}`))}</strong></div>
+  `);
 }
 
 function renderSplitReportUI(report) {

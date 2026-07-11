@@ -689,7 +689,8 @@
               <p data-i18n="split.subtitle">Create Train / Val / Test splits and check split quality and leakage risk.</p>
             </div>
           </div>
-          <section class="panel-section narrow-form">
+          <div class="split-workspace">
+          <section class="panel-section split-config-panel">
             <div class="section-title"><h2 data-i18n="split.formTitle">Train / Val / Test Settings</h2></div>
             <form id="form-split-dataset" class="form-stack">
               <label>
@@ -711,6 +712,12 @@
             </form>
             <div id="split-report-card" class="report-box"></div>
           </section>
+          <section class="panel-section split-preview-panel">
+            <div class="section-title"><div><h2 data-i18n="split.previewTitle">Distribution Preview</h2><p class="section-subtitle" data-i18n="split.previewHelp">Estimated allocation before files are written.</p></div></div>
+            <div id="split-distribution-preview" class="split-distribution-preview"></div>
+            <div id="split-readiness-summary" class="split-readiness-summary"></div>
+          </section>
+          </div>
         </section>
 
         <section class="page" id="page-augmentation">
@@ -2191,6 +2198,11 @@
             <article class="control-card"><div class="card-heading"><i class="fa-solid fa-file-lines"></i><h3 data-i18n="export.reportTitle">Report</h3></div><p data-i18n="export.reportHelp">Generate a Markdown project and training report.</p><button class="btn btn-secondary guarded" data-requires="project" id="btn-export-report" data-i18n="export.report">Generate Report</button></article>
             <article class="control-card muted"><div class="card-heading"><i class="fa-solid fa-bolt"></i><h3>TensorRT <span class="info-icon" data-tooltip="TensorRT can accelerate inference on NVIDIA GPUs but requires compatible GPU, driver, and conversion backend." data-i18n-tooltip="export.tensorRtTooltip">i</span></h3></div><p data-i18n="export.tensorRtHelp">Phase 2 backend required.</p><button class="btn btn-disabled" disabled data-i18n="export.tensorrt">Export TensorRT</button></article>
           </div>
+          <section class="panel-section export-validation-strip" id="export-cnn-validation">
+            <div><i class="fa-solid fa-gauge-high"></i><strong data-i18n="export.precisionTitle">Precision</strong><span data-i18n="export.precisionHelp">FP32 is preserved; export does not silently quantize the model.</span></div>
+            <div><i class="fa-solid fa-circle-check"></i><strong data-i18n="export.graphTitle">Graph check</strong><span data-i18n="export.graphHelp">The generated ONNX graph is checked before delivery.</span></div>
+            <div><i class="fa-solid fa-chart-line"></i><strong data-i18n="export.qualityTitle">Model quality</strong><span data-i18n="export.qualityHelp">Accuracy remains tied to the source run and is reviewed on Evaluation.</span><button type="button" class="btn btn-secondary btn-compact" data-nav="evaluation" data-i18n="export.openEvaluation">Open Evaluation</button></div>
+          </section>
           <div class="control-card-grid compact" id="export-rnn-actions" hidden>
             <article class="control-card"><div class="card-heading"><i class="fa-solid fa-box-archive"></i><h3 data-i18n="export.rnnPackageTitle">Model Package ZIP</h3></div><p data-i18n="export.rnnPackageHelp">Export model weights with schema, scaler, metrics, diagnostics, and runtime contract.</p><button class="btn btn-primary guarded" data-requires="project" id="btn-export-rnn-package" data-export-format="rnn_package" data-i18n="export.rnnPackageAction">Export Package ZIP</button></article>
             <article class="control-card"><div class="card-heading"><i class="fa-solid fa-file-contract"></i><h3 data-i18n="export.rnnContractTitle">Inference Contract</h3></div><p data-i18n="export.rnnContractHelp">Export the JSON contract required by downstream sequence inference clients.</p><button class="btn btn-secondary guarded" data-requires="project" id="btn-export-rnn-contract" data-export-format="rnn_contract" data-i18n="export.rnnContractAction">Export Contract</button></article>

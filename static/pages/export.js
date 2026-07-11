@@ -55,9 +55,11 @@ function updateButtonStates() {
   const isRnn = isRnnProject(appState.currentProject);
   const cnnActions = qs("#export-cnn-actions");
   const rnnActions = qs("#export-rnn-actions");
+  const cnnValidation = qs("#export-cnn-validation");
 
   if (cnnActions) cnnActions.hidden = isRnn;
   if (rnnActions) rnnActions.hidden = !isRnn;
+  if (cnnValidation) cnnValidation.hidden = isRnn;
 
   qsa("[data-export-format]").forEach((button) => {
     const visibleGroup = button.closest("#export-rnn-actions, #export-cnn-actions");
@@ -172,12 +174,20 @@ function renderExportResult() {
       <span>${escapeHtml(t("rnn.export.resultRun"))}: <strong>${escapeHtml(result.run_id || "--")}</strong></span>
       <span>${escapeHtml(t("rnn.export.resultCreated"))}: <strong>${escapeHtml(formatDateTime(result.created_at))}</strong></span>
       <span>${escapeHtml(t("export.summaryFile"))}: <code>${escapeHtml(result.summary_path || result.summary_abs_path || "--")}</code></span>
+      ${renderExportValidation(result.validation)}
     </div>
   `;
   if (badge) {
     badge.className = "summary-badge badge-success";
     badge.textContent = t("export.exportedBadge");
   }
+}
+
+function renderExportValidation(validation) {
+  if (!validation || typeof validation !== "object" || !Object.keys(validation).length) return "";
+  const graph = validation.graph_check === "passed" ? t("export.graphPassed") : (validation.graph_check || "--");
+  const precision = String(validation.precision || "--").toUpperCase();
+  return `<span>${escapeHtml(t("export.validationSummary", { graph, precision }))}</span>`;
 }
 
 function renderExportArtifacts() {
