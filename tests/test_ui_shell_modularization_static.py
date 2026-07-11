@@ -76,11 +76,11 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/dashboard.css";\n'
                 '@import "./styles/pages/history.css";\n'
                 '@import "./styles/pages/dataset.css";\n'
-                '@import "./styles/pages/labelme.css";\n'
-                '@import "./styles/pages/split.css";\n'
+                '@import "./styles/pages/labelme.css?v=20260711-layout-export-precision";\n'
+                '@import "./styles/pages/split.css?v=20260711-layout-export-precision";\n'
                 '@import "./styles/pages/training.css";\n'
                 '@import "./styles/pages/rnn_training.css";\n'
-                '@import "./styles/pages/augmentation.css";\n'
+                '@import "./styles/pages/augmentation.css?v=20260711-layout-export-precision";\n'
                 '@import "./styles/pages/model_compare.css";\n'
                 '@import "./styles/pages/inference.css";\n'
                 '@import "./styles/pages/auto_labeling.css";\n'
@@ -800,7 +800,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         tooltip_js = (ROOT / "static" / "core" / "tooltip.js").read_text(encoding="utf-8")
         project_lifecycle_js = (ROOT / "static" / "core" / "project_lifecycle.js").read_text(encoding="utf-8")
 
-        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260710-training-i18n-ux";', app_js)
+        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260711-layout-export-precision";', app_js)
         self.assertIn("bootstrapApp().catch", app_js)
         self.assertNotIn("bindGlobalNavigation", app_js)
         self.assertNotIn("function navigate", app_js)
@@ -815,7 +815,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn('from "./right_panel.js?v=20260708-rnn-feature-wizard"', bootstrap_js)
         self.assertIn('from "./tooltip.js"', bootstrap_js)
         self.assertIn('from "./project_lifecycle.js"', bootstrap_js)
-        self.assertIn('from "./page_registry.js?v=20260710-training-i18n-ux"', bootstrap_js)
+        self.assertIn('from "./page_registry.js?v=20260711-layout-export-precision"', bootstrap_js)
         self.assertIn("createProjectLifecycle({ renderAll, navigate });", bootstrap_js)
         self.assertIn("export async function bootstrapApp()", bootstrap_js)
         self.assertIn("initPageModules();", bootstrap_js)

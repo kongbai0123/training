@@ -23,7 +23,7 @@ import {
   initPageModules,
   renderPrimaryPageModules,
   renderSecondaryPageModules,
-} from "./page_registry.js?v=20260710-training-i18n-ux";
+} from "./page_registry.js?v=20260711-layout-export-precision";
 
 const {
   bootstrapSession,

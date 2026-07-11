@@ -11,11 +11,11 @@
 @import "./styles/pages/dashboard.css";
 @import "./styles/pages/history.css";
 @import "./styles/pages/dataset.css";
-@import "./styles/pages/labelme.css";
-@import "./styles/pages/split.css";
+@import "./styles/pages/labelme.css?v=20260711-layout-export-precision";
+@import "./styles/pages/split.css?v=20260711-layout-export-precision";
 @import "./styles/pages/training.css";
 @import "./styles/pages/rnn_training.css";
-@import "./styles/pages/augmentation.css";
+@import "./styles/pages/augmentation.css?v=20260711-layout-export-precision";
 @import "./styles/pages/model_compare.css";
 @import "./styles/pages/inference.css";
 @import "./styles/pages/auto_labeling.css";

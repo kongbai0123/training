@@ -26,7 +26,7 @@ class ExportPageStaticTests(unittest.TestCase):
         self.assertIn('data-export-format="rnn_schema_scaler"', index_html)
         self.assertIn('id="export-result-panel"', index_html)
         self.assertIn('id="export-artifact-list"', index_html)
-        self.assertIn('import { initExport, renderExportPage } from "../pages/export.js?v=20260709-export-artifacts";', page_registry_js)
+        self.assertIn('import { initExport, renderExportPage } from "../pages/export.js?v=20260711-layout-export-precision";', page_registry_js)
         self.assertIn("function isRnnProject(project)", export_js)
         self.assertIn("cnnActions.hidden = isRnn", export_js)
         self.assertIn("rnnActions.hidden = !isRnn", export_js)
