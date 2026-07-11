@@ -3,14 +3,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.training.export_service import ExportService, ExportableModelNotFound
+from src.training.export_service import ExportService, ExportServiceError, ExportableModelNotFound
 
 
 class FakeYOLO:
     def __init__(self, weight_path: str):
         self.weight_path = Path(weight_path)
 
-    def export(self, format: str):
+    def export(self, format: str, **kwargs):
         if format != "onnx":
             raise ValueError("unexpected export format")
         self.weight_path.with_suffix(".onnx").write_bytes(b"fake-onnx")
@@ -57,6 +57,22 @@ class ExportServiceTests(unittest.TestCase):
         self.assertEqual(payload["validation"]["precision"], "fp32")
         validate_graph.assert_called_once()
         save_project.assert_called_once()
+
+    def test_export_project_model_supports_fp16_onnx(self):
+        with patch("src.training.export_service.YOLO", FakeYOLO), \
+             patch.object(ExportService, "_validate_onnx_graph", return_value=None), \
+             patch("src.training.export_service.ProjectManager.save_project", return_value=True):
+            payload = ExportService.export_project_model(
+                "proj_export", self.project, run_id="run_a", export_format="onnx", precision="fp16"
+            )
+
+        self.assertEqual(payload["validation"]["precision"], "fp16")
+
+    def test_export_project_model_rejects_uncalibrated_int8(self):
+        with self.assertRaisesRegex(ExportServiceError, "calibrated export workflow"):
+            ExportService.export_project_model(
+                "proj_export", self.project, run_id="run_a", export_format="onnx", precision="int8"
+            )
 
     def test_export_project_model_can_copy_cnn_pt_without_onnx_conversion(self):
         with patch("src.training.export_service.ProjectManager.save_project", return_value=True):

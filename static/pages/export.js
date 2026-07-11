@@ -130,6 +130,7 @@ async function exportModel(format = "auto") {
   const params = new URLSearchParams();
   if (selectedModelId) params.set("model_id", selectedModelId);
   if (format) params.set("format", format);
+  if (format === "onnx") params.set("precision", qs("#export-onnx-precision")?.value || "fp32");
   const query = params.toString();
   const url = `/api/projects/${appState.currentProjectId}/export${query ? `?${query}` : ""}`;
 

@@ -986,6 +986,8 @@ export const zhTWOverrides = {
   "export.onnxAction": "匯出 ONNX",
   "export.onnxTooltip": "ONNX 是跨框架模型格式，可供 ONNX Runtime 或其他部署工具使用。",
   "export.precisionTitle": "精度策略",
+  "export.precisionLabel": "匯出精度",
+  "export.int8Calibration": "INT8（需要校正資料）",
   "export.precisionHelp": "保留 FP32，不在匯出時暗中量化模型。",
   "export.graphTitle": "格式檢查",
   "export.graphHelp": "交付前檢查產生的 ONNX 計算圖。",

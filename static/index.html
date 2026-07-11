@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260710-training-i18n-ux">
+  <link rel="stylesheet" href="/static/style.css?v=20260711-layout-export-precision">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -2193,7 +2193,7 @@
             </article>
           </div>
           <div class="control-card-grid compact" id="export-cnn-actions">
-            <article class="control-card"><div class="card-heading"><i class="fa-solid fa-diagram-project"></i><h3>ONNX <span class="info-icon" data-tooltip="ONNX is a cross-framework model format for ONNX Runtime or other deployment tools." data-i18n-tooltip="export.onnxTooltip">i</span></h3></div><p data-i18n="export.onnxHelp">Export ONNX for cross-platform inference and ONNX Runtime.</p><button class="btn btn-primary guarded" data-requires="project" id="btn-export-cnn-onnx" data-export-format="onnx" data-i18n="export.onnxAction">Export ONNX</button></article>
+            <article class="control-card"><div class="card-heading"><i class="fa-solid fa-diagram-project"></i><h3>ONNX <span class="info-icon" data-tooltip="ONNX is a cross-framework model format for ONNX Runtime or other deployment tools." data-i18n-tooltip="export.onnxTooltip">i</span></h3></div><p data-i18n="export.onnxHelp">Export ONNX for cross-platform inference and ONNX Runtime.</p><label class="export-precision-field"><span data-i18n="export.precisionLabel">Export precision</span><select id="export-onnx-precision"><option value="fp32">FP32</option><option value="fp16">FP16</option><option value="int8" disabled data-i18n="export.int8Calibration">INT8 (calibration required)</option></select></label><button class="btn btn-primary guarded" data-requires="project" id="btn-export-cnn-onnx" data-export-format="onnx" data-i18n="export.onnxAction">Export ONNX</button></article>
             <article class="control-card"><div class="card-heading"><i class="fa-solid fa-file-code"></i><h3 data-i18n="export.ptCopyTitle">PT Copy</h3></div><p data-i18n="export.ptHelp">Export PyTorch .pt weights for Python / Ultralytics workflows.</p><button class="btn btn-secondary guarded" data-requires="project" id="btn-export-cnn-pt" data-export-format="pt" data-i18n="export.ptAction">Copy PT</button></article>
             <article class="control-card"><div class="card-heading"><i class="fa-solid fa-file-lines"></i><h3 data-i18n="export.reportTitle">Report</h3></div><p data-i18n="export.reportHelp">Generate a Markdown project and training report.</p><button class="btn btn-secondary guarded" data-requires="project" id="btn-export-report" data-i18n="export.report">Generate Report</button></article>
             <article class="control-card muted"><div class="card-heading"><i class="fa-solid fa-bolt"></i><h3>TensorRT <span class="info-icon" data-tooltip="TensorRT can accelerate inference on NVIDIA GPUs but requires compatible GPU, driver, and conversion backend." data-i18n-tooltip="export.tensorRtTooltip">i</span></h3></div><p data-i18n="export.tensorRtHelp">Phase 2 backend required.</p><button class="btn btn-disabled" disabled data-i18n="export.tensorrt">Export TensorRT</button></article>
@@ -2715,7 +2715,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260710-training-i18n-ux"></script>
+  <script type="module" src="/static/app.js?v=20260711-layout-export-precision"></script>
 </body>
 </html>
 

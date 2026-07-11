@@ -51,6 +51,7 @@ class ExportService:
         run_id: Optional[str] = None,
         model_id: Optional[str] = None,
         export_format: Optional[str] = None,
+        precision: Optional[str] = None,
     ) -> Dict[str, Any]:
         layout = ProjectLayout.from_project(project)
         normalized_format = cls._normalize_export_format(export_format)
@@ -94,7 +95,7 @@ class ExportService:
 
         if normalized_format in {"auto", "onnx"}:
             best_pt = cls.resolve_exportable_weight(project, run_id=run_id, model_id=model_id)
-            summary = cls.export_weight_to_onnx(project_id, project, layout, best_pt, run_id=run_id)
+            summary = cls.export_weight_to_onnx(project_id, project, layout, best_pt, run_id=run_id, precision=precision)
             return {
                 "success": True,
                 "export_id": summary["export_id"],
@@ -259,10 +260,14 @@ class ExportService:
         best_pt: Path,
         *,
         run_id: Optional[str] = None,
+        precision: Optional[str] = None,
     ) -> Dict[str, Any]:
+        normalized_precision = str(precision or "fp32").strip().lower()
+        if normalized_precision not in {"fp32", "fp16"}:
+            raise ExportServiceError("ONNX precision must be fp32 or fp16; INT8 requires a calibrated export workflow.")
         try:
             model_obj = YOLO(str(best_pt.resolve()))
-            model_obj.export(format="onnx")
+            model_obj.export(format="onnx", half=normalized_precision == "fp16")
         except Exception as exc:
             raise ExportServiceError(f"Failed to export ONNX model: {exc}")
 
@@ -293,7 +298,7 @@ class ExportService:
             "summary_abs_path": str((export_dir / "summary.json").resolve().as_posix()),
             "validation": {
                 "graph_check": "passed",
-                "precision": "fp32",
+                "precision": normalized_precision,
                 "numerical_equivalence": "not_run",
             },
         }

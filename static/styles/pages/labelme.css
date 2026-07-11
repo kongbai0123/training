@@ -255,6 +255,12 @@ body[data-theme="light"] .labelme-step-card {
   min-height: 320px;
 }
 
+#page-labelme .labelme-clean-layout > .labelme-preview-card {
+  grid-column: 1 / -1 !important;
+  width: 100%;
+  max-width: none;
+}
+
 .labelme-export-details {
   border: 1px solid var(--border);
   border-radius: var(--radius);

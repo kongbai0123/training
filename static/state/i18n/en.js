@@ -799,6 +799,8 @@
     "export.onnxAction": "Export ONNX",
     "export.onnxTooltip": "ONNX is a cross-framework model format for ONNX Runtime or other deployment tools.",
     "export.precisionTitle": "Precision",
+    "export.precisionLabel": "Export precision",
+    "export.int8Calibration": "INT8 (calibration required)",
     "export.precisionHelp": "FP32 is preserved; export does not silently quantize the model.",
     "export.graphTitle": "Graph check",
     "export.graphHelp": "The generated ONNX graph is checked before delivery.",

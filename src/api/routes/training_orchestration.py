@@ -226,6 +226,7 @@ def export_model(
     run_id: Optional[str] = None,
     model_id: Optional[str] = None,
     format: Optional[str] = None,
+    precision: Optional[str] = None,
 ):
     require_feature("export_onnx")()
     project = ProjectManager.get_project(project_id)
@@ -239,6 +240,7 @@ def export_model(
             run_id=run_id,
             model_id=model_id,
             export_format=format,
+            precision=precision,
         )
     except ExportableModelNotFound as exc:
         raise HTTPException(status_code=400, detail=str(exc))

@@ -386,17 +386,22 @@ body[data-theme="light"] .aug-preview-box h4 {
 
 .augmentation-console-grid {
   display: grid;
-  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
 }
 
 .augmentation-policy-column,
 .augmentation-preview-column {
-  display: grid;
-  gap: 14px;
-  min-width: 0;
+  display: contents;
 }
+
+.augmentation-policy-column > .panel-section:first-child { grid-column: 1; grid-row: 1; }
+.augmentation-policy-column > #aug-settings-panel { grid-column: 2; grid-row: 1; }
+.augmentation-preview-column > .aug-job-history-card { grid-column: 3; grid-row: 1; }
+.augmentation-preview-column > .panel-section:first-child { grid-column: 1 / -1; grid-row: 2; min-width: 0; }
+
+.augmentation-console-grid > * > .panel-section { height: 100%; min-width: 0; }
 
 .preset-list.compact {
   grid-template-columns: 1fr;
@@ -727,6 +732,11 @@ body[data-theme="light"] .aug-preview-box h4 {
 }
 
 @media (max-width: 980px) {
+  .augmentation-console-grid { grid-template-columns: 1fr; }
+  .augmentation-policy-column > .panel-section:first-child,
+  .augmentation-policy-column > #aug-settings-panel,
+  .augmentation-preview-column > .aug-job-history-card,
+  .augmentation-preview-column > .panel-section:first-child { grid-column: 1; grid-row: auto; }
   .augmentation-console-grid {
     grid-template-columns: 1fr;
   }

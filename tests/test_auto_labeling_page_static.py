@@ -52,7 +52,7 @@ class AutoLabelingPageStaticTests(unittest.TestCase):
         auto_labeling_css = (ROOT / "static" / "styles" / "pages" / "auto_labeling.css").read_text(encoding="utf-8")
         auto_labeling_js = (ROOT / "static" / "pages" / "auto_labeling.js").read_text(encoding="utf-8")
 
-        self.assertIn("/static/style.css?v=20260710-training-i18n-ux", index_html)
+        self.assertIn("/static/style.css?v=20260711-layout-export-precision", index_html)
         self.assertIn('data-i18n="autoLabel.executionConsole"', index_html)
         self.assertIn('data-i18n="autoLabel.executionConsoleHelp"', index_html)
         self.assertIn('data-i18n="autoLabel.reviewWorkspaceHelp"', index_html)
