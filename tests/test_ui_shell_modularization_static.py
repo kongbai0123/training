@@ -31,6 +31,8 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertNotIn('class="labelme-overview-health"', index_html)
         self.assertIn('class="annotation-overview-metric-grid"', labelme_js)
         self.assertIn("grid-template-columns: repeat(5, minmax(0, 1fr));", labelme_css)
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", labelme_css)
+        self.assertNotIn(".labelme-step-strip,\n.labelme-import-panel,", labelme_css)
 
     def test_style_shell_delegates_design_tokens_to_styles_module(self):
         style_css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
