@@ -217,11 +217,11 @@ input:checked + .switch-slider:before {
   transform: translateX(22px);
 }
 
-/* Stacked Preview Layout */
 .aug-preview-container {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
   width: 100%;
   margin-top: 8px;
 }
@@ -262,8 +262,8 @@ body[data-theme="light"] .aug-preview-box h4 {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 220px;
-  max-height: 300px;
+  min-height: 390px;
+  max-height: 520px;
   padding: 12px;
   position: relative;
   overflow: hidden;
@@ -272,9 +272,20 @@ body[data-theme="light"] .aug-preview-box h4 {
 .aug-preview-content canvas,
 .aug-preview-content img {
   max-width: 100%;
-  max-height: 270px;
+  max-height: 490px;
   object-fit: contain;
   border-radius: 4px;
+}
+
+.aug-preview-box:first-child .aug-preview-content {
+  min-height: 170px;
+  max-height: 220px;
+  padding: 8px;
+}
+
+.aug-preview-box:first-child .aug-preview-content canvas,
+.aug-preview-box:first-child .aug-preview-content img {
+  max-height: 194px;
 }
 
 /* Info Box */
@@ -766,6 +777,9 @@ body[data-theme="light"] .aug-preview-box h4 {
   .aug-preset-detail div {
     grid-template-columns: 1fr;
   }
+
+  .aug-preview-container { grid-template-columns: 1fr; }
+  .aug-preview-box:first-child { max-width: none; }
 }
 
 @media (max-width: 840px) {
