@@ -126,12 +126,15 @@ installer/    Windows installer 設定
 docs/         安裝、使用、架構、部署與疑難排解
 ```
 
+完整目錄用途、runtime data tree 與 source / packaged / portable 路徑解析方式，請見 [專案資料樹與路徑規範](docs/PROJECT_STRUCTURE.md)。
+
 ## 文件
 
 - [安裝指南](docs/INSTALL.md)
 - [使用者指南](docs/USER_GUIDE.md)
 - [開發者指南](docs/DEVELOPER_GUIDE.md)
 - [架構文件](docs/ARCHITECTURE.md)
+- [專案資料樹與路徑規範](docs/PROJECT_STRUCTURE.md)
 - [部署與打包](docs/DEPLOYMENT.md)
 - [測試規範](docs/TESTING_GUIDELINES.md)
 - [乾淨 Windows 驗證](docs/CLEAN_MACHINE_VALIDATION.md)
