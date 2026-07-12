@@ -159,12 +159,30 @@ function renderGuide() {
   const models = filteredModels();
   if (!models.some((model) => model.model_id === guideState.selectedId)) guideState.selectedId = models[0]?.model_id || "";
   const selected = selectedModel();
+  renderTaskExplainer();
   renderContext(models);
   renderList(models);
   renderDetail(selected);
   renderDecision(selected);
   renderCharts(selected);
   renderReport();
+}
+
+function renderTaskExplainer() {
+  const host = qs("#model-guide-task-explainer");
+  if (!host) return;
+  const task = qs("#model-guide-task")?.value || "all";
+  const definitions = {
+    all: ["fa-layer-group", "modelGuide.taskAllTitle", "modelGuide.taskAllDescription", "modelGuide.taskAllExamples", "modelGuide.taskAllMetrics"],
+    detection: ["fa-object-group", "modelGuide.detectionTitle", "modelGuide.detectionDescription", "modelGuide.detectionExamples", "modelGuide.detectionMetrics"],
+    segmentation: ["fa-draw-polygon", "modelGuide.segmentationTitle", "modelGuide.segmentationDescription", "modelGuide.segmentationExamples", "modelGuide.segmentationMetrics"],
+    sequence_classification: ["fa-tags", "modelGuide.classificationTitle", "modelGuide.classificationDescription", "modelGuide.classificationExamples", "modelGuide.classificationMetrics"],
+    sequence_regression: ["fa-chart-line", "modelGuide.regressionTitle", "modelGuide.regressionDescription", "modelGuide.regressionExamples", "modelGuide.regressionMetrics"],
+  };
+  const [icon, title, description, examples, metrics] = definitions[task] || definitions.all;
+  host.innerHTML = `
+    <div class="model-guide-task-intro"><i class="fa-solid ${icon}"></i><span><strong>${escapeHtml(t(title))}</strong><small>${escapeHtml(t(description))}</small></span></div>
+    <dl><div><dt>${escapeHtml(t("modelGuide.typicalOutput"))}</dt><dd>${escapeHtml(t(examples))}</dd></div><div><dt>${escapeHtml(t("modelGuide.commonMetrics"))}</dt><dd class="no-i18n">${escapeHtml(t(metrics))}</dd></div></dl>`;
 }
 
 function renderContext(models) {

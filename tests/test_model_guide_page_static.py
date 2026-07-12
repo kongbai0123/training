@@ -48,6 +48,17 @@ class ModelGuidePageStaticTests(unittest.TestCase):
         self.assertIn("grid-template-columns: minmax(250px, 28%)", css)
         self.assertIn("@media (max-width: 800px)", css)
 
+    def test_task_selector_explains_classifier_and_regressor_outputs(self):
+        html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        module = (ROOT / "static" / "pages" / "model_guide.js").read_text(encoding="utf-8")
+        zh_tw = (ROOT / "static" / "state" / "i18n" / "zh-TW.js").read_text(encoding="utf-8")
+        self.assertIn('id="model-guide-task-explainer"', html)
+        self.assertIn('data-i18n="modelGuide.classificationChoice"', html)
+        self.assertIn('data-i18n="modelGuide.regressionChoice"', html)
+        self.assertIn("function renderTaskExplainer()", module)
+        self.assertIn('"modelGuide.classificationDescription"', zh_tw)
+        self.assertIn('"modelGuide.regressionDescription"', zh_tw)
+
     def test_i18n_audit_distinguishes_technical_identifiers(self):
         audit = (ROOT / "scripts" / "i18n_dom_audit.mjs").read_text(encoding="utf-8")
         self.assertIn('parent.closest(".no-i18n, [data-i18n-ignore]")', audit)

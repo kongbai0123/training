@@ -32,6 +32,62 @@
   min-height: 36px;
 }
 
+.model-guide-task-explainer {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.2fr) minmax(380px, 1fr);
+  align-items: center;
+  gap: 16px;
+  margin: calc(var(--guide-gap) * -0.35) 0 var(--guide-gap);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.model-guide-task-intro {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.model-guide-task-intro > i {
+  color: var(--accent);
+  font-size: 17px;
+}
+
+.model-guide-task-intro span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.model-guide-task-intro small,
+.model-guide-task-explainer dt {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.model-guide-task-explainer dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.model-guide-task-explainer dl > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.model-guide-task-explainer dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
 .model-guide-context-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -323,6 +379,7 @@
 
 @media (max-width: 800px) {
   .model-guide-toolbar,
+  .model-guide-task-explainer,
   .model-guide-context-strip,
   .model-guide-workspace,
   .model-guide-pros-cons,
@@ -330,4 +387,5 @@
   .model-guide-detail-panel,
   .model-guide-decision-panel { border-top: 1px solid var(--border); border-left: 0; }
   .model-guide-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .model-guide-task-explainer dl { grid-template-columns: 1fr; }
 }

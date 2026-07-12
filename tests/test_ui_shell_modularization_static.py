@@ -88,7 +88,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/evaluation.css";\n'
                 '@import "./styles/pages/project_assistant.css";\n'
                 '@import "./styles/pages/model_setup.css";\n'
-                '@import "./styles/pages/model_guide.css?v=20260712-model-guide-report";\n'
+                '@import "./styles/pages/model_guide.css?v=20260713-model-guide-task-explainer";\n'
                 '@import "./styles/shared.css";'
             )
         )
@@ -806,7 +806,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         tooltip_js = (ROOT / "static" / "core" / "tooltip.js").read_text(encoding="utf-8")
         project_lifecycle_js = (ROOT / "static" / "core" / "project_lifecycle.js").read_text(encoding="utf-8")
 
-        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260712-model-guide-report4";', app_js)
+        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260713-model-guide-task-explainer";', app_js)
         self.assertIn("syncPageModeForProject(null, requestedPage);", bootstrap_js)
         self.assertIn("bootstrapApp().catch", app_js)
         self.assertNotIn("bindGlobalNavigation", app_js)
@@ -822,7 +822,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn('from "./right_panel.js?v=20260708-rnn-feature-wizard"', bootstrap_js)
         self.assertIn('from "./tooltip.js"', bootstrap_js)
         self.assertIn('from "./project_lifecycle.js"', bootstrap_js)
-        self.assertIn('from "./page_registry.js?v=20260712-model-guide-report4"', bootstrap_js)
+        self.assertIn('from "./page_registry.js?v=20260713-model-guide-task-explainer"', bootstrap_js)
         self.assertIn("createProjectLifecycle({ renderAll, navigate });", bootstrap_js)
         self.assertIn("export async function bootstrapApp()", bootstrap_js)
         self.assertIn("initPageModules();", bootstrap_js)

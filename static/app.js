@@ -1,5 +1,5 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js?v=20260712-model-guide-report4";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260713-model-guide-task-explainer";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

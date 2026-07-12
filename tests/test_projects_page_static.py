@@ -42,8 +42,8 @@ class ProjectsPageStaticTests(unittest.TestCase):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("../pages/projects.js?v=20260709-project-open-delegation", page_registry_js)
-        self.assertIn("./core/bootstrap.js?v=20260712-model-guide-report4", app_js)
-        self.assertIn("/static/app.js?v=20260712-model-guide-report4", index_html)
+        self.assertIn("./core/bootstrap.js?v=20260713-model-guide-task-explainer", app_js)
+        self.assertIn("/static/app.js?v=20260713-model-guide-task-explainer", index_html)
 
 
 if __name__ == "__main__":

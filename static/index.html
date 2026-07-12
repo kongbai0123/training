@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260712-model-guide-report">
+  <link rel="stylesheet" href="/static/style.css?v=20260713-model-guide-task-explainer">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -2267,11 +2267,13 @@
 
           <section class="model-guide-toolbar" aria-label="Model guide filters" data-i18n-aria-label="modelGuide.filtersAria">
             <label><span data-i18n="modelGuide.architecture">架構</span><select id="model-guide-architecture"><option value="all" data-i18n="common.all">全部</option><option value="cnn">CNN</option><option value="rnn">RNN</option></select></label>
-            <label><span data-i18n="modelGuide.task">任務類型</span><select id="model-guide-task"><option value="all" data-i18n="common.all">全部</option><option value="detection" data-i18n="modelSetup.detection">物件偵測</option><option value="segmentation" data-i18n="modelSetup.segmentation">影像分割</option><option value="sequence_classification" data-i18n="modelGuide.sequenceClassification">序列分類</option><option value="sequence_regression" data-i18n="modelGuide.sequenceRegression">序列回歸</option></select></label>
+            <label><span data-i18n="modelGuide.task">任務類型</span><select id="model-guide-task"><option value="all" data-i18n="modelGuide.taskAll">全部任務</option><option value="detection" data-i18n="modelGuide.detectionChoice">物件偵測 - 找出物件位置與類別</option><option value="segmentation" data-i18n="modelGuide.segmentationChoice">影像分割 - 找出物件輪廓與類別</option><option value="sequence_classification" data-i18n="modelGuide.classificationChoice">序列分類 - 預測類別</option><option value="sequence_regression" data-i18n="modelGuide.regressionChoice">序列回歸 - 預測連續數值</option></select></label>
             <label><span data-i18n="modelGuide.family">模型家族</span><select id="model-guide-family"><option value="all" data-i18n="common.all">全部</option></select></label>
             <label><span data-i18n="modelGuide.objective">選型偏好</span><select id="model-guide-objective"><option value="speed" data-i18n="modelGuide.speed">速度</option><option value="balanced" selected data-i18n="modelGuide.balanced">平衡</option><option value="accuracy" data-i18n="modelGuide.accuracy">精度</option></select></label>
             <label class="model-guide-search"><span data-i18n="common.search">搜尋</span><input type="search" id="model-guide-search" data-i18n-placeholder="modelGuide.searchPlaceholder" placeholder="搜尋模型名稱"></label>
           </section>
+
+          <section class="model-guide-task-explainer" id="model-guide-task-explainer" aria-live="polite"></section>
 
           <section class="model-guide-context-strip">
             <div><span data-i18n="modelGuide.hardware">目前硬體</span><strong class="no-i18n" id="model-guide-hardware">--</strong></div>
@@ -2837,7 +2839,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260712-model-guide-report4"></script>
+  <script type="module" src="/static/app.js?v=20260713-model-guide-task-explainer"></script>
 </body>
 </html>
 
