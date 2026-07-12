@@ -973,6 +973,7 @@
                         </select>
                       </label>
                     </div>
+                    <div class="training-profile-guide" id="training-profile-guide" aria-live="polite"></div>
                   </section>
                   <div class="training-model-registry-shell">
                     <div class="model-registry-header">
@@ -990,7 +991,7 @@
                       </div>
                     </div>
                     <label>
-                      <span><span data-i18n="training.model">Model</span> <span class="info-icon" data-tooltip="Select a model compatible with the current project task. Segmentation projects should use a segmentation model." data-i18n-tooltip="training.modelTooltip">i</span></span>
+                        <span><span data-i18n="training.model">Model</span> <span class="info-icon" data-tooltip="Model selection guide; Match the project task: Detection finds boxes, Segmentation finds masks; Recommended means the default balance for the current task and hardware; An incompatible model cannot start training" data-i18n-tooltip="training.modelTooltip">i</span></span>
                       <select id="train-model">
                         <option value="yolov8n-seg.pt" data-i18n="training.modelOption.yolov8nSeg">YOLOv8n Segmentation (Recommended)</option>
                         <option value="yolov8s-seg.pt" data-i18n="training.modelOption.yolov8sSeg">YOLOv8s Segmentation</option>
@@ -1002,7 +1003,7 @@
                     <details class="training-model-details">
                       <summary>
                         <span data-i18n="training.modelRegistry.selected">Selected</span>
-                        <strong id="training-model-selected-name">--</strong>
+                        <strong class="no-i18n" id="training-model-selected-name">--</strong>
                         <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
                       </summary>
                       <div class="training-model-registry-card" id="training-model-registry-card">
@@ -1050,6 +1051,7 @@
                         <span><span data-i18n="training.imgsz">Image Size</span> <span class="info-icon" data-tooltip="Input image size for training. Higher sizes may improve detail but use more memory." data-i18n-tooltip="training.imgszTooltip">i</span></span>
                         <select id="train-imgsz">
                           <option value="320">320</option>
+                          <option value="512">512</option>
                           <option value="640" selected>640</option>
                           <option value="768">768</option>
                           <option value="960">960</option>

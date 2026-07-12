@@ -56,9 +56,15 @@ export function initTraining() {
     qs("#config-advanced-fields")?.classList.remove("hidden");
   });
 
-  ["#train-model", "#train-batch", "#train-imgsz", "#train-device", "#train-profile"].forEach((selector) => {
+  ["#train-model", "#train-batch", "#train-imgsz", "#train-device"].forEach((selector) => {
     qs(selector)?.addEventListener("change", () => renderTrainingMonitor());
   });
+  qs("#train-profile")?.addEventListener("change", (event) => {
+    applyTrainingProfile(event.target.value);
+    renderTrainingProfileGuide();
+    renderTrainingMonitor();
+  });
+  renderTrainingProfileGuide();
   qs("#btn-training-open-model-hub")?.addEventListener("click", () => {
     openModelImportModal();
   });
@@ -220,8 +226,53 @@ export function initTraining() {
     if (appState.trainingStatus?.status === "training") startMonitorWebSocket();
   });
   eventBus.on("start-training-monitor", () => startMonitorWebSocket());
-  eventBus.on("language-changed", () => renderTrainingMonitor());
+  eventBus.on("language-changed", () => {
+    renderTrainingProfileGuide();
+    renderTrainingMonitor();
+  });
   eventBus.on("state-changed", () => loadTrainingModelCatalog());
+}
+
+const TRAINING_PROFILES = {
+  balanced: { epochs: 50, batch: 8, imgsz: 640, patience: 20 },
+  quick: { epochs: 5, batch: 4, imgsz: 512, patience: 5 },
+  accuracy: { epochs: 100, batch: 4, imgsz: 768, patience: 30 },
+};
+
+function applyTrainingProfile(profile) {
+  const preset = TRAINING_PROFILES[profile];
+  if (!preset) return;
+  Object.entries({
+    "#train-epochs": preset.epochs,
+    "#train-batch": preset.batch,
+    "#train-imgsz": preset.imgsz,
+    "#train-patience": preset.patience,
+  }).forEach(([selector, value]) => {
+    const field = qs(selector);
+    if (!field) return;
+    field.value = String(value);
+    field.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
+function renderTrainingProfileGuide() {
+  const host = qs("#training-profile-guide");
+  if (!host) return;
+  const profile = qs("#train-profile")?.value || "balanced";
+  const keys = {
+    balanced: ["fa-scale-balanced", "training.profileBalanced", "training.profileBalancedUse", "training.profileBalancedBenefit", "training.profileBalancedCaution", "50 / 8 / 640 / 20"],
+    quick: ["fa-bolt", "training.profileQuick", "training.profileQuickUse", "training.profileQuickBenefit", "training.profileQuickCaution", "5 / 4 / 512 / 5"],
+    accuracy: ["fa-bullseye", "training.profileAccuracy", "training.profileAccuracyUse", "training.profileAccuracyBenefit", "training.profileAccuracyCaution", "100 / 4 / 768 / 30"],
+    custom: ["fa-sliders", "training.profileCustom", "training.profileCustomUse", "training.profileCustomBenefit", "training.profileCustomCaution", t("training.profileCustomValues")],
+  };
+  const [icon, title, use, benefit, caution, values] = keys[profile] || keys.balanced;
+  host.innerHTML = `
+    <div class="training-profile-guide-title"><i class="fa-solid ${icon}"></i><span><strong>${escapeHtml(t(title))}</strong><small>${escapeHtml(t(use))}</small></span></div>
+    <ul>
+      <li><strong>${escapeHtml(t("training.profileParameters"))}</strong><span class="no-i18n">${escapeHtml(values)}</span></li>
+      <li><strong>${escapeHtml(t("training.profileBenefit"))}</strong><span>${escapeHtml(t(benefit))}</span></li>
+      <li><strong>${escapeHtml(t("training.profileCaution"))}</strong><span>${escapeHtml(t(caution))}</span></li>
+    </ul>`;
 }
 
 async function loadTrainingModelCatalog(force = false) {

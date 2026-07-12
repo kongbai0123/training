@@ -75,6 +75,16 @@ class TrainingI18nUxStaticTests(unittest.TestCase):
         self.assertNotIn("raw.githubusercontent.com", self.training_js)
         self.assertIn('t("training.reportImageUnavailable")', self.training_js)
 
+    def test_training_profiles_apply_presets_and_explain_tradeoffs(self):
+        self.assertIn('id="training-profile-guide"', self.index_html)
+        self.assertIn("const TRAINING_PROFILES", self.training_js)
+        self.assertIn("function applyTrainingProfile(profile)", self.training_js)
+        self.assertIn("function renderTrainingProfileGuide()", self.training_js)
+        self.assertIn('"#train-epochs": preset.epochs', self.training_js)
+        self.assertIn('"training.profileQuickCaution"', self.zh_catalog)
+        self.assertIn('"training.profileAccuracyBenefit"', self.zh_catalog)
+        self.assertIn(".training-profile-guide {", self.training_css)
+
 
 if __name__ == "__main__":
     unittest.main()

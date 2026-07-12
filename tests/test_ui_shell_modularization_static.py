@@ -79,7 +79,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/dataset.css";\n'
                 '@import "./styles/pages/labelme.css?v=20260711-layout-export-precision";\n'
                 '@import "./styles/pages/split.css?v=20260711-layout-export-precision";\n'
-                '@import "./styles/pages/training.css";\n'
+                '@import "./styles/pages/training.css?v=20260713-training-profile-guide";\n'
                 '@import "./styles/pages/rnn_training.css";\n'
                 '@import "./styles/pages/augmentation.css?v=20260711-augmentation-preview-focus";\n'
                 '@import "./styles/pages/model_compare.css";\n'

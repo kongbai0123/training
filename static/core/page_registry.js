@@ -5,7 +5,7 @@ import { initDataset, renderDatasetPage } from "../pages/dataset.js?v=20260630-p
 import { initLabelMe, renderLabelMeManager } from "../pages/labelme.js?v=20260711-layout-export-precision";
 import { initSplit, renderSplitPage } from "../pages/split.js";
 import { initAugmentation, renderAugmentationPage } from "../pages/augmentation.js?v=20260711-layout-export-precision";
-import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "../pages/training.js?v=20260712-unlocked-visible-training";
+import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "../pages/training.js?v=20260713-training-profile-guide";
 import {
   initTrainingModeSidebar,
   renderTrainingModeSidebar,
