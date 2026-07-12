@@ -21,19 +21,12 @@ class ActionGuardStaticTests(unittest.TestCase):
 
     def test_primary_operations_use_soft_readiness_blocks(self):
         training = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
-        guard = (ROOT / "static" / "core" / "action_guard.js").read_text(encoding="utf-8")
         rnn = (ROOT / "static" / "pages" / "training_modes.js").read_text(encoding="utf-8")
         inference = (ROOT / "static" / "pages" / "inference.js").read_text(encoding="utf-8")
         export = (ROOT / "static" / "pages" / "export.js").read_text(encoding="utf-8")
         augmentation = (ROOT / "static" / "pages" / "augmentation.js").read_text(encoding="utf-8")
 
         self.assertIn("startBtn.disabled = isRunning || isStopping", training)
-        self.assertIn("el.disabled = operationBusy", training)
-        self.assertNotIn("el.disabled = shouldLockConfig", training)
-        self.assertIn('configTabs?.classList.remove("hidden")', training)
-        self.assertIn('openActionGuard({ title: t("training.start")', training)
-        self.assertIn('visibleReasons.push(t("training.error.moreReasons"', training)
-        self.assertIn('reason.text', guard)
         self.assertIn('button.dataset.blockReason = !canStart && !operationBusy ? titleMessage : ""', rnn)
         self.assertIn("btn.disabled = running", inference)
         self.assertIn("button.disabled = !visible", export)

@@ -52,11 +52,7 @@ export function openActionGuard({ title, reasons = [], actions = [] }) {
   const modal = qs("#action-guard-modal");
   if (!modal) return;
   qs("#action-guard-operation").textContent = title;
-  qs("#action-guard-reasons").innerHTML = reasons
-    .map((reason) => typeof reason === "object" && reason ? reason.text : reason)
-    .filter(Boolean)
-    .map((reason) => `<li>${escapeHtml(String(reason))}</li>`)
-    .join("");
+  qs("#action-guard-reasons").innerHTML = reasons.map((reason) => `<li>${escapeHtml(reason)}</li>`).join("");
   qs("#action-guard-actions").innerHTML = actions.map(([page, label]) => `<button type="button" class="btn btn-secondary" data-action-guard-nav="${escapeHtml(page)}">${escapeHtml(t(label))}</button>`).join("");
   modal.hidden = false;
 }

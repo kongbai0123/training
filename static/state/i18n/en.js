@@ -1356,7 +1356,6 @@
     "training.toast.blocked": "Training is blocked. Fix readiness blockers first.",
     "training.toast.started": "Training started.",
     "training.toast.startFailed": "Failed to start training: {message}",
-    "training.error.moreReasons": "{count} additional validation issues are available in the project logs.",
     "training.toast.stopSent": "Stop request sent. Waiting for training process to exit.",
     "training.toast.stopFailed": "Failed to stop training: {message}",
     "training.toast.abortSent": "Training aborted and progress HUD was closed.",

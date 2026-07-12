@@ -844,7 +844,6 @@ export const zhTWOverrides = {
   "training.abort": "中止",
   "training.toast.started": "訓練已啟動。",
   "training.toast.startFailed": "無法啟動訓練：{message}",
-  "training.error.moreReasons": "另有 {count} 項驗證問題，完整內容可在專案日誌查看。",
   "training.toast.stopSent": "已送出停止訓練要求。",
   "training.toast.stopFailed": "無法停止訓練：{message}",
   "training.toast.abortSent": "已送出中止訓練要求。",
