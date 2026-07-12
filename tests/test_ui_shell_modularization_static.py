@@ -800,7 +800,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         tooltip_js = (ROOT / "static" / "core" / "tooltip.js").read_text(encoding="utf-8")
         project_lifecycle_js = (ROOT / "static" / "core" / "project_lifecycle.js").read_text(encoding="utf-8")
 
-        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260711-layout-export-precision";', app_js)
+        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260712-unlocked-training-config";', app_js)
         self.assertIn("bootstrapApp().catch", app_js)
         self.assertNotIn("bindGlobalNavigation", app_js)
         self.assertNotIn("function navigate", app_js)

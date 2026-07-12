@@ -2,6 +2,7 @@ import { eventBus } from "../event_bus.js";
 import { appState, getProjectStatus, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
+import { openActionGuard } from "../core/action_guard.js";
 import { initTrainingModeSidebar } from "./training_modes.js";
 
 // Training UI helper
@@ -85,12 +86,16 @@ export function initTraining() {
     const isSegModel = selectedTaskFamily === "segmentation" || modelName.includes("-seg");
 
     if (isSegTask && !isSegModel) {
-      eventBus.emit("toast", t("training.toast.segModel"));
+      openActionGuard({ title: t("training.start"), reasons: [t("training.toast.segModel")] });
       return;
     }
 
     if (blockers.length > 0) {
-      eventBus.emit("toast", t("training.toast.blocked"));
+      openActionGuard({
+        title: t("training.start"),
+        reasons: blockers,
+        actions: [["dataset", "actionGuard.openDataset"], ["labelme", "actionGuard.openLabelMe"], ["split", "actionGuard.openSplit"]]
+      });
       return;
     }
 
@@ -136,7 +141,15 @@ export function initTraining() {
       startMonitorWebSocket();
       eventBus.emit("refresh-project");
     } catch (err) {
-      eventBus.emit("toast", t("training.toast.startFailed", { message: err.message }));
+      const lines = String(err?.message || t("training.toast.blocked"))
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const visibleReasons = lines.slice(0, 8);
+      if (lines.length > visibleReasons.length) {
+        visibleReasons.push(t("training.error.moreReasons", { count: lines.length - visibleReasons.length }));
+      }
+      openActionGuard({ title: t("training.start"), reasons: visibleReasons });
     }
   });
 
@@ -691,15 +704,15 @@ export function renderTrainingMonitor() {
   const lockMsg = qs("#config-lock-msg");
   const configForm = qs("#form-training-config");
   const startBlocker = qs("#training-start-blocker");
-  const shouldLockConfig = !isReady || isRunning || isStopping;
+  const operationBusy = isRunning || isStopping;
   const configFields = ["#config-simple-fields", "#config-advanced-fields"];
   const configTabs = qs(".training-config-panel .config-tabs-nav");
 
   if (startBtn) {
     startBtn.disabled = isRunning || isStopping;
     startBtn.dataset.requires = !isReady && !isRunning && !isStopping ? "train-ready" : "";
-    startBtn.setAttribute("aria-disabled", shouldLockConfig ? "true" : "false");
-    startBtn.title = shouldLockConfig ? t("training.toast.blocked") : t("training.start");
+    startBtn.setAttribute("aria-disabled", operationBusy ? "true" : "false");
+    startBtn.title = !isReady && !operationBusy ? t("training.toast.blocked") : t("training.start");
   }
   if (isRunning) {
     stopBtn?.classList.remove("hidden");
@@ -718,7 +731,7 @@ export function renderTrainingMonitor() {
   }
 
   if (lockMsg) {
-    lockMsg.classList.toggle("hidden", !shouldLockConfig);
+    lockMsg.classList.toggle("hidden", !operationBusy);
     const message = isRunning
       ? t("training.config.lockedRunning")
       : isStopping
@@ -729,21 +742,21 @@ export function renderTrainingMonitor() {
 
   if (configForm) {
     qsa("#form-training-config input, #form-training-config select").forEach((el) => {
-      el.disabled = shouldLockConfig;
+      el.disabled = operationBusy;
     });
   }
   configFields.forEach((selector) => {
     const el = qs(selector);
     if (!el) return;
-    if (selector === "#config-advanced-fields" && isReady && qs("#tab-config-advanced")?.classList.contains("active")) {
+    if (selector === "#config-advanced-fields" && qs("#tab-config-advanced")?.classList.contains("active")) {
       el.classList.remove("hidden");
     } else if (selector === "#config-advanced-fields") {
       el.classList.add("hidden");
     } else {
-      el.classList.toggle("hidden", !isReady);
+      el.classList.remove("hidden");
     }
   });
-  configTabs?.classList.toggle("hidden", !isReady);
+  configTabs?.classList.remove("hidden");
   if (startBlocker) {
     startBlocker.classList.toggle("hidden", isReady);
     startBlocker.innerHTML = isReady ? "" : `<strong>${escapeHtml(t("training.startDisabled"))}</strong><ul>${blockers.map((b) => `<li>${escapeHtml(b.text)}</li>`).join("")}</ul>`;

@@ -1,5 +1,5 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js?v=20260711-layout-export-precision";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260712-unlocked-training-config";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
