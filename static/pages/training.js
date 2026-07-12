@@ -735,15 +735,15 @@ export function renderTrainingMonitor() {
   configFields.forEach((selector) => {
     const el = qs(selector);
     if (!el) return;
-    if (selector === "#config-advanced-fields" && isReady && qs("#tab-config-advanced")?.classList.contains("active")) {
+    if (selector === "#config-advanced-fields" && qs("#tab-config-advanced")?.classList.contains("active")) {
       el.classList.remove("hidden");
     } else if (selector === "#config-advanced-fields") {
       el.classList.add("hidden");
     } else {
-      el.classList.toggle("hidden", !isReady);
+      el.classList.remove("hidden");
     }
   });
-  configTabs?.classList.toggle("hidden", !isReady);
+  configTabs?.classList.remove("hidden");
   if (startBlocker) {
     startBlocker.classList.toggle("hidden", isReady);
     startBlocker.innerHTML = isReady ? "" : `<strong>${escapeHtml(t("training.startDisabled"))}</strong><ul>${blockers.map((b) => `<li>${escapeHtml(b.text)}</li>`).join("")}</ul>`;

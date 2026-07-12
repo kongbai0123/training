@@ -733,7 +733,7 @@ export const zhTWOverrides = {
   "training.title": "模型訓練控制台",
   "training.subtitle": "先檢查訓練就緒狀態，修正阻擋項目後，再設定並啟動受控訓練。",
   "training.config.title": "訓練設定",
-  "training.config.locked": "訓練就緒檢查通過前，訓練設定會保持鎖定。",
+  "training.config.locked": "設定內容可供瀏覽；建立或開啟專案並完成就緒檢查後即可編輯與開始訓練。",
   "training.config.lockedRunning": "訓練執行中，設定暫時鎖定。",
   "training.config.lockedStopping": "訓練正在停止，設定仍維持鎖定。",
   "training.config.subtitle": "先完成模型與核心資源設定；只有需要調整基準訓練時才開啟進階調校。",

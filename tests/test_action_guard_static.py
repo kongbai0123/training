@@ -27,6 +27,9 @@ class ActionGuardStaticTests(unittest.TestCase):
         augmentation = (ROOT / "static" / "pages" / "augmentation.js").read_text(encoding="utf-8")
 
         self.assertIn("startBtn.disabled = isRunning || isStopping", training)
+        self.assertIn("el.disabled = shouldLockConfig", training)
+        self.assertIn('configTabs?.classList.remove("hidden")', training)
+        self.assertIn('el.classList.remove("hidden")', training)
         self.assertIn('button.dataset.blockReason = !canStart && !operationBusy ? titleMessage : ""', rnn)
         self.assertIn("btn.disabled = running", inference)
         self.assertIn("button.disabled = !visible", export)

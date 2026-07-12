@@ -1210,7 +1210,7 @@
     "training.status.missing": "Missing",
     "training.status.splitReady": "Ready",
     "training.config.title": "Training Configuration",
-    "training.config.locked": "Training configuration is locked until Dataset, LabelMe annotations, and Split are ready.",
+    "training.config.locked": "Configuration details remain visible for reference. Open a project and complete readiness checks to edit or start training.",
     "training.config.lockedRunning": "Training configuration is locked while a run is active.",
     "training.config.lockedStopping": "Training is stopping. Configuration remains locked.",
     "training.config.subtitle": "Choose the model and core resources first. Open advanced tuning only when the baseline needs adjustment.",

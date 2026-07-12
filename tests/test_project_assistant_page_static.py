@@ -47,7 +47,9 @@ class ProjectAssistantPageStaticTests(unittest.TestCase):
         legacy_module = (ROOT / "static" / "pages" / "rag_workbench.js").read_text(encoding="utf-8")
         module = (ROOT / "static" / "pages" / "project_assistant_impl.js").read_text(encoding="utf-8")
 
-        self.assertIn('navigate(params.get("page") || "dashboard")', bootstrap)
+        self.assertIn('const requestedPage = params.get("page") || "dashboard"', bootstrap)
+        self.assertIn("syncPageModeForProject(null, requestedPage);", bootstrap)
+        self.assertIn("navigate(requestedPage);", bootstrap)
         self.assertIn('eventBus.emit("open-project-assistant")', bootstrap)
         self.assertIn("initProjectAssistant", registry)
         self.assertIn("renderProjectAssistantPage", registry)

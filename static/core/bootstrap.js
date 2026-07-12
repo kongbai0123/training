@@ -24,7 +24,8 @@ import {
   initPageModules,
   renderPrimaryPageModules,
   renderSecondaryPageModules,
-} from "./page_registry.js?v=20260712-task-aware-assistant";
+  syncPageModeForProject,
+} from "./page_registry.js?v=20260712-visible-training-pages";
 
 const {
   bootstrapSession,
@@ -61,11 +62,13 @@ export async function bootstrapApp() {
   await loadProjects({ autoOpenLatest: false });
   const params = new URLSearchParams(window.location.search || "");
   const openProjectId = params.get("openProjectId") || "";
+  const requestedPage = params.get("page") || "dashboard";
   if (openProjectId) {
-    await openProject(openProjectId, { page: params.get("page") || "dashboard" });
+    await openProject(openProjectId, { page: requestedPage });
     return;
   }
-  navigate(params.get("page") || "dashboard");
+  syncPageModeForProject(null, requestedPage);
+  navigate(requestedPage);
 }
 
 function bindGlobalNavigation() {
