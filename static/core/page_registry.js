@@ -18,6 +18,7 @@ import { initInference, renderInferencePage } from "../pages/inference.js?v=2026
 import { initAutoLabeling, renderAutoLabelingPage } from "../pages/auto_labeling.js?v=20260709-review-gate";
 import { initExport, renderExportPage } from "../pages/export.js?v=20260711-layout-export-precision";
 import { initSettings, renderSettingsPage } from "../pages/settings.js";
+import { initModelGuide, renderModelGuidePage } from "../pages/model_guide.js?v=20260712-model-guide-report4";
 
 export function initPageModules() {
   initDashboard();
@@ -34,6 +35,7 @@ export function initPageModules() {
   initAutoLabeling();
   initExport();
   initSettings();
+  initModelGuide();
   initTrainingModeSidebar();
 }
 
@@ -55,6 +57,7 @@ export function renderSecondaryPageModules(status) {
   renderAutoLabelingPage(status);
   renderExportPage(status);
   renderSettingsPage();
+  renderModelGuidePage();
   renderProjectAssistantPage();
   renderProjectsPage();
 }

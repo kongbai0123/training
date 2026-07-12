@@ -153,6 +153,7 @@ async function collectSnapshot(page) {
       if (!text || text.length < 2) continue;
       const parent = node.parentElement;
       if (!parent || !isVisible(parent)) continue;
+      if (parent.closest(".no-i18n, [data-i18n-ignore]")) continue;
       visibleText.push({
         kind: "visible_text",
         text,
@@ -162,6 +163,7 @@ async function collectSnapshot(page) {
     const attrs = [];
     const attrNames = ["data-tooltip", "placeholder", "title", "aria-label", "alt"];
     document.querySelectorAll("*").forEach((element) => {
+      if (element.closest(".no-i18n, [data-i18n-ignore]")) return;
       attrNames.forEach((attr) => {
         const value = element.getAttribute(attr);
         if (!value || !value.trim()) return;

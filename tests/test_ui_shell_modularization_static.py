@@ -59,6 +59,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         evaluation_css = (ROOT / "static" / "styles" / "pages" / "evaluation.css").read_text(encoding="utf-8")
         project_assistant_css = (ROOT / "static" / "styles" / "pages" / "project_assistant.css").read_text(encoding="utf-8")
         model_setup_css = (ROOT / "static" / "styles" / "pages" / "model_setup.css").read_text(encoding="utf-8")
+        model_guide_css = (ROOT / "static" / "styles" / "pages" / "model_guide.css").read_text(encoding="utf-8")
         shared_css = (ROOT / "static" / "styles" / "shared.css").read_text(encoding="utf-8")
 
         self.assertTrue(
@@ -87,6 +88,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/evaluation.css";\n'
                 '@import "./styles/pages/project_assistant.css";\n'
                 '@import "./styles/pages/model_setup.css";\n'
+                '@import "./styles/pages/model_guide.css?v=20260712-model-guide-report";\n'
                 '@import "./styles/shared.css";'
             )
         )
@@ -464,6 +466,10 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(model_setup_css, r"(?m)^\.model-setup-list \{")
         self.assertIn("@media (max-width: 760px) {", model_setup_css)
 
+        self.assertRegex(model_guide_css, r"(?m)^\.model-guide-workspace \{")
+        self.assertRegex(model_guide_css, r"(?m)^\.model-guide-report-panel \{")
+        self.assertIn("@media (max-width: 800px) {", model_guide_css)
+
         self.assertIn(".dashboard-lower-grid,\n.two-column-layout", shared_css)
         self.assertRegex(shared_css, r"(?m)^\.compact-table \{")
         self.assertRegex(shared_css, r"(?m)^\.settings-controls \{")
@@ -800,7 +806,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         tooltip_js = (ROOT / "static" / "core" / "tooltip.js").read_text(encoding="utf-8")
         project_lifecycle_js = (ROOT / "static" / "core" / "project_lifecycle.js").read_text(encoding="utf-8")
 
-        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260712-unlocked-visible-training";', app_js)
+        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260712-model-guide-report4";', app_js)
         self.assertIn("syncPageModeForProject(null, requestedPage);", bootstrap_js)
         self.assertIn("bootstrapApp().catch", app_js)
         self.assertNotIn("bindGlobalNavigation", app_js)
@@ -816,7 +822,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn('from "./right_panel.js?v=20260708-rnn-feature-wizard"', bootstrap_js)
         self.assertIn('from "./tooltip.js"', bootstrap_js)
         self.assertIn('from "./project_lifecycle.js"', bootstrap_js)
-        self.assertIn('from "./page_registry.js?v=20260712-unlocked-visible-training"', bootstrap_js)
+        self.assertIn('from "./page_registry.js?v=20260712-model-guide-report4"', bootstrap_js)
         self.assertIn("createProjectLifecycle({ renderAll, navigate });", bootstrap_js)
         self.assertIn("export async function bootstrapApp()", bootstrap_js)
         self.assertIn("initPageModules();", bootstrap_js)

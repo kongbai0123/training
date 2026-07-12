@@ -22,4 +22,5 @@
 @import "./styles/pages/evaluation.css";
 @import "./styles/pages/project_assistant.css";
 @import "./styles/pages/model_setup.css";
+@import "./styles/pages/model_guide.css?v=20260712-model-guide-report";
 @import "./styles/shared.css";

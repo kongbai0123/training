@@ -25,7 +25,7 @@ import {
   renderPrimaryPageModules,
   renderSecondaryPageModules,
   syncPageModeForProject,
-} from "./page_registry.js?v=20260712-unlocked-visible-training";
+} from "./page_registry.js?v=20260712-model-guide-report4";
 
 const {
   bootstrapSession,
