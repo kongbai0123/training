@@ -14,7 +14,7 @@ export function updateActionAvailability(status) {
     const blocked = !rules[requirement];
     el.disabled = false;
     el.dataset.readinessBlocked = blocked ? "true" : "false";
-    el.setAttribute("aria-disabled", blocked ? "true" : "false");
+    el.setAttribute("aria-disabled", "false");
     el.classList.toggle("is-readiness-blocked", blocked);
   });
 
@@ -24,7 +24,7 @@ export function updateActionAvailability(status) {
     startBtn.disabled = false;
     startBtn.dataset.requires = "train-ready";
     startBtn.dataset.readinessBlocked = blocked ? "true" : "false";
-    startBtn.setAttribute("aria-disabled", blocked ? "true" : "false");
+    startBtn.setAttribute("aria-disabled", "false");
     startBtn.classList.toggle("is-readiness-blocked", blocked);
   }
 }

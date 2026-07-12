@@ -9,7 +9,7 @@ import { qs, qsa } from "../utils.js";
 import { initGlobalProgressHud } from "../ui/progress_hud.js";
 import { renderHeaderStatus as renderHeaderStatusCore } from "./header_status.js";
 import { renderPageGuards as renderPageGuardsCore } from "./page_guards.js?v=20260708-rnn-feature-wizard";
-import { updateActionAvailability as updateActionAvailabilityCore } from "./action_availability.js";
+import { updateActionAvailability as updateActionAvailabilityCore } from "./action_availability.js?v=20260712-unlocked-actions";
 import { showToast as showToastCore } from "./toast.js";
 import { initDirtyFormTracking } from "./dirty_forms.js";
 import { initResourceFreshnessTracking } from "./resource_freshness.js";
@@ -25,7 +25,7 @@ import {
   renderPrimaryPageModules,
   renderSecondaryPageModules,
   syncPageModeForProject,
-} from "./page_registry.js?v=20260712-visible-training-pages";
+} from "./page_registry.js?v=20260712-unlocked-visible-training";
 
 const {
   bootstrapSession,

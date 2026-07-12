@@ -13,6 +13,8 @@ class ActionGuardStaticTests(unittest.TestCase):
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("el.disabled = false", availability)
+        self.assertIn('el.setAttribute("aria-disabled", "false")', availability)
+        self.assertIn('startBtn.setAttribute("aria-disabled", "false")', availability)
         self.assertNotIn("el.disabled = !rules[requirement]", availability)
         self.assertIn('document.addEventListener("click", interceptGuardedAction, true)', guard)
         self.assertIn("evaluateActionRequirement", guard)
@@ -27,7 +29,8 @@ class ActionGuardStaticTests(unittest.TestCase):
         augmentation = (ROOT / "static" / "pages" / "augmentation.js").read_text(encoding="utf-8")
 
         self.assertIn("startBtn.disabled = isRunning || isStopping", training)
-        self.assertIn("el.disabled = shouldLockConfig", training)
+        self.assertIn("el.disabled = operationBusy", training)
+        self.assertNotIn("el.disabled = shouldLockConfig", training)
         self.assertIn('configTabs?.classList.remove("hidden")', training)
         self.assertIn('el.classList.remove("hidden")', training)
         self.assertIn('button.dataset.blockReason = !canStart && !operationBusy ? titleMessage : ""', rnn)

@@ -1,5 +1,5 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js?v=20260712-visible-training-pages";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260712-unlocked-visible-training";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

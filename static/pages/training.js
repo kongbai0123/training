@@ -691,15 +691,15 @@ export function renderTrainingMonitor() {
   const lockMsg = qs("#config-lock-msg");
   const configForm = qs("#form-training-config");
   const startBlocker = qs("#training-start-blocker");
-  const shouldLockConfig = !isReady || isRunning || isStopping;
+  const operationBusy = isRunning || isStopping;
   const configFields = ["#config-simple-fields", "#config-advanced-fields"];
   const configTabs = qs(".training-config-panel .config-tabs-nav");
 
   if (startBtn) {
     startBtn.disabled = isRunning || isStopping;
     startBtn.dataset.requires = !isReady && !isRunning && !isStopping ? "train-ready" : "";
-    startBtn.setAttribute("aria-disabled", shouldLockConfig ? "true" : "false");
-    startBtn.title = shouldLockConfig ? t("training.toast.blocked") : t("training.start");
+    startBtn.setAttribute("aria-disabled", operationBusy ? "true" : "false");
+    startBtn.title = !isReady && !operationBusy ? t("training.toast.blocked") : t("training.start");
   }
   if (isRunning) {
     stopBtn?.classList.remove("hidden");
@@ -718,18 +718,18 @@ export function renderTrainingMonitor() {
   }
 
   if (lockMsg) {
-    lockMsg.classList.toggle("hidden", !shouldLockConfig);
+    lockMsg.classList.toggle("hidden", !operationBusy);
     const message = isRunning
       ? t("training.config.lockedRunning")
       : isStopping
         ? t("training.config.lockedStopping")
-        : t("training.config.locked");
+        : "";
     lockMsg.querySelector("span") && (lockMsg.querySelector("span").textContent = message);
   }
 
   if (configForm) {
     qsa("#form-training-config input, #form-training-config select").forEach((el) => {
-      el.disabled = shouldLockConfig;
+      el.disabled = operationBusy;
     });
   }
   configFields.forEach((selector) => {
