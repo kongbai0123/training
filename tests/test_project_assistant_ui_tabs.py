@@ -33,6 +33,13 @@ class ProjectAssistantUiTabTests(unittest.TestCase):
         self.assertIn('id="rag-status-context"', self.index)
         self.assertNotIn('id="rag-status-chunks"', self.index)
 
+    def test_project_mode_is_explicit_for_general_cnn_and_rnn_contexts(self):
+        self.assertIn('id="assistant-project-mode"', self.index)
+        self.assertIn("function renderProjectMode()", self.script)
+        self.assertIn('const mode = !hasProject ? "general" : architecture', self.script)
+        for mode in ("general", "cnn", "rnn"):
+            self.assertIn(f'"assistant.projectMode.{mode}.title"', (ROOT / "static" / "state" / "i18n" / "en.js").read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()

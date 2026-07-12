@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from ultralytics import YOLO
+from ultralytics import RTDETR, YOLO
 
 from src.model_registry import ModelRegistry
 from src.project_layout import ProjectLayout
@@ -266,7 +266,8 @@ class ExportService:
         if normalized_precision not in {"fp32", "fp16"}:
             raise ExportServiceError("ONNX precision must be fp32 or fp16; INT8 requires a calibrated export workflow.")
         try:
-            model_obj = YOLO(str(best_pt.resolve()))
+            backend = cls._resolve_cnn_backend(project, run_id, best_pt)
+            model_obj = RTDETR(str(best_pt.resolve())) if backend == "ultralytics_rtdetr" else YOLO(str(best_pt.resolve()))
             model_obj.export(format="onnx", half=normalized_precision == "fp16")
         except Exception as exc:
             raise ExportServiceError(f"Failed to export ONNX model: {exc}")
@@ -313,6 +314,24 @@ class ExportService:
         project["current"]["export_id"] = export_id
         ProjectManager.save_project(project_id, project)
         return summary
+
+    @staticmethod
+    def _resolve_cnn_backend(project: Dict[str, Any], run_id: Optional[str], best_pt: Path) -> str:
+        candidate_run_id = run_id
+        if not candidate_run_id:
+            for run in project.get("training_runs") or []:
+                if Path(str(run.get("best_model") or "")).resolve() == best_pt.resolve():
+                    candidate_run_id = run.get("run_id")
+                    break
+        if candidate_run_id:
+            try:
+                layout = ProjectLayout.from_project(project)
+                payload = _read_json(layout.training_run_dir(sanitize_run_id(str(candidate_run_id))) / "backend.json")
+                if payload.get("backend"):
+                    return str(payload["backend"])
+            except Exception:
+                pass
+        return str((project.get("training_config") or {}).get("backend") or "ultralytics_yolo")
 
     @staticmethod
     def _validate_onnx_graph(onnx_path: Path) -> None:

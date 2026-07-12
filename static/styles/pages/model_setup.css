@@ -16,6 +16,150 @@
   color: var(--text-muted);
 }
 
+.model-setup-step-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.model-setup-step-nav button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel-soft);
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.model-setup-step-nav button span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.model-setup-step-nav button strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-setup-step-nav button.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--text);
+}
+
+.model-setup-step-nav button.active span {
+  background: var(--primary);
+  color: #fff;
+}
+
+.onboarding-panel {
+  display: grid;
+  gap: 14px;
+  min-height: 220px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel-soft);
+}
+
+.onboarding-panel[hidden],
+.model-setup-task-filter[hidden] {
+  display: none;
+}
+
+.onboarding-panel-heading h3,
+.onboarding-panel-heading p {
+  margin: 0;
+}
+
+.onboarding-panel-heading p {
+  margin-top: 4px;
+  color: var(--text-muted);
+}
+
+.onboarding-control-grid,
+.onboarding-toggle-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+
+.onboarding-control-grid label,
+.onboarding-toggle-list label,
+.onboarding-policy {
+  display: grid;
+  gap: 6px;
+}
+
+.onboarding-toggle-list label,
+.onboarding-policy {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+
+.onboarding-toggle-list label span {
+  display: grid;
+  gap: 3px;
+}
+
+.onboarding-policy > span {
+  display: grid;
+  gap: 3px;
+}
+
+.onboarding-policy > i {
+  color: var(--success);
+}
+
+.onboarding-toggle-list small,
+.onboarding-path-summary {
+  color: var(--text-muted);
+}
+
+.onboarding-path-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.model-setup-task-filter {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  padding: 1px;
+  border: 1px solid var(--border);
+  background: var(--border);
+}
+
+.model-setup-task-filter button {
+  min-height: 34px;
+  border: 0;
+  background: var(--bg-panel);
+  color: var(--text-muted);
+}
+
+.model-setup-task-filter button.active {
+  background: var(--primary);
+  color: #fff;
+}
+
 .model-setup-hardware {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -155,6 +299,25 @@
   font-size: 0.78rem;
 }
 
+.model-setup-copy .model-scale-help {
+  display: block;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-template-card {
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+}
+
+body[data-density="compact"] .model-setup-card,
+body[data-density="compact"] .onboarding-toggle-list label,
+body[data-density="compact"] .onboarding-policy {
+  padding-block: 8px;
+}
+
 .model-fit-badge {
   padding: 3px 7px;
   border-radius: var(--radius);
@@ -265,6 +428,10 @@
 }
 
 @media (max-width: 760px) {
+  .model-setup-step-nav,
+  .model-setup-task-filter,
+  .onboarding-control-grid,
+  .onboarding-toggle-list,
   .model-setup-hardware,
   .model-setup-list,
   .model-source-list {
@@ -286,5 +453,9 @@
 
   .model-setup-component button {
     grid-column: 1 / -1;
+  }
+
+  .onboarding-path-summary {
+    display: grid;
   }
 }

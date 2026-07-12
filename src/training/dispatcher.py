@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from src.training.backends import RNNBackend, XGBoostBackend, YOLOBackend
+from src.training.backends import RNNBackend, RTDETRBackend, XGBoostBackend, YOLOBackend
 from src.training.base_backend import TrainingBackend
 from src.training.state_store import TrainingStateStore
 
@@ -11,6 +11,7 @@ class TrainerDispatcher:
     DEFAULT_BACKEND = "ultralytics_yolo"
     _backends: Dict[str, TrainingBackend] = {
         DEFAULT_BACKEND: YOLOBackend(),
+        "ultralytics_rtdetr": RTDETRBackend(),
         "pytorch_lstm": RNNBackend(),
         "sklearn_xgboost": XGBoostBackend(),
     }

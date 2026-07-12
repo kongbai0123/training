@@ -696,7 +696,9 @@ export function renderTrainingMonitor() {
   const configTabs = qs(".training-config-panel .config-tabs-nav");
 
   if (startBtn) {
-    startBtn.disabled = shouldLockConfig;
+    startBtn.disabled = isRunning || isStopping;
+    startBtn.dataset.requires = !isReady && !isRunning && !isStopping ? "train-ready" : "";
+    startBtn.setAttribute("aria-disabled", shouldLockConfig ? "true" : "false");
     startBtn.title = shouldLockConfig ? t("training.toast.blocked") : t("training.start");
   }
   if (isRunning) {

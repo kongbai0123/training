@@ -64,7 +64,10 @@ function updateButtonStates() {
   qsa("[data-export-format]").forEach((button) => {
     const visibleGroup = button.closest("#export-rnn-actions, #export-cnn-actions");
     const visible = !visibleGroup || !visibleGroup.hidden;
-    button.disabled = !canExport || !visible;
+    button.disabled = !visible;
+    button.dataset.requires = visible && !canExport ? "custom" : "";
+    button.dataset.blockReason = visible && !canExport ? t("export.noModel") : "";
+    button.setAttribute("aria-disabled", visible && !canExport ? "true" : "false");
     button.closest(".control-card")?.classList.toggle("muted", !canExport || !visible);
   });
 }

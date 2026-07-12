@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 import cv2
 import numpy as np
-from ultralytics import YOLO
+from ultralytics import RTDETR, YOLO
 
 from src.model_registry import ModelRegistry
 
@@ -75,7 +75,7 @@ class InferenceEngine:
         show_bbox = bool(settings.get("show_bbox", True))
         class_filter = cls._parse_class_filter(settings.get("class_filter"))
 
-        model_obj = cls._get_model(model["internal_weight_path"])
+        model_obj = cls._get_model(model["internal_weight_path"], model.get("backend"))
         
         # Validate the loaded YOLO task against the project task family.
         real_task = getattr(model_obj, "task", "detect")
@@ -170,14 +170,16 @@ class InferenceEngine:
         }
 
     @classmethod
-    def _get_model(cls, weight_path: str) -> YOLO:
-        key = Path(weight_path).resolve().as_posix()
+    def _get_model(cls, weight_path: str, backend: Optional[str] = None) -> YOLO:
+        normalized_backend = str(backend or "ultralytics_yolo")
+        key = f"{normalized_backend}:{Path(weight_path).resolve().as_posix()}"
         if key in cls._model_cache:
             model = cls._model_cache.pop(key)
             cls._model_cache[key] = model
             return model
 
-        model = YOLO(key)
+        resolved_path = Path(weight_path).resolve().as_posix()
+        model = RTDETR(resolved_path) if normalized_backend == "ultralytics_rtdetr" else YOLO(resolved_path)
         cls._model_cache[key] = model
         while len(cls._model_cache) > cls._cache_limit:
             cls._model_cache.popitem(last=False)

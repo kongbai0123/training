@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "evaluated_at": "2026-07-12",
+  "candidates": [
+    {
+      "candidate_id": "rf-detr",
+      "display_name": "RF-DETR",
+      "upstream_url": "https://github.com/roboflow/rf-detr",
+      "release": "1.8.3",
+      "license": "Apache-2.0",
+      "tasks": ["detection", "segmentation"],
+      "python_requires": ">=3.10",
+      "package": "rfdetr",
+      "required_extras": ["train", "onnx"],
+      "windows_classifier_declared": false,
+      "status": "blocked_windows_validation",
+      "execution_enabled": false,
+      "blockers": [
+        "Upstream package metadata does not declare Windows support.",
+        "Training extras introduce a separate dependency stack that is not included in the packaged runtime.",
+        "A clean Windows GPU train, evaluate, infer, export and packaged smoke has not passed."
+      ],
+      "acceptance_gates": [
+        "isolated dependency environment resolves without changing the core runtime",
+        "COCO and YOLO dataset conversion round-trip passes",
+        "detection and segmentation smoke training completes on Windows",
+        "evaluation, inference and ONNX export artifacts match the platform contract",
+        "packaged executable launches and runs without system Python"
+      ]
+    },
+    {
+      "candidate_id": "d-fine",
+      "display_name": "D-FINE",
+      "upstream_url": "https://github.com/Peterande/D-FINE",
+      "license": "Apache-2.0",
+      "tasks": ["detection"],
+      "status": "research_pending",
+      "execution_enabled": false,
+      "blockers": ["Windows packaging, model licensing and export contracts are not yet validated."],
+      "acceptance_gates": ["license audit", "Windows training smoke", "evaluation contract", "ONNX export smoke"]
+    },
+    {
+      "candidate_id": "torchvision-baselines",
+      "display_name": "Faster / Mask R-CNN Baselines",
+      "upstream_url": "https://pytorch.org/vision/stable/models.html",
+      "license": "BSD-3-Clause",
+      "tasks": ["detection", "segmentation"],
+      "status": "research_pending",
+      "execution_enabled": false,
+      "blockers": ["Training and artifact adapters have not been implemented."],
+      "acceptance_gates": ["dataset adapter", "training lifecycle adapter", "evaluation contract", "export limitations documented"]
+    }
+  ]
+}

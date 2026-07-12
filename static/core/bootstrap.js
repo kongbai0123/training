@@ -17,13 +17,14 @@ import { setActivePage } from "./router.js";
 import { initWorkspaceContextPanel, renderRightPanel as renderRightPanelCore } from "./right_panel.js?v=20260708-rnn-feature-wizard";
 import { initInfoTooltips } from "./tooltip.js";
 import { createProjectLifecycle } from "./project_lifecycle.js";
-import { initModelSetup, maybeOpenModelSetup } from "./model_setup.js?v=20260710-model-preparation";
-import { initModelSelectionCenter } from "./model_selection_center.js?v=20260710-model-selection";
+import { initModelSetup, maybeOpenModelSetup } from "./model_setup.js?v=20260712-model-onboarding";
+import { initModelSelectionCenter } from "./model_selection_center.js?v=20260712-research-model-guide";
+import { initActionGuard } from "./action_guard.js?v=20260712-soft-action-guard";
 import {
   initPageModules,
   renderPrimaryPageModules,
   renderSecondaryPageModules,
-} from "./page_registry.js?v=20260711-layout-export-precision";
+} from "./page_registry.js?v=20260712-task-aware-assistant";
 
 const {
   bootstrapSession,
@@ -41,6 +42,7 @@ export async function bootstrapApp() {
   initGlobalProgressHud();
   initDirtyFormTracking();
   initResourceFreshnessTracking();
+  initActionGuard();
   bindGlobalNavigation();
   initWorkspaceContextPanel();
   initInfoTooltips();

@@ -8,7 +8,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
-from ultralytics import YOLO
+from ultralytics import RTDETR, YOLO
 from src.model_store import ModelStore
 from src.project_layout import ProjectLayout
 from src.training.runners.thread_runner import DEFAULT_THREAD_TRAINING_RUNNER
@@ -27,6 +27,12 @@ class YOLOTrainer:
     _global_states: Dict[str, Dict[str, Any]] = {}
     _stop_flags: Dict[str, bool] = {}
     _threads: Dict[str, Any] = {}
+
+    @staticmethod
+    def _load_training_model(model_path: str, backend: str):
+        if backend == "ultralytics_rtdetr":
+            return RTDETR(model_path)
+        return YOLO(model_path)
 
     @classmethod
     def _mirror_state(cls, project_id: str, state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -284,6 +290,7 @@ class YOLOTrainer:
         dataset_path = Path(project_data["dataset_path"])
         layout = ProjectLayout.from_project(project_data)
         train_config = project_data.get("training_config", {})
+        backend_name = str(train_config.get("backend") or "ultralytics_yolo")
         task_type = project_data.get("task_type", "detection")
         
         from src.training.run_manager import RunManager
@@ -302,7 +309,7 @@ class YOLOTrainer:
             run_id=run_id,
             total_epochs=train_config.get("epochs", 50),
             architecture="cnn",
-            backend="ultralytics_yolo",
+            backend=backend_name,
         )
         cls._mirror_state(project_id, state)
         
@@ -316,7 +323,7 @@ class YOLOTrainer:
             
             # Load training model.
             model_name = ModelStore.resolve_training_model(train_config.get("model", "yolov8n.pt"))
-            model = YOLO(model_name)
+            model = cls._load_training_model(model_name, backend_name)
             
             # 3. 閮餃? Callbacks
             def on_train_start(trainer):
@@ -440,7 +447,8 @@ class YOLOTrainer:
                     task_type=task_type,
                     status=status,
                     error_msg=error_msg,
-                    data_yaml_path=actual_data_yaml
+                    data_yaml_path=actual_data_yaml,
+                    backend=backend_name,
                 )
                 
                 # Mark cancellation in the state store.

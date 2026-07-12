@@ -1662,13 +1662,20 @@ function updateRnnExportControls() {
   const select = qs("#rnn-export-model");
   const hasProject = Boolean(appState.currentProjectId);
   const hasModel = Boolean(select?.value || trainingModeState.rnn.exportModels?.length);
-  const disabled = !hasProject || !hasModel || trainingModeState.rnn.exportLoading || trainingModeState.rnn.exportRunning;
+  const busy = trainingModeState.rnn.exportLoading || trainingModeState.rnn.exportRunning;
+  const blocker = !hasProject ? t("actionGuard.reason.project") : !hasModel ? t("rnn.export.noModels") : "";
   qsa("[data-rnn-export-format]").forEach((button) => {
-    button.disabled = disabled;
-    button.closest(".control-card")?.classList.toggle("muted", disabled);
+    button.disabled = busy;
+    button.dataset.requires = blocker && !busy ? "custom" : "";
+    button.dataset.blockReason = blocker && !busy ? blocker : "";
+    button.setAttribute("aria-disabled", blocker || busy ? "true" : "false");
+    button.closest(".control-card")?.classList.toggle("muted", Boolean(blocker || busy));
   });
   const refresh = qs("#rnn-refresh-export-models");
-  if (refresh) refresh.disabled = !hasProject || trainingModeState.rnn.exportLoading;
+  if (refresh) {
+    refresh.disabled = trainingModeState.rnn.exportLoading;
+    refresh.dataset.requires = !hasProject && !trainingModeState.rnn.exportLoading ? "project" : "";
+  }
 }
 
 async function exportRnnArtifact(format = "rnn_package") {
@@ -2093,7 +2100,11 @@ function updateRnnStartControls() {
     : message;
   const buttons = [qs("#rnn-start-disabled")].filter(Boolean);
   buttons.forEach((button) => {
-    button.disabled = !canStart;
+    const operationBusy = trainingModeState.rnn.trainingStarting || ["running", "stopping"].includes(String(appState.trainingStatus?.status || "").toLowerCase());
+    button.disabled = operationBusy;
+    button.dataset.requires = !canStart && !operationBusy ? "custom" : "";
+    button.dataset.blockReason = !canStart && !operationBusy ? titleMessage : "";
+    button.setAttribute("aria-disabled", canStart ? "false" : "true");
     button.classList.toggle("btn-primary", canStart);
     button.classList.toggle("btn-disabled", !canStart);
     button.title = canStart ? t("rnn.training.startTitle") : titleMessage;

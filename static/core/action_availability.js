@@ -11,13 +11,20 @@ export function updateActionAvailability(status) {
   qsa(".guarded").forEach((el) => {
     const requirement = el.dataset.requires;
     if (!requirement) return;
-    el.disabled = !rules[requirement];
-    el.classList.toggle("btn-disabled", !rules[requirement]);
+    const blocked = !rules[requirement];
+    el.disabled = false;
+    el.dataset.readinessBlocked = blocked ? "true" : "false";
+    el.setAttribute("aria-disabled", blocked ? "true" : "false");
+    el.classList.toggle("is-readiness-blocked", blocked);
   });
 
   const startBtn = qs("#btn-start-train");
   if (startBtn) {
-    startBtn.disabled = !status.trainReady;
-    startBtn.classList.toggle("btn-disabled", !status.trainReady);
+    const blocked = !status.trainReady;
+    startBtn.disabled = false;
+    startBtn.dataset.requires = "train-ready";
+    startBtn.dataset.readinessBlocked = blocked ? "true" : "false";
+    startBtn.setAttribute("aria-disabled", blocked ? "true" : "false");
+    startBtn.classList.toggle("is-readiness-blocked", blocked);
   }
 }

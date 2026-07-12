@@ -2,154 +2,138 @@
 
 # Vision Training Studio
 
-**本地優先的 Windows 通用模型訓練工作台**
+**Windows 本機 AI 模型訓練、評估與匯出工作台**
 
-從資料匯入、標註與序列設定，到訓練、任務感知評估、模型比較及部署產物匯出。
+支援 CNN 影像任務與 RNN 序列任務，從資料匯入、資料角色設定、訓練、評估、模型比較到交付產物，均在同一套本機介面完成。
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](docs/INSTALL.md)
 [![Version](https://img.shields.io/badge/version-0.1.0-2563EB)](VERSION)
 [![Package](https://img.shields.io/badge/package-Portable%20EXE-16A34A)](docs/INSTALL.md)
 [![Runtime](https://img.shields.io/badge/end--user%20runtime-No%20Python%20required-0F766E)](docs/INSTALL.md)
 
-[Windows 版本](https://github.com/kongbai0123/training/releases) · [使用指南](docs/USER_GUIDE.md) · [安裝說明](docs/INSTALL.md) · [問題排除](docs/TROUBLESHOOTING.md)
+[Windows 版本](https://github.com/kongbai0123/training/releases) · [使用指南](docs/USER_GUIDE.md) · [安裝說明](docs/INSTALL.md) · [疑難排解](docs/TROUBLESHOOTING.md)
 
 </div>
 
-![Vision Training Studio 總覽介面](docs/assets/app-overview.png)
+![Vision Training Studio 總覽](docs/assets/app-overview.png)
 
-## Windows 下載
+## 產品定位
 
-正式使用以 **Windows x64 Portable EXE 套件**為主。使用者不需要另外安裝 Python 或 Node.js。
+Vision Training Studio 專注於通用模型訓練流程：
+
+1. 匯入可訓練的影像或序列資料。
+2. 設定 CNN 類別與標註，或 RNN 時間、序列 ID、特徵與目標欄位。
+3. 選擇符合任務與硬體的模型。
+4. 執行訓練並查看任務感知評估指標。
+5. 比較不同模型或同模型不同 run。
+6. 匯出部署所需模型、schema、scaler、推論合約與報告。
+
+專案助理只提供本機來源搜尋與診斷提示，不控制訓練決策，核心流程不依賴 LLM。
+
+## Windows 使用方式
+
+一般使用者應下載 Windows x64 Portable EXE：
 
 1. 前往 [GitHub Releases](https://github.com/kongbai0123/training/releases)。
 2. 下載 `VisionTrainingStudio_<version>_Windows_x64_portable.zip`。
 3. 完整解壓縮後執行 `VisionTrainingStudio.exe`。
 
-> `VisionTrainingStudio.exe` 必須與同層的 `_internal` 資料夾一起使用。請勿只複製單一 EXE。
+`VisionTrainingStudio.exe` 必須與 `_internal` 資料夾保持相對位置。終端使用者不需要另外安裝 Python 或 Node.js。
 
-## 產品能力
+## 功能範圍
 
-| 工作流程 | CNN 影像訓練 | RNN 序列訓練 |
+| 流程 | CNN 影像任務 | RNN 序列任務 |
 |---|---|---|
-| 資料 | 圖片、資料夾、ZIP | CSV、CSV ZIP、序列資料 |
-| 資料設定 | 類別、LabelMe、人工與自動標註 | 時間欄、序列 ID、特徵、目標、任務類型 |
-| 資料準備 | 品質檢查、Train/Val/Test、影像增強 | 缺失檢查、Window/Stride/Horizon、切分與正規化 |
-| 模型 | Ultralytics YOLO Detection / Segmentation | LSTM、GRU、BiLSTM、XGBoost |
-| 評估 | mAP、Precision、Recall、混淆與輸出檢視 | Accuracy、Macro-F1、MAE、RMSE、Confusion Matrix、Residual Plot |
-| 比較 | 不同模型與不同 Run | 不同模型與同模型不同 Run |
-| 匯出 | PT、ONNX、Markdown Report | Model Package、Schema、Scaler、Inference Contract、Report |
+| 資料 | 圖片、ZIP、影片影格 | CSV、CSV ZIP、本機序列檔 |
+| 資料設定 | 類別、LabelMe、標註匯入、自動標註 | 時間欄、序列 ID、特徵、目標、任務類型 |
+| 資料驗證 | 缺圖、缺標註、未知類別、分布與洩漏風險 | 缺失值、型別、序列長度、目標分布與資料洩漏 |
+| 模型 | YOLO、RT-DETR、自訂 YOLO | LSTM、GRU、BiLSTM、XGBoost |
+| 評估 | mAP、Precision、Recall、混淆矩陣、訓練曲線 | Accuracy、Macro-F1、MAE、RMSE、混淆矩陣、殘差診斷 |
+| 比較 | 不同模型與同模型不同 run | 不同架構與同架構不同 run |
+| 匯出 | PT、ONNX、Markdown 報告 | Model Package、Schema、Scaler、Inference Contract、報告 |
 
-## 實際介面
+## 模型支援
 
-<table>
-  <tr>
-    <td width="50%"><strong>CNN 影像訓練流程</strong></td>
-    <td width="50%"><strong>RNN 序列訓練流程</strong></td>
-  </tr>
-  <tr>
-    <td><img src="docs/assets/cnn-training-flow.png" alt="CNN 影像訓練流程介面"></td>
-    <td><img src="docs/assets/rnn-training-flow.png" alt="RNN 序列訓練流程介面"></td>
-  </tr>
-</table>
+- **YOLOv8、YOLO11、YOLO26**：Detection 與 Segmentation 均提供 `n/s/m/l/x` 官方權重選項。
+- **RT-DETR-L/X**：Detection 的訓練、評估、推論與 ONNX 匯出已接入既有 run 生命週期。
+- **RF-DETR**：在模型中心提供官方 benchmark 與選型資訊；Windows 打包與完整依賴驗證尚未通過，因此不開放執行。
+- **D-FINE、Faster R-CNN、Mask R-CNN**：列入研究閘門，未通過驗收前不宣稱可訓練。
+- **RNN/XGBoost**：內建 LSTM、GRU、BiLSTM 與 XGBoost 訓練範本。
 
-<table>
-  <tr>
-    <td width="50%"><strong>LabelMe 標註與品質審查</strong></td>
-    <td width="50%"><strong>資料分割與分布預覽</strong></td>
-  </tr>
-  <tr>
-    <td><img src="docs/assets/labelme-workspace.png" alt="LabelMe 標註管理與預覽介面"></td>
-    <td><img src="docs/assets/split-management.png" alt="資料分割管理與樣本分布預覽介面"></td>
-  </tr>
-</table>
+詳細能力、授權與驗收狀態請參閱 [模型支援矩陣](docs/MODEL_SUPPORT.md)。
 
-ONNX 預設保留 FP32，匯出時會檢查計算圖完整性；模型準確度與資料集指標仍以來源 Run 的「評估」頁為準，避免把格式轉換誤當成重新評估。
+## 初次啟動
 
-## 使用流程
+初次啟動精靈會引導設定：
 
-```text
-建立專案
-  → 匯入圖片或序列資料
-  → 完成 CNN 標註或 RNN Schema 設定
-  → 執行品質檢查與資料切分
-  → 選擇模型並啟動訓練
-  → 檢視任務對應指標與診斷
-  → 比較 Run 並匯出部署產物
-```
+- 繁體中文或英文
+- 深色或淺色介面
+- 介面密度與縮放
+- 離線優先與自動儲存
+- CPU、GPU、VRAM、RAM 與磁碟檢查
+- 離線 LabelMe 元件
+- 任務類型與選配模型
 
-CNN 與 RNN 使用獨立的資料準備、評估與匯出流程；專案建立後，介面只呈現該專案適用的功能。
+所有模型下載都必須由使用者明確確認，並在完成後驗證 SHA-256。
 
-## 系統需求
+## 離線能力
 
-| 項目 | 建議環境 |
-|---|---|
-| 作業系統 | Windows 10 / 11 x64 |
-| 記憶體 | 16 GB 以上，依資料與模型大小調整 |
-| 儲存空間 | 至少保留 10 GB，另加資料集與模型所需空間 |
-| GPU | NVIDIA GPU 選配；無 GPU 時依功能回落 CPU 或顯示明確提示 |
-| 網路 | 核心訓練流程可在本機執行；模型下載或外部服務依使用情境決定 |
+- 已安裝的模型、既有專案、訓練、評估、比較與匯出可在本機執行。
+- Managed LabelMe 元件安裝完成後可離線使用。
+- 第一次下載模型、更新元件或啟用外部雲端服務時需要網路。
+- 軟體不會在未告知的情況下上傳資料或自動下載模型。
 
-## 本地資料與隱私
+## 開發與驗證
 
-- 專案、模型、logs、cache、exports 與暫存資料不提交至 Git。
-- packaged mode 會將使用者資料與程式本體分離。
-- 軟體不應在未告知使用者的情況下上傳資料或刪除專案。
-- API key、token、密碼、私有資料集與模型權重不得提交至 repo。
-
-## 開發與建置
-
-只有原始碼開發者需要 Python 3.11。正式 Portable EXE 使用者不需要開發環境。
+開發環境使用 Python 3.11。常用入口集中於 `scripts/`：
 
 ```bat
 scripts\run.bat
-scripts\start_dev.bat
 scripts\test.bat
 scripts\build.bat
 scripts\package.bat
 scripts\smoke_dist.bat
 ```
 
-PyInstaller 輸出：
+PyInstaller 產物：
 
 ```text
 dist\VisionTrainingStudio\VisionTrainingStudio.exe
 ```
 
-核心原始碼與使用者資料維持分離：
+## 專案結構
 
 ```text
-src/          後端與核心服務
-static/       前端介面與本地資源
-tests/        單元、整合與靜態驗證
-scripts/      啟動、測試、建置、打包與診斷
-packaging/    PyInstaller 設定
-installer/    Windows installer 設定
-docs/         安裝、使用、架構、部署與疑難排解
+src/                 後端、訓練、模型、評估與匯出邏輯
+static/              前端介面、樣式與繁中／英文字典
+data/                內建模型目錄、benchmark 與研究閘門
+tests/               單元、整合、UI 靜態與 smoke 測試
+scripts/             啟動、測試、建置、打包與驗證腳本
+packaging/           PyInstaller 設定
+installer/           Windows 安裝器設定
+docs/                使用、架構、部署與疑難排解文件
 ```
 
-完整目錄用途、runtime data tree 與 source / packaged / portable 路徑解析方式，請見 [專案資料樹與路徑規範](docs/PROJECT_STRUCTURE.md)。
+完整資料樹與執行期資料位置請參閱 [專案結構](docs/PROJECT_STRUCTURE.md)。
 
 ## 文件
 
-- [安裝指南](docs/INSTALL.md)
-- [使用者指南](docs/USER_GUIDE.md)
-- [開發者指南](docs/DEVELOPER_GUIDE.md)
-- [架構文件](docs/ARCHITECTURE.md)
-- [專案資料樹與路徑規範](docs/PROJECT_STRUCTURE.md)
-- [部署與打包](docs/DEPLOYMENT.md)
+- [安裝說明](docs/INSTALL.md)
+- [使用指南](docs/USER_GUIDE.md)
+- [模型支援矩陣](docs/MODEL_SUPPORT.md)
+- [開發指南](docs/DEVELOPER_GUIDE.md)
+- [系統架構](docs/ARCHITECTURE.md)
+- [專案結構](docs/PROJECT_STRUCTURE.md)
+- [部署指南](docs/DEPLOYMENT.md)
 - [測試規範](docs/TESTING_GUIDELINES.md)
 - [乾淨 Windows 驗證](docs/CLEAN_MACHINE_VALIDATION.md)
-- [已知問題](docs/KNOWN_ISSUES.md)
+- [已知限制](docs/KNOWN_ISSUES.md)
 - [疑難排解](docs/TROUBLESHOOTING.md)
 
 ## Release Gate
 
-正式發布至少需要通過：完整測試、建置檢查、PyInstaller 打包、packaged runtime smoke，以及乾淨 Windows VM 驗證。未完成乾淨機器驗證前，不宣稱為正式 production release。
-
-## 專案狀態
-
-目前版本為 `0.1.0` commercial MVP。CNN / YOLO 與 RNN / Sequence 主流程可操作，但仍應依 [已知問題](docs/KNOWN_ISSUES.md) 與 [乾淨機器驗證](docs/CLEAN_MACHINE_VALIDATION.md) 完成正式交付檢查。
+開發機測試、實際模型 smoke 與 packaged runtime smoke 通過，不等於已完成乾淨電腦驗收。正式 release 前仍需在未安裝 Python、Node.js 與開發依賴的 Windows 10/11 x64 電腦測試完整 portable ZIP。
 
 ## 授權
 
-本 repo 尚未附公開開源授權。外部使用、修改與散布條款請向專案維護者確認；第三方元件資訊位於 `docs/compliance/`。
+本 repository 尚未提供統一公開授權。第三方模型與套件授權資訊位於 `docs/compliance/` 與 [模型支援矩陣](docs/MODEL_SUPPORT.md)。

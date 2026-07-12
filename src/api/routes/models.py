@@ -9,8 +9,10 @@ from pydantic import BaseModel
 from src.model_registry import ModelRegistry
 from src.model_store import ModelStore
 from src.model_system import ModelCatalog
+from src.model_system.catalog import normalize_task_family
 from src.model_install_manager import MODEL_INSTALL_MANAGER
 from src.model_recommendation import annotate_hardware_fit, rank_models_for_project
+from src.model_system.research_gate import evaluate_research_candidates
 from src.model_sources import list_model_sources
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
@@ -190,6 +192,12 @@ def list_project_model_catalog(
     task_family = project.get("task_type")
     if usage == "inference":
         models = ModelCatalog.list_inference_supported(project=project, task_family=task_family, architecture=architecture)
+    elif usage == "guide":
+        normalized_task = normalize_task_family(task_family)
+        models = [
+            model for model in ModelCatalog.list_all(project=project, architecture=architecture)
+            if normalize_task_family(model.get("task_family")) == normalized_task
+        ]
     elif usage == "all":
         models = ModelCatalog.list_all(project=project, architecture=architecture)
     else:
@@ -210,6 +218,11 @@ def list_project_model_catalog(
             "recommended": [model.get("model_id") for model in models if model.get("recommended_for_project")],
         },
     }
+
+
+@router.get("/api/models/research")
+def list_model_research_candidates():
+    return evaluate_research_candidates()
 
 
 @router.post("/api/projects/{project_id}/models/import/yolo-pt")

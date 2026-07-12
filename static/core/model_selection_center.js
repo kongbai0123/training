@@ -2,6 +2,7 @@ import { apiFetch } from "../api.js";
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { escapeHtml, qs, qsa } from "../utils.js";
+import { openActionGuard } from "./action_guard.js?v=20260712-soft-action-guard";
 
 let payload = null;
 let activeTab = "recommended";
@@ -16,6 +17,10 @@ export function initModelSelectionCenter() {
     if (event.target.id === "model-selection-modal") closeModelSelectionCenter();
   });
   qs("#model-selection-objective")?.addEventListener("change", () => loadCandidates());
+  qs("#model-selection-family")?.addEventListener("change", () => {
+    selectedModelId = visibleModels()[0]?.model_id || "";
+    renderModelSelectionCenter();
+  });
   qs("#model-selection-list")?.addEventListener("change", handleCandidateSelection);
   qsa("[data-model-selection-tab]").forEach((button) => {
     button.addEventListener("click", () => setActiveTab(button.dataset.modelSelectionTab));
@@ -60,9 +65,10 @@ async function loadCandidates() {
   setLoadingState();
   try {
     payload = await apiFetch(
-      `/api/projects/${encodeURIComponent(appState.currentProjectId)}/models/catalog?architecture=${architecture}&usage=train&objective=${objective}`,
+      `/api/projects/${encodeURIComponent(appState.currentProjectId)}/models/catalog?architecture=${architecture}&usage=guide&objective=${objective}`,
       { suppressToast: true },
     );
+    renderFamilyOptions();
     const candidates = visibleModels();
     if (!candidates.some((model) => model.model_id === selectedModelId)) {
       selectedModelId = candidates[0]?.model_id || "";
@@ -103,12 +109,22 @@ function setActiveTab(nextTab) {
 }
 
 function visibleModels() {
-  const models = payload?.models || [];
+  const family = qs("#model-selection-family")?.value || "all";
+  const models = (payload?.models || []).filter((model) => family === "all" || String(model.model_family || model.backend || "other") === family);
   if (activeTab === "recommended") return models.filter((model) => model.recommended_for_project);
   if (activeTab === "custom") {
     return models.filter((model) => ["user_import", "imported", "project_trained"].includes(String(model.source || "")));
   }
   return models;
+}
+
+function renderFamilyOptions() {
+  const select = qs("#model-selection-family");
+  if (!select) return;
+  const previous = select.value || "all";
+  const families = [...new Set((payload?.models || []).map((model) => String(model.model_family || model.backend || "other")))].sort();
+  select.innerHTML = `<option value="all">${escapeHtml(t("common.all"))}</option>${families.map((family) => `<option value="${escapeHtml(family)}">${escapeHtml(familyLabel(family))}</option>`).join("")}`;
+  select.value = families.includes(previous) ? previous : "all";
 }
 
 function renderModelSelectionCenter() {
@@ -144,15 +160,16 @@ function renderCandidateTable(candidates) {
   list.innerHTML = candidates.map((model) => {
     const benchmark = model.benchmark || {};
     const metric = benchmark.primary_metric;
-    const latency = benchmark.latency?.cpu_onnx_ms;
+    const latency = benchmark.latency?.cpu_onnx_ms ?? benchmark.latency?.gpu_ms;
+    const latencyKind = benchmark.latency?.cpu_onnx_ms ? "CPU" : benchmark.latency?.gpu_ms ? "GPU" : "";
     const fit = model.hardware_fit || "unavailable";
-    const status = model.usable ? t("modelSelection.ready") : model.installation_required ? t("modelSelection.installRequired") : t("modelSelection.unavailable");
+    const status = model.source === "research" ? t("modelSelection.researchOnly") : model.usable ? t("modelSelection.ready") : model.installation_required ? t("modelSelection.installRequired") : t("modelSelection.unavailable");
     return `
       <tr class="${model.model_id === selectedModelId ? "selected" : ""}">
         <td><input type="radio" name="model-selection-candidate" value="${escapeHtml(model.model_id)}" ${model.model_id === selectedModelId ? "checked" : ""}></td>
         <td><strong>${escapeHtml(model.display_name || model.model_id)}</strong><small>${escapeHtml(status)}</small></td>
         <td>${metric ? `${escapeHtml(metric.label)} <strong>${formatNumber(metric.value)}</strong>` : escapeHtml(t("modelSelection.profileBased"))}</td>
-        <td>${latency ? `${formatNumber(latency)} ms` : "--"}</td>
+        <td>${latency ? `${formatNumber(latency)} ms <small>${latencyKind}</small>` : "--"}</td>
         <td>${benchmark.parameters_m ? `${formatNumber(benchmark.parameters_m)} M` : "--"}</td>
         <td><span class="model-fit-badge ${escapeHtml(fit)}">${escapeHtml(t(`modelSelection.fit.${fit}`))}</span></td>
       </tr>`;
@@ -189,7 +206,7 @@ function renderDetail(model) {
       <div><dt>${escapeHtml(t("modelSelection.source"))}</dt><dd>${escapeHtml(sourceLabel(model.source))}</dd></div>
       <div><dt>${escapeHtml(t("modelSelection.task"))}</dt><dd>${escapeHtml(taskLabel(model.task_family))}</dd></div>
       <div><dt>${escapeHtml(t("modelSelection.license"))}</dt><dd>${escapeHtml(model.license || "--")}</dd></div>
-      <div><dt>${escapeHtml(t("modelSelection.status"))}</dt><dd>${escapeHtml(model.usable ? t("modelSelection.ready") : t("modelSelection.installRequired"))}</dd></div>
+      <div><dt>${escapeHtml(t("modelSelection.status"))}</dt><dd>${escapeHtml(model.source === "research" ? t("modelSelection.researchOnly") : model.usable ? t("modelSelection.ready") : model.installation_required ? t("modelSelection.installRequired") : t("modelSelection.unavailable"))}</dd></div>
     </dl>
     ${renderDetailList(t("modelSelection.recommendationReasons"), reasons)}
     ${renderDetailList(t("modelSelection.bestFor"), bestFor)}
@@ -236,7 +253,7 @@ function renderChart(candidates) {
     setNodeText("#model-selection-benchmark-kind", t("modelSelection.profileChart"));
     if (note) note.textContent = t("modelSelection.profileDisclaimer");
   } else {
-    const benchmarkModels = candidates.filter((model) => model.benchmark?.primary_metric?.value && model.benchmark?.latency?.cpu_onnx_ms);
+    const benchmarkModels = candidates.filter((model) => model.benchmark?.primary_metric?.value && (model.benchmark?.latency?.cpu_onnx_ms || model.benchmark?.latency?.gpu_ms));
     if (!benchmarkModels.length) {
       canvas.hidden = true;
       empty.hidden = false;
@@ -255,12 +272,12 @@ function renderCnnBenchmarkChart(canvas, models) {
     data: {
       datasets: models.map((model, index) => ({
         label: model.display_name,
-        data: [{ x: model.benchmark.latency.cpu_onnx_ms, y: model.benchmark.primary_metric.value }],
+        data: [{ x: model.benchmark.latency.cpu_onnx_ms ?? model.benchmark.latency.gpu_ms, y: model.benchmark.primary_metric.value }],
         pointRadius: Math.max(5, Math.min(12, 4 + Number(model.benchmark.parameters_m || 0) / 4)),
         backgroundColor: chartColor(index),
       })),
     },
-    options: chartOptions(t("modelSelection.cpuLatencyAxis"), t("modelSelection.qualityAxis")),
+    options: chartOptions(models.some((model) => model.benchmark.latency?.cpu_onnx_ms) ? t("modelSelection.mixedLatencyAxis") : t("modelSelection.gpuLatencyAxis"), t("modelSelection.qualityAxis")),
   });
 }
 
@@ -305,6 +322,14 @@ function applySelectedModel() {
     return;
   }
   if (!model.usable) {
+    if (model.source === "research" || String(model.status || "").startsWith("blocked_")) {
+      openActionGuard({
+        title: model.display_name || model.model_id,
+        reasons: [t("modelSelection.researchBlocked")],
+        actions: [],
+      });
+      return;
+    }
     eventBus.emit("toast", t("modelSelection.requiresSetup", { model: model.display_name || model.model_id }));
     closeModelSelectionCenter();
     eventBus.emit("open-model-setup");
@@ -352,6 +377,11 @@ function taskLabel(task) {
 function sourceLabel(source) {
   const normalized = String(source || "unknown").toLowerCase();
   return t(`modelSelection.sourceLabel.${normalized}`);
+}
+
+function familyLabel(family) {
+  const labels = { yolo26: "YOLO26", yolo11: "YOLO11", yolov8: "YOLOv8", rtdetr: "RT-DETR", "rf-detr": "RF-DETR", lstm: "LSTM", gru: "GRU", bilstm: "BiLSTM", xgboost: "XGBoost" };
+  return labels[family] || family;
 }
 
 function setNodeText(selector, value) {

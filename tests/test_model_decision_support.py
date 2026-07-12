@@ -22,6 +22,16 @@ class ModelDecisionMetadataTests(unittest.TestCase):
         self.assertEqual(yolo["decision_profile"]["scale"], "nano")
         self.assertIn("zh-TW", rnn["decision_profile"]["summary"])
         self.assertEqual(normalize_task_family("semantic_segmentation"), "segmentation")
+        rtdetr = models["builtin.rtdetr-l-det"]
+        self.assertEqual(rtdetr["backend"], "ultralytics_rtdetr")
+        self.assertEqual(rtdetr["benchmark"]["primary_metric"]["value"], 53.0)
+
+    def test_model_selection_center_supports_family_and_mixed_latency_filters(self):
+        source = (ROOT / "static" / "core" / "model_selection_center.js").read_text(encoding="utf-8")
+        html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="model-selection-family"', html)
+        self.assertIn("renderFamilyOptions", source)
+        self.assertIn("benchmark.latency?.cpu_onnx_ms ?? benchmark.latency?.gpu_ms", source)
 
     def test_ranking_is_task_local_and_objective_aware(self):
         models = [

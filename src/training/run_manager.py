@@ -56,7 +56,8 @@ class RunManager:
         task_type: str,
         status: str,
         error_msg: str = "",
-        data_yaml_path: Optional[Path] = None
+        data_yaml_path: Optional[Path] = None,
+        backend: str = "ultralytics_yolo",
     ) -> Optional[Dict[str, Any]]:
         """
         當訓練完成/中止/出錯時：
@@ -139,7 +140,8 @@ class RunManager:
             "platform_score": platform_score,
             "health": health_analysis,
             "error": error_msg,
-            "completed_at": completed_at
+            "completed_at": completed_at,
+            "backend": backend,
         }
 
         try:
@@ -154,7 +156,7 @@ class RunManager:
             backend_contract = build_backend_contract(
                 run_id=run_dir.name,
                 architecture="cnn",
-                backend="ultralytics_yolo",
+                backend=backend,
                 task_type=task_type,
                 status=status,
                 created_at=created_at,

@@ -98,6 +98,34 @@
   color: var(--text);
 }
 
+.assistant-project-mode {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  background: var(--bg-panel-soft);
+}
+
+.assistant-project-mode-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.assistant-project-mode p {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
 .assistant-settings-panel {
   margin-bottom: 16px;
 }

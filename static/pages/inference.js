@@ -423,7 +423,11 @@ function updateRunButtonState() {
   const compatible = model ? isModelCompatible(appState.currentProject?.task_type, model.task_type) : false;
   const reason = getRunDisabledReason({ model, hasImage, compatible });
 
-  btn.disabled = Boolean(reason);
+  const running = Boolean(appState.inferenceRunning);
+  btn.disabled = running;
+  btn.dataset.requires = reason && !running ? "custom" : "";
+  btn.dataset.blockReason = reason && !running ? reason : "";
+  btn.setAttribute("aria-disabled", reason ? "true" : "false");
   btn.classList.toggle("btn-disabled", Boolean(reason));
   btn.innerHTML = appState.inferenceRunning
     ? `<i class="fa-solid fa-spinner fa-spin"></i> Running`

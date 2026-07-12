@@ -1002,6 +1002,13 @@ body[data-theme="light"] .modal-overlay {
   line-height: 1.5;
 }
 
+.is-readiness-blocked { opacity: 1; cursor: pointer; }
+.action-guard-modal-content { max-width: 620px; }
+.action-guard-operation { display: grid; gap: 5px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel-soft); }
+.action-guard-operation span { color: var(--text-muted); font-size: 0.78rem; }
+.action-guard-operation strong { font-size: 1rem; }
+#action-guard-reasons { margin: 8px 0 0; padding-left: 20px; }
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;

@@ -351,7 +351,7 @@ function renderRiskCheck(info) {
 }
 
 function updateControlState(info) {
-  const settingsDisabled = info.state.startsWith("blocked_") || applying;
+  const settingsDisabled = applying;
   qsa("#aug-settings-panel input, #aug-settings-panel button").forEach((el) => {
     if (el.id === "aug-camera-perspective") {
       el.disabled = true;
@@ -365,7 +365,10 @@ function updateControlState(info) {
 
   const previewBtn = qs("#btn-preview-aug");
   if (previewBtn) {
-    previewBtn.disabled = !info.canPreview || applying;
+    previewBtn.disabled = applying;
+    previewBtn.dataset.requires = !info.canPreview && !applying ? "custom" : "";
+    previewBtn.dataset.blockReason = !info.canPreview && !applying ? info.reasons.join(" ") : "";
+    previewBtn.setAttribute("aria-disabled", info.canPreview ? "false" : "true");
     previewBtn.innerHTML = info.state === "preview_generating"
       ? `<i class="fa-solid fa-spinner fa-spin"></i> 產生中...`
       : `<i class="fa-solid fa-eye"></i> 產生預覽`;
@@ -373,7 +376,10 @@ function updateControlState(info) {
 
   const applyBtn = qs("#btn-apply-aug");
   if (applyBtn) {
-    applyBtn.disabled = !info.canApply || applying;
+    applyBtn.disabled = applying;
+    applyBtn.dataset.requires = !info.canApply && !applying ? "custom" : "";
+    applyBtn.dataset.blockReason = !info.canApply && !applying ? info.reasons.join(" ") : "";
+    applyBtn.setAttribute("aria-disabled", info.canApply ? "false" : "true");
     applyBtn.innerHTML = applying
       ? `<i class="fa-solid fa-spinner fa-spin"></i> 套用中...`
       : `<i class="fa-solid fa-wand-magic-sparkles"></i> 套用到 Train Split`;

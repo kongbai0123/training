@@ -1,5 +1,5 @@
 import { initDashboard, renderDashboard } from "../pages/dashboard.js?v=20260710-training-i18n-ux";
-import { initProjectAssistant, renderProjectAssistantPage } from "../pages/project_assistant.js?v=20260710-project-assistant";
+import { initProjectAssistant, renderProjectAssistantPage } from "../pages/project_assistant.js?v=20260712-task-aware-assistant";
 import { initProjects, renderProjectsPage } from "../pages/projects.js?v=20260709-project-open-delegation";
 import { initDataset, renderDatasetPage } from "../pages/dataset.js?v=20260630-progress-hud";
 import { initLabelMe, renderLabelMeManager } from "../pages/labelme.js?v=20260711-layout-export-precision";

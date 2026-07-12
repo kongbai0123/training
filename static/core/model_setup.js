@@ -1,18 +1,33 @@
 import { apiFetch } from "../api.js";
 import { eventBus } from "../event_bus.js";
-import { t } from "../state.js";
+import { appState, applyLanguage, applyTheme, t } from "../state.js";
 import { escapeHtml, qs } from "../utils.js";
 
 const REVIEW_KEY = "vts-model-setup-reviewed";
 const activeJobs = new Map();
 let catalogPayload = null;
 let loadingPromise = null;
+let onboardingStep = 1;
+let selectedTask = "all";
 
 export function initModelSetup() {
   qs("#btn-open-model-setup")?.addEventListener("click", openModelSetup);
   qs("#btn-close-model-setup")?.addEventListener("click", () => closeModelSetup(true));
   qs("#btn-skip-model-setup")?.addEventListener("click", () => closeModelSetup(true));
   qs("#btn-install-selected-models")?.addEventListener("click", installSelectedModels);
+  qs("#btn-onboarding-next")?.addEventListener("click", () => setOnboardingStep(onboardingStep + 1));
+  qs("#btn-onboarding-back")?.addEventListener("click", () => setOnboardingStep(onboardingStep - 1));
+  document.querySelectorAll("[data-onboarding-step]").forEach((button) => button.addEventListener("click", () => setOnboardingStep(Number(button.dataset.onboardingStep))));
+  document.querySelectorAll("[data-model-task]").forEach((button) => button.addEventListener("click", () => {
+    selectedTask = button.dataset.modelTask || "all";
+    document.querySelectorAll("[data-model-task]").forEach((item) => item.classList.toggle("active", item === button));
+    renderModels(catalogPayload?.models || []);
+  }));
+  qs("#onboarding-language")?.addEventListener("change", (event) => applyLanguage(event.target.value));
+  qs("#onboarding-theme")?.addEventListener("change", (event) => applyTheme(event.target.value));
+  qs("#onboarding-density")?.addEventListener("change", applyOnboardingPreferences);
+  qs("#onboarding-scale")?.addEventListener("change", applyOnboardingPreferences);
+  ["onboarding-offline", "onboarding-autosave", "onboarding-clean-cache"].forEach((id) => qs(`#${id}`)?.addEventListener("change", saveOnboardingPreferences));
   qs("#model-setup-modal")?.addEventListener("click", (event) => {
     if (event.target.id === "model-setup-modal") closeModelSetup(true);
   });
@@ -21,6 +36,7 @@ export function initModelSetup() {
   qs("#btn-select-labelme-component")?.addEventListener("click", () => qs("#labelme-component-file")?.click());
   qs("#labelme-component-file")?.addEventListener("change", installLabelMeComponent);
   eventBus.on("open-model-setup", openModelSetup);
+  restoreOnboardingPreferences();
 }
 
 export async function maybeOpenModelSetup() {
@@ -32,7 +48,44 @@ export async function openModelSetup() {
   const modal = qs("#model-setup-modal");
   if (!modal) return;
   modal.hidden = false;
+  setOnboardingStep(1);
   await refreshModelSetup();
+}
+
+function setOnboardingStep(step) {
+  onboardingStep = Math.max(1, Math.min(4, Number(step) || 1));
+  document.querySelectorAll("[data-onboarding-panel]").forEach((panel) => { panel.hidden = Number(panel.dataset.onboardingPanel) !== onboardingStep; });
+  document.querySelectorAll("[data-onboarding-step]").forEach((button) => {
+    const active = Number(button.dataset.onboardingStep) === onboardingStep;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "step" : "false");
+  });
+  const back = qs("#btn-onboarding-back");
+  const next = qs("#btn-onboarding-next");
+  const install = qs("#btn-install-selected-models");
+  if (back) back.hidden = onboardingStep === 1;
+  if (next) next.hidden = onboardingStep === 4;
+  if (install) install.hidden = onboardingStep !== 4;
+  saveOnboardingPreferences();
+}
+
+function restoreOnboardingPreferences() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem("vts-onboarding-preferences") || "{}"); } catch { saved = {}; }
+  const values = { "onboarding-language": appState.settings.language, "onboarding-theme": appState.settings.theme, "onboarding-density": saved.density || "comfortable", "onboarding-scale": String(saved.scale || 1) };
+  Object.entries(values).forEach(([id, value]) => { const node = qs(`#${id}`); if (node) node.value = value; });
+  [["onboarding-offline", saved.offlineFirst !== false], ["onboarding-autosave", saved.autosave !== false], ["onboarding-clean-cache", Boolean(saved.cleanCacheOnStartup)]].forEach(([id, value]) => { const node = qs(`#${id}`); if (node) node.checked = value; });
+  applyOnboardingPreferences();
+}
+
+function applyOnboardingPreferences() {
+  document.body.dataset.density = qs("#onboarding-density")?.value || "comfortable";
+  document.documentElement.style.zoom = String(Number(qs("#onboarding-scale")?.value || 1));
+  saveOnboardingPreferences();
+}
+
+function saveOnboardingPreferences() {
+  localStorage.setItem("vts-onboarding-preferences", JSON.stringify({ schemaVersion: 1, density: qs("#onboarding-density")?.value || "comfortable", scale: Number(qs("#onboarding-scale")?.value || 1), offlineFirst: Boolean(qs("#onboarding-offline")?.checked), confirmDownloads: true, autosave: Boolean(qs("#onboarding-autosave")?.checked), cleanCacheOnStartup: Boolean(qs("#onboarding-clean-cache")?.checked) }));
 }
 
 export async function renderModelSetupSettings() {
@@ -139,7 +192,9 @@ function renderModels(models) {
   if (!list) return;
   const filter = qs("#model-setup-family-filter")?.value || "recommended";
   const installable = models.filter((model) => {
+    if (selectedTask === "sequence") return model.architecture === "rnn";
     if (model.architecture !== "cnn" || !model.installation_required) return false;
+    if (selectedTask !== "all" && model.task_family !== selectedTask) return false;
     if (filter === "all") return true;
     if (filter === "recommended") return model.installed || model.hardware_fit === "recommended";
     return model.model_family === filter;
@@ -147,7 +202,7 @@ function renderModels(models) {
   const readyTemplates = models.filter((model) => model.architecture === "rnn" && model.usable).length;
   const rnnSummary = qs("#model-setup-rnn-summary");
   if (rnnSummary) rnnSummary.textContent = t("modelSetup.rnnReady", { count: readyTemplates });
-  list.innerHTML = installable.map(renderModelCard).join("") || `<div class="empty-state">${escapeHtml(t("modelSetup.noInstallableModels"))}</div>`;
+  list.innerHTML = installable.map((model) => model.architecture === "rnn" ? renderTemplateCard(model) : renderModelCard(model)).join("") || `<div class="empty-state">${escapeHtml(t("modelSetup.noInstallableModels"))}</div>`;
 }
 
 function renderSources(sources) {
@@ -166,12 +221,13 @@ function renderModelCard(model) {
   const fit = model.hardware_fit || "compatible";
   const recommended = fit === "recommended" || Boolean(model.recommended);
   const selected = !installed && recommended ? "checked" : "";
-  const disabled = installed || job?.status === "downloading" || fit === "incompatible" ? "disabled" : "";
+  const disabled = installed || job?.status === "downloading" ? "disabled" : "";
   const size = formatBytes(model.download_size || 0);
   const task = model.task_family === "segmentation" ? t("modelSetup.segmentation") : t("modelSetup.detection");
   const statusLabel = installed ? t("modelSetup.installed") : t(`modelSetup.fit.${fit}`);
   const statusClass = installed ? "installed" : fit;
   const progress = job ? renderJobProgress(job) : "";
+  const scale = resolveModelScale(model);
   return `
     <article class="model-setup-card" data-model-card="${escapeHtml(model.model_id)}">
       <label class="model-setup-select">
@@ -179,12 +235,24 @@ function renderModelCard(model) {
         <span class="model-setup-icon"><i class="fa-solid fa-cube"></i></span>
         <span class="model-setup-copy">
           <strong>${escapeHtml(model.display_name || model.model_id)}</strong>
-          <span>${escapeHtml(task)} · ${escapeHtml(size)}</span>
+          <small class="model-scale-help"><b>${escapeHtml(t(`modelSetup.scale.${scale}.name`))}</b><span aria-hidden="true"> &middot; </span>${escapeHtml(t(`modelSetup.scale.${scale}.help`))}</small>
+          <span>${escapeHtml(task)} <span aria-hidden="true">&middot;</span> ${escapeHtml(size)}</span>
         </span>
       </label>
       <span class="model-fit-badge ${escapeHtml(statusClass)}">${escapeHtml(statusLabel)}</span>
       ${progress}
     </article>`;
+}
+
+function renderTemplateCard(model) {
+  return `<article class="model-setup-card model-template-card"><span class="model-setup-icon"><i class="fa-solid fa-wave-square"></i></span><span class="model-setup-copy"><strong>${escapeHtml(model.display_name || model.model_id)}</strong><span>${escapeHtml(t("modelSetup.builtInTemplate"))}</span></span><span class="model-fit-badge ready">${escapeHtml(t("modelSetup.fit.ready"))}</span></article>`;
+}
+
+function resolveModelScale(model) {
+  const declared = model.decision_profile?.scale;
+  if (["nano", "small", "medium", "large", "xlarge"].includes(declared)) return declared;
+  const match = String(model.model_id || model.weight || "").match(/(?:^|[-_])(n|s|m|l|x)(?:[-_.]|$)/i);
+  return ({ n: "nano", s: "small", m: "medium", l: "large", x: "xlarge" })[match?.[1]?.toLowerCase()] || "medium";
 }
 
 function renderJobProgress(job) {

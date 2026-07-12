@@ -70,6 +70,7 @@ export function renderProjectAssistantImplPage() {
     return;
   }
   renderStatus();
+  renderProjectMode();
   renderPageContext();
   renderKnowledgeBase();
   renderProfiles();
@@ -416,6 +417,19 @@ function renderStatus() {
   setText("#rag-status-documents", kb.document_count ?? 0);
   setText("#rag-kb-badge", t("assistant.docCount", { count: kb.document_count ?? 0 }));
   setText("#rag-agent-count", t("assistant.runCount", { count: assistantState.agentRuns.length }));
+}
+
+function renderProjectMode() {
+  const project = appState.currentProject || {};
+  const hasProject = Boolean(appState.currentProjectId);
+  const architecture = resolveAssistantArchitecture(project);
+  const mode = !hasProject ? "general" : architecture;
+  const icons = { general: "fa-compass", cnn: "fa-images", rnn: "fa-wave-square" };
+  const icon = qs("#assistant-project-mode .assistant-project-mode-icon i");
+  if (icon) icon.className = `fa-solid ${icons[mode]}`;
+  setText("#assistant-project-mode-title", t(`assistant.projectMode.${mode}.title`));
+  setText("#assistant-project-mode-help", t(`assistant.projectMode.${mode}.help`));
+  setText("#assistant-project-mode-badge", t(`assistant.projectMode.${mode}.badge`));
 }
 
 function renderSettings() {

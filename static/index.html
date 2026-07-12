@@ -238,6 +238,12 @@
             <div><span data-i18n="assistant.sources">Sources</span><strong id="rag-status-documents">0</strong></div>
           </section>
 
+          <section class="assistant-project-mode" id="assistant-project-mode" aria-live="polite">
+            <span class="assistant-project-mode-icon"><i class="fa-solid fa-compass"></i></span>
+            <div><strong id="assistant-project-mode-title">--</strong><p id="assistant-project-mode-help">--</p></div>
+            <span class="summary-badge" id="assistant-project-mode-badge">--</span>
+          </section>
+
           <nav class="assistant-tab-list" role="tablist" aria-label="Assistant sections" data-i18n-aria-label="assistant.tabsAria">
             <button type="button" class="active" role="tab" aria-selected="true" data-assistant-tab="qa"><i class="fa-regular fa-comments"></i><span data-i18n="assistant.tab.qa">Q&amp;A</span></button>
             <button type="button" role="tab" aria-selected="false" data-assistant-tab="sources"><i class="fa-solid fa-folder-tree"></i><span data-i18n="assistant.tab.sources">Sources</span></button>
@@ -267,7 +273,7 @@
               <h2 data-i18n="assistant.settingsTitle">Assistant Mode</h2>
               <span class="summary-badge" id="rag-settings-badge" data-i18n="assistant.mode.localSearch">Local Search</span>
             </div>
-            <p class="section-help" data-i18n="assistant.settingsHelp">Core training never depends on LLM. The assistant defaults to local project search; GGUF and cloud API modes are optional future generation backends.</p>
+              <p class="section-help" data-i18n="assistant.settingsHelp">Core training never depends on an LLM. Local project search is the default; optional generation backends never control training decisions.</p>
             <div class="assistant-settings-grid">
               <label>
                 <span data-i18n="assistant.settingsMode">Mode</span>
@@ -2334,6 +2340,7 @@
         <div><span data-i18n="modelSelection.projectTask">專案任務</span><strong id="model-selection-task">--</strong></div>
         <div><span data-i18n="modelSelection.datasetSize">資料規模</span><strong id="model-selection-samples">--</strong></div>
         <div><span data-i18n="modelSelection.hardware">硬體</span><strong id="model-selection-hardware">--</strong></div>
+        <label><span data-i18n="modelSelection.family">模型家族</span><select id="model-selection-family"><option value="all" data-i18n="common.all">全部</option></select></label>
         <label><span data-i18n="modelSelection.objective">優先目標</span><select id="model-selection-objective"><option value="balanced" data-i18n="modelSelection.objective.balanced">平衡</option><option value="speed" data-i18n="modelSelection.objective.speed">速度</option><option value="accuracy" data-i18n="modelSelection.objective.accuracy">精度</option></select></label>
       </section>
 
@@ -2354,7 +2361,7 @@
           <div class="model-selection-section-heading"><strong data-i18n="modelSelection.candidates">候選模型</strong><span class="badge badge-muted" id="model-selection-count">0</span></div>
           <div class="model-selection-table-wrap">
             <table class="data-table model-selection-table">
-              <thead><tr><th></th><th data-i18n="modelSelection.model">模型</th><th data-i18n="modelSelection.quality">品質</th><th data-i18n="modelSelection.latency">CPU 延遲</th><th data-i18n="modelSelection.params">參數量</th><th data-i18n="modelSelection.fit">硬體適配</th></tr></thead>
+              <thead><tr><th></th><th data-i18n="modelSelection.model">模型</th><th data-i18n="modelSelection.quality">品質</th><th data-i18n="modelSelection.latency">推論延遲</th><th data-i18n="modelSelection.params">參數量</th><th data-i18n="modelSelection.fit">硬體適配</th></tr></thead>
               <tbody id="model-selection-list"></tbody>
             </table>
           </div>
@@ -2384,14 +2391,42 @@
         <button class="icon-btn" id="btn-close-model-setup" type="button" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
       </div>
 
-      <section class="model-setup-hardware" aria-label="Hardware summary" data-i18n-aria-label="modelSetup.hardwareSummary">
+      <nav class="onboarding-step-nav" aria-label="Initial setup steps" data-i18n-aria-label="modelSetup.stepsAria">
+        <button type="button" class="active" data-onboarding-step="1"><span>1</span><strong data-i18n="modelSetup.step.interface">Language &amp; interface</strong></button>
+        <button type="button" data-onboarding-step="2"><span>2</span><strong data-i18n="modelSetup.step.privacy">Data &amp; privacy</strong></button>
+        <button type="button" data-onboarding-step="3"><span>3</span><strong data-i18n="modelSetup.step.hardware">Hardware</strong></button>
+        <button type="button" data-onboarding-step="4"><span>4</span><strong data-i18n="modelSetup.step.models">Tasks &amp; models</strong></button>
+      </nav>
+
+      <section class="onboarding-panel onboarding-preferences" data-onboarding-panel="1">
+        <div class="onboarding-panel-heading"><h3 data-i18n="modelSetup.interfaceTitle">Language and display</h3><p data-i18n="modelSetup.interfaceHelp">Changes apply immediately and can be updated later in Settings.</p></div>
+        <div class="onboarding-control-grid">
+          <label><span data-i18n="languageLabel">Language</span><select id="onboarding-language"><option value="zh-TW">繁體中文</option><option value="en">English</option></select></label>
+          <label><span data-i18n="themeLabel">Theme</span><select id="onboarding-theme"><option value="dark" data-i18n="common.dark">Dark</option><option value="light" data-i18n="common.light">Light</option></select></label>
+          <label><span data-i18n="modelSetup.uiDensity">Information density</span><select id="onboarding-density"><option value="comfortable" data-i18n="modelSetup.density.comfortable">Comfortable</option><option value="compact" data-i18n="modelSetup.density.compact">Compact</option></select></label>
+          <label><span data-i18n="modelSetup.uiScale">UI scale</span><select id="onboarding-scale"><option value="1">100%</option><option value="1.1">110%</option><option value="1.25">125%</option></select></label>
+        </div>
+      </section>
+
+      <section class="onboarding-panel onboarding-preferences" data-onboarding-panel="2" hidden>
+        <div class="onboarding-panel-heading"><h3 data-i18n="modelSetup.privacyTitle">Data, privacy and convenience</h3><p data-i18n="modelSetup.privacyHelp">Training data stays local. Network access remains opt-in for model downloads and external services.</p></div>
+        <div class="onboarding-toggle-list">
+          <label><span><strong data-i18n="modelSetup.offlinePriority">Offline-first mode</strong><small data-i18n="modelSetup.offlinePriorityHelp">Prefer installed models and local components.</small></span><input type="checkbox" id="onboarding-offline" checked></label>
+          <div class="onboarding-policy"><span><strong data-i18n="modelSetup.confirmDownloads">Confirm every model download</strong><small data-i18n="modelSetup.confirmDownloadsHelp">Never download a model without an explicit action.</small></span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i></div>
+          <label><span><strong data-i18n="modelSetup.autosave">Autosave project configuration</strong><small data-i18n="modelSetup.autosaveHelp">Save safe form changes when leaving a page.</small></span><input type="checkbox" id="onboarding-autosave" checked></label>
+          <label><span><strong data-i18n="modelSetup.cleanupCache">Clean rebuildable cache on startup</strong><small data-i18n="modelSetup.cleanupCacheHelp">Never removes projects, models, exports or logs.</small></span><input type="checkbox" id="onboarding-clean-cache"></label>
+        </div>
+        <div class="onboarding-path-summary"><span data-i18n="modelSetup.userDataLocation">User data location</span><code id="onboarding-user-data-path">%LOCALAPPDATA%\VisionTrainingStudio</code></div>
+      </section>
+
+      <section class="model-setup-hardware" data-onboarding-panel="3" hidden aria-label="Hardware summary" data-i18n-aria-label="modelSetup.hardwareSummary">
         <div><span data-i18n="modelSetup.gpu">GPU</span><strong id="model-setup-gpu">--</strong></div>
         <div><span data-i18n="modelSetup.vram">VRAM</span><strong id="model-setup-vram">--</strong></div>
         <div><span data-i18n="modelSetup.memory">RAM</span><strong id="model-setup-memory">--</strong></div>
         <div><span data-i18n="modelSetup.disk">Free disk</span><strong id="model-setup-disk">--</strong></div>
       </section>
 
-      <section class="model-setup-component">
+      <section class="model-setup-component" data-onboarding-panel="3" hidden>
         <span class="model-setup-icon"><i class="fa-solid fa-pen-to-square"></i></span>
         <div>
           <div class="model-component-title-row">
@@ -2404,9 +2439,9 @@
         <button type="button" class="btn btn-secondary btn-sm" id="btn-select-labelme-component" data-i18n="modelSetup.labelme.install">Install Component ZIP</button>
       </section>
 
-      <div class="model-setup-section-heading">
+      <div class="model-setup-section-heading" data-onboarding-panel="4" hidden>
         <div>
-          <h3 data-i18n="modelSetup.cnnModels">CNN / YOLO Models</h3>
+          <h3 data-i18n="modelSetup.cnnModels">Vision models</h3>
           <p data-i18n="modelSetup.cnnHelp">Only selected models are downloaded from the approved official source.</p>
         </div>
         <div class="model-setup-heading-tools">
@@ -2416,28 +2451,49 @@
             <option value="yolo26">YOLO26</option>
             <option value="yolo11">YOLO11</option>
             <option value="yolov8">YOLOv8</option>
+            <option value="rtdetr">RT-DETR</option>
             <option value="all" data-i18n="common.all">All</option>
           </select>
         </div>
       </div>
-      <div class="model-setup-list" id="model-setup-list"></div>
+      <div class="model-setup-task-filter" data-onboarding-panel="4" hidden>
+        <button type="button" class="active" data-model-task="all" data-i18n="common.all">All</button>
+        <button type="button" data-model-task="detection" data-i18n="modelSetup.detection">Detection</button>
+        <button type="button" data-model-task="segmentation" data-i18n="modelSetup.segmentation">Segmentation</button>
+        <button type="button" data-model-task="sequence" data-i18n="modelSetup.sequenceModels">Sequence models</button>
+      </div>
+      <div class="model-setup-list" id="model-setup-list" data-onboarding-panel="4" hidden></div>
 
-      <details class="model-source-summary">
+      <details class="model-source-summary" data-onboarding-panel="4" hidden>
         <summary data-i18n="modelSetup.otherSources">Other Model Sources</summary>
         <div class="model-source-list" id="model-setup-sources"></div>
       </details>
 
-      <div class="model-setup-consent">
+      <div class="model-setup-consent" data-onboarding-panel="4" hidden>
         <i class="fa-solid fa-shield-halved"></i>
         <p data-i18n="modelSetup.consent">Downloads require this explicit action. Files are checksum-verified before becoming available.</p>
       </div>
       <div class="modal-actions model-setup-actions">
         <button class="btn btn-secondary" id="btn-skip-model-setup" type="button" data-i18n="modelSetup.skip">Skip for now</button>
-        <button class="btn btn-primary" id="btn-install-selected-models" type="button">
+        <button class="btn btn-secondary" id="btn-onboarding-back" type="button" hidden><i class="fa-solid fa-arrow-left"></i> <span data-i18n="common.back">Back</span></button>
+        <button class="btn btn-primary" id="btn-onboarding-next" type="button"><span data-i18n="common.next">Next</span> <i class="fa-solid fa-arrow-right"></i></button>
+        <button class="btn btn-primary" id="btn-install-selected-models" type="button" hidden>
           <i class="fa-solid fa-download"></i>
           <span data-i18n="modelSetup.installSelected">Install Selected Models</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="action-guard-modal" hidden>
+    <div class="modal-content confirm-modal action-guard-modal-content" role="dialog" aria-modal="true" aria-labelledby="action-guard-title">
+      <div class="modal-header">
+        <div><h2 id="action-guard-title" data-i18n="actionGuard.title">Action needs attention</h2><p data-i18n="actionGuard.subtitle">Complete the requirements below before this action can run.</p></div>
+        <button class="icon-btn" id="btn-close-action-guard" type="button" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
+      </div>
+      <div class="action-guard-operation"><span data-i18n="actionGuard.operation">Requested action</span><strong id="action-guard-operation">--</strong></div>
+      <div class="status-guard warning"><div><strong data-i18n="actionGuard.reasons">Why it cannot run yet</strong><ul id="action-guard-reasons"></ul></div></div>
+      <div class="modal-actions" id="action-guard-actions"></div>
     </div>
   </div>
 
