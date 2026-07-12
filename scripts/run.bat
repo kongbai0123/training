@@ -3,12 +3,12 @@ setlocal EnableExtensions
 chcp 65001 >nul
 title Vision Training Studio
 
+cd /d "%~dp0\.."
+
 echo ===================================================
 echo   Vision Training Studio - Start Server
 echo ===================================================
 echo.
-
-cd /d "%~dp0"
 echo Working directory: %CD%
 echo.
 

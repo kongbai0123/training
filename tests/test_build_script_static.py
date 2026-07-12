@@ -6,6 +6,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BuildScriptStaticTests(unittest.TestCase):
+    def test_batch_entrypoints_are_grouped_under_scripts(self):
+        root_batch_files = list(ROOT.glob("*.bat"))
+        run_bat = (ROOT / "scripts" / "run.bat").read_text(encoding="utf-8")
+
+        self.assertEqual(root_batch_files, [])
+        self.assertIn('cd /d "%~dp0\\.."', run_bat)
+        self.assertIn('start "Vision Training Studio API"', run_bat)
+
     def test_build_script_checks_modular_frontend_javascript(self):
         build_bat = (ROOT / "scripts" / "build.bat").read_text(encoding="utf-8")
 

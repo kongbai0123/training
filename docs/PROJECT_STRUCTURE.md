@@ -14,7 +14,13 @@ VisionTrainingStudio/
 │  └─ reports/              研究與風險報告
 ├─ installer/               Windows 安裝器設定
 ├─ packaging/               PyInstaller 與元件打包入口
-├─ scripts/                 啟動、測試、建置、打包、稽核與診斷工具
+├─ scripts/                 所有批次入口、建置、稽核與診斷工具
+│  ├─ run.bat              Source mode 相容啟動入口
+│  ├─ start*.bat           開發與一般啟動
+│  ├─ build*.bat           建置與安裝器
+│  ├─ package*.bat         Portable 與元件封裝
+│  ├─ smoke*.bat / .ps1    打包後 smoke test
+│  └─ clean_runtime.bat    可重建資料清理
 ├─ src/                     Python 後端與核心業務邏輯
 │  ├─ api/routes/           FastAPI route 邊界
 │  ├─ model_system/         模型 catalog、相容性與安裝邏輯
@@ -29,10 +35,38 @@ VisionTrainingStudio/
 ├─ tools/                   開發工具所需的受控檔案
 ├─ app.py                   FastAPI 應用入口
 ├─ launcher.py              桌面啟動與本機服務管理
-├─ run.bat                  根目錄相容啟動入口
 ├─ requirements*.txt        runtime / build / test 依賴
 ├─ VERSION / version.json   版本來源
 └─ README.md                專案入口文件
+```
+
+## Visual Structure
+
+```mermaid
+flowchart TB
+    Repo["Repository"] --> Entry["Application entry\napp.py / launcher.py"]
+    Repo --> Source["Backend source\nsrc/"]
+    Repo --> Frontend["Offline frontend\nstatic/"]
+    Repo --> Automation["Scripts and delivery\nscripts/ · packaging/ · installer/"]
+    Repo --> Quality["Quality and documentation\ntests/ · docs/"]
+
+    Source --> Paths["Central path resolver\nsrc/app_paths.py"]
+    Paths --> UserData["User data root"]
+    UserData --> Projects["projects/\ndatasets · runs · weights · evaluations"]
+    UserData --> Models["models/ · components/"]
+    UserData --> State["config/ · licenses/ · project_assistant/"]
+    UserData --> Runtime["logs/ · cache/ · tmp/ · exports/"]
+
+    Automation --> Build["Rebuildable output\nbuild/"]
+    Automation --> Dist["Executable output\ndist/"]
+    Automation --> Release["Release candidates\nrelease_artifacts/"]
+
+    classDef source fill:#172033,stroke:#3b82f6,color:#f8fafc;
+    classDef runtime fill:#14251f,stroke:#10b981,color:#f8fafc;
+    classDef output fill:#2b2112,stroke:#f59e0b,color:#f8fafc;
+    class Repo,Entry,Source,Frontend,Automation,Quality,Paths source;
+    class UserData,Projects,Models,State,Runtime runtime;
+    class Build,Dist,Release output;
 ```
 
 ## Runtime Data Tree
