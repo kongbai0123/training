@@ -3,6 +3,7 @@ import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { escapeHtml, qs, qsa } from "../utils.js";
 import { openActionGuard } from "../core/action_guard.js?v=20260712-soft-action-guard";
+import { isPercentMetric, modelMatchesRun, normalizedMetricValue, sameMetric } from "../core/model_guide_metrics.js?v=20260713-model-guide-evidence";
 
 const guideState = {
   payload: null,
@@ -231,7 +232,7 @@ function renderDetail(model) {
     </div>
     <p class="model-guide-summary">${escapeHtml(localized(profile.summary) || t("modelSelection.noDescription"))}</p>
     <div class="model-guide-metrics">
-      ${metricCard(t("modelGuide.officialMetric"), metric.value == null ? "--" : formatNumber(metric.value), metric.label || "")}
+      ${metricCard(t("modelGuide.officialMetric"), metric.value == null ? "--" : formatMetricValue(metric.value, metric.key), metric.label || "")}
       ${metricCard(t("modelGuide.parameters"), benchmark.parameters_m ? `${formatNumber(benchmark.parameters_m)} M` : "--", "")}
       ${metricCard(t("modelGuide.modelSize"), model.download_size ? formatBytes(model.download_size) : "--", "")}
       ${metricCard(t("modelGuide.recommendedVram"), model.min_vram_mb ? `${formatNumber(model.min_vram_mb / 1024)} GB` : "--", "")}
@@ -242,8 +243,8 @@ function renderDetail(model) {
       ${detailList(t("modelGuide.limitations"), tradeoffs, "limitation", "fa-triangle-exclamation")}
     </div>
     <div class="model-guide-charts">
-      <section><div class="section-title compact"><h3 data-i18n="modelGuide.modelProfile">${escapeHtml(t("modelGuide.modelProfile"))}</h3></div><div class="model-guide-chart"><canvas id="model-guide-profile-chart"></canvas></div></section>
-      <section><div class="section-title compact"><h3>${escapeHtml(t("modelGuide.officialVsLocal"))}</h3></div><div class="model-guide-chart"><canvas id="model-guide-benchmark-chart"></canvas><div id="model-guide-local-empty" class="empty-state hidden"></div></div></section>
+      <section><div class="section-title compact"><h3 data-i18n="modelGuide.modelProfile">${escapeHtml(t("modelGuide.modelProfile"))}</h3><small>${escapeHtml(t("modelGuide.modelProfileNote"))}</small></div><div class="model-guide-chart"><canvas id="model-guide-profile-chart"></canvas></div></section>
+      <section class="model-guide-evidence-section"><div class="section-title compact"><h3>${escapeHtml(t("modelGuide.evaluationEvidence"))}</h3></div><div id="model-guide-evidence-source" class="model-guide-evidence-source"></div><div class="model-guide-chart model-guide-evidence-chart"><canvas id="model-guide-benchmark-chart"></canvas><div id="model-guide-local-empty" class="model-guide-chart-empty hidden"></div></div><p id="model-guide-comparison-note" class="model-guide-comparison-note hidden"></p></section>
     </div>`;
 }
 
@@ -286,24 +287,43 @@ function renderCharts(model) {
   if (!benchmarkCanvas) return;
   const official = model.benchmark?.primary_metric;
   const runs = matchingRuns(model);
-  const compatibleRuns = runs.filter((run) => sameMetric(official?.key, run.primary_metric?.key));
+  const comparisonMetric = official?.key || runs.find((run) => run.primary_metric?.key)?.primary_metric?.key;
+  const compatibleRuns = runs.filter((run) => sameMetric(comparisonMetric, run.primary_metric?.key));
   const empty = qs("#model-guide-local-empty");
-  if (!official?.value && !compatibleRuns.length) {
+  const source = qs("#model-guide-evidence-source");
+  const note = qs("#model-guide-comparison-note");
+  renderEvidenceSource(source, model, official, compatibleRuns);
+  if (!compatibleRuns.length) {
     benchmarkCanvas.hidden = true;
     empty?.classList.remove("hidden");
-    if (empty) empty.textContent = t("modelGuide.noComparableMetrics");
+    if (empty) empty.innerHTML = `<i class="fa-solid fa-chart-column"></i><strong>${escapeHtml(t(official?.value == null ? "modelGuide.noComparableMetrics" : "modelGuide.noLocalRuns"))}</strong><span>${escapeHtml(t(official?.value == null ? "modelGuide.noComparableMetricsHelp" : "modelGuide.noLocalRunsHelp"))}</span>`;
+    note?.classList.add("hidden");
     return;
   }
   benchmarkCanvas.hidden = false;
-  empty?.classList.toggle("hidden", compatibleRuns.length > 0);
-  if (empty && !compatibleRuns.length) empty.textContent = t("modelGuide.noLocalRuns");
-  const labels = [t("modelGuide.officialBenchmark"), ...compatibleRuns.slice(0, 3).map((run) => run.run_id)];
-  const values = [Number(official?.value || 0), ...compatibleRuns.slice(0, 3).map((run) => Number(run.primary_metric?.value || 0))];
+  empty?.classList.add("hidden");
+  const includeOfficial = official?.value != null && sameMetric(comparisonMetric, official.key);
+  const labels = [...(includeOfficial ? [t("modelGuide.officialReference")] : []), ...compatibleRuns.slice(0, 3).map((run) => run.run_id)];
+  const values = [...(includeOfficial ? [normalizedMetricValue(official.value, comparisonMetric)] : []), ...compatibleRuns.slice(0, 3).map((run) => normalizedMetricValue(run.primary_metric?.value, comparisonMetric))];
+  const colors = [...(includeOfficial ? ["#94a3b8"] : []), "#3b82f6", "#14b8a6", "#22c55e"];
+  if (note) {
+    note.textContent = t(includeOfficial ? "modelGuide.referenceComparisonNote" : "modelGuide.localOnlyComparisonNote");
+    note.classList.remove("hidden");
+  }
   benchmarkChart = new window.Chart(benchmarkCanvas, {
     type: "bar",
-    data: { labels, datasets: [{ label: official?.label || t("modelGuide.primaryMetric"), data: values, backgroundColor: ["#3b82f6", "#22c55e", "#14b8a6", "#84cc16"], borderRadius: 3 }] },
-    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } },
+    data: { labels, datasets: [{ label: metricLabel(official || compatibleRuns[0]?.primary_metric), data: values, backgroundColor: colors, borderRadius: 3 }] },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, suggestedMax: isPercentMetric(comparisonMetric) ? 100 : undefined, title: { display: true, text: metricLabel(official || compatibleRuns[0]?.primary_metric) } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${metricLabel(official || compatibleRuns[0]?.primary_metric)}: ${formatNumber(context.raw)}${isPercentMetric(comparisonMetric) ? "%" : ""}` } } } },
   });
+}
+
+function renderEvidenceSource(host, model, official, runs) {
+  if (!host) return;
+  const benchmark = model.benchmark || {};
+  const officialValue = official?.value == null ? "--" : `${formatNumber(normalizedMetricValue(official.value, official.key))}${isPercentMetric(official.key) ? "%" : ""}`;
+  host.innerHTML = `
+    <div><span>${escapeHtml(t("modelGuide.officialReference"))}</span><strong>${escapeHtml(officialValue)}</strong><small>${escapeHtml(metricLabel(official))} · ${escapeHtml(benchmark.dataset || t("modelGuide.datasetUnknown"))}${benchmark.input_size ? ` · ${escapeHtml(t("modelGuide.inputSize", { size: benchmark.input_size }))}` : ""}</small>${benchmark.source_url ? `<a href="${escapeHtml(benchmark.source_url)}" target="_blank" rel="noreferrer"><i class="fa-solid fa-arrow-up-right-from-square"></i> ${escapeHtml(t("modelGuide.officialSource"))}</a>` : ""}</div>
+    <div><span>${escapeHtml(t("modelGuide.localEvidence"))}</span><strong>${runs.length}</strong><small>${escapeHtml(runs.length ? t("modelGuide.matchingRunsReady") : t("modelGuide.noMatchingRuns"))}</small></div>`;
 }
 
 function buildReport() {
@@ -319,8 +339,8 @@ function buildReport() {
       summary: [localized(profile.summary) || t("modelSelection.noDescription"), ...((localized(profile.best_for) || []).map((item) => `${t("modelGuide.advantagePrefix")} ${item}`))],
       official: benchmark.primary_metric?.value == null
         ? [t("modelGuide.noOfficialBenchmark")]
-        : [`${benchmark.primary_metric.label}: ${formatNumber(benchmark.primary_metric.value)}`, `${t("modelGuide.dataset")}: ${benchmark.dataset || "--"}`, `${t("modelGuide.latency")}: ${latencyValue(benchmark)}`],
-      local: runs.length ? runs.map((run) => `${run.run_id}: ${run.primary_metric?.label || run.primary_metric?.key || "metric"} ${formatNumber(run.primary_metric?.value)}`) : [t("modelGuide.noLocalRuns")],
+        : [`${metricLabel(benchmark.primary_metric)}: ${formatMetricValue(benchmark.primary_metric.value, benchmark.primary_metric.key)}`, `${t("modelGuide.dataset")}: ${benchmark.dataset || "--"}`, `${t("modelGuide.inputResolution")}: ${benchmark.input_size || "--"}`, `${t("modelGuide.latency")}: ${latencyValue(benchmark)}`, `${t("modelGuide.officialSource")}: ${benchmark.source_url || t("modelGuide.catalogMetadata")}`, t("modelGuide.referenceComparisonNote")],
+      local: runs.length ? runs.map((run) => `${run.run_id}: ${metricLabel(run.primary_metric)} ${formatMetricValue(run.primary_metric?.value, run.primary_metric?.key)} · ${taskLabel(run.task_family || run.task_type)}`) : [t("modelGuide.noLocalRuns")],
       deployment: [`${t("modelGuide.format")}: ${model.format || "--"}`, `${t("modelGuide.recommendedVram")}: ${model.min_vram_mb ? `${formatNumber(model.min_vram_mb / 1024)} GB` : "--"}`, `${t("modelSelection.license")}: ${model.license || "--"}`],
       risk: localized(profile.tradeoffs) || [t("modelGuide.noKnownRisks")],
     },
@@ -400,12 +420,7 @@ function selectedModel() {
 }
 
 function matchingRuns(model) {
-  const candidates = [model.model_id, model.display_name, model.weight, model.selector_value, model.training_value, model.model_family]
-    .filter(Boolean).map(normalizeName);
-  return guideState.localRuns.filter((run) => {
-    const runModel = normalizeName(run.model || "");
-    return runModel && candidates.some((candidate) => candidate.length > 2 && (runModel.includes(candidate) || candidate.includes(runModel)));
-  });
+  return guideState.localRuns.filter((run) => modelMatchesRun(model, run));
 }
 
 function profileScores(model) {
@@ -519,14 +534,13 @@ function latencyRuntime(benchmark) {
   return benchmark.latency?.gpu_runtime || (benchmark.latency?.cpu_onnx_ms ? "CPU ONNX" : "");
 }
 
-function sameMetric(a, b) {
-  const left = String(a || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
-  const right = String(b || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
-  return left && right && (left === right || left.includes(right) || right.includes(left));
+function formatMetricValue(value, key) {
+  if (value == null || !Number.isFinite(Number(value))) return "--";
+  return `${formatNumber(normalizedMetricValue(value, key))}${isPercentMetric(key) ? "%" : ""}`;
 }
 
-function normalizeName(value) {
-  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+function metricLabel(metric) {
+  return metric?.label || metric?.display_name || metric?.key || t("modelGuide.primaryMetric");
 }
 
 function formatNumber(value) {

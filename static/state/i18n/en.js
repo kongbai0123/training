@@ -2114,7 +2114,22 @@
     "modelGuide.reportSourceNote": "Official benchmarks and local run metrics are kept separate; results may differ by dataset and hardware.",
     "modelGuide.generatedAt": "Generated at",
     "modelGuide.popupBlocked": "Allow the report window to open, then use Print to save it as PDF.",
-    "modelGuide.notTrainableReason": "This model is provided for research comparison only and is not enabled for training."
+    "modelGuide.notTrainableReason": "This model is provided for research comparison only and is not enabled for training.",
+    "modelGuide.evaluationEvidence": "Evaluation evidence",
+    "modelGuide.modelProfileNote": "0-100 selection estimate, not an official benchmark",
+    "modelGuide.officialReference": "Official reference",
+    "modelGuide.localEvidence": "Local measurements",
+    "modelGuide.datasetUnknown": "Benchmark dataset not registered",
+    "modelGuide.inputSize": "Input size {size}",
+    "modelGuide.inputResolution": "Benchmark input size",
+    "modelGuide.matchingRunsReady": "Same model, task, and comparable metric",
+    "modelGuide.noMatchingRuns": "No completed run matches this model and task",
+    "modelGuide.noComparableMetricsHelp": "This model has no verified official metric and no matching local run, so an empty chart is not drawn.",
+    "modelGuide.noLocalRunsHelp": "Official data is an external reference. The comparison chart appears after a local run finishes with the same model and task.",
+    "modelGuide.referenceComparisonNote": "Official values come from a public benchmark while local values come from the active project. Different datasets make this directional evidence, not a same-condition ranking.",
+    "modelGuide.localOnlyComparisonNote": "Only local runs with the same model, task, and metric are compared.",
+    "modelGuide.officialSource": "Official data source",
+    "modelGuide.catalogMetadata": "System catalog metadata"
 };
 
 for (const key of Object.keys(en)) {

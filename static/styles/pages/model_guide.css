@@ -272,6 +272,18 @@
   background: var(--bg-soft);
 }
 
+.model-guide-charts .section-title.compact {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.model-guide-charts .section-title.compact small {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .model-guide-detail-list h3 { margin: 0 0 8px; font-size: 14px; }
 .model-guide-detail-list ul { margin: 0; padding-left: 18px; color: var(--text-muted); line-height: 1.5; }
 .model-guide-detail-list.advantage h3 { color: var(--success); }
@@ -280,6 +292,96 @@
 .model-guide-chart {
   position: relative;
   height: 210px;
+}
+
+.model-guide-evidence-source {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(84px, .8fr);
+  gap: 1px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--border);
+}
+
+.model-guide-evidence-source > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 7px 8px;
+  background: var(--bg-panel);
+}
+
+.model-guide-evidence-source span,
+.model-guide-evidence-source small,
+.model-guide-comparison-note {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.model-guide-evidence-source strong {
+  font-size: 15px;
+}
+
+.model-guide-evidence-source small {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.model-guide-evidence-source a {
+  width: fit-content;
+  color: var(--accent);
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.model-guide-evidence-source a:hover {
+  text-decoration: underline;
+}
+
+.model-guide-evidence-chart {
+  height: 165px;
+  overflow: hidden;
+}
+
+.model-guide-chart-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 5px;
+  padding: 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.model-guide-chart-empty i {
+  color: var(--accent);
+  font-size: 18px;
+}
+
+.model-guide-chart-empty strong {
+  color: var(--text);
+  font-size: 12px;
+}
+
+.model-guide-chart-empty span {
+  max-width: 240px;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.model-guide-chart-empty.hidden {
+  display: none;
+}
+
+.model-guide-comparison-note {
+  min-height: 28px;
+  margin: 6px 0 0;
 }
 
 .model-guide-decision-panel {

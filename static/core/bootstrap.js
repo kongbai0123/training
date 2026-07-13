@@ -25,7 +25,7 @@ import {
   renderPrimaryPageModules,
   renderSecondaryPageModules,
   syncPageModeForProject,
-} from "./page_registry.js?v=20260713-model-guide-task-explainer";
+} from "./page_registry.js?v=20260713-model-guide-evidence";
 
 const {
   bootstrapSession,

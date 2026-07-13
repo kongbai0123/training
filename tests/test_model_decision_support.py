@@ -20,6 +20,10 @@ class ModelDecisionMetadataTests(unittest.TestCase):
         rnn = models["template.rnn.lstm-classifier"]
         self.assertEqual(yolo["benchmark"]["primary_metric"]["key"], "mask_map50_95")
         self.assertEqual(yolo["decision_profile"]["scale"], "nano")
+        yolo26m_seg = models["builtin.yolo26m-seg"]
+        self.assertEqual(yolo26m_seg["benchmark"]["kind"], "official")
+        self.assertEqual(yolo26m_seg["benchmark"]["primary_metric"]["value"], 44.1)
+        self.assertEqual(yolo26m_seg["benchmark"]["source_url"], "https://docs.ultralytics.com/tasks/segment/")
         self.assertIn("zh-TW", rnn["decision_profile"]["summary"])
         self.assertEqual(normalize_task_family("semantic_segmentation"), "segmentation")
         rtdetr = models["builtin.rtdetr-l-det"]

@@ -747,9 +747,12 @@
                                                  "value":  53.1
                                              },
                           "latency":  {
-                                          "cpu_onnx_ms":  220
+                                          "cpu_onnx_ms":  220,
+                                          "gpu_ms":  4.7,
+                                          "gpu_runtime":  "T4 TensorRT10"
                                       },
                           "parameters_m":  20.4,
+                          "flops_b":  68.2,
                           "source_url":  "https://docs.ultralytics.com/models/yolo26/"
                       }
     },
@@ -778,20 +781,27 @@
                                  "scale":  "medium"
                              },
         "benchmark":  {
-                          "kind":  "third_party_same_environment",
+                          "kind":  "official",
                           "dataset":  "COCO val2017",
                           "input_size":  640,
                           "primary_metric":  {
                                                  "key":  "mask_map50_95",
                                                  "label":  "Mask mAP50-95",
-                                                 "value":  44
+                                                 "value":  44.1
                                              },
+                          "secondary_metric":  {
+                                                   "key":  "box_map50_95",
+                                                   "label":  "Box mAP50-95",
+                                                   "value":  52.5
+                                               },
                           "latency":  {
-                                          "gpu_ms":  6.32,
-                                          "gpu_runtime":  "NVIDIA T4 TensorRT FP16 batch 1"
+                                          "cpu_onnx_ms":  328.2,
+                                          "gpu_ms":  6.7,
+                                          "gpu_runtime":  "T4 TensorRT10"
                                       },
                           "parameters_m":  23.6,
-                          "source_url":  "https://github.com/roboflow/rf-detr"
+                          "flops_b":  121.5,
+                          "source_url":  "https://docs.ultralytics.com/tasks/segment/"
                       }
     },
     {
@@ -828,9 +838,12 @@
                                                  "value":  55
                                              },
                           "latency":  {
-                                          "cpu_onnx_ms":  286.2
+                                          "cpu_onnx_ms":  286.2,
+                                          "gpu_ms":  6.2,
+                                          "gpu_runtime":  "T4 TensorRT10"
                                       },
                           "parameters_m":  24.8,
+                          "flops_b":  86.4,
                           "source_url":  "https://docs.ultralytics.com/models/yolo26/"
                       }
     },
@@ -859,7 +872,7 @@
                                  "scale":  "large"
                              },
         "benchmark":  {
-                          "kind":  "third_party_same_environment",
+                          "kind":  "official",
                           "dataset":  "COCO val2017",
                           "input_size":  640,
                           "primary_metric":  {
@@ -867,12 +880,19 @@
                                                  "label":  "Mask mAP50-95",
                                                  "value":  45.5
                                              },
+                          "secondary_metric":  {
+                                                   "key":  "box_map50_95",
+                                                   "label":  "Box mAP50-95",
+                                                   "value":  54.4
+                                               },
                           "latency":  {
-                                          "gpu_ms":  7.58,
-                                          "gpu_runtime":  "NVIDIA T4 TensorRT FP16 batch 1"
+                                          "cpu_onnx_ms":  387,
+                                          "gpu_ms":  8,
+                                          "gpu_runtime":  "T4 TensorRT10"
                                       },
                           "parameters_m":  28,
-                          "source_url":  "https://github.com/roboflow/rf-detr"
+                          "flops_b":  139.8,
+                          "source_url":  "https://docs.ultralytics.com/tasks/segment/"
                       }
     },
     {
@@ -909,9 +929,12 @@
                                                  "value":  57.5
                                              },
                           "latency":  {
-                                          "cpu_onnx_ms":  525.8
+                                          "cpu_onnx_ms":  525.8,
+                                          "gpu_ms":  11.8,
+                                          "gpu_runtime":  "T4 TensorRT10"
                                       },
                           "parameters_m":  55.7,
+                          "flops_b":  193.9,
                           "source_url":  "https://docs.ultralytics.com/models/yolo26/"
                       }
     },
@@ -940,20 +963,27 @@
                                  "scale":  "xlarge"
                              },
         "benchmark":  {
-                          "kind":  "third_party_same_environment",
+                          "kind":  "official",
                           "dataset":  "COCO val2017",
                           "input_size":  640,
                           "primary_metric":  {
                                                  "key":  "mask_map50_95",
                                                  "label":  "Mask mAP50-95",
-                                                 "value":  46.8
+                                                 "value":  47
                                              },
+                          "secondary_metric":  {
+                                                   "key":  "box_map50_95",
+                                                   "label":  "Box mAP50-95",
+                                                   "value":  56.5
+                                               },
                           "latency":  {
-                                          "gpu_ms":  12.92,
-                                          "gpu_runtime":  "NVIDIA T4 TensorRT FP16 batch 1"
+                                          "cpu_onnx_ms":  787,
+                                          "gpu_ms":  16.4,
+                                          "gpu_runtime":  "T4 TensorRT10"
                                       },
                           "parameters_m":  62.8,
-                          "source_url":  "https://github.com/roboflow/rf-detr"
+                          "flops_b":  313.5,
+                          "source_url":  "https://docs.ultralytics.com/tasks/segment/"
                       }
     },
     {

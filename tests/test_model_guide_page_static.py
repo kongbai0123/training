@@ -1,3 +1,6 @@
+import json
+import shutil
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -63,6 +66,48 @@ class ModelGuidePageStaticTests(unittest.TestCase):
         audit = (ROOT / "scripts" / "i18n_dom_audit.mjs").read_text(encoding="utf-8")
         self.assertIn('parent.closest(".no-i18n, [data-i18n-ignore]")', audit)
         self.assertIn('element.closest(".no-i18n, [data-i18n-ignore]")', audit)
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js is required for model-guide metric contract tests")
+    def test_metric_and_model_matching_contracts(self):
+        module_uri = (ROOT / "static" / "core" / "model_guide_metrics.js").as_uri()
+        script = f'''import {{ sameMetric, normalizedMetricValue, modelMatchesRun }} from "{module_uri}";
+const yolo = {{ model_id: "builtin.yolov8n-seg", display_name: "YOLOv8n Segmentation", weight: "yolov8n-seg.pt", task_family: "segmentation" }};
+const lstm = {{ model_id: "template.rnn.lstm-classifier", display_name: "LSTM Classifier", selector_value: "lstm", task_family: "sequence_classification" }};
+console.log(JSON.stringify({{
+  maskMetric: sameMetric("mask_map50_95", "metrics/mAP50-95(M)"),
+  boxMismatch: sameMetric("mask_map50_95", "metrics/mAP50-95(B)"),
+  normalizedMap: normalizedMetricValue(0.339, "metrics/mAP50-95(M)"),
+  yoloMatch: modelMatchesRun(yolo, {{ model: "yolov8n-seg.pt", task_family: "segmentation" }}),
+  yoloSizeMismatch: modelMatchesRun(yolo, {{ model: "yolov8s-seg.pt", task_family: "segmentation" }}),
+  yoloTaskMismatch: modelMatchesRun(yolo, {{ model: "yolov8n-seg.pt", task_family: "detection" }}),
+  lstmMatch: modelMatchesRun(lstm, {{ model: "lstm", task_family: "sequence_classification" }}),
+  lstmTaskMismatch: modelMatchesRun(lstm, {{ model: "lstm", task_family: "sequence_regression" }})
+}}));'''
+        result = subprocess.run(
+            [shutil.which("node"), "--input-type=module", "--eval", script],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["maskMetric"])
+        self.assertFalse(payload["boxMismatch"])
+        self.assertAlmostEqual(payload["normalizedMap"], 33.9, places=6)
+        self.assertTrue(payload["yoloMatch"])
+        self.assertFalse(payload["yoloSizeMismatch"])
+        self.assertFalse(payload["yoloTaskMismatch"])
+        self.assertTrue(payload["lstmMatch"])
+        self.assertFalse(payload["lstmTaskMismatch"])
+
+    def test_empty_local_evidence_does_not_draw_a_fake_comparison(self):
+        module = (ROOT / "static" / "pages" / "model_guide.js").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "styles" / "pages" / "model_guide.css").read_text(encoding="utf-8")
+        self.assertIn("if (!compatibleRuns.length)", module)
+        self.assertIn("benchmarkCanvas.hidden = true", module)
+        self.assertIn("model-guide-chart-empty", module)
+        self.assertIn('target="_blank" rel="noreferrer"', module)
+        self.assertIn('t("modelGuide.modelProfileNote")', module)
+        self.assertIn(".model-guide-chart-empty.hidden", css)
 
 
 if __name__ == "__main__":
