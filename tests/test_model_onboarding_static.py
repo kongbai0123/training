@@ -20,6 +20,19 @@ def test_onboarding_persists_user_preferences_and_filters_tasks():
     assert "applyTheme(event.target.value)" in source
     assert 'selectedTask === "sequence"' in source
     assert "resolveModelScale" in source
+    assert 'apiFetch("/api/onboarding"' in source
+    assert 'apiFetch("/api/onboarding/complete"' in source
+
+
+def test_model_manager_is_optional_and_does_not_preselect_recommendations():
+    html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+    source = (ROOT / "static" / "core" / "model_setup.js").read_text(encoding="utf-8")
+    assert 'id="model-setup-step-nav"' in html
+    assert 'data-i18n="modelSetup.optionalTitle"' in html
+    assert 'id="btn-complete-model-setup"' in html
+    assert 'id="model-setup-selection-summary"' in html
+    assert 'const selected = "";' in source
+    assert 'openModelSetup({ mode: "manage" })' in source
 
 
 def test_model_scale_labels_cover_supported_size_suffixes():

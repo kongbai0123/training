@@ -9,6 +9,7 @@ for %%P in (
   "ISCC.exe"
   "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
   "%ProgramFiles%\Inno Setup 6\ISCC.exe"
+  "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
   "%ProgramFiles(x86)%\Inno Setup 5\ISCC.exe"
   "%ProgramFiles%\Inno Setup 5\ISCC.exe"
 ) do (

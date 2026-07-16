@@ -9,11 +9,13 @@ let catalogPayload = null;
 let loadingPromise = null;
 let onboardingStep = 1;
 let selectedTask = "all";
+let setupMode = "initial";
 
 export function initModelSetup() {
-  qs("#btn-open-model-setup")?.addEventListener("click", openModelSetup);
-  qs("#btn-close-model-setup")?.addEventListener("click", () => closeModelSetup(true));
-  qs("#btn-skip-model-setup")?.addEventListener("click", () => closeModelSetup(true));
+  qs("#btn-open-model-setup")?.addEventListener("click", () => openModelSetup({ mode: "manage" }));
+  qs("#btn-close-model-setup")?.addEventListener("click", () => closeModelSetup({ completeInitialSetup: setupMode === "initial", outcome: "skipped" }));
+  qs("#btn-skip-model-setup")?.addEventListener("click", () => closeModelSetup({ completeInitialSetup: true, outcome: "skipped" }));
+  qs("#btn-complete-model-setup")?.addEventListener("click", () => closeModelSetup({ completeInitialSetup: setupMode === "initial", outcome: "completed" }));
   qs("#btn-install-selected-models")?.addEventListener("click", installSelectedModels);
   qs("#btn-onboarding-next")?.addEventListener("click", () => setOnboardingStep(onboardingStep + 1));
   qs("#btn-onboarding-back")?.addEventListener("click", () => setOnboardingStep(onboardingStep - 1));
@@ -29,26 +31,62 @@ export function initModelSetup() {
   qs("#onboarding-scale")?.addEventListener("change", applyOnboardingPreferences);
   ["onboarding-offline", "onboarding-autosave", "onboarding-clean-cache"].forEach((id) => qs(`#${id}`)?.addEventListener("change", saveOnboardingPreferences));
   qs("#model-setup-modal")?.addEventListener("click", (event) => {
-    if (event.target.id === "model-setup-modal") closeModelSetup(true);
+    if (event.target.id === "model-setup-modal") closeModelSetup({ completeInitialSetup: setupMode === "initial", outcome: "skipped" });
   });
   qs("#model-setup-list")?.addEventListener("click", handleModelAction);
+  qs("#model-setup-list")?.addEventListener("change", updateModelSelectionState);
   qs("#model-setup-family-filter")?.addEventListener("change", () => renderModels(catalogPayload?.models || []));
   qs("#btn-select-labelme-component")?.addEventListener("click", () => qs("#labelme-component-file")?.click());
   qs("#labelme-component-file")?.addEventListener("change", installLabelMeComponent);
-  eventBus.on("open-model-setup", openModelSetup);
+  eventBus.on("open-model-setup", () => openModelSetup({ mode: "manage" }));
   restoreOnboardingPreferences();
 }
 
 export async function maybeOpenModelSetup() {
-  if (localStorage.getItem(REVIEW_KEY)) return;
-  await openModelSetup();
+  const browserReview = localStorage.getItem(REVIEW_KEY);
+  try {
+    const state = await apiFetch("/api/onboarding", { suppressToast: true });
+    if (state.initial_setup_completed) {
+      localStorage.setItem(REVIEW_KEY, state.outcome || "completed");
+      return;
+    }
+    if (browserReview) {
+      await persistInitialSetupCompletion("migrated");
+      return;
+    }
+  } catch {
+    if (browserReview) return;
+  }
+  await openModelSetup({ mode: "initial" });
 }
 
-export async function openModelSetup() {
+export async function openModelSetup({ mode = "manage" } = {}) {
   const modal = qs("#model-setup-modal");
   if (!modal) return;
+  setupMode = mode === "initial" ? "initial" : "manage";
+  modal.dataset.setupMode = setupMode;
   modal.hidden = false;
-  setOnboardingStep(1);
+  qs("#model-setup-step-nav")?.toggleAttribute("hidden", setupMode !== "initial");
+  qs("#btn-skip-model-setup")?.toggleAttribute("hidden", setupMode !== "initial");
+  const titleKey = setupMode === "initial" ? "modelSetup.title" : "modelSetup.manageTitle";
+  const subtitleKey = setupMode === "initial" ? "modelSetup.subtitle" : "modelSetup.manageSubtitle";
+  const title = qs("#model-setup-title");
+  const subtitle = qs("#model-setup-subtitle");
+  if (title) {
+    title.dataset.i18n = titleKey;
+    title.textContent = t(titleKey);
+  }
+  if (subtitle) {
+    subtitle.dataset.i18n = subtitleKey;
+    subtitle.textContent = t(subtitleKey);
+  }
+  const completeLabel = qs("#model-setup-complete-label");
+  const completeLabelKey = setupMode === "initial" ? "modelSetup.completeWithoutInstall" : "modelSetup.closeManager";
+  if (completeLabel) {
+    completeLabel.dataset.i18n = completeLabelKey;
+    completeLabel.textContent = t(completeLabelKey);
+  }
+  setOnboardingStep(setupMode === "initial" ? 1 : 4);
   await refreshModelSetup();
 }
 
@@ -63,9 +101,11 @@ function setOnboardingStep(step) {
   const back = qs("#btn-onboarding-back");
   const next = qs("#btn-onboarding-next");
   const install = qs("#btn-install-selected-models");
-  if (back) back.hidden = onboardingStep === 1;
+  const complete = qs("#btn-complete-model-setup");
+  if (back) back.hidden = setupMode !== "initial" || onboardingStep === 1;
   if (next) next.hidden = onboardingStep === 4;
   if (install) install.hidden = onboardingStep !== 4;
+  if (complete) complete.hidden = onboardingStep !== 4;
   saveOnboardingPreferences();
 }
 
@@ -203,6 +243,33 @@ function renderModels(models) {
   const rnnSummary = qs("#model-setup-rnn-summary");
   if (rnnSummary) rnnSummary.textContent = t("modelSetup.rnnReady", { count: readyTemplates });
   list.innerHTML = installable.map((model) => model.architecture === "rnn" ? renderTemplateCard(model) : renderModelCard(model)).join("") || `<div class="empty-state">${escapeHtml(t("modelSetup.noInstallableModels"))}</div>`;
+  updateModelSummary(models);
+  updateModelSelectionState();
+}
+
+function updateModelSummary(models) {
+  const installable = models.filter((model) => model.architecture === "cnn" && model.installation_required);
+  const installed = installable.filter((model) => model.installed).length;
+  const recommended = installable.filter((model) => !model.installed && (model.recommended || model.hardware_fit === "recommended")).length;
+  const values = {
+    "model-setup-installed-count": installed,
+    "model-setup-available-count": Math.max(0, installable.length - installed),
+    "model-setup-recommended-count": recommended,
+  };
+  Object.entries(values).forEach(([id, value]) => {
+    const node = qs(`#${id}`);
+    if (node) node.textContent = String(value);
+  });
+}
+
+function updateModelSelectionState() {
+  const selected = [...document.querySelectorAll("[data-model-select]:checked")];
+  const installButton = qs("#btn-install-selected-models");
+  const summary = qs("#model-setup-selection-summary");
+  if (installButton) installButton.disabled = selected.length === 0;
+  if (summary) summary.textContent = selected.length
+    ? t("modelSetup.selectionCount", { count: selected.length })
+    : t("modelSetup.selectionEmpty");
 }
 
 function renderSources(sources) {
@@ -220,7 +287,7 @@ function renderModelCard(model) {
   const installed = Boolean(model.installed);
   const fit = model.hardware_fit || "compatible";
   const recommended = fit === "recommended" || Boolean(model.recommended);
-  const selected = !installed && recommended ? "checked" : "";
+  const selected = "";
   const disabled = installed || job?.status === "downloading" ? "disabled" : "";
   const size = formatBytes(model.download_size || 0);
   const task = model.task_family === "segmentation" ? t("modelSetup.segmentation") : t("modelSetup.detection");
@@ -277,7 +344,7 @@ async function installSelectedModels() {
     eventBus.emit("toast", t("modelSetup.selectAtLeastOne"));
     return;
   }
-  localStorage.setItem(REVIEW_KEY, "installed");
+  if (setupMode === "initial") await persistInitialSetupCompletion("installed");
   for (const modelId of selected) {
     try {
       const job = await apiFetch("/api/models/install", {
@@ -333,8 +400,22 @@ async function handleModelAction(event) {
   }
 }
 
-function closeModelSetup(reviewed) {
-  if (reviewed) localStorage.setItem(REVIEW_KEY, "skipped");
+async function persistInitialSetupCompletion(outcome) {
+  localStorage.setItem(REVIEW_KEY, outcome);
+  try {
+    await apiFetch("/api/onboarding/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ outcome }),
+      suppressToast: true,
+    });
+  } catch {
+    // Browser storage remains a compatibility fallback; the durable marker is retried next launch.
+  }
+}
+
+async function closeModelSetup({ completeInitialSetup = false, outcome = "completed" } = {}) {
+  if (completeInitialSetup) await persistInitialSetupCompletion(outcome);
   const modal = qs("#model-setup-modal");
   if (modal) modal.hidden = true;
 }

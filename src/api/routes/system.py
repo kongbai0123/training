@@ -1,15 +1,21 @@
 import os
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from src.config import APP_ENV, APP_VERSION, BASE_DIR, PROJECTS_DIR, STATIC_DIR, VERSION_INFO
 from src.license_manager import build_license_report
 from src.local_session import current_bootstrap
+from src.onboarding_state import complete_onboarding, get_onboarding_state
 from src.system_capabilities import get_system_capabilities
 
 
 router = APIRouter()
 LOCAL_TRUSTED_MODE = os.environ.get("LOCAL_TRUSTED_MODE", "false").lower() in ("true", "1", "yes")
+
+
+class OnboardingCompletionRequest(BaseModel):
+    outcome: str = "completed"
 
 
 @router.get("/api/version")
@@ -25,6 +31,16 @@ def bootstrap():
 @router.get("/api/system/capabilities")
 def system_capabilities():
     return get_system_capabilities()
+
+
+@router.get("/api/onboarding")
+def onboarding_status():
+    return get_onboarding_state()
+
+
+@router.post("/api/onboarding/complete")
+def mark_onboarding_complete(request: OnboardingCompletionRequest):
+    return complete_onboarding(request.outcome)
 
 
 @router.get("/api/health")

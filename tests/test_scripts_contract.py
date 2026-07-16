@@ -60,6 +60,11 @@ class ScriptsContractTests(unittest.TestCase):
         self.assertIn("Unable to stop packaged app process", package_script)
         self.assertIn("VTS_PYTHON_EXE", package_script)
 
+    def test_installer_build_supports_per_user_inno_setup(self):
+        installer_script = (ROOT / "scripts" / "build_installer.bat").read_text(encoding="utf-8")
+
+        self.assertIn("%LOCALAPPDATA%\\Programs\\Inno Setup 6\\ISCC.exe", installer_script)
+
     def test_pyinstaller_warning_audit_script_has_blocker_gate(self):
         audit_script = (ROOT / "scripts" / "audit_pyinstaller_warnings.py").read_text(encoding="utf-8")
 
