@@ -18,7 +18,7 @@ Generated artifacts remain excluded from Git.
 
 | Check | Result | Evidence |
 |---|---|---|
-| Full unit/integration/static suite | PASS | 363 tests passed |
+| Full unit/integration/static suite | PASS | 364 tests passed |
 | JavaScript syntax and Python compilation | PASS | `scripts/build.bat` |
 | PyInstaller warning audit | PASS | 0 blocker, 0 unclassified, 6 watch warnings |
 | Installed offline smoke | PASS | OpenCV 5.0.0.93; 0 projects; 0 automatic model downloads; 0 external connections |
