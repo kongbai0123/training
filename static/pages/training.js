@@ -5,7 +5,7 @@ import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
 import { initTrainingModeSidebar } from "./training_modes.js";
 
 // Training UI helper
-let metricsChart = null;
+let metricsCharts = [];
 let currentChartData = null; // Training UI helper
 let activeChartTab = "primary"; // Training UI helper
 const activeGlobalTrainingJobs = new Set();
@@ -17,6 +17,8 @@ let trainingModelCatalog = [];
 let loadedTrainingModelCatalogProjectId = null;
 let trainingStatusPollTimer = null;
 let trainingStatusPollInFlight = false;
+let metricLoadRequestId = 0;
+let metricLoadInFlightRunId = "";
 
 const ACTIVE_TRAINING_STATUSES = new Set(["training", "stopping"]);
 const TERMINAL_TRAINING_STATUSES = new Set(["completed", "failed", "stopped"]);
@@ -1316,8 +1318,9 @@ async function loadLatestRunMetricsOnce() {
     }
     
     // Training UI helper
-    const latestRun = runs[0];
-    if (latestRun.run_id === lastLoadedRunId && currentChartData) {
+    const preferredRunId = appState.trainingStatus?.run_id || appState.currentProject?.current?.training_run_id || "";
+    const latestRun = runs.find((run) => run.run_id === preferredRunId) || runs[0];
+    if ((latestRun.run_id === lastLoadedRunId && currentChartData) || latestRun.run_id === metricLoadInFlightRunId) {
       return; // Training UI helper
     }
     
@@ -1330,8 +1333,11 @@ async function loadLatestRunMetricsOnce() {
 
 // Training UI helper
 async function loadRunMetrics(runId) {
+  const requestId = ++metricLoadRequestId;
+  metricLoadInFlightRunId = runId;
   try {
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${runId}/metrics`, { suppressToast: true });
+    if (requestId !== metricLoadRequestId) return;
     currentChartData = normalizeStoredTrainingMetrics(data);
     lastLoadedRunId = runId;
     lastRenderedMetricRunId = runId;
@@ -1343,11 +1349,12 @@ async function loadRunMetrics(runId) {
     renderEpochHistoryTable(currentChartData);
     
     // Training UI helper
-    updateTrendDiagnostic(runId);
+    updateTrendDiagnostic(runId, requestId);
     
     // Training UI helper
-    await loadRunArtifacts(runId);
+    await loadRunArtifacts(runId, requestId);
   } catch (err) {
+    if (requestId !== metricLoadRequestId) return;
     if (!isExpectedMissingRunMetrics(err)) {
       console.error("loadRunMetrics error", err);
     }
@@ -1358,15 +1365,19 @@ async function loadRunMetrics(runId) {
     renderEpochHistoryTable(null);
     setMetricsDashboardActive(false);
     renderArtifactList(null, runId);
+  } finally {
+    if (requestId === metricLoadRequestId) metricLoadInFlightRunId = "";
   }
 }
 
 // Training UI helper
-async function loadRunArtifacts(runId) {
+async function loadRunArtifacts(runId, requestId = metricLoadRequestId) {
   try {
     const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${runId}/artifacts`, { suppressToast: true });
+    if (requestId !== metricLoadRequestId) return;
     renderArtifactList(data, runId);
   } catch (err) {
+    if (requestId !== metricLoadRequestId) return;
     if (!isExpectedMissingRunMetrics(err)) {
       console.error("loadRunArtifacts error", err);
     }
@@ -1380,9 +1391,10 @@ function isExpectedMissingRunMetrics(err) {
 }
 
 // Training UI helper
-async function updateTrendDiagnostic(runId) {
+async function updateTrendDiagnostic(runId, requestId = metricLoadRequestId) {
   try {
     const runs = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs`);
+    if (requestId !== metricLoadRequestId) return;
     const run = runs.find((item) => item.run_id === runId);
     if (!run || !run.health) {
       setText("#trend-best-epoch", run?.best_epoch || "--");
@@ -1415,37 +1427,33 @@ async function updateTrendDiagnostic(runId) {
 }
 
 function updateChartVisualization() {
-  const canvas = qs("#metrics-chart-canvas");
-  if (!canvas) return;
+  const grid = qs("#metrics-chart-grid");
+  if (!grid) return;
 
-  if (metricsChart) {
-    metricsChart.destroy();
-    metricsChart = null;
-  }
+  metricsCharts.forEach((chart) => chart.destroy());
+  metricsCharts = [];
+  grid.replaceChildren();
 
   if (!currentChartData || !currentChartData.epochs || currentChartData.epochs.length === 0) {
-    canvas.dataset.chartMaxEpoch = "0";
-    canvas.dataset.chartPointCount = "0";
-    // Training UI helper
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#95a1b1";
-    ctx.font = "14px Inter";
-    ctx.textAlign = "center";
-    ctx.fillText(t("training.metrics.emptyTitle"), canvas.width / 2, canvas.height / 2);
+    grid.dataset.chartCount = "0";
+    grid.dataset.chartMaxEpoch = "0";
+    grid.dataset.chartPointCount = "0";
+    const empty = document.createElement("div");
+    empty.className = "metrics-chart-empty";
+    empty.textContent = t("training.metrics.emptyTitle");
+    grid.appendChild(empty);
     return;
   }
 
   const epochs = currentChartData.epochs;
   const chartMaxEpoch = getChartMaxEpoch(currentChartData, epochs);
   const chartLabels = Array.from({ length: chartMaxEpoch }, (_, index) => index + 1);
-  canvas.dataset.chartMaxEpoch = String(chartMaxEpoch);
-  canvas.dataset.chartPointCount = String(epochs.length);
+  grid.dataset.chartMaxEpoch = String(chartMaxEpoch);
+  grid.dataset.chartPointCount = String(epochs.length);
   const showRaw = qs("#chart-show-raw")?.checked !== false;
   const showSmooth = qs("#chart-show-smooth")?.checked !== false;
   const alpha = Number(qs("#chart-ema-alpha")?.value || 0.25);
 
-  const datasets = [];
   const raw = currentChartData.raw || {};
   
   // Training UI helper
@@ -1539,14 +1547,47 @@ function updateChartVisualization() {
     }
   }
 
+  if (keysToRender.length === 0 || (!showRaw && !showSmooth)) {
+    grid.dataset.chartCount = "0";
+    const empty = document.createElement("div");
+    empty.className = "metrics-chart-empty";
+    empty.textContent = t("training.metrics.noTabMetrics");
+    grid.appendChild(empty);
+    return;
+  }
+
+  const isLight = document.body.dataset.theme === "light";
+  const gridColor = isLight ? "#e2e8f0" : "#2b3441";
+  const textColor = isLight ? "#5d6b7d" : "#95a1b1";
+
   keysToRender.forEach((item) => {
     const rawData = raw[item.key] || [];
     if (rawData.length === 0) return;
-    const expandedRawData = expandSeriesToEpochRange(rawData, epochs, chartMaxEpoch);
 
+    const card = document.createElement("article");
+    card.className = "metric-chart-card";
+    card.dataset.metricKey = item.key;
+    const header = document.createElement("div");
+    header.className = "metric-chart-card-header";
+    const title = document.createElement("h3");
+    title.textContent = item.label;
+    const latestLabel = document.createElement("span");
+    const latestValue = [...rawData].reverse().find((value) => Number.isFinite(Number(value)));
+    latestLabel.textContent = `${t("training.metrics.latest")}: ${metricValue(latestValue, 5)}`;
+    header.append(title, latestLabel);
+    const canvasWrap = document.createElement("div");
+    canvasWrap.className = "metric-chart-canvas-wrap";
+    const canvas = document.createElement("canvas");
+    canvas.dataset.metricKey = item.key;
+    canvasWrap.appendChild(canvas);
+    card.append(header, canvasWrap);
+    grid.appendChild(card);
+
+    const datasets = [];
+    const expandedRawData = expandSeriesToEpochRange(rawData, epochs, chartMaxEpoch);
     if (showRaw) {
       datasets.push({
-        label: `${item.label} (Raw)`,
+        label: t("training.metrics.raw"),
         data: expandedRawData,
         borderColor: item.color.raw,
         backgroundColor: "transparent",
@@ -1555,13 +1596,11 @@ function updateChartVisualization() {
         tension: 0.1
       });
     }
-
     if (showSmooth) {
       const smoothData = computeEma(rawData);
-      const expandedSmoothData = expandSeriesToEpochRange(smoothData, epochs, chartMaxEpoch);
       datasets.push({
-        label: `${item.label} (Smooth)`,
-        data: expandedSmoothData,
+        label: "EMA",
+        data: expandSeriesToEpochRange(smoothData, epochs, chartMaxEpoch),
         borderColor: item.color.smooth,
         backgroundColor: "transparent",
         borderWidth: 2.5,
@@ -1569,55 +1608,38 @@ function updateChartVisualization() {
         tension: 0.2
       });
     }
-  });
 
-  if (datasets.length === 0) {
-    canvas.dataset.chartDatasetCount = "0";
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#95a1b1";
-    ctx.font = "14px Inter";
-    ctx.textAlign = "center";
-    ctx.fillText("No metrics available for this tab.", canvas.width / 2, canvas.height / 2);
-    return;
-  }
-
-  const isLight = document.body.dataset.theme === "light";
-  const gridColor = isLight ? "#e2e8f0" : "#2b3441";
-  const textColor = isLight ? "#5d6b7d" : "#95a1b1";
-
-  metricsChart = new Chart(canvas, {
-    type: "line",
-    data: {
-      labels: chartLabels,
-      datasets: datasets
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          labels: { color: textColor, font: { family: "Inter", size: 11 } }
+    const chart = new Chart(canvas, {
+      type: "line",
+      data: { labels: chartLabels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { labels: { color: textColor, font: { family: "Inter", size: 11 } } },
+          tooltip: { mode: "index", intersect: false }
         },
-        tooltip: {
-          mode: "index",
-          intersect: false
-        }
-      },
-      scales: {
-        x: {
-          grid: { color: gridColor },
-          ticks: { color: textColor, font: { family: "Inter" } },
-          title: { display: true, text: "Epoch", color: textColor }
-        },
-        y: {
-          grid: { color: gridColor },
-          ticks: { color: textColor, font: { family: "Inter" } }
+        scales: {
+          x: {
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { family: "Inter" } },
+            title: { display: true, text: "Epoch", color: textColor }
+          },
+          y: {
+            beginAtZero: false,
+            grace: "8%",
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { family: "Inter" } },
+            title: { display: true, text: item.label, color: textColor }
+          }
         }
       }
-    }
+    });
+    canvas.dataset.chartDatasetCount = String(datasets.length);
+    metricsCharts.push(chart);
   });
-  canvas.dataset.chartDatasetCount = String(datasets.length);
+  grid.dataset.chartCount = String(metricsCharts.length);
 }
 
 function getChartMaxEpoch(chartData, epochs = []) {

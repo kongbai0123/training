@@ -29,6 +29,10 @@ class TrainingRunsApiMetricsSchemaTests(unittest.TestCase):
                 json.dumps({"primary_metric": {"key": "val/macro_f1"}, "groups": {"quality": ["val/macro_f1"]}}),
                 encoding="utf-8",
             )
+            run_dir.joinpath("train_config.json").write_text(
+                json.dumps({"epochs": 30}),
+                encoding="utf-8",
+            )
 
             with patch("src.api.routes.training_runs.ProjectManager.get_project", return_value={"project_id": "p1"}), \
                  patch("src.api.routes.training_runs.ProjectLayout.from_project", return_value=_FakeLayout(root)):
@@ -36,6 +40,8 @@ class TrainingRunsApiMetricsSchemaTests(unittest.TestCase):
 
             self.assertEqual(payload["metric_schema"]["primary_metric"]["key"], "val/macro_f1")
             self.assertEqual(payload["metric_schema"]["groups"]["quality"], ["val/macro_f1"])
+            self.assertEqual(payload["run_id"], "run_rnn")
+            self.assertEqual(payload["total_epochs"], 30)
 
 
 if __name__ == "__main__":

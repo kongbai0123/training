@@ -406,29 +406,31 @@ class YOLOTrainer:
                 # PyInstaller on Windows can deadlock when PyTorch dataloader
                 # workers spawn child processes from the frozen executable.
                 workers = 0
-            
-            model.train(
-                data=data_yaml_path,
-                epochs=epochs,
-                batch=batch_size,
-                imgsz=imgsz,
-                lr0=lr0,
-                device=device,
-                project=str(runs_dir.resolve().as_posix()),
-                name=run_id,
-                exist_ok=False,
-                patience=int(train_config.get("patience", 20)),
-                save=True,
-                save_period=int(train_config.get("save_period", 5)),
-                cache=train_config.get("cache", False),
-                workers=workers,
-                amp=bool(train_config.get("amp", True)),
-                seed=int(train_config.get("seed", 42)),
-                deterministic=False,
-                close_mosaic=int(train_config.get("close_mosaic", 10)),
-                plots=True,
-                verbose=True
-            )
+            from src.training.vector_plot_capture import capture_vector_plots
+
+            with capture_vector_plots(runs_dir):
+                model.train(
+                    data=data_yaml_path,
+                    epochs=epochs,
+                    batch=batch_size,
+                    imgsz=imgsz,
+                    lr0=lr0,
+                    device=device,
+                    project=str(runs_dir.resolve().as_posix()),
+                    name=run_id,
+                    exist_ok=False,
+                    patience=int(train_config.get("patience", 20)),
+                    save=True,
+                    save_period=int(train_config.get("save_period", 5)),
+                    cache=train_config.get("cache", False),
+                    workers=workers,
+                    amp=bool(train_config.get("amp", True)),
+                    seed=int(train_config.get("seed", 42)),
+                    deterministic=False,
+                    close_mosaic=int(train_config.get("close_mosaic", 10)),
+                    plots=True,
+                    verbose=True
+                )
             
             # Resolve actual run directory from trainer save_dir, with fallback.
             try:

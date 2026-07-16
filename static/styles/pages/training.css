@@ -715,11 +715,49 @@
 .chart-drawing-container {
   position: relative;
   width: 100%;
-  height: 320px;
   background: var(--bg-preview);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 8px;
+  padding: 12px;
+}
+.metrics-chart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+.metric-chart-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+.metric-chart-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.metric-chart-card-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+.metric-chart-card-header span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.metric-chart-canvas-wrap {
+  position: relative;
+  height: 250px;
+}
+.metrics-chart-empty {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  color: var(--text-muted);
 }
 .chart-report-container {
   text-align: center;
@@ -860,6 +898,14 @@
 .training-scroll-table {
   max-height: 300px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.training-scroll-table .data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-panel);
+  box-shadow: 0 1px 0 var(--border);
 }
 .training-event-list {
   max-height: 300px;
@@ -868,6 +914,18 @@
   flex-direction: column;
   gap: 8px;
   padding: 4px;
+  scrollbar-gutter: stable;
+}
+.training-scroll-title {
+  position: sticky;
+  top: -4px;
+  z-index: 2;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 #event-log-list {
   display: flex;

@@ -1211,7 +1211,7 @@
               </div>
 
               <div id="chart-drawing-container" class="chart-drawing-container">
-                <canvas id="metrics-chart-canvas"></canvas>
+                <div id="metrics-chart-grid" class="metrics-chart-grid" aria-live="polite"></div>
               </div>
 
               <div id="chart-report-container" class="hidden chart-report-container">
@@ -1252,6 +1252,7 @@
                 </table>
               </div>
               <div id="log-event-container" class="hidden training-event-list">
+                <div class="training-scroll-title" data-i18n="training.logs.eventTimeline">Event timeline</div>
                 <div class="empty-state" id="event-log-empty" data-i18n="training.logs.noEvent">No training events yet.</div>
                 <div id="event-log-list"></div>
               </div>
@@ -1711,21 +1712,22 @@
             <div class="metric-card"><span>dfl_loss</span><strong id="eval-dfl-loss">--</strong></div>
             <div class="metric-card"><span>box_loss</span><strong id="eval-box-loss">--</strong></div>
           </div>
-          <section class="panel-section evaluation-guidance-card">
-            <div class="section-title"><h2>CNN 評估檢查重點</h2></div>
-            <div class="evaluation-guidance-grid">
-              <div class="evaluation-guidance-item">
-                <h3>資料分散檢查</h3>
-                <ol>
-                  <li>建立類別平衡的 Train / Val / Test 分散。</li>
-                  <li>訓練前檢查類別分布與漏標風險。</li>
-                  <li>分散完成後再設定物理擴充。</li>
-                </ol>
+          <section class="panel-section evaluation-guidance-card evaluation-intelligence-card">
+            <div class="section-title evaluation-intelligence-title">
+              <div>
+                <h2 data-i18n="evaluation.intelligence.title">Smart model assessment</h2>
+                <p data-i18n="evaluation.intelligence.subtitle">Recommendations use this run's model, training configuration, dataset coverage and evaluation metrics.</p>
               </div>
-              <div class="evaluation-guidance-item">
-                <h3>物理擴充備註</h3>
-                <p>Val / Test images 不會套用擴充；擴充只套用於 Train split。請用混淆矩陣、Precision / Recall 與 F1 曲線確認模型是否真的泛化。</p>
+              <div class="evaluation-score-badge" id="evaluation-score-badge"><strong id="evaluation-score">--</strong><span>/ 100</span></div>
+            </div>
+            <div id="evaluation-assessment-empty" class="empty-state" data-i18n="evaluation.intelligence.empty">Complete a training run to generate assessment advice.</div>
+            <div id="evaluation-assessment-content" class="hidden">
+              <div class="evaluation-verdict-row">
+                <span class="status-badge" id="evaluation-verdict">--</span>
+                <p id="evaluation-assessment-summary"></p>
               </div>
+              <div class="evaluation-context-chips" id="evaluation-context-chips"></div>
+              <div class="evaluation-recommendation-list" id="evaluation-recommendation-list"></div>
             </div>
           </section>
           <section class="panel-section evaluation-plots-card">

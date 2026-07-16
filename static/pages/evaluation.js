@@ -15,6 +15,7 @@ export async function renderEvaluationPage() {
 
   if (!appState.currentProjectId) {
     resetEvaluationMetrics();
+    renderEvaluationAssessment(null);
     renderEvaluationPlots([]);
     return;
   }
@@ -32,10 +33,12 @@ export async function renderEvaluationPage() {
     setText("#eval-dfl-loss", data.has_metrics ? formatMetric(metrics.dfl_loss, 4) : "--");
     setText("#eval-box-loss", data.has_metrics ? formatMetric(metrics.box_loss, 4) : "--");
 
-    renderEvaluationPlots(data.has_metrics ? data.plots || [] : [], data.run_id);
+    renderEvaluationAssessment(data.assessment);
+    renderEvaluationPlots(data.has_metrics ? data.plots || [] : [], data.run_id, data.plot_exports || {});
   } catch (err) {
     console.error("Failed to load evaluation metrics:", err);
     resetEvaluationMetrics();
+    renderEvaluationAssessment(null);
     renderEvaluationPlots([]);
   }
 }
@@ -51,7 +54,50 @@ function formatMetric(value, digits = 3) {
   return Number.isFinite(number) ? number.toFixed(digits) : "--";
 }
 
-function renderEvaluationPlots(plots = [], runId = null) {
+function renderEvaluationAssessment(assessment) {
+  const empty = qs("#evaluation-assessment-empty");
+  const content = qs("#evaluation-assessment-content");
+  const hasAssessment = Boolean(assessment?.context && Array.isArray(assessment?.signals));
+  empty?.classList.toggle("hidden", hasAssessment);
+  content?.classList.toggle("hidden", !hasAssessment);
+  setText("#evaluation-score", hasAssessment ? assessment.score : "--");
+  if (!hasAssessment) return;
+
+  const verdict = String(assessment.verdict || "attention");
+  const verdictNode = qs("#evaluation-verdict");
+  if (verdictNode) {
+    verdictNode.className = `status-badge ${verdict}`;
+    verdictNode.textContent = t(`evaluation.verdict.${verdict}`);
+  }
+  setText("#evaluation-assessment-summary", t(`evaluation.verdict.${verdict}.summary`));
+
+  const context = assessment.context || {};
+  const contextItems = [
+    ["model", context.model],
+    ["task", context.task_type],
+    ["epochs", `${context.completed_epochs || 0} / ${context.configured_epochs || "--"}`],
+    ["bestEpoch", context.best_epoch || "--"],
+    ["imageSize", context.imgsz || "--"],
+    ["batch", context.batch_size || "--"],
+    ["dataset", context.total_images || "--"],
+    ["classes", context.class_count || "--"],
+  ];
+  const chips = qs("#evaluation-context-chips");
+  if (chips) {
+    chips.innerHTML = contextItems.map(([key, value]) => `<span class="evaluation-context-chip">${escapeHtml(t(`evaluation.context.${key}`))}: ${escapeHtml(String(value))}</span>`).join("");
+  }
+
+  const recommendations = qs("#evaluation-recommendation-list");
+  if (recommendations) {
+    recommendations.innerHTML = assessment.signals.map((signal) => {
+      const severity = ["critical", "warning", "info", "positive"].includes(signal.severity) ? signal.severity : "info";
+      const icon = severity === "critical" ? "fa-circle-exclamation" : severity === "warning" ? "fa-triangle-exclamation" : severity === "positive" ? "fa-circle-check" : "fa-lightbulb";
+      return `<article class="evaluation-recommendation ${severity}"><i class="fa-solid ${icon}"></i><div><strong>${escapeHtml(t(`evaluation.signal.${signal.code}.title`))}</strong><p>${escapeHtml(t(`evaluation.signal.${signal.code}.detail`, signal.values || {}))}</p></div></article>`;
+    }).join("");
+  }
+}
+
+function renderEvaluationPlots(plots = [], runId = null, plotExports = {}) {
   const plotsGrid = qs("#evaluation-plots-grid");
   if (!plotsGrid) return;
   if (!plots.length) {
@@ -63,12 +109,17 @@ function renderEvaluationPlots(plots = [], runId = null) {
   plotsGrid.innerHTML = plots.map((plot) => {
     const title = plot.replace(/\.(png|jpg|jpeg)$/i, "").replace(/_/g, " ");
     const src = `/api/projects/${encodeURIComponent(appState.currentProjectId)}/evaluation/plot/${encodeURIComponent(plot)}?t=${Date.now()}${runParam}`;
+    const vectorFilename = plotExports[plot] || "";
+    const downloadFilename = vectorFilename || plot;
+    const downloadFormat = vectorFilename ? "SVG" : pathExtensionLabel(plot);
+    const downloadSrc = `/api/projects/${encodeURIComponent(appState.currentProjectId)}/evaluation/plot/${encodeURIComponent(downloadFilename)}?t=${Date.now()}${runParam}`;
+    const downloadTitle = vectorFilename ? t("evaluation.plot.downloadSvg") : t("evaluation.plot.downloadLegacyRaster");
     return `
       <div class="evaluation-plot-card">
         <h3>${escapeHtml(title)}</h3>
         <div class="evaluation-plot-preview" data-evaluation-plot-preview="${escapeHtml(src)}" data-evaluation-plot-title="${escapeHtml(title)}" role="button" tabindex="0" aria-label="Preview ${escapeHtml(title)}">
-          <button type="button" class="evaluation-plot-download" data-evaluation-plot-download="${escapeHtml(src)}" data-evaluation-plot-filename="${escapeHtml(plot)}" aria-label="Download ${escapeHtml(title)}">
-            <i class="fa-solid fa-download"></i>
+          <button type="button" class="evaluation-plot-download" data-evaluation-plot-download="${escapeHtml(downloadSrc)}" data-evaluation-plot-filename="${escapeHtml(downloadFilename)}" aria-label="${escapeHtml(downloadTitle)}: ${escapeHtml(title)}" title="${escapeHtml(downloadTitle)}">
+            <i class="fa-solid fa-download"></i><span>${escapeHtml(downloadFormat)}</span>
           </button>
           <img src="${src}" alt="${escapeHtml(plot)}">
         </div>
@@ -95,6 +146,11 @@ function renderEvaluationPlots(plots = [], runId = null) {
   });
 }
 
+function pathExtensionLabel(filename) {
+  const extension = String(filename || "").split(".").pop()?.toUpperCase();
+  return extension || "FILE";
+}
+
 async function downloadEvaluationPlot(url, filename) {
   if (!url) return;
   try {
@@ -106,13 +162,13 @@ async function downloadEvaluationPlot(url, filename) {
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = objectUrl;
-    link.download = filename || "evaluation_plot.png";
+    link.download = filename || "evaluation_plot.svg";
     document.body.appendChild(link);
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
   } catch (err) {
-    eventBus.emit("toast", `下載評估圖失敗：${err.message}`);
+    eventBus.emit("toast", t("evaluation.plot.downloadFailed", { message: err.message }));
   }
 }
 

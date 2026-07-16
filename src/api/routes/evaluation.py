@@ -24,12 +24,14 @@ def get_evaluation_results(project_id: str):
 
     results = _read_evaluation_metrics(run_dir)
     available_plots = _list_evaluation_plots(run_dir)
+    plot_exports = _list_vector_plot_exports(run_dir, available_plots)
     artifacts = _list_run_artifact_files(run_dir)
 
     if not results:
         payload = _empty_evaluation_payload()
         payload["run_id"] = run_dir.name
         payload["plots"] = available_plots
+        payload["plot_exports"] = plot_exports
         payload["artifacts"] = artifacts
         return payload
 
@@ -39,7 +41,9 @@ def get_evaluation_results(project_id: str):
         "run_id": run_dir.name,
         "metrics": results["metrics"],
         "epochs_completed": results["epochs_completed"],
+        "assessment": _build_smart_assessment(project, run_dir, results),
         "plots": available_plots,
+        "plot_exports": plot_exports,
         "artifacts": artifacts
     }
 
@@ -88,6 +92,8 @@ def _empty_evaluation_payload() -> Dict[str, Any]:
         },
         "epochs_completed": 0,
         "plots": [],
+        "plot_exports": {},
+        "assessment": None,
         "artifacts": [],
     }
 
@@ -230,6 +236,103 @@ def _list_evaluation_plots(run_dir: Path) -> List[str]:
         "labels.jpg",
     ]
     return [name for name in preferred if (run_dir / name).exists()]
+
+
+def _list_vector_plot_exports(run_dir: Path, plots: List[str]) -> Dict[str, Optional[str]]:
+    exports: Dict[str, Optional[str]] = {}
+    for plot in plots:
+        svg_name = f"{Path(plot).stem}.svg"
+        exports[plot] = svg_name if (run_dir / svg_name).is_file() else None
+    return exports
+
+
+def _read_json_object(path: Path) -> Dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else {}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def _build_smart_assessment(project: Dict[str, Any], run_dir: Path, results: Dict[str, Any]) -> Dict[str, Any]:
+    metrics = results.get("metrics") or {}
+    raw = results.get("raw") or {}
+    config = _read_json_object(run_dir / "train_config.json")
+    summary = _read_json_object(run_dir / "run_summary.json")
+    precision = float(metrics.get("precision") or 0.0)
+    recall = float(metrics.get("recall") or 0.0)
+    f1 = float(metrics.get("f1") or 0.0)
+    map50 = float(metrics.get("map50") or 0.0)
+    map50_95 = float(metrics.get("map50_95") or 0.0)
+    quality_score = round(100 * max(0.0, min(1.0, (0.35 * map50_95) + (0.25 * f1) + (0.2 * precision) + (0.2 * recall))))
+    signals: List[Dict[str, Any]] = []
+
+    def add_signal(code: str, severity: str, **values: Any) -> None:
+        signals.append({"code": code, "severity": severity, "values": values})
+
+    if f1 < 0.5:
+        add_signal("low_f1", "critical", f1=round(f1, 4))
+    elif f1 < 0.75:
+        add_signal("moderate_f1", "warning", f1=round(f1, 4))
+
+    balance_gap = abs(precision - recall)
+    if balance_gap >= 0.15:
+        code = "precision_below_recall" if precision < recall else "recall_below_precision"
+        add_signal(code, "warning", precision=round(precision, 4), recall=round(recall, 4), gap=round(balance_gap, 4))
+
+    localization_gap = max(0.0, map50 - map50_95)
+    if localization_gap >= 0.2:
+        add_signal("localization_gap", "warning", map50=round(map50, 4), map50_95=round(map50_95, 4), gap=round(localization_gap, 4))
+
+    configured_epochs = int(config.get("epochs") or results.get("epochs_completed") or 0)
+    completed_epochs = int(results.get("epochs_completed") or 0)
+    best_epoch = int(summary.get("best_epoch") or 0)
+    if configured_epochs > 0 and best_epoch > 0:
+        if best_epoch <= max(2, int(configured_epochs * 0.4)) and completed_epochs >= max(3, int(configured_epochs * 0.7)):
+            add_signal("early_best_epoch", "warning", best_epoch=best_epoch, configured_epochs=configured_epochs)
+        elif best_epoch >= int(configured_epochs * 0.9) and completed_epochs >= configured_epochs:
+            add_signal("late_best_epoch", "info", best_epoch=best_epoch, configured_epochs=configured_epochs)
+
+    total_images = int((project.get("annotation_progress") or {}).get("total") or len(project.get("images") or []))
+    class_count = len(project.get("class_names") or [])
+    if total_images and class_count and total_images / class_count < 40:
+        add_signal("limited_class_coverage", "warning", total_images=total_images, class_count=class_count, images_per_class=round(total_images / class_count, 1))
+
+    imgsz = int(config.get("imgsz") or 0)
+    if imgsz and imgsz < 512 and str(project.get("task_type") or "").lower() in {"detection", "semantic_segmentation", "instance_segmentation"}:
+        add_signal("low_input_resolution", "info", imgsz=imgsz)
+
+    loss_values = [float(value) for value in (raw.get("val/box_loss") or raw.get("val/seg_loss") or []) if isinstance(value, (int, float))]
+    if len(loss_values) >= 5 and min(loss_values) > 0 and loss_values[-1] >= min(loss_values) * 1.25:
+        add_signal("validation_loss_rising", "warning", best_loss=round(min(loss_values), 4), last_loss=round(loss_values[-1], 4))
+
+    if not signals:
+        add_signal("healthy_balance", "positive", f1=round(f1, 4), map50_95=round(map50_95, 4))
+
+    severity_penalty = sum({"critical": 15, "warning": 7, "info": 2, "positive": 0}.get(item["severity"], 0) for item in signals)
+    score = max(0, min(100, quality_score - severity_penalty))
+    verdict = "strong" if score >= 85 else "usable" if score >= 70 else "attention" if score >= 50 else "weak"
+    return {
+        "score": score,
+        "verdict": verdict,
+        "signals": signals[:6],
+        "context": {
+            "run_id": run_dir.name,
+            "model": config.get("model") or summary.get("model") or "--",
+            "task_type": project.get("task_type") or "--",
+            "configured_epochs": configured_epochs,
+            "completed_epochs": completed_epochs,
+            "best_epoch": best_epoch,
+            "batch_size": config.get("batch_size"),
+            "imgsz": config.get("imgsz"),
+            "patience": config.get("patience"),
+            "device": config.get("device"),
+            "total_images": total_images,
+            "class_count": class_count,
+        },
+    }
 
 
 def _list_run_artifact_files(run_dir: Path) -> List[Dict[str, Any]]:

@@ -205,14 +205,27 @@ def get_run_metrics(project_id: str, run_id: str):
         raise HTTPException(status_code=404, detail="Project not found")
 
     layout = ProjectLayout.from_project(project)
-    metrics_file = layout.training_run_dir(run_id) / "metrics.json"
+    run_dir = layout.training_run_dir(run_id)
+    metrics_file = run_dir / "metrics.json"
     if not metrics_file.exists():
         raise HTTPException(status_code=404, detail="Metrics file not found for this run")
 
     try:
         with open(metrics_file, "r", encoding="utf-8") as f:
             payload = json.load(f)
-        schema_file = layout.training_run_dir(run_id) / "metric_schema.json"
+        if isinstance(payload, dict):
+            payload.setdefault("run_id", run_id)
+            config_file = run_dir / "train_config.json"
+            if "total_epochs" not in payload and config_file.exists():
+                try:
+                    with open(config_file, "r", encoding="utf-8") as f:
+                        config_payload = json.load(f)
+                    configured_epochs = config_payload.get("epochs") or config_payload.get("total_epochs")
+                    if configured_epochs is not None:
+                        payload["total_epochs"] = int(configured_epochs)
+                except (OSError, ValueError, TypeError, AttributeError):
+                    pass
+        schema_file = run_dir / "metric_schema.json"
         if schema_file.exists() and isinstance(payload, dict):
             with open(schema_file, "r", encoding="utf-8") as f:
                 payload.setdefault("metric_schema", json.load(f))
