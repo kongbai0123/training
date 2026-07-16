@@ -1144,6 +1144,9 @@ function renderRnnMonitorChart(canvasId, emptyId, chartModel, variant) {
   empty?.classList.toggle("hidden", hasSeries);
   const previous = canvasId === "rnn-monitor-quality-chart" ? rnnMonitorQualityChart : rnnMonitorLossChart;
   previous?.destroy();
+  if (typeof Chart !== "undefined" && typeof Chart.getChart === "function") {
+    Chart.getChart(canvas)?.destroy();
+  }
   if (!hasSeries || typeof Chart === "undefined") {
     if (canvasId === "rnn-monitor-quality-chart") rnnMonitorQualityChart = null;
     else rnnMonitorLossChart = null;

@@ -34,6 +34,7 @@ def test_rnn_live_monitor_uses_task_specific_metrics():
     for metric in ("val/accuracy", "val/macro_f1", "val/precision", "val/recall", "val/mae", "val/rmse"):
         assert metric in helpers
     assert "buildRnnLiveMonitorViewModel(appState.trainingStatus" in modes
+    assert "Chart.getChart(canvas)?.destroy()" in modes
     assert 'TrainingStateStore.set_field(project_id, "task_type"' in read("src/training/backends/rnn_backend.py")
 
 
