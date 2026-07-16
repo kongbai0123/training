@@ -1,11 +1,21 @@
 from pathlib import Path
 import unittest
+import json
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class ScriptsContractTests(unittest.TestCase):
+    def test_release_version_is_synchronized(self):
+        version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        installer = (ROOT / "installer" / "VisionTrainingStudio.iss").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        version_info = json.loads((ROOT / "version.json").read_text(encoding="utf-8"))
+        self.assertIn(f'#define MyAppVersion "{version}"', installer)
+        self.assertIn(f"version-{version}-2563EB", readme)
+        self.assertEqual(version_info["version"], version)
+
     def test_required_windows_scripts_exist(self):
         for script in [
             "start.bat",

@@ -37,6 +37,9 @@ class YOLOTrainerRunnerBridgePhase1CTests(unittest.TestCase):
         self.assertEqual(call_kwargs["args"], (project,))
         self.assertFalse(call_kwargs["daemon"])
         self.assertEqual(YOLOTrainer._threads["project_1"]["run_id"], "run_1")
+        state = TrainingStateStore.get_state("project_1")
+        self.assertEqual(state["status"], "training")
+        self.assertEqual(state["run_id"], "run_1")
 
     def test_runner_duplicate_prevents_second_start(self):
         project = {"project_id": "project_1", "training_config": {"run_id": "run_1"}}
@@ -81,6 +84,14 @@ class YOLOTrainerRunnerBridgePhase1CTests(unittest.TestCase):
         for key in ["status", "epoch", "total_epochs", "metrics", "error", "run_id", "hardware"]:
             self.assertIn(key, status)
         self.assertEqual(status["hardware"], {"cpu_usage": 1})
+
+    def test_gpu_selection_uses_cuda_availability_not_optional_telemetry(self):
+        with patch("src.trainer.torch.cuda.is_available", return_value=True):
+            self.assertEqual(YOLOTrainer.resolve_training_device("gpu"), 0)
+        with patch("src.trainer.torch.cuda.is_available", return_value=False):
+            self.assertEqual(YOLOTrainer.resolve_training_device("gpu"), "cpu")
+        with patch("src.trainer.torch.cuda.is_available", return_value=True):
+            self.assertEqual(YOLOTrainer.resolve_training_device("cpu"), "cpu")
 
 
 if __name__ == "__main__":

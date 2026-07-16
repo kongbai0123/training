@@ -145,12 +145,15 @@ class TrainingStateStore:
         project_id: str,
         best_model: Optional[str] = None,
         run_id: Optional[str] = None,
+        termination_reason: Optional[str] = None,
     ) -> Dict[str, Any]:
         extra = {}
         if best_model:
             extra["best_model"] = best_model
         if run_id:
             extra["run_id"] = run_id
+        if termination_reason:
+            extra["termination_reason"] = termination_reason
         if not extra:
             extra = None
         return cls._set_status(project_id, "completed", extra=extra, complete=True)

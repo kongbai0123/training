@@ -15,6 +15,11 @@ let lastRenderedMetricEpochCount = -1;
 let trainingHudTickTimer = null;
 let trainingModelCatalog = [];
 let loadedTrainingModelCatalogProjectId = null;
+let trainingStatusPollTimer = null;
+let trainingStatusPollInFlight = false;
+
+const ACTIVE_TRAINING_STATUSES = new Set(["training", "stopping"]);
+const TERMINAL_TRAINING_STATUSES = new Set(["completed", "failed", "stopped"]);
 
 function isSequenceTrainingRecord(record = {}) {
   const architecture = String(record.architecture || "").toLowerCase();
@@ -134,6 +139,7 @@ export function initTraining() {
         metrics: [],
         error: "",
         run_id: startPayload?.run_id || configData.run_id || "",
+        started_at: new Date().toISOString(),
         architecture: taskType.includes("sequence") ? "rnn" : "cnn",
         backend: selectedOption?.dataset?.backend || "ultralytics_yolo"
       };
@@ -807,7 +813,7 @@ export function renderTrainingMonitor() {
   const monitorEmpty = qs("#training-monitor-empty");
   const monitorActive = qs("#training-monitor-active");
 
-  const showMonitor = isRunning || isStopping || trainState.status === "completed" || trainState.status === "failed";
+  const showMonitor = isRunning || isStopping || TERMINAL_TRAINING_STATUSES.has(trainState.status);
   monitorEmpty?.classList.toggle("hidden", showMonitor);
   monitorActive?.classList.toggle("hidden", !showMonitor);
 
@@ -821,8 +827,9 @@ export function renderTrainingMonitor() {
       : 0;
   updateGlobalTrainingProgress(trainState, progressPercent, showMonitor);
 
-  setText("#train-status-label", trainState.status || "Idle");
+  setText("#train-status-label", trainingStatusLabel(trainState.status));
   setText("#train-progress-text", showMonitor ? `Epoch ${displayEpoch} / ${totalEpochs || "--"}` : "--");
+  renderTrainingMonitorOutcome(trainState, displayEpoch, totalEpochs);
 
   const lastMetrics = trainState.metrics && trainState.metrics.length ? trainState.metrics[trainState.metrics.length - 1] : {};
   const isRnnStatus = isSequenceTrainingRecord(trainState);
@@ -876,7 +883,7 @@ function updateGlobalTrainingProgress(trainState, progressPercent, showMonitor) 
     activeGlobalTrainingJobs.add(jobId);
     ensureTrainingHudTicker();
   }
-  if ((status === "completed" || status === "failed") && !activeGlobalTrainingJobs.has(jobId)) {
+  if (TERMINAL_TRAINING_STATUSES.has(status) && !activeGlobalTrainingJobs.has(jobId)) {
     return;
   }
   const payload = {
@@ -909,9 +916,55 @@ function updateGlobalTrainingProgress(trainState, progressPercent, showMonitor) 
     activeGlobalTrainingJobs.delete(jobId);
     trainingHudStartTimes.delete(jobId);
     stopTrainingHudTickerIfIdle();
+  } else if (status === "stopped") {
+    eventBus.emit("progress:hide", { jobId });
+    activeGlobalTrainingJobs.delete(jobId);
+    trainingHudStartTimes.delete(jobId);
+    stopTrainingHudTickerIfIdle();
   } else {
     eventBus.emit("progress:update", payload);
   }
+}
+
+function trainingStatusLabel(status = "idle") {
+  const labels = {
+    training: "training.progress.inProgress",
+    stopping: "training.progress.stopping",
+    completed: "common.completed",
+    failed: "common.failed",
+    stopped: "common.stopped",
+    idle: "training.monitor.statusIdle"
+  };
+  return t(labels[status] || "training.monitor.statusIdle");
+}
+
+function renderTrainingMonitorOutcome(trainState, displayEpoch, totalEpochs) {
+  const outcome = qs("#training-monitor-outcome");
+  if (!outcome) return;
+  const status = trainState.status || "idle";
+  const isEarlyStop = status === "completed" && (
+    trainState.termination_reason === "early_stopping" ||
+    (displayEpoch > 0 && totalEpochs > 0 && displayEpoch < totalEpochs)
+  );
+  let message = "";
+  let tone = "";
+  if (isEarlyStop) {
+    message = t("training.monitor.outcomeEarlyStop", { epoch: displayEpoch, total: totalEpochs });
+    tone = "is-success";
+  } else if (status === "completed") {
+    message = t("training.monitor.outcomeCompleted", { epoch: displayEpoch, total: totalEpochs || displayEpoch });
+    tone = "is-success";
+  } else if (status === "failed") {
+    message = t("training.monitor.outcomeFailed", { message: trainState.error || t("training.monitor.outcomeUnknownError") });
+    tone = "is-danger";
+  } else if (status === "stopped") {
+    message = t("training.monitor.outcomeStopped", { epoch: displayEpoch, total: totalEpochs || "--" });
+    tone = "is-warning";
+  }
+  outcome.classList.toggle("hidden", !message);
+  outcome.classList.remove("is-success", "is-warning", "is-danger");
+  if (tone) outcome.classList.add(tone);
+  outcome.textContent = message;
 }
 
 function ensureTrainingHudTicker() {
@@ -1787,31 +1840,76 @@ function startMonitorWebSocket() {
   
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   appState.wsConn = new WebSocket(`${protocol}//${window.location.host}/api/projects/${appState.currentProjectId}/monitor`);
+  scheduleTrainingStatusPoll(4000);
   
   appState.wsConn.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    appState.trainingStatus = data;
-    
-    // Training UI helper
-    renderTrainingMonitor();
-    
-    // Training UI helper
-    eventBus.emit("state-changed");
-    
-    // Training UI helper
-    if (data.status !== "training") {
-      try {
-        appState.wsConn.close();
-      } catch (e) {}
-      eventBus.emit("refresh-project");
+    try {
+      applyTrainingStatusUpdate(JSON.parse(event.data));
+    } catch (error) {
+      console.error("Invalid training monitor message", error);
+      scheduleTrainingStatusPoll(250);
     }
   };
   
   appState.wsConn.onclose = () => {
     appState.wsConn = null;
+    if (ACTIVE_TRAINING_STATUSES.has(appState.trainingStatus?.status)) {
+      scheduleTrainingStatusPoll(250);
+    }
   };
   appState.wsConn.onerror = () => {
     eventBus.emit("toast", "Training monitor WebSocket failed.");
-    appState.wsConn = null;
+    scheduleTrainingStatusPoll(250);
   };
+}
+
+function applyTrainingStatusUpdate(data) {
+  if (!data || typeof data !== "object") return;
+  const previousStatus = appState.trainingStatus?.status || "idle";
+  appState.trainingStatus = data;
+  renderTrainingMonitor();
+  eventBus.emit("state-changed");
+
+  if (TERMINAL_TRAINING_STATUSES.has(data.status)) {
+    stopTrainingStatusPolling();
+    if (appState.wsConn) {
+      try {
+        appState.wsConn.close();
+      } catch (error) {}
+    }
+    if (previousStatus !== data.status) eventBus.emit("refresh-project");
+    return;
+  }
+
+  if (ACTIVE_TRAINING_STATUSES.has(data.status)) {
+    scheduleTrainingStatusPoll(4000);
+  }
+}
+
+function scheduleTrainingStatusPoll(delay = 4000) {
+  if (!appState.currentProjectId || !ACTIVE_TRAINING_STATUSES.has(appState.trainingStatus?.status)) return;
+  if (trainingStatusPollTimer) window.clearTimeout(trainingStatusPollTimer);
+  trainingStatusPollTimer = window.setTimeout(refreshTrainingStatusFromApi, delay);
+}
+
+async function refreshTrainingStatusFromApi() {
+  trainingStatusPollTimer = null;
+  if (trainingStatusPollInFlight || !appState.currentProjectId) return;
+  trainingStatusPollInFlight = true;
+  try {
+    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/status`);
+    applyTrainingStatusUpdate(data);
+  } catch (error) {
+    console.error("Training status fallback poll failed", error);
+    scheduleTrainingStatusPoll(2000);
+  } finally {
+    trainingStatusPollInFlight = false;
+  }
+}
+
+function stopTrainingStatusPolling() {
+  if (trainingStatusPollTimer) {
+    window.clearTimeout(trainingStatusPollTimer);
+    trainingStatusPollTimer = null;
+  }
 }

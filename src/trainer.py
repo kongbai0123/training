@@ -5,6 +5,7 @@ import time
 import shutil
 import psutil
 import sys
+import torch
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -33,6 +34,10 @@ class YOLOTrainer:
         if backend == "ultralytics_rtdetr":
             return RTDETR(model_path)
         return YOLO(model_path)
+
+    @staticmethod
+    def resolve_training_device(requested_device: str):
+        return 0 if requested_device == "gpu" and torch.cuda.is_available() else "cpu"
 
     @classmethod
     def _mirror_state(cls, project_id: str, state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -64,7 +69,15 @@ class YOLOTrainer:
         cpu_usage = psutil.cpu_percent()
         ram = psutil.virtual_memory()
         
-        gpu_info = {"available": False, "name": "N/A", "usage": 0, "vram_used": 0, "vram_total": 0, "temp": 0}
+        cuda_available = bool(torch.cuda.is_available())
+        gpu_info = {
+            "available": cuda_available,
+            "name": torch.cuda.get_device_name(0) if cuda_available else "N/A",
+            "usage": 0,
+            "vram_used": 0,
+            "vram_total": 0,
+            "temp": 0,
+        }
         
         if HAS_NVML:
             try:
@@ -273,6 +286,14 @@ class YOLOTrainer:
             return
             
         cls._stop_flags[project_id] = False
+        state = TrainingStateStore.init_run(
+            project_id=project_id,
+            run_id=run_id,
+            total_epochs=int(train_config.get("epochs", 50)),
+            architecture="cnn",
+            backend=str(train_config.get("backend") or "ultralytics_yolo"),
+        )
+        cls._mirror_state(project_id, state)
         
         result = DEFAULT_THREAD_TRAINING_RUNNER.start(
             project_id=project_id,
@@ -283,6 +304,13 @@ class YOLOTrainer:
         )
         if result.get("started"):
             cls._threads[project_id] = dict(result)
+        else:
+            state = TrainingStateStore.mark_failed(
+                project_id,
+                "Training runner did not start.",
+                run_id=run_id,
+            )
+            cls._mirror_state(project_id, state)
 
     @classmethod
     def _run_yolo(cls, project_data: Dict[str, Any]):
@@ -304,13 +332,15 @@ class YOLOTrainer:
         if actual_run_dir.exists():
             raise RuntimeError(f"Training run directory already exists: {actual_run_dir}")
         
-        state = TrainingStateStore.init_run(
-            project_id=project_id,
-            run_id=run_id,
-            total_epochs=train_config.get("epochs", 50),
-            architecture="cnn",
-            backend=backend_name,
-        )
+        state = TrainingStateStore.get_state(project_id)
+        if state.get("run_id") != run_id or state.get("status") != "training":
+            state = TrainingStateStore.init_run(
+                project_id=project_id,
+                run_id=run_id,
+                total_epochs=train_config.get("epochs", 50),
+                architecture="cnn",
+                backend=backend_name,
+            )
         cls._mirror_state(project_id, state)
         
         error_msg = ""
@@ -370,7 +400,7 @@ class YOLOTrainer:
             batch_size = int(train_config.get("batch_size", 8))
             imgsz = int(train_config.get("imgsz", 640))
             lr0 = float(train_config.get("lr0", 0.01))
-            device = 0 if train_config.get("device") == "gpu" and HAS_NVML else "cpu"
+            device = cls.resolve_training_device(str(train_config.get("device") or "cpu"))
             workers = int(train_config.get("workers", 4))
             if getattr(sys, "frozen", False):
                 # PyInstaller on Windows can deadlock when PyTorch dataloader
@@ -409,7 +439,15 @@ class YOLOTrainer:
             # Training completed.
             best_model_path = actual_run_dir / "weights" / "best.pt"
             best_model = str(best_model_path.resolve().as_posix()) if best_model_path.exists() else None
-            state = TrainingStateStore.mark_completed(project_id, best_model=best_model, run_id=run_id)
+            latest_state = TrainingStateStore.get_state(project_id)
+            completed_epochs = int(latest_state.get("epoch") or 0)
+            termination_reason = "early_stopping" if 0 < completed_epochs < epochs else "completed"
+            state = TrainingStateStore.mark_completed(
+                project_id,
+                best_model=best_model,
+                run_id=run_id,
+                termination_reason=termination_reason,
+            )
             cls._mirror_state(project_id, state)
                 
         except KeyboardInterrupt:
@@ -501,7 +539,6 @@ class YOLOTrainer:
             
             # Free GPU memory after training.
             import gc
-            import torch
             gc.collect()
             if torch.cuda.is_available():
                 try:

@@ -4,6 +4,7 @@ import {
   initPreferences,
   applyLanguage,
   getProjectStatus,
+  t,
 } from "../state.js";
 import { qs, qsa } from "../utils.js";
 import { initGlobalProgressHud } from "../ui/progress_hud.js";

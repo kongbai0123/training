@@ -51,6 +51,15 @@ class TrainingStateStorePhase1BTests(unittest.TestCase):
         self.assertEqual(completed["status"], "completed")
         self.assertEqual(completed["best_model"], "weights/best.pt")
 
+        TrainingStateStore.init_run("project_early", "run_early", 80, "cnn", "ultralytics_yolo")
+        early = TrainingStateStore.mark_completed(
+            "project_early",
+            run_id="run_early",
+            termination_reason="early_stopping",
+        )
+        self.assertEqual(early["status"], "completed")
+        self.assertEqual(early["termination_reason"], "early_stopping")
+
     def test_get_state_returns_deep_copy(self):
         TrainingStateStore.init_run("project_1", "run_1", 2, "cnn", "ultralytics_yolo")
         state = TrainingStateStore.append_epoch_metrics("project_1", {"epoch": 1, "map50": 0.5})

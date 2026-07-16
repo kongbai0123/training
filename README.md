@@ -7,7 +7,7 @@
 支援 CNN 影像任務與 RNN 序列任務，從資料匯入、資料角色設定、訓練、評估、模型比較到交付產物，均在同一套本機介面完成。
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](docs/INSTALL.md)
-[![Version](https://img.shields.io/badge/version-0.1.0-2563EB)](VERSION)
+[![Version](https://img.shields.io/badge/version-0.1.1-2563EB)](VERSION)
 [![Package](https://img.shields.io/badge/package-Portable%20EXE-16A34A)](docs/INSTALL.md)
 [![Runtime](https://img.shields.io/badge/end--user%20runtime-No%20Python%20required-0F766E)](docs/INSTALL.md)
 

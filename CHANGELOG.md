@@ -4,6 +4,15 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-16
+
+### Fixed
+- Compact the live training monitor into a responsive horizontal summary instead of stacked full-width cards.
+- Keep training status synchronized through WebSocket updates plus HTTP fallback polling, including completed, failed, stopped, and early-stopping outcomes.
+- Record and display successful early stopping so the UI no longer leaves users waiting on a stale in-progress indicator.
+- Select CUDA training from PyTorch device availability instead of requiring optional NVIDIA telemetry support.
+- Restore the translated project-refresh notification after terminal training updates.
+
 ### Added
 - Added durable first-run completion state under the user configuration directory, including migration from the legacy browser-only review marker.
 - Added release validation evidence for the rebuilt Windows runtime, portable archive, installer, clean installation, same-path upgrade, and uninstall data retention.
