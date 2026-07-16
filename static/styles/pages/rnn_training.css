@@ -280,6 +280,18 @@
   font-size: 0.78rem;
   background: var(--bg-panel);
 }
+.rnn-start-guidance { display: flex; gap: 8px; align-items: flex-start; padding: 9px 10px; border-radius: 7px; font-size: 0.8rem; line-height: 1.45; }
+.rnn-start-guidance.is-warning { border: 1px solid rgba(245, 158, 11, 0.38); background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+.rnn-start-guidance.is-ready { border: 1px solid rgba(34, 197, 94, 0.36); background: rgba(34, 197, 94, 0.1); color: var(--success); }
+.rnn-training-start-panel .rnn-disabled-action-hitbox,
+.rnn-training-start-panel #rnn-start-disabled { width: 100%; }
+.rnn-live-monitor-section { border-color: color-mix(in srgb, var(--primary) 34%, var(--border)); }
+.rnn-live-monitor-section.is-active { box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent); }
+.rnn-monitor-progress-row { display: flex; justify-content: space-between; gap: 12px; color: var(--text-soft); font-size: 0.84rem; }
+.rnn-monitor-progress-track { height: 8px; margin: 7px 0 12px; overflow: hidden; border-radius: 999px; background: rgba(148, 163, 184, 0.2); }
+.rnn-monitor-progress-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 180ms ease; }
+.rnn-monitor-metric-grid.metric-grid.compact { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 12px; }
+.rnn-monitor-chart-grid .rnn-chart-shell { min-height: 250px; }
 .rnn-training-secondary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -412,6 +424,9 @@
   gap: 10px;
   margin-bottom: 10px;
 }
+.rnn-chart-heading > div { display: grid; gap: 3px; min-width: 0; }
+.rnn-chart-heading .btn,
+.rnn-comparison-card-head .btn { flex: 0 0 auto; }
 .rnn-chart-heading strong {
   color: var(--text);
   font-size: 0.88rem;
@@ -640,6 +655,27 @@
   color: var(--text-muted);
   font-size: 0.76rem;
 }
+.rnn-comparison-card-head > div { display: grid; gap: 3px; min-width: 0; }
+.rnn-intelligence-layout { display: grid; grid-template-columns: minmax(120px, 0.18fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.rnn-intelligence-score { display: flex; align-items: baseline; justify-content: center; padding: 18px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); }
+.rnn-intelligence-score strong { color: var(--primary); font-size: 2rem; }
+.rnn-intelligence-score span { color: var(--text-muted); }
+.rnn-intelligence-context { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.rnn-intelligence-context > span { display: grid; gap: 2px; min-width: 110px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg-panel); }
+.rnn-intelligence-context small { color: var(--text-muted); }
+.rnn-intelligence-context strong { color: var(--text); overflow-wrap: anywhere; }
+.rnn-intelligence-recommendations { display: grid; gap: 8px; }
+.rnn-intelligence-signal { display: flex; gap: 9px; padding: 9px 10px; border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: 7px; background: var(--bg-panel); }
+.rnn-intelligence-signal.is-warning { border-left-color: var(--warning); }
+.rnn-intelligence-signal.is-danger { border-left-color: var(--danger); }
+.rnn-intelligence-signal.is-success { border-left-color: var(--success); }
+.rnn-intelligence-signal > div { display: grid; gap: 3px; }
+.rnn-intelligence-signal strong { color: var(--text); }
+.rnn-intelligence-signal span { color: var(--text-muted); font-size: 0.8rem; line-height: 1.45; }
+.rnn-verdict-strong { background: rgba(34, 197, 94, 0.14); color: var(--success); }
+.rnn-verdict-usable { background: rgba(59, 130, 246, 0.14); color: var(--primary); }
+.rnn-verdict-attention { background: rgba(245, 158, 11, 0.14); color: var(--warning); }
+.rnn-verdict-weak { background: rgba(239, 68, 68, 0.14); color: var(--danger); }
 .rnn-comparison-card canvas {
   width: 100% !important;
   height: 150px !important;
@@ -800,6 +836,11 @@
   text-align: right;
   color: var(--text);
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .rnn-intelligence-layout { grid-template-columns: 1fr; }
+  .rnn-monitor-metric-grid.metric-grid.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .rnn-schema-grid {
   display: grid;

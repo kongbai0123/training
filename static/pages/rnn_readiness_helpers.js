@@ -1,3 +1,5 @@
+import { t } from "../state.js";
+
 export function parseRnnFeatureColumns(value = "") {
   const seen = new Set();
   return String(value)
@@ -104,18 +106,18 @@ export function rnnStartBlockerMessage({
   modelLabel = "Selected model",
   readiness = null
 } = {}) {
-  if (!hasProject) return "Open a project before starting RNN training.";
-  if (readinessLoading) return "RNN readiness is still checking.";
-  if (trainingStarting) return "RNN training is starting.";
-  if (trainingStatus === "training" || trainingStatus === "stopping") return "Another training job is already active.";
+  if (!hasProject) return t("rnn.training.blocker.project");
+  if (readinessLoading) return t("rnn.training.blocker.checking");
+  if (trainingStarting) return t("rnn.training.blocker.starting");
+  if (trainingStatus === "training" || trainingStatus === "stopping") return t("rnn.training.blocker.running");
   if (!modelTrainable) {
-    return `${modelLabel} is available in the catalog, but its training backend is not enabled yet.`;
+    return t("rnn.training.blocker.model", { model: modelLabel });
   }
-  if (!readiness) return "Run RNN readiness check before starting training.";
+  if (!readiness) return t("rnn.training.blocker.readiness");
   const csv = readiness.summary?.csv || {};
   if (!csv.valid || Number(csv.file_count || 0) === 0) {
-    return "RNNBackend MVP requires ready CSV feature sequence files under project/sequences.";
+    return t("rnn.training.blocker.csv");
   }
-  if (!readiness.ready) return readiness.message || "RNN readiness is not ready.";
-  return "RNN training is disabled until readiness passes.";
+  if (!readiness.ready) return t("rnn.training.blocker.settings");
+  return t("rnn.training.blocker.settings");
 }

@@ -64,6 +64,7 @@ class XGBoostBackend(TrainingBackend):
 
         total_epochs = _int(config.get("epochs"), 100)
         TrainingStateStore.init_run(project_id, run_id, total_epochs, self.architecture, self.backend_name)
+        TrainingStateStore.set_field(project_id, "task_type", _rnn_task_type(config))
         result = DEFAULT_THREAD_TRAINING_RUNNER.start(
             project_id=project_id,
             run_id=run_id,

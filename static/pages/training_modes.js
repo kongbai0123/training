@@ -88,6 +88,13 @@ import {
 } from "./rnn_readiness_render_helpers.js";
 import { buildRnnArtifactListViewModel } from "./rnn_artifact_helpers.js";
 import { buildRnnTrainingPayload } from "./rnn_training_payload_helpers.js";
+import {
+  buildRnnBarChartSvg,
+  buildRnnDiagnosticSvg,
+  buildRnnLineChartSvg,
+  buildRnnLiveMonitorViewModel,
+  buildRnnSmartAssessment
+} from "./rnn_intelligence_helpers.js";
 import { trainingModeState } from "./training_mode_state.js";
 
 export { trainingModeState } from "./training_mode_state.js";
@@ -95,6 +102,10 @@ export { trainingModeState } from "./training_mode_state.js";
 let rnnScoreChart = null;
 let rnnLossChart = null;
 let rnnRunComparisonCharts = [];
+let rnnMonitorQualityChart = null;
+let rnnMonitorLossChart = null;
+let currentRnnEvaluationDashboard = null;
+let currentRnnComparisons = [];
 
 export function initTrainingModeSidebar() {
   qsa("[data-training-mode]").forEach((button) => {
@@ -165,6 +176,11 @@ export function initTrainingModeSidebar() {
   });
 
   initRnnPreviewEvents();
+  eventBus.on("language-changed", () => {
+    syncRnnModelSelection();
+    renderTrainingWorkspace();
+    renderRnnEvaluation();
+  });
   loadRnnModelGuides();
   renderTrainingModeSidebar();
   renderTrainingWorkspace();
@@ -269,6 +285,7 @@ export function renderTrainingWorkspace() {
   setHTML("#rnn-training-flow-guide", renderTrainingFlowGuide({ mode: appState.currentProject ? "rnn" : null }));
 
   renderRnnReadiness();
+  renderRnnLiveMonitor();
   if (!isCnn
     && appState.currentProjectId
     && !trainingModeState.rnn.config
@@ -436,6 +453,10 @@ export function initRnnPreviewEvents() {
   qs("#rnn-refresh-inference-result")?.addEventListener("click", () => loadLatestRnnInferenceResult({ force: true }));
   qs("#rnn-refresh-evaluation")?.addEventListener("click", () => loadRnnEvaluation({ force: true }));
   qs("#rnn-eval-run-select")?.addEventListener("change", (event) => selectRnnEvaluationRun(event.target.value));
+  qs("#rnn-evaluation-panel")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-rnn-chart-download]");
+    if (button) downloadRnnEvaluationChart(button.dataset.rnnChartDownload, button.dataset.metricIndex);
+  });
   qs("#rnn-refresh-export-models")?.addEventListener("click", () => loadRnnExportModels({ force: true }));
   qs("#rnn-export-model")?.addEventListener("change", updateRnnExportControls);
   qsa("[data-rnn-export-format]").forEach((button) => {
@@ -1074,6 +1095,82 @@ function renderRnnReadiness() {
   }
 }
 
+function renderRnnLiveMonitor() {
+  const host = qs("#rnn-live-monitor");
+  if (!host) return;
+  const view = buildRnnLiveMonitorViewModel(appState.trainingStatus || {});
+  const isRnnProject = String(appState.currentProject?.task_type || "").toLowerCase().includes("sequence");
+  host.classList.toggle("is-active", view.visible && ["training", "stopping"].includes(view.status));
+  setText("#rnn-monitor-status", trainingStatusLabelForRnn(view.status));
+  setText("#rnn-monitor-progress-text", `Epoch ${Math.min(view.epoch, view.totalEpochs || view.epoch)} / ${view.totalEpochs || "--"}`);
+  setText("#rnn-monitor-progress-percent", `${Math.round(view.progress)}%`);
+  const progressBar = qs("#rnn-monitor-progress-bar");
+  if (progressBar) progressBar.style.width = `${view.progress}%`;
+
+  const cards = qs("#rnn-monitor-metrics");
+  if (cards) {
+    cards.innerHTML = view.cards.map((card) => `
+      <div class="metric-card">
+        <span>${escapeHtml(card.label)}</span>
+        <strong>${card.value === null ? "--" : escapeHtml(Number(card.value).toFixed(4))}</strong>
+      </div>
+    `).join("");
+  }
+  renderRnnMonitorChart("rnn-monitor-quality-chart", "rnn-monitor-quality-empty", view.qualityChart, "score");
+  renderRnnMonitorChart("rnn-monitor-loss-chart", "rnn-monitor-loss-empty", view.lossChart, "loss");
+  if (!view.visible && !isRnnProject) {
+    setText("#rnn-monitor-status", t("training.monitor.statusIdle"));
+  }
+}
+
+function trainingStatusLabelForRnn(status = "idle") {
+  const keys = {
+    training: "training.progress.inProgress",
+    stopping: "training.progress.stopping",
+    completed: "common.completed",
+    failed: "common.failed",
+    stopped: "common.stopped",
+    idle: "training.monitor.statusIdle"
+  };
+  return t(keys[status] || keys.idle);
+}
+
+function renderRnnMonitorChart(canvasId, emptyId, chartModel, variant) {
+  const canvas = qs(`#${canvasId}`);
+  const empty = qs(`#${emptyId}`);
+  if (!canvas) return;
+  const hasSeries = chartModel?.series?.some((item) => item.values?.some((value) => value !== null));
+  canvas.classList.toggle("hidden", !hasSeries);
+  empty?.classList.toggle("hidden", hasSeries);
+  const previous = canvasId === "rnn-monitor-quality-chart" ? rnnMonitorQualityChart : rnnMonitorLossChart;
+  previous?.destroy();
+  if (!hasSeries || typeof Chart === "undefined") {
+    if (canvasId === "rnn-monitor-quality-chart") rnnMonitorQualityChart = null;
+    else rnnMonitorLossChart = null;
+    return;
+  }
+  const palette = variant === "loss" ? ["#ef4444", "#f59e0b"] : ["#3b82f6", "#22c55e", "#a855f7", "#f59e0b"];
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: chartModel.labels,
+      datasets: chartModel.series.map((series, index) => ({
+        label: series.label,
+        data: series.values,
+        borderColor: palette[index % palette.length],
+        backgroundColor: palette[index % palette.length],
+        tension: 0.25,
+        pointRadius: 2,
+        borderWidth: 2.2,
+        spanGaps: false
+      }))
+    },
+    options: buildRnnChartOptions(variant === "loss" ? t("rnn.evaluation.lossCurve") : t("rnn.monitor.qualityChart"))
+  });
+  if (canvasId === "rnn-monitor-quality-chart") rnnMonitorQualityChart = chart;
+  else rnnMonitorLossChart = chart;
+}
+
 async function loadRnnEvaluation(options = {}) {
   if (!appState.currentProjectId) {
     trainingModeState.rnn.evaluationProjectId = "";
@@ -1256,7 +1353,13 @@ function renderRnnEvaluation() {
     metricsByRun: trainingModeState.rnn.evaluationRunMetrics || {},
     comparisonMetric: trainingModeState.rnn.comparisonMetric || "macro_f1"
   });
+  currentRnnEvaluationDashboard = activeRun ? dashboard : null;
   renderRnnTaskAwareDashboard(dashboard, { history, isRegression, metricContext: metrics || summary });
+  renderRnnSmartAssessment(activeRun ? buildRnnSmartAssessment({
+    metrics: metrics || {},
+    summary,
+    config: trainingModeState.rnn.config || {}
+  }) : {});
   renderRnnEvaluationArtifacts(artifacts, activeRun?.run_id || "");
   renderRnnEvaluationRunHistory(runs);
   renderRnnEvaluationSidebar({
@@ -1353,6 +1456,73 @@ function renderRnnTaskAwareDashboard(dashboard, fallback = {}) {
   if (diagnosticHost) diagnosticHost.innerHTML = renderRnnTaskDiagnostic(dashboard.diagnostic);
 }
 
+function renderRnnSmartAssessment(assessment = {}) {
+  const score = qs("#rnn-intelligence-score");
+  const verdict = qs("#rnn-intelligence-verdict");
+  const context = qs("#rnn-intelligence-context");
+  const recommendations = qs("#rnn-intelligence-recommendations");
+  if (score) score.textContent = assessment.score ?? "--";
+  if (verdict) {
+    verdict.textContent = assessment.verdict ? t(`rnn.intelligence.verdict.${assessment.verdict}`) : "--";
+    verdict.className = `summary-badge rnn-verdict-${assessment.verdict || "neutral"}`;
+  }
+  if (context) {
+    context.innerHTML = (assessment.context || []).map(([label, value]) => `
+      <span><small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong></span>
+    `).join("");
+  }
+  if (recommendations) {
+    recommendations.innerHTML = (assessment.signals || []).map((signal) => `
+      <div class="rnn-intelligence-signal is-${escapeHtml(signal.tone || "info")}">
+        <i class="fa-solid ${signal.tone === "success" ? "fa-circle-check" : signal.tone === "danger" ? "fa-circle-xmark" : "fa-lightbulb"}"></i>
+        <div><strong>${escapeHtml(t(`rnn.intelligence.signal.${signal.code}.title`, signal.values || {}))}</strong><span>${escapeHtml(t(`rnn.intelligence.signal.${signal.code}.help`, signal.values || {}))}</span></div>
+      </div>
+    `).join("");
+  }
+}
+
+function downloadRnnEvaluationChart(kind, metricIndex) {
+  if (!currentRnnEvaluationDashboard) {
+    eventBus.emit("toast", t("rnn.evaluation.downloadUnavailable"));
+    return;
+  }
+  let svg = "";
+  let filename = "rnn-chart.svg";
+  if (kind === "score" || kind === "loss") {
+    const model = kind === "score" ? currentRnnEvaluationDashboard.scoreChart : currentRnnEvaluationDashboard.lossChart;
+    svg = buildRnnLineChartSvg(model || {});
+    filename = `rnn-${kind}-curve.svg`;
+  } else if (kind === "comparison") {
+    const comparison = currentRnnComparisons[Number(metricIndex) || 0];
+    if (comparison) {
+      svg = buildRnnBarChartSvg({
+        title: `${comparison.metricConfig?.label || "Metric"} - ${t("rnn.evaluation.runComparison")}`,
+        rows: (comparison.rows || []).filter((row) => row.hasValue)
+      });
+      filename = `rnn-${String(comparison.metricConfig?.label || "comparison").toLowerCase().replace(/[^a-z0-9]+/g, "-")}.svg`;
+    }
+  } else if (kind === "diagnostic") {
+    svg = buildRnnDiagnosticSvg(currentRnnEvaluationDashboard.diagnostic || {});
+    filename = currentRnnEvaluationDashboard.diagnostic?.type === "confusion"
+      ? "rnn-confusion-matrix.svg"
+      : "rnn-residual-diagnostic.svg";
+  }
+  if (!svg) {
+    eventBus.emit("toast", t("rnn.evaluation.downloadUnavailable"));
+    return;
+  }
+  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  eventBus.emit("toast", t("rnn.evaluation.downloadedSvg", { filename }));
+}
+
 function resolveRnnComparisonMetricKeys(metricSchema = {}) {
   const metricKeys = [
     ...(metricSchema.groups?.quality || []).map(metricKeyFromSchemaKey),
@@ -1389,6 +1559,7 @@ function renderRnnBaselineComparison(metricSchema = {}) {
     metricsByRun: trainingModeState.rnn.evaluationRunMetrics || {},
     metricKey
   }));
+  currentRnnComparisons = comparisons;
   setText("#rnn-eval-run-comparison-count", t("rnn.evaluation.metricCount", { count: comparisons.length }));
   countBadge?.classList.toggle("hidden", !comparisons.length);
   renderRnnRunComparisonCharts(comparisons);
@@ -1441,6 +1612,7 @@ function renderRnnRunComparisonCharts(comparisons = []) {
   rnnRunComparisonCharts = [];
 
   const available = comparisons.filter((comparison) => (comparison.rows || []).some((row) => row.hasValue));
+  currentRnnComparisons = available;
   if (!available.length) {
     host.innerHTML = `<div class="rnn-eval-chart-empty">${escapeHtml(t("rnn.evaluation.noComparableRuns"))}</div>`;
     return;
@@ -1452,8 +1624,8 @@ function renderRnnRunComparisonCharts(comparisons = []) {
     return `
       <div class="rnn-comparison-card">
         <div class="rnn-comparison-card-head">
-          <strong>${escapeHtml(label)}</strong>
-          <span>${escapeHtml(hint)}</span>
+          <div><strong>${escapeHtml(label)}</strong><span>${escapeHtml(hint)}</span></div>
+          <button type="button" class="btn btn-secondary btn-sm" data-rnn-chart-download="comparison" data-metric-index="${index}"><i class="fa-solid fa-download"></i> SVG</button>
         </div>
         <canvas id="rnn-eval-run-comparison-chart-${index}"></canvas>
       </div>
@@ -2100,19 +2272,26 @@ function updateRnnStartControls() {
     : message;
   const buttons = [qs("#rnn-start-disabled")].filter(Boolean);
   buttons.forEach((button) => {
-    const operationBusy = trainingModeState.rnn.trainingStarting || ["running", "stopping"].includes(String(appState.trainingStatus?.status || "").toLowerCase());
+    const operationBusy = trainingModeState.rnn.trainingStarting || ["training", "running", "stopping"].includes(String(appState.trainingStatus?.status || "").toLowerCase());
     button.disabled = operationBusy;
-    button.dataset.requires = !canStart && !operationBusy ? "custom" : "";
-    button.dataset.blockReason = !canStart && !operationBusy ? titleMessage : "";
-    button.setAttribute("aria-disabled", canStart ? "false" : "true");
-    button.classList.toggle("btn-primary", canStart);
-    button.classList.toggle("btn-disabled", !canStart);
+    button.removeAttribute("data-requires");
+    delete button.dataset.blockReason;
+    button.setAttribute("aria-disabled", operationBusy ? "true" : "false");
+    button.classList.add("btn-primary");
+    button.classList.toggle("is-busy", operationBusy);
     button.title = canStart ? t("rnn.training.startTitle") : titleMessage;
   });
 
   const bannerBtn = qs("#rnn-start-disabled");
   if (bannerBtn) {
     bannerBtn.innerHTML = renderRnnStartBannerButtonContent(canStart);
+  }
+  const guidance = qs("#rnn-training-start-guidance");
+  if (guidance) {
+    guidance.className = `rnn-start-guidance ${canStart ? "is-ready" : "is-warning"}`;
+    guidance.innerHTML = canStart
+      ? `<i class="fa-solid fa-circle-check"></i><span>${escapeHtml(t("rnn.training.readyGuidance"))}</span>`
+      : `<i class="fa-solid fa-triangle-exclamation"></i><span>${escapeHtml(titleMessage)}</span>`;
   }
   const stateBadge = qs("#rnn-training-state-badge");
   if (stateBadge) {
@@ -2169,11 +2348,11 @@ async function startRnnTraining(event) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(configData)
     });
-    eventBus.emit("toast", "RNN training started.");
+    eventBus.emit("toast", t("rnn.training.started"));
     eventBus.emit("start-training-monitor");
     eventBus.emit("refresh-project");
   } catch (err) {
-    eventBus.emit("toast", `RNN training failed to start: ${err.message}`);
+    eventBus.emit("toast", t("rnn.training.startFailed", { message: err.message }));
   } finally {
     trainingModeState.rnn.trainingStarting = false;
     updateRnnStartControls();

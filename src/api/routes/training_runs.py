@@ -216,13 +216,24 @@ def get_run_metrics(project_id: str, run_id: str):
         if isinstance(payload, dict):
             payload.setdefault("run_id", run_id)
             config_file = run_dir / "train_config.json"
-            if "total_epochs" not in payload and config_file.exists():
+            if config_file.exists():
                 try:
                     with open(config_file, "r", encoding="utf-8") as f:
                         config_payload = json.load(f)
-                    configured_epochs = config_payload.get("epochs") or config_payload.get("total_epochs")
-                    if configured_epochs is not None:
-                        payload["total_epochs"] = int(configured_epochs)
+                    if isinstance(config_payload, dict):
+                        payload.setdefault("train_config", config_payload)
+                        configured_epochs = config_payload.get("epochs") or config_payload.get("total_epochs")
+                        if "total_epochs" not in payload and configured_epochs is not None:
+                            payload["total_epochs"] = int(configured_epochs)
+                except (OSError, ValueError, TypeError, AttributeError):
+                    pass
+            summary_file = run_dir / "run_summary.json"
+            if summary_file.exists():
+                try:
+                    with open(summary_file, "r", encoding="utf-8") as f:
+                        summary_payload = json.load(f)
+                    if isinstance(summary_payload, dict):
+                        payload.setdefault("run_summary", summary_payload)
                 except (OSError, ValueError, TypeError, AttributeError):
                     pass
         schema_file = run_dir / "metric_schema.json"

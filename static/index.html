@@ -851,13 +851,8 @@
             </div>
             <div class="page-actions training-rnn-header-actions hidden" id="rnn-header-actions">
               <button type="button" class="btn btn-primary" id="rnn-create-project">
-                <i class="fa-solid fa-folder-plus"></i> New RNN Project
+                <i class="fa-solid fa-folder-plus"></i> <span data-i18n="rnn.project.new">新增 RNN 專案</span>
               </button>
-              <span class="rnn-disabled-action-hitbox">
-                <button type="button" class="btn btn-disabled" id="rnn-start-disabled" disabled>
-                  <i class="fa-solid fa-lock"></i> Start RNN Disabled
-                </button>
-              </span>
             </div>
           </div>
 
@@ -1454,13 +1449,47 @@
                         </div>
                         <aside class="rnn-training-start-panel">
                           <strong data-i18n="rnn.training.readinessStart">Readiness / Start</strong>
-                          <p data-i18n="rnn.training.readinessStartHelp">先完成序列資料集、特徵欄位與切片設定；通過 readiness 後，使用右上角的 Start RNN 啟動訓練。</p>
+                          <p data-i18n="rnn.training.readinessStartHelp">先完成序列資料集、特徵欄位與切片設定；若仍有缺項，按下訓練時會提示應前往的設定頁面。</p>
                           <div class="rnn-start-checklist">
                             <span data-i18n="rnn.training.sequenceCsv">Sequence CSV</span>
                             <span data-i18n="rnn.training.featureConfig">Feature config</span>
                             <span data-i18n="rnn.training.windowing">Windowing</span>
                           </div>
+                          <div class="rnn-start-guidance" id="rnn-training-start-guidance" role="status"></div>
+                          <span class="rnn-disabled-action-hitbox">
+                            <button type="button" class="btn btn-primary" id="rnn-start-disabled">
+                              <i class="fa-solid fa-play"></i> <span data-i18n="rnn.training.startShort">開始 RNN 訓練</span>
+                            </button>
+                          </span>
                         </aside>
+                      </div>
+                    </section>
+
+                    <section class="rnn-preview-card rnn-live-monitor-section" id="rnn-live-monitor">
+                      <div class="section-title">
+                        <div>
+                          <h2 data-i18n="rnn.monitor.title">RNN 即時訓練監控</h2>
+                          <p class="section-subtitle" data-i18n="rnn.monitor.subtitle">依分類或回歸任務顯示對應的 Epoch、損失與品質指標。</p>
+                        </div>
+                        <span class="summary-badge badge-neutral" id="rnn-monitor-status" data-i18n="training.monitor.statusIdle">等待訓練</span>
+                      </div>
+                      <div class="rnn-monitor-progress-row">
+                        <strong id="rnn-monitor-progress-text">Epoch 0 / --</strong>
+                        <span id="rnn-monitor-progress-percent">0%</span>
+                      </div>
+                      <div class="rnn-monitor-progress-track"><span id="rnn-monitor-progress-bar"></span></div>
+                      <div class="metric-grid compact rnn-monitor-metric-grid" id="rnn-monitor-metrics"></div>
+                      <div class="rnn-eval-chart-grid rnn-monitor-chart-grid">
+                        <div class="rnn-chart-shell">
+                          <div class="rnn-chart-heading"><strong data-i18n="rnn.monitor.qualityChart">任務品質指標</strong><span data-i18n="rnn.monitor.live">即時更新</span></div>
+                          <canvas id="rnn-monitor-quality-chart"></canvas>
+                          <div class="rnn-eval-chart-empty" id="rnn-monitor-quality-empty" data-i18n="rnn.monitor.waitingFirstEpoch">等待第一個 Epoch 完成。</div>
+                        </div>
+                        <div class="rnn-chart-shell">
+                          <div class="rnn-chart-heading"><strong data-i18n="rnn.evaluation.lossCurve">Loss curve</strong><span data-i18n="rnn.monitor.live">即時更新</span></div>
+                          <canvas id="rnn-monitor-loss-chart"></canvas>
+                          <div class="rnn-eval-chart-empty" id="rnn-monitor-loss-empty" data-i18n="rnn.monitor.waitingFirstEpoch">等待第一個 Epoch 完成。</div>
+                        </div>
                       </div>
                     </section>
 
@@ -1524,17 +1553,33 @@
                     </div>
                     <div id="rnn-eval-message" class="rnn-placeholder-box" data-i18n="rnn.evaluation.noRunLoaded">No RNN or XGBoost run has been loaded yet.</div>
                     <div class="rnn-eval-flow">
+                      <div class="rnn-result-panel rnn-intelligence-panel" id="rnn-eval-intelligence">
+                        <div class="section-title">
+                          <div>
+                            <h3 data-i18n="rnn.intelligence.title">智慧模型評估與建議</h3>
+                            <p class="section-subtitle" data-i18n="rnn.intelligence.subtitle">綜合任務、模型設定、訓練趨勢與診斷結果提供判斷。</p>
+                          </div>
+                          <span class="summary-badge badge-neutral" id="rnn-intelligence-verdict">--</span>
+                        </div>
+                        <div class="rnn-intelligence-layout">
+                          <div class="rnn-intelligence-score"><strong id="rnn-intelligence-score">--</strong><span>/ 100</span></div>
+                          <div>
+                            <div class="rnn-intelligence-context" id="rnn-intelligence-context"></div>
+                            <div class="rnn-intelligence-recommendations" id="rnn-intelligence-recommendations"></div>
+                          </div>
+                        </div>
+                      </div>
                       <div class="rnn-result-panel rnn-chart-panel">
                         <div class="section-title"><h3 data-i18n="rnn.evaluation.taskTrends">Task-aware Trends</h3><span class="summary-badge badge-neutral" id="rnn-eval-chart-count">0 metrics</span></div>
                         <div class="rnn-baseline-note hidden" id="rnn-eval-baseline-note" data-i18n="rnn.evaluation.singlePointBaseline">Single-point baseline metrics are shown as flat reference lines.</div>
                         <div class="rnn-eval-chart-grid" id="rnn-eval-chart-stack">
                           <div class="rnn-chart-shell">
-                            <div class="rnn-chart-heading"><strong id="rnn-eval-score-chart-title" data-i18n="rnn.evaluation.scoreCurve">Score curve</strong><span id="rnn-eval-score-chart-note" data-i18n="rnn.evaluation.scoreCurveNote">Driven by task metric schema.</span></div>
+                            <div class="rnn-chart-heading"><div><strong id="rnn-eval-score-chart-title" data-i18n="rnn.evaluation.scoreCurve">Score curve</strong><span id="rnn-eval-score-chart-note" data-i18n="rnn.evaluation.scoreCurveNote">Driven by task metric schema.</span></div><button type="button" class="btn btn-secondary btn-sm" data-rnn-chart-download="score"><i class="fa-solid fa-download"></i> SVG</button></div>
                             <canvas id="rnn-eval-score-chart"></canvas>
                             <div class="rnn-eval-chart-empty hidden" id="rnn-eval-score-empty" data-i18n="rnn.evaluation.noScoreMetrics">No score metrics loaded.</div>
                           </div>
                           <div class="rnn-chart-shell">
-                            <div class="rnn-chart-heading"><strong id="rnn-eval-loss-chart-title" data-i18n="rnn.evaluation.lossCurve">Loss curve</strong><span id="rnn-eval-loss-chart-note" data-i18n="rnn.evaluation.lossCurveNote">Train / validation loss.</span></div>
+                            <div class="rnn-chart-heading"><div><strong id="rnn-eval-loss-chart-title" data-i18n="rnn.evaluation.lossCurve">Loss curve</strong><span id="rnn-eval-loss-chart-note" data-i18n="rnn.evaluation.lossCurveNote">Train / validation loss.</span></div><button type="button" class="btn btn-secondary btn-sm" data-rnn-chart-download="loss"><i class="fa-solid fa-download"></i> SVG</button></div>
                             <canvas id="rnn-eval-loss-chart"></canvas>
                             <div class="rnn-eval-chart-empty hidden" id="rnn-eval-loss-empty" data-i18n="rnn.evaluation.noLossMetrics">No loss metrics loaded.</div>
                           </div>
@@ -1550,7 +1595,7 @@
                         </div>
                       </div>
                       <div class="rnn-result-panel">
-                        <div class="section-title"><h3 id="rnn-eval-diagnostic-title">Task Diagnostic</h3><span class="summary-badge badge-neutral" id="rnn-eval-diagnostic-badge">schema</span></div>
+                        <div class="section-title"><h3 id="rnn-eval-diagnostic-title">Task Diagnostic</h3><div class="button-row"><span class="summary-badge badge-neutral" id="rnn-eval-diagnostic-badge">schema</span><button type="button" class="btn btn-secondary btn-sm" data-rnn-chart-download="diagnostic"><i class="fa-solid fa-download"></i> SVG</button></div></div>
                         <div id="rnn-eval-task-diagnostic" class="rnn-task-diagnostic">
                           <div class="rnn-eval-chart-empty">No task diagnostic loaded.</div>
                         </div>

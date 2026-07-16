@@ -71,9 +71,7 @@ export function resolveRnnReadinessSummaryView({
 }
 
 export function renderRnnStartBannerButtonContent(canStart = false) {
-  return canStart
-    ? `<i class="fa-solid fa-play"></i> ${escapeHtml(t("rnn.training.startShort"))}`
-    : `<i class="fa-solid fa-lock"></i> ${escapeHtml(t("rnn.training.startDisabled"))}`;
+  return `<i class="fa-solid fa-play"></i> ${escapeHtml(t("rnn.training.startShort"))}`;
 }
 
 export function resolveRnnTrainingActionText({ canStart = false, message = "" } = {}) {

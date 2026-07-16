@@ -61,6 +61,7 @@ class RNNBackend(TrainingBackend):
 
         total_epochs = _int(config.get("epochs"), 10)
         TrainingStateStore.init_run(project_id, run_id, total_epochs, self.architecture, self.backend_name)
+        TrainingStateStore.set_field(project_id, "task_type", _rnn_task_type(config))
         result = DEFAULT_THREAD_TRAINING_RUNNER.start(
             project_id=project_id,
             run_id=run_id,
@@ -121,7 +122,11 @@ class RNNBackend(TrainingBackend):
             if status == "stopped":
                 TrainingStateStore.mark_stopped(project_id, "Training stopped by user.")
             else:
-                TrainingStateStore.mark_completed(project_id, best_model="weights/best.pt")
+                TrainingStateStore.mark_completed(
+                    project_id,
+                    best_model="weights/best.pt",
+                    termination_reason=metrics_payload.get("stopped_reason") or None,
+                )
             self._update_project_run(project, summary)
             self._write_contracts(run_dir, run_id, task_type, status, created_at)
         except (RNNSequenceDatasetError, RNNTrainingError, Exception) as exc:
