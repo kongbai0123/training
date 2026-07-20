@@ -119,6 +119,14 @@ try:
 except Exception:
     pass
 
+# Transformers determines SciPy availability through package metadata before
+# importing the already-collected SciPy modules.  Preserve that metadata in the
+# frozen runtime so D-FINE's Hungarian matcher is enabled.
+try:
+    datas += copy_metadata("scipy")
+except Exception:
+    pass
+
 for package_name in [
     "fastapi",
     "starlette",

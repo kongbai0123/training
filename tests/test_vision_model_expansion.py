@@ -40,6 +40,10 @@ class VisionModelExpansionTests(unittest.TestCase):
         self.assertIn("pytorch_torchvision", TrainerDispatcher._backends)
         self.assertIn("transformers_dfine", TrainerDispatcher._backends)
 
+    def test_packaged_dfine_keeps_scipy_metadata(self):
+        spec = (Path(__file__).parents[1] / "packaging" / "vision_training_studio.spec").read_text(encoding="utf-8")
+        self.assertIn('copy_metadata("scipy")', spec)
+
     def test_project_defaults_match_visual_task(self):
         self.assertEqual(ProjectManager._default_training_config("image_classification")["backend"], "pytorch_torchvision")
         self.assertEqual(ProjectManager._default_training_config("semantic_segmentation")["model"], "unet")
