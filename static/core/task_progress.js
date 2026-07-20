@@ -196,6 +196,12 @@ export function beginTask(options = {}) {
 
 export function beginApiTask(url, options = {}, method = "GET") {
   if (options.suppressProgress || options.taskProgress === false) return null;
+  const normalizedMethod = String(method || "GET").toUpperCase();
+  const isBackgroundRead = (normalizedMethod === "GET" || normalizedMethod === "HEAD")
+    && options.progressMode !== "foreground"
+    && options.taskProgress !== true
+    && typeof options.taskProgress !== "object";
+  if (isBackgroundRead) return null;
   const custom = typeof options.taskProgress === "object" ? options.taskProgress : {};
   return beginTask({ ...custom, url, method });
 }

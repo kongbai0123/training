@@ -3,6 +3,20 @@ import { appState, t } from "./state.js";
 import { markResourceStaleFromRequest } from "./core/resource_freshness.js";
 import { beginApiTask } from "./core/task_progress.js";
 
+const inflightReads = new Map();
+const responseCache = new Map();
+
+function requestKey(url, options, method) {
+  const headers = Object.entries(options.headers || {})
+    .map(([key, value]) => [String(key).toLowerCase(), String(value)])
+    .sort(([left], [right]) => left.localeCompare(right));
+  return JSON.stringify([method, String(url), headers]);
+}
+
+function clearResponseCache() {
+  responseCache.clear();
+}
+
 export class VtsApiError extends Error {
   constructor({ code = "API_ERROR", message = "Request failed", details = {}, suggestion = "", retryable = false, fieldErrors = {}, severity = "error", status = 0 } = {}) {
     super(message);
@@ -53,16 +67,30 @@ async function buildApiError(res) {
   }
 }
 
-export async function apiFetch(url, options = {}) {
+export function apiFetch(url, options = {}) {
   const method = (options.method || "GET").toUpperCase();
   const suppressToast = Boolean(options.suppressToast);
   const token = appState.bootstrap?.token;
   const extraHeaders = { ...(options.headers || {}) };
+  const isRead = method === "GET" || method === "HEAD";
+  const key = isRead ? requestKey(url, options, method) : "";
+  const cacheTtlMs = Math.max(0, Number(options.responseCacheTtlMs) || 0);
+  const cached = key ? responseCache.get(key) : null;
+  if (cached && cacheTtlMs > 0 && cached.expiresAt > Date.now()) {
+    return Promise.resolve(cached.payload);
+  }
+  if (key && options.dedupe !== false && inflightReads.has(key)) {
+    return inflightReads.get(key);
+  }
+
   const task = beginApiTask(url, options, method);
   const {
     suppressToast: _suppressToast,
     suppressProgress: _suppressProgress,
     taskProgress: _taskProgress,
+    progressMode: _progressMode,
+    dedupe: _dedupe,
+    responseCacheTtlMs: _responseCacheTtlMs,
     ...fetchOptions
   } = options;
 
@@ -70,27 +98,42 @@ export async function apiFetch(url, options = {}) {
     extraHeaders["X-VTS-Token"] = token;
   }
 
-  try {
-    const res = await fetch(url, {
-      ...fetchOptions,
-      method,
-      headers: extraHeaders,
+  const request = (async () => {
+    try {
+      const res = await fetch(url, {
+        ...fetchOptions,
+        method,
+        headers: extraHeaders,
+      });
+      if (!res.ok) {
+        throw await buildApiError(res);
+      }
+      markResourceStaleFromRequest(url, method);
+      const contentType = res.headers.get("content-type") || "";
+      const payload = await (contentType.includes("application/json") ? res.json() : res.text());
+      if (key && cacheTtlMs > 0) {
+        responseCache.set(key, { payload, expiresAt: Date.now() + cacheTtlMs });
+      }
+      if (!isRead) clearResponseCache();
+      task?.complete();
+      return payload;
+    } catch (err) {
+      task?.fail({ message: err?.message || "Request failed" });
+      if (!suppressToast) {
+        eventBus.emit("toast", err instanceof VtsApiError ? err : formatApiErrorForToast(err));
+      }
+      throw err;
+    }
+  })();
+
+  if (key && options.dedupe !== false) {
+    const trackedRequest = request.finally(() => {
+      if (inflightReads.get(key) === trackedRequest) inflightReads.delete(key);
     });
-    if (!res.ok) {
-      throw await buildApiError(res);
-    }
-    markResourceStaleFromRequest(url, method);
-    const contentType = res.headers.get("content-type") || "";
-    const payload = await (contentType.includes("application/json") ? res.json() : res.text());
-    task?.complete();
-    return payload;
-  } catch (err) {
-    task?.fail({ message: err?.message || "Request failed" });
-    if (!suppressToast) {
-      eventBus.emit("toast", err instanceof VtsApiError ? err : formatApiErrorForToast(err));
-    }
-    throw err;
+    inflightReads.set(key, trackedRequest);
+    return trackedRequest;
   }
+  return request;
 }
 
 export async function apiFetchBlob(url, options = {}) {
@@ -103,6 +146,9 @@ export async function apiFetchBlob(url, options = {}) {
     suppressToast: _suppressToast,
     suppressProgress: _suppressProgress,
     taskProgress: _taskProgress,
+    progressMode: _progressMode,
+    dedupe: _dedupe,
+    responseCacheTtlMs: _responseCacheTtlMs,
     ...fetchOptions
   } = options;
 
@@ -185,6 +231,7 @@ export function apiUpload(url, options = {}) {
         return;
       }
       markResourceStaleFromRequest(url, method);
+      clearResponseCache();
       const contentType = xhr.getResponseHeader("content-type") || "";
       let payload = xhr.responseText;
       if (contentType.includes("application/json")) {

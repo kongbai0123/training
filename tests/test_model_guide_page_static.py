@@ -28,7 +28,7 @@ class ModelGuidePageStaticTests(unittest.TestCase):
         self.assertIn("const ranked = new Map", module)
         self.assertIn('/compare/runs?architecture=', module)
         self.assertIn("initModelGuide();", registry)
-        self.assertIn("renderModelGuidePage();", registry)
+        self.assertIn('"model-guide": () => renderModelGuidePage()', registry)
 
     def test_model_report_preview_and_exports_are_functional(self):
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")

@@ -19,6 +19,7 @@ let trainingStatusPollTimer = null;
 let trainingStatusPollInFlight = false;
 let metricLoadRequestId = 0;
 let metricLoadInFlightRunId = "";
+let emptyRunListProjectId = "";
 
 const ACTIVE_TRAINING_STATUSES = new Set(["training", "stopping"]);
 const TERMINAL_TRAINING_STATUSES = new Set(["completed", "failed", "stopped"]);
@@ -225,6 +226,9 @@ export function initTraining() {
     if (appState.trainingStatus?.status === "training") startMonitorWebSocket();
   });
   eventBus.on("start-training-monitor", () => startMonitorWebSocket());
+  eventBus.on("refresh-project", () => {
+    emptyRunListProjectId = "";
+  });
   eventBus.on("language-changed", () => {
     renderTrainingProfileGuide();
     renderTrainingMonitor();
@@ -1458,11 +1462,13 @@ function updateMonitorMetricLabels(isRnn, metrics = {}) {
 let lastLoadedRunId = null;
 async function loadLatestRunMetricsOnce() {
   if (!appState.currentProjectId) return;
+  if (emptyRunListProjectId === appState.currentProjectId) return;
   
   // Training UI helper
   try {
     const runs = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs`);
     if (!runs || runs.length === 0) {
+      emptyRunListProjectId = appState.currentProjectId;
       currentChartData = null;
       lastRenderedMetricRunId = "";
       lastRenderedMetricEpochCount = -1;
@@ -1472,6 +1478,7 @@ async function loadLatestRunMetricsOnce() {
       setMetricsDashboardActive(false);
       return;
     }
+    emptyRunListProjectId = "";
     
     // Training UI helper
     const preferredRunId = appState.trainingStatus?.run_id || appState.currentProject?.current?.training_run_id || "";

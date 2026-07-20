@@ -19,6 +19,7 @@ import { initAutoLabeling, renderAutoLabelingPage } from "../pages/auto_labeling
 import { initExport, renderExportPage } from "../pages/export.js?v=20260711-layout-export-precision";
 import { initSettings, renderSettingsPage } from "../pages/settings.js";
 import { initModelGuide, renderModelGuidePage } from "../pages/model_guide.js?v=20260713-model-guide-evidence";
+import { appState } from "../state.js";
 
 export function initPageModules() {
   initDashboard();
@@ -44,22 +45,28 @@ export function renderPrimaryPageModules(status) {
 }
 
 export function renderSecondaryPageModules(status) {
-  renderDatasetPage(status);
-  renderLabelMeManager(status);
-  renderSplitPage(status);
-  renderAugmentationPage(status);
-  renderTrainingMonitor();
   renderTrainingModeSidebar();
-  renderTrainingWorkspace();
-  renderEvaluationPage(status);
-  renderModelComparePage();
-  renderInferencePage(status);
-  renderAutoLabelingPage(status);
-  renderExportPage(status);
-  renderSettingsPage();
-  renderModelGuidePage();
+  const renderActivePage = {
+    dataset: () => renderDatasetPage(status),
+    labelme: () => renderLabelMeManager(status),
+    split: () => renderSplitPage(status),
+    augmentation: () => renderAugmentationPage(status),
+    training: () => {
+      renderTrainingMonitor();
+      renderTrainingWorkspace();
+    },
+    evaluation: () => renderEvaluationPage(status),
+    "model-compare": () => renderModelComparePage(),
+    inference: () => renderInferencePage(status),
+    "auto-labeling": () => renderAutoLabelingPage(status),
+    export: () => renderExportPage(status),
+    settings: () => renderSettingsPage(),
+    "model-guide": () => renderModelGuidePage(),
+    projects: () => renderProjectsPage(),
+    history: () => renderProjectsPage(),
+  }[appState.currentPage];
+  renderActivePage?.();
   renderProjectAssistantPage();
-  renderProjectsPage();
 }
 
 export function syncPageModeForProject(project, pageId) {

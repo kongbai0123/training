@@ -129,13 +129,13 @@ export function initTrainingModeSidebar() {
       ensureTrainingPageActive();
       renderTrainingModeSidebar();
       renderTrainingWorkspace();
-      loadRnnConfig({ force: true });
+      loadRnnConfig();
       if (trainingModeState.activeRnnPanel === "sequence-test") {
         loadRnnInferenceModels();
         loadLatestRnnInferenceResult();
       }
-      if (trainingModeState.activeRnnPanel === "evaluation") loadRnnEvaluation({ force: true });
-      if (trainingModeState.activeRnnPanel === "export") loadRnnExportModels({ force: true });
+      if (trainingModeState.activeRnnPanel === "evaluation") loadRnnEvaluation();
+      if (trainingModeState.activeRnnPanel === "export") loadRnnExportModels();
     });
   });
 
@@ -165,7 +165,7 @@ export function initTrainingModeSidebar() {
         eventBus.emit("navigate", trainingModeState.activeMode === "cnn" ? "dashboard" : "training");
         renderTrainingModeSidebar();
         renderTrainingWorkspace();
-        if (trainingModeState.activeMode === "rnn") loadRnnConfig({ force: true });
+        if (trainingModeState.activeMode === "rnn") loadRnnConfig();
         return;
       }
       if (button.dataset.modeNav === "history" || button.dataset.modeNav === "settings") {
@@ -181,6 +181,12 @@ export function initTrainingModeSidebar() {
     syncRnnModelSelection();
     renderTrainingWorkspace();
     renderRnnEvaluation();
+  });
+  eventBus.on("refresh-project", () => {
+    trainingModeState.rnn.evaluationLoaded = false;
+    trainingModeState.rnn.exportLoaded = false;
+    trainingModeState.rnn.inferenceModelsLoaded = false;
+    trainingModeState.rnn.inferenceResultLoaded = false;
   });
   loadRnnModelGuides();
   renderTrainingModeSidebar();
@@ -200,7 +206,7 @@ export function setTrainingMode(mode) {
   if (mode === "rnn") ensureTrainingPageActive();
   renderTrainingModeSidebar();
   renderTrainingWorkspace();
-  if (mode === "rnn") loadRnnConfig({ force: true });
+  if (mode === "rnn") loadRnnConfig();
 }
 
 function ensureTrainingPageActive() {
@@ -303,7 +309,7 @@ export function renderTrainingWorkspace() {
   if (!isCnn && appState.currentPage === "training" && trainingModeState.activeRnnPanel === "export") {
     renderRnnExportPanel();
     if (appState.currentProjectId && trainingModeState.rnn.exportProjectId !== appState.currentProjectId) {
-      loadRnnExportModels({ force: true });
+      loadRnnExportModels();
     }
   }
 }
@@ -487,15 +493,24 @@ async function loadRnnReadiness(options = {}) {
     return;
   }
 
-  trainingModeState.rnn.readinessLoading = true;
-  renderRnnReadiness();
-  try {
-    const params = new URLSearchParams({
+  const params = new URLSearchParams({
       sequence_length: qs("#rnn-sequence-length")?.value || "16",
       stride: qs("#rnn-stride")?.value || "8",
       horizon: qs("#rnn-horizon")?.value || "1"
-    });
-    trainingModeState.rnn.readiness = await apiFetch(`/api/projects/${appState.currentProjectId}/rnn/readiness?${params.toString()}`);
+  });
+  const readinessKey = `${appState.currentProjectId}:${params.toString()}`;
+  if (!options.force && trainingModeState.rnn.readiness && trainingModeState.rnn.readinessKey === readinessKey) {
+    renderRnnReadiness();
+    return;
+  }
+  trainingModeState.rnn.readinessLoading = true;
+  renderRnnReadiness();
+  try {
+    trainingModeState.rnn.readiness = await apiFetch(
+      `/api/projects/${appState.currentProjectId}/rnn/readiness?${params.toString()}`,
+      { responseCacheTtlMs: options.force ? 0 : 30000 }
+    );
+    trainingModeState.rnn.readinessKey = readinessKey;
   } catch (err) {
     trainingModeState.rnn.readiness = {
       status: "not_ready",
@@ -521,20 +536,37 @@ async function loadRnnConfig(options = {}) {
     renderRnnConfig();
     return;
   }
+  const projectChanged = trainingModeState.rnn.configProjectId !== appState.currentProjectId;
+  if (!projectChanged && trainingModeState.rnn.config && !options.force) {
+    renderRnnConfig();
+    return;
+  }
+  if (projectChanged) {
+    trainingModeState.rnn.config = null;
+    trainingModeState.rnn.readiness = null;
+    trainingModeState.rnn.readinessKey = "";
+    trainingModeState.rnn.schemaWizard = null;
+    trainingModeState.rnn.qualityReport = null;
+    trainingModeState.rnn.runRegistry = null;
+  }
   trainingModeState.rnn.configLoading = true;
   renderRnnConfig();
   try {
-    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/rnn/config`);
+    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/rnn/config`, {
+      responseCacheTtlMs: options.force ? 0 : 30000
+    });
     trainingModeState.rnn.config = payload.config || null;
     trainingModeState.rnn.configInspection = payload.inspection || null;
     trainingModeState.rnn.configRecommendation = payload.recommendation || payload.inspection?.suggested_config || null;
     trainingModeState.rnn.configValidation = payload.validation || null;
     trainingModeState.rnn.windowSummary = payload.window || payload.validation?.window || null;
     trainingModeState.rnn.configMismatches = payload.mismatches || [];
-    await loadRnnSchemaWizardAndQuality();
+    trainingModeState.rnn.configProjectId = appState.currentProjectId;
+    trainingModeState.rnn.configLoadedAt = Date.now();
+    await loadRnnSchemaWizardAndQuality({ force: options.force });
     applyRnnConfigToForm();
     await loadRnnModelCatalog({ force: options.force });
-    await loadRnnReadiness({ force: true });
+    await loadRnnReadiness({ force: options.force });
   } catch (err) {
     eventBus.emit("toast", `RNN config load failed: ${err.message}`);
   } finally {
@@ -543,12 +575,16 @@ async function loadRnnConfig(options = {}) {
   }
 }
 
-async function loadRnnSchemaWizardAndQuality() {
+async function loadRnnSchemaWizardAndQuality(options = {}) {
   if (!appState.currentProjectId) return;
+  const requestOptions = {
+    suppressToast: true,
+    responseCacheTtlMs: options.force ? 0 : 30000
+  };
   const [wizardResult, qualityResult, registryResult] = await Promise.all([
-    apiFetch(`/api/projects/${appState.currentProjectId}/rnn/schema-wizard`, { suppressToast: true }).catch(() => null),
-    apiFetch(`/api/projects/${appState.currentProjectId}/dataset/quality-report`, { suppressToast: true }).catch(() => null),
-    apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/registry`, { suppressToast: true }).catch(() => null)
+    apiFetch(`/api/projects/${appState.currentProjectId}/rnn/schema-wizard`, requestOptions).catch(() => null),
+    apiFetch(`/api/projects/${appState.currentProjectId}/dataset/quality-report`, requestOptions).catch(() => null),
+    apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/registry`, requestOptions).catch(() => null)
   ]);
   trainingModeState.rnn.schemaWizard = wizardResult?.wizard || null;
   trainingModeState.rnn.qualityReport = qualityResult || null;
@@ -1183,6 +1219,7 @@ async function loadRnnEvaluation(options = {}) {
     trainingModeState.rnn.evaluationArtifacts = [];
     trainingModeState.rnn.evaluationRunId = "";
     trainingModeState.rnn.evaluationRunMetrics = {};
+    trainingModeState.rnn.evaluationLoaded = false;
     renderRnnEvaluation();
     return;
   }
@@ -1194,12 +1231,13 @@ async function loadRnnEvaluation(options = {}) {
     trainingModeState.rnn.evaluationArtifacts = [];
     trainingModeState.rnn.evaluationRunId = "";
     trainingModeState.rnn.evaluationRunMetrics = {};
+    trainingModeState.rnn.evaluationLoaded = false;
   }
   if (trainingModeState.rnn.evaluationLoading && !options.force) {
     renderRnnEvaluation();
     return;
   }
-  if (!projectChanged && !options.force && trainingModeState.rnn.evaluationRuns.length && trainingModeState.rnn.evaluationMetrics) {
+  if (!projectChanged && !options.force && trainingModeState.rnn.evaluationLoaded) {
     renderRnnEvaluation();
     return;
   }
@@ -1211,6 +1249,7 @@ async function loadRnnEvaluation(options = {}) {
     const runs = sortRnnEvaluationRuns((Array.isArray(runsPayload) ? runsPayload : []).filter(isSequenceEvaluationRun));
     trainingModeState.rnn.evaluationProjectId = projectId;
     trainingModeState.rnn.evaluationRuns = runs;
+    trainingModeState.rnn.evaluationLoaded = true;
 
     const preferredRunId = options.runId || (!projectChanged ? trainingModeState.rnn.evaluationRunId : "");
     const activeRun = runs.find((run) => run.run_id === preferredRunId) || runs[0] || null;
@@ -1244,6 +1283,7 @@ async function loadRnnEvaluation(options = {}) {
     trainingModeState.rnn.evaluationMetrics = null;
     trainingModeState.rnn.evaluationArtifacts = [];
     trainingModeState.rnn.evaluationRunMetrics = {};
+    trainingModeState.rnn.evaluationLoaded = false;
   } finally {
     trainingModeState.rnn.evaluationLoading = false;
     renderRnnEvaluation();
@@ -1734,6 +1774,7 @@ async function loadRnnExportModels(options = {}) {
     trainingModeState.rnn.exportModels = [];
     trainingModeState.rnn.exportArtifacts = [];
     trainingModeState.rnn.exportProjectId = "";
+    trainingModeState.rnn.exportLoaded = false;
     renderRnnExportPanel();
     return;
   }
@@ -1743,7 +1784,7 @@ async function loadRnnExportModels(options = {}) {
   }
   if (!options.force
     && trainingModeState.rnn.exportProjectId === appState.currentProjectId
-    && trainingModeState.rnn.exportModels.length) {
+    && trainingModeState.rnn.exportLoaded) {
     renderRnnExportPanel();
     return;
   }
@@ -1755,9 +1796,11 @@ async function loadRnnExportModels(options = {}) {
     const models = await apiFetch(`/api/projects/${appState.currentProjectId}/models?scope=all`);
     trainingModeState.rnn.exportModels = filterRnnInferenceModels(models, trainingModeState.rnn.backend);
     await loadRnnExportArtifacts();
+    trainingModeState.rnn.exportLoaded = true;
   } catch (err) {
     trainingModeState.rnn.exportModels = [];
     trainingModeState.rnn.exportArtifacts = [];
+    trainingModeState.rnn.exportLoaded = false;
     eventBus.emit("toast", t("export.toast.failed", { message: err.message }));
   } finally {
     trainingModeState.rnn.exportLoading = false;
@@ -1926,18 +1969,22 @@ async function loadRnnInferenceModels(options = {}) {
     renderRnnInferenceModels();
     return;
   }
-  if (!options.force && trainingModeState.rnn.inferenceModels.length) {
+  const projectChanged = trainingModeState.rnn.inferenceProjectId !== appState.currentProjectId;
+  if (!options.force && !projectChanged && trainingModeState.rnn.inferenceModelsLoaded) {
     renderRnnInferenceModels();
     return;
   }
 
   trainingModeState.rnn.inferenceLoading = true;
+  trainingModeState.rnn.inferenceProjectId = appState.currentProjectId;
   renderRnnInferenceModels();
   try {
     const models = await apiFetch(`/api/projects/${appState.currentProjectId}/models?scope=all`);
     trainingModeState.rnn.inferenceModels = filterRnnInferenceModels(models, trainingModeState.rnn.backend);
+    trainingModeState.rnn.inferenceModelsLoaded = true;
   } catch (err) {
     trainingModeState.rnn.inferenceModels = [];
+    trainingModeState.rnn.inferenceModelsLoaded = false;
     eventBus.emit("toast", `Failed to load RNN models: ${err.message}`);
   } finally {
     trainingModeState.rnn.inferenceLoading = false;
@@ -2028,6 +2075,8 @@ async function runRnnSequenceInference(event) {
     });
     const result = await followServerTask(launch.job_id, { kind: "inference", title: t("task.inference.title") });
     trainingModeState.rnn.inferenceResult = result;
+    trainingModeState.rnn.inferenceResultLoaded = true;
+    trainingModeState.rnn.inferenceResultProjectId = appState.currentProjectId;
     appState.inferenceJobsProjectId = "";
     renderRnnInferenceResult();
     eventBus.emit("toast", "RNN sequence inference completed.");
@@ -2042,10 +2091,13 @@ async function runRnnSequenceInference(event) {
 async function loadLatestRnnInferenceResult(options = {}) {
   if (!appState.currentProjectId) {
     trainingModeState.rnn.inferenceResult = null;
+    trainingModeState.rnn.inferenceResultLoaded = false;
+    trainingModeState.rnn.inferenceResultProjectId = "";
     renderRnnInferenceResult();
     return;
   }
-  if (trainingModeState.rnn.inferenceResult && !options.force) {
+  const projectChanged = trainingModeState.rnn.inferenceResultProjectId !== appState.currentProjectId;
+  if (!projectChanged && trainingModeState.rnn.inferenceResultLoaded && !options.force) {
     renderRnnInferenceResult();
     return;
   }
@@ -2058,6 +2110,8 @@ async function loadLatestRnnInferenceResult(options = {}) {
   try {
     const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/inference/jobs`, { suppressToast: true });
     const jobs = Array.isArray(payload?.jobs) ? payload.jobs : [];
+    trainingModeState.rnn.inferenceResultProjectId = appState.currentProjectId;
+    trainingModeState.rnn.inferenceResultLoaded = true;
     const latest = jobs.find((job) =>
       job?.kind === "sequence" || job?.mode === "rnn" || job?.architecture === "rnn"
     );
@@ -2072,6 +2126,7 @@ async function loadLatestRnnInferenceResult(options = {}) {
     trainingModeState.rnn.inferenceResult = normalizeRnnInferenceJobResult(detail);
     renderRnnInferenceResult();
   } catch (err) {
+    trainingModeState.rnn.inferenceResultLoaded = false;
     if (options.force) eventBus.emit("toast", `Failed to load sequence inference result: ${err.message}`);
     renderRnnInferenceResult();
   }

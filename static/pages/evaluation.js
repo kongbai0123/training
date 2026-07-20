@@ -3,8 +3,16 @@ import { eventBus } from "../event_bus.js";
 import { setText, qs, escapeHtml } from "../utils.js";
 import { apiFetch, apiFetchBlob } from "../api.js";
 
+let loadedEvaluationProjectId = "";
+let cachedEvaluation = null;
+let evaluationLoading = false;
+
 export function initEvaluation() {
   eventBus.on("language-changed", () => renderEvaluationPage());
+  eventBus.on("refresh-project", () => {
+    loadedEvaluationProjectId = "";
+    cachedEvaluation = null;
+  });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeEvaluationPlotPreview();
   });
@@ -14,33 +22,50 @@ export async function renderEvaluationPage() {
   if (appState.currentPage !== "evaluation") return;
 
   if (!appState.currentProjectId) {
+    loadedEvaluationProjectId = "";
+    cachedEvaluation = null;
     resetEvaluationMetrics();
     renderEvaluationAssessment(null);
     renderEvaluationPlots([]);
     return;
   }
 
-  try {
-    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/evaluation`);
-    const metrics = data.metrics || {};
-    
-    setText("#eval-map50", data.has_metrics ? formatMetric(metrics.map50, 3) : "--");
-    setText("#eval-iou", data.has_metrics ? formatMetric(metrics.map50_95, 3) : "--");
-    setText("#eval-precision", data.has_metrics ? formatMetric(metrics.precision, 3) : "--");
-    setText("#eval-recall", data.has_metrics ? formatMetric(metrics.recall, 3) : "--");
-    setText("#eval-f1", data.has_metrics ? formatMetric(metrics.f1, 3) : "--");
-    setText("#eval-cls-loss", data.has_metrics ? formatMetric(metrics.cls_loss, 4) : "--");
-    setText("#eval-dfl-loss", data.has_metrics ? formatMetric(metrics.dfl_loss, 4) : "--");
-    setText("#eval-box-loss", data.has_metrics ? formatMetric(metrics.box_loss, 4) : "--");
+  if (loadedEvaluationProjectId === appState.currentProjectId && cachedEvaluation) {
+    renderEvaluationData(cachedEvaluation);
+    return;
+  }
+  if (evaluationLoading) return;
 
-    renderEvaluationAssessment(data.assessment);
-    renderEvaluationPlots(data.has_metrics ? data.plots || [] : [], data.run_id, data.plot_exports || {});
+  const projectId = appState.currentProjectId;
+  evaluationLoading = true;
+  try {
+    const data = await apiFetch(`/api/projects/${projectId}/evaluation`);
+    if (appState.currentProjectId !== projectId) return;
+    loadedEvaluationProjectId = projectId;
+    cachedEvaluation = data;
+    renderEvaluationData(data);
   } catch (err) {
     console.error("Failed to load evaluation metrics:", err);
     resetEvaluationMetrics();
     renderEvaluationAssessment(null);
     renderEvaluationPlots([]);
+  } finally {
+    evaluationLoading = false;
   }
+}
+
+function renderEvaluationData(data) {
+  const metrics = data.metrics || {};
+  setText("#eval-map50", data.has_metrics ? formatMetric(metrics.map50, 3) : "--");
+  setText("#eval-iou", data.has_metrics ? formatMetric(metrics.map50_95, 3) : "--");
+  setText("#eval-precision", data.has_metrics ? formatMetric(metrics.precision, 3) : "--");
+  setText("#eval-recall", data.has_metrics ? formatMetric(metrics.recall, 3) : "--");
+  setText("#eval-f1", data.has_metrics ? formatMetric(metrics.f1, 3) : "--");
+  setText("#eval-cls-loss", data.has_metrics ? formatMetric(metrics.cls_loss, 4) : "--");
+  setText("#eval-dfl-loss", data.has_metrics ? formatMetric(metrics.dfl_loss, 4) : "--");
+  setText("#eval-box-loss", data.has_metrics ? formatMetric(metrics.box_loss, 4) : "--");
+  renderEvaluationAssessment(data.assessment);
+  renderEvaluationPlots(data.has_metrics ? data.plots || [] : [], data.run_id, data.plot_exports || {});
 }
 
 function resetEvaluationMetrics() {
