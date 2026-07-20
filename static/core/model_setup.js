@@ -1,10 +1,12 @@
-import { apiFetch } from "../api.js";
+import { apiFetch, apiUpload } from "../api.js";
 import { eventBus } from "../event_bus.js";
 import { appState, applyLanguage, applyTheme, t } from "../state.js";
 import { escapeHtml, qs } from "../utils.js";
+import { beginTask } from "./task_progress.js";
 
 const REVIEW_KEY = "vts-model-setup-reviewed";
 const activeJobs = new Map();
+const installProgressTasks = new Map();
 let catalogPayload = null;
 let loadingPromise = null;
 let onboardingStep = 1;
@@ -195,7 +197,7 @@ async function installLabelMeComponent(event) {
     const form = new FormData();
     form.append("confirm", "true");
     form.append("file", file);
-    const status = await apiFetch("/api/components/labelme/install", { method: "POST", body: form });
+    const status = await apiUpload("/api/components/labelme/install", { method: "POST", body: form });
     eventBus.emit("toast", t("modelSetup.labelme.installed", { version: status.version || "--" }));
     await refreshLabelMeComponent();
   } catch (error) {
@@ -366,8 +368,9 @@ async function installSelectedModels() {
         body: JSON.stringify({ model_id: modelId, confirm: true }),
       });
       activeJobs.set(job.job_id, job);
+      syncModelInstallProgress(job);
       renderModels(catalogPayload?.models || []);
-      pollInstallJob(job.job_id);
+      monitorInstallJob(job.job_id);
     } catch (error) {
       eventBus.emit("toast", t("modelSetup.installFailed", { message: error.message }));
     }
@@ -376,21 +379,86 @@ async function installSelectedModels() {
 
 async function pollInstallJob(jobId) {
   try {
-    const job = await apiFetch(`/api/models/install/jobs/${encodeURIComponent(jobId)}`, { suppressToast: true });
-    activeJobs.set(jobId, job);
-    renderModels(catalogPayload?.models || []);
-    if (["queued", "downloading"].includes(job.status)) {
+    const job = await apiFetch(`/api/models/install/jobs/${encodeURIComponent(jobId)}`, { suppressToast: true, suppressProgress: true });
+    const terminal = await handleInstallJobUpdate(job);
+    if (!terminal) {
       window.setTimeout(() => pollInstallJob(jobId), 500);
-      return;
-    }
-    if (job.status === "completed") {
-      eventBus.emit("toast", t("modelSetup.installCompleted", { model: job.display_name }));
-      await refreshModelSetup({ force: true });
-    } else if (job.status === "failed") {
-      eventBus.emit("toast", t("modelSetup.installFailed", { message: job.error || job.status }));
     }
   } catch (error) {
     eventBus.emit("toast", t("modelSetup.installFailed", { message: error.message }));
+  }
+}
+
+function monitorInstallJob(jobId) {
+  let terminal = false;
+  let fallbackStarted = false;
+  const startFallback = () => {
+    if (terminal || fallbackStarted) return;
+    fallbackStarted = true;
+    void pollInstallJob(jobId);
+  };
+  try {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const socket = new WebSocket(`${protocol}//${window.location.host}/api/models/install/jobs/${encodeURIComponent(jobId)}/ws`);
+    socket.addEventListener("message", async (event) => {
+      try {
+        const job = JSON.parse(event.data);
+        if (["completed", "failed", "cancelled"].includes(String(job?.status || "").toLowerCase())) terminal = true;
+        terminal = await handleInstallJobUpdate(job) || terminal;
+      } catch {
+        startFallback();
+      }
+    });
+    socket.addEventListener("error", startFallback);
+    socket.addEventListener("close", startFallback);
+  } catch {
+    startFallback();
+  }
+}
+
+async function handleInstallJobUpdate(job) {
+  activeJobs.set(job.job_id, job);
+  syncModelInstallProgress(job);
+  renderModels(catalogPayload?.models || []);
+  if (job.status === "completed") {
+    eventBus.emit("toast", t("modelSetup.installCompleted", { model: job.display_name }));
+    await refreshModelSetup({ force: true });
+    return true;
+  }
+  if (["failed", "cancelled"].includes(job.status)) {
+    eventBus.emit("toast", t("modelSetup.installFailed", { message: job.error || job.status }));
+    return true;
+  }
+  return false;
+}
+
+function syncModelInstallProgress(job) {
+  if (!job?.job_id) return;
+  let controller = installProgressTasks.get(job.job_id);
+  if (!controller) {
+    controller = beginTask({
+      jobId: job.job_id,
+      kind: "model",
+      title: job.display_name || t("task.model.title"),
+      stage: t("task.model.preparing"),
+      method: "POST",
+    });
+    installProgressTasks.set(job.job_id, controller);
+  }
+  const status = String(job.status || "queued").toLowerCase();
+  const percent = Number(job.progress || 0);
+  if (status === "completed") {
+    controller.complete({ message: t("modelSetup.installCompleted", { model: job.display_name }) });
+    installProgressTasks.delete(job.job_id);
+  } else if (["failed", "cancelled"].includes(status)) {
+    controller.fail({ message: job.error || status, percent });
+    installProgressTasks.delete(job.job_id);
+  } else {
+    controller.update({
+      percent,
+      indeterminate: !Number(job.expected_bytes || 0),
+      message: status === "downloading" ? t("task.model.downloading") : t("task.model.preparing"),
+    });
   }
 }
 
@@ -406,7 +474,7 @@ async function handleModelAction(event) {
       const job = await apiFetch(`/api/models/install/jobs/${encodeURIComponent(retry.dataset.modelRetry)}/retry`, { method: "POST" });
       activeJobs.set(job.job_id, job);
       renderModels(catalogPayload?.models || []);
-      pollInstallJob(job.job_id);
+      monitorInstallJob(job.job_id);
     }
   } catch (error) {
     eventBus.emit("toast", t("modelSetup.installFailed", { message: error.message }));

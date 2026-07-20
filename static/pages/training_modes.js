@@ -1,6 +1,7 @@
 ﻿import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
-import { apiFetch } from "../api.js";
+import { apiFetch, apiUpload } from "../api.js";
+import { beginTask, followServerTask } from "../core/task_progress.js";
 import { qs, qsa, escapeHtml, setHTML, setText } from "../utils.js";
 import { renderTrainingFlowGuide } from "../core/training_flow_guide.js";
 import {
@@ -850,7 +851,7 @@ async function importRnnDataset() {
   try {
     const form = new FormData();
     form.append("file", file);
-    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/rnn/dataset/import`, {
+    const result = await apiUpload(`/api/projects/${appState.currentProjectId}/rnn/dataset/import`, {
       method: "POST",
       body: form
     });
@@ -1868,14 +1869,20 @@ async function exportRnnArtifact(format = "rnn_package") {
   if (selectedModelId) params.set("model_id", selectedModelId);
   trainingModeState.rnn.exportRunning = true;
   renderRnnExportPanel();
+  const task = beginTask({ kind: "export", title: t("task.export.title"), stage: t("task.export.preparing"), method: "POST" });
   try {
     eventBus.emit("toast", t("export.toast.running"));
-    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/export?${params.toString()}`);
+    const launch = await apiFetch(`/api/projects/${appState.currentProjectId}/export/jobs?${params.toString()}`, {
+      method: "POST",
+      suppressProgress: true,
+    });
+    const data = await followServerTask(launch.job_id, { controller: task, kind: "export", title: t("task.export.title") });
     trainingModeState.rnn.exportLastResult = data;
     await loadRnnExportArtifacts();
     renderRnnExportPanel();
     eventBus.emit("toast", t("export.toast.done", { path: resolveExportPath(data) }));
   } catch (err) {
+    task.fail({ message: err.message });
     eventBus.emit("toast", t("export.toast.failed", { message: err.message }));
   } finally {
     trainingModeState.rnn.exportRunning = false;
@@ -2015,10 +2022,11 @@ async function runRnnSequenceInference(event) {
   trainingModeState.rnn.inferenceRunning = true;
   updateRnnInferenceControls();
   try {
-    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/inference/sequence`, {
+    const launch = await apiUpload(`/api/projects/${appState.currentProjectId}/inference/sequence/jobs`, {
       method: "POST",
       body: form
     });
+    const result = await followServerTask(launch.job_id, { kind: "inference", title: t("task.inference.title") });
     trainingModeState.rnn.inferenceResult = result;
     appState.inferenceJobsProjectId = "";
     renderRnnInferenceResult();
@@ -2186,9 +2194,7 @@ async function loadRnnModelGuides() {
   trainingModeState.rnn.modelGuidesLoading = true;
   renderRnnModelGuide();
   try {
-    const response = await fetch("/static/data/model_guide_catalog.json", { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    trainingModeState.rnn.modelGuides = await response.json();
+    trainingModeState.rnn.modelGuides = await apiFetch("/static/data/model_guide_catalog.json", { cache: "no-store" });
   } catch (err) {
     trainingModeState.rnn.modelGuides = {};
     eventBus.emit("toast", `Model guide load failed: ${err.message}`);

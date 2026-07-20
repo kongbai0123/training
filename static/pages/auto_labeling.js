@@ -1,5 +1,6 @@
 import { appState, t } from "../state.js";
-import { apiFetch } from "../api.js";
+import { apiFetch, apiUpload } from "../api.js";
+import { beginTask, followServerTask } from "../core/task_progress.js";
 import { eventBus } from "../event_bus.js";
 import { qs, qsa, setHTML, setText, escapeHtml, showToast, collectDroppedFiles } from "../utils.js";
 
@@ -576,8 +577,6 @@ async function uploadAutoLabelSourceFiles(files) {
   }
 
   const dropZone = qs("#auto-source-drop-zone");
-  const progressPanel = ensureAutoProgressPanel("auto-source-upload-progress", dropZone);
-  updateAutoProgress(progressPanel, t("autoLabel.progress.filtering"), 0, t("autoLabel.progress.analyzing"));
 
   const classified = classifyAutoLabelSourceFiles(allFiles);
   const imageFiles = classified.images;
@@ -586,10 +585,18 @@ async function uploadAutoLabelSourceFiles(files) {
   if (rejected > 0) showToast(t("autoLabel.toast.filteredSource", { count: rejected }));
 
   if (!imageFiles.length && !zipFiles.length) {
-    progressPanel?.remove();
     showToast(t("autoLabel.toast.noImageOrZip"));
     return;
   }
+
+  const progress = beginTask({
+    jobId: `auto-source-import-${Date.now()}`,
+    kind: "import",
+    title: t("task.import.title"),
+    stage: t("autoLabel.progress.analyzing"),
+    method: "POST",
+    inlineHost: dropZone?.parentElement,
+  });
 
   let importedImages = 0;
   let duplicateSameHash = 0;
@@ -597,10 +604,11 @@ async function uploadAutoLabelSourceFiles(files) {
   try {
     for (let idx = 0; idx < zipFiles.length; idx += 1) {
       const file = zipFiles[idx];
-      updateAutoProgress(progressPanel, t("autoLabel.progress.importingZip"), Math.round((idx / Math.max(1, zipFiles.length)) * 100), t("autoLabel.progress.processingZip", { name: file.name }));
+      progress.update({ percent: Math.round((idx / Math.max(1, zipFiles.length)) * 100), indeterminate: false, message: t("autoLabel.progress.processingZip", { name: file.name }) });
       const formData = new FormData();
       formData.append("file", file, file.name);
-      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-zip`, { method: "POST", body: formData });
+      const launch = await apiUpload(`/api/projects/${appState.currentProjectId}/import-zip/jobs`, { method: "POST", body: formData });
+      const data = await followServerTask(launch.job_id, { kind: "import", title: t("task.import.title") });
       importedImages += Number(data.imported_images || 0);
     }
 
@@ -609,24 +617,25 @@ async function uploadAutoLabelSourceFiles(files) {
     for (let i = 0; i < imageFiles.length; i += batchSize) {
       const batchIndex = Math.floor(i / batchSize) + 1;
       const batch = imageFiles.slice(i, i + batchSize);
-      updateAutoProgress(progressPanel, t("autoLabel.progress.uploadingImages"), Math.round((i / Math.max(1, imageFiles.length)) * 100), t("autoLabel.progress.uploadingBatch", { index: batchIndex, total: totalBatches, count: batch.length }));
+      progress.update({ percent: Math.round((i / Math.max(1, imageFiles.length)) * 100), indeterminate: false, message: t("autoLabel.progress.uploadingBatch", { index: batchIndex, total: totalBatches, count: batch.length }) });
       const formData = new FormData();
       batch.forEach((file) => formData.append("files", file, file.name));
-      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/upload-images`, { method: "POST", body: formData });
+      const data = await apiUpload(`/api/projects/${appState.currentProjectId}/upload-images`, { method: "POST", body: formData });
       importedImages += Number(data.uploaded_count || 0);
       duplicateSameHash += Number(data.duplicate_same_hash || 0);
       renamedCount += Number(data.renamed_same_name_diff_hash || 0);
     }
 
-    updateAutoProgress(progressPanel, t("autoLabel.progress.syncing"), 95, t("autoLabel.progress.syncingDetail"));
-    try { await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/sync`, { method: "POST" }); } catch (err) { console.warn("Auto-label source sync failed", err); }
-    updateAutoProgress(progressPanel, t("autoLabel.progress.completed"), 100, t("autoLabel.progress.importSummary", { imported: importedImages, duplicates: duplicateSameHash, renamed: renamedCount }));
+    progress.update({ percent: 95, indeterminate: false, message: t("autoLabel.progress.syncingDetail") });
+    try {
+      const syncTask = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/sync/jobs`, { method: "POST" });
+      await followServerTask(syncTask.job_id, { kind: "sync", title: t("task.sync.title") });
+    } catch (err) { console.warn("Auto-label source sync failed", err); }
+    progress.complete({ message: t("autoLabel.progress.importSummary", { imported: importedImages, duplicates: duplicateSameHash, renamed: renamedCount }) });
     eventBus.emit("refresh-project");
   } catch (err) {
     showToast(t("autoLabel.toast.importFailed", { message: err.message }));
-    updateAutoProgress(progressPanel, t("autoLabel.progress.failed"), 100, `Error: ${err.message}`);
-  } finally {
-    setTimeout(() => progressPanel?.remove(), 5000);
+    progress.fail({ message: err.message });
   }
 }
 
@@ -669,7 +678,7 @@ async function createAutoLabelJob() {
   creatingAutoLabelJob = true;
   button?.setAttribute("aria-busy", "true");
   try {
-    const payload = await apiFetch(`/api/projects/${appState.currentProjectId}/auto-labeling/jobs`, {
+    const launch = await apiFetch(`/api/projects/${appState.currentProjectId}/auto-labeling/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -679,6 +688,7 @@ async function createAutoLabelJob() {
         ...draftRules,
       }),
     });
+    const payload = await followServerTask(launch.job_id, { kind: "auto_label", title: t("task.autoLabel.title") });
     showToast(t("autoLabel.toast.jobCreated", { job: payload.job_id || "--" }));
     loadedAutoLabelStatusProjectId = null;
     await loadAutoLabelStatus({ hasProject: true });
@@ -709,26 +719,6 @@ function readAutoDraftRules() {
   };
 }
 
-function ensureAutoProgressPanel(id, anchor) {
-  let panel = qs(`#${id}`);
-  if (!panel) {
-    panel = document.createElement("div");
-    panel.id = id;
-    panel.className = "ingest-progress-container";
-    anchor?.parentNode?.insertBefore(panel, anchor.nextSibling);
-  }
-  return panel;
-}
-
-function updateAutoProgress(panel, statusText, percent, detailsText) {
-  if (!panel) return;
-  const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
-  panel.innerHTML = `
-    <div class="ingest-progress-header"><span class="ingest-progress-status">${escapeHtml(statusText)}</span><span class="ingest-progress-percent">${safePercent}%</span></div>
-    <div class="ingest-progress-bar-bg"><div class="ingest-progress-bar-fill" style="width: ${safePercent}%"></div></div>
-    <div class="ingest-progress-details">${escapeHtml(detailsText)}</div>
-  `;
-}
 function initModelImportDropZone() {
   const dropZone = qs("#auto-model-drop-zone");
   const fileInput = qs("#auto-model-file-input");

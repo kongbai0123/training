@@ -1,6 +1,7 @@
 import { appState, t } from "../state.js";
 import { eventBus } from "../event_bus.js";
-import { apiFetch } from "../api.js";
+import { apiFetch, apiFetchBlob, apiUpload } from "../api.js";
+import { followServerTask } from "../core/task_progress.js";
 import { qs, qsa, escapeHtml, setText } from "../utils.js";
 import { buildDeploymentDecision, renderDeploymentDecisionCard } from "../core/deployment_decision.js";
 
@@ -320,9 +321,14 @@ async function runOutputComparison() {
     form.append("imgsz", qs("#compare-output-imgsz")?.value || "640");
     form.append("device", qs("#compare-output-device")?.value || "cpu");
     form.append("file", file);
-    compareState.outputResult = await apiFetch(`/api/projects/${encodeURIComponent(appState.currentProjectId)}/compare/output-image`, {
+    const started = await apiUpload(`/api/projects/${encodeURIComponent(appState.currentProjectId)}/compare/output-image/jobs`, {
       method: "POST",
       body: form,
+    });
+    compareState.outputResult = await followServerTask(started.job_id, {
+      kind: "evaluation",
+      title: t("task.evaluation.title"),
+      button: qs("#btn-run-output-compare"),
     });
   } catch (err) {
     compareState.outputResult = null;
@@ -927,13 +933,7 @@ function updateCompareActions() {
 async function downloadCompareReportFile(url, filename) {
   if (!url) return;
   try {
-    const headers = {};
-    if (appState.bootstrap?.token) headers["X-VTS-Token"] = appState.bootstrap.token;
-    const response = await fetch(url, { headers });
-    if (!response.ok) {
-      throw new Error(await response.text() || `HTTP ${response.status}`);
-    }
-    const blob = await response.blob();
+    const blob = await apiFetchBlob(url);
     const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = downloadUrl;
@@ -950,13 +950,7 @@ async function downloadCompareReportFile(url, filename) {
 async function downloadRunArtifact(runId, url, filename) {
   if (!runId || !url) return;
   try {
-    const headers = {};
-    if (appState.bootstrap?.token) headers["X-VTS-Token"] = appState.bootstrap.token;
-    const response = await fetch(url, { headers });
-    if (!response.ok) {
-      throw new Error(await response.text() || `HTTP ${response.status}`);
-    }
-    const blob = await response.blob();
+    const blob = await apiFetchBlob(url);
     const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = downloadUrl;

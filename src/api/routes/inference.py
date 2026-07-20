@@ -15,6 +15,7 @@ from src.model_registry import ModelRegistry
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
 from src.rnn_inference_engine import RNNSequenceInferenceEngine
+from src.task_jobs import task_job_manager
 
 router = APIRouter()
 
@@ -162,6 +163,153 @@ async def run_sequence_inference(
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/api/projects/{project_id}/inference/image/jobs")
+async def start_image_inference_job(
+    project_id: str,
+    model_id: str = Form(...),
+    conf: float = Form(0.25),
+    iou: float = Form(0.7),
+    imgsz: int = Form(640),
+    device: str = Form("cpu"),
+    mask_opacity: float = Form(0.45),
+    show_mask: bool = Form(True),
+    show_bbox: bool = Form(True),
+    class_filter: Optional[str] = Form(None),
+    image_path: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+):
+    require_feature("inference")()
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        ModelRegistry.resolve_model(project, model_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    inference_dirs = ModelRegistry.ensure_inference_dirs(project)
+    original_filename = ""
+    if file and file.filename:
+        import uuid
+        ext = Path(file.filename).suffix.lower()
+        if ext not in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}:
+            raise HTTPException(status_code=400, detail="Only image files are supported")
+        original_filename = Path(file.filename).name
+        input_path = inference_dirs["inputs_images"] / f"upload_{uuid.uuid4().hex}{ext}"
+        with open(input_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    elif image_path:
+        if not LOCAL_TRUSTED_MODE:
+            raise HTTPException(status_code=403, detail="image_path requires Local Trusted Mode.")
+        from src.security_utils import safe_resolve_under
+        try:
+            input_path = safe_resolve_under(ProjectLayout.from_project(project).project_dir.resolve(), Path(image_path))
+        except ValueError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        original_filename = Path(image_path).name
+    else:
+        raise HTTPException(status_code=400, detail="Please provide an image file or image_path")
+
+    settings = {
+        "conf": conf,
+        "iou": iou,
+        "imgsz": imgsz,
+        "device": device,
+        "mask_opacity": mask_opacity,
+        "show_mask": show_mask,
+        "show_bbox": show_bbox,
+        "class_filter": class_filter,
+        "original_filename": original_filename,
+    }
+
+    def run_inference(reporter):
+        current_project = ProjectManager.get_project(project_id)
+        if not current_project:
+            raise RuntimeError("Project not found")
+        reporter.update(phase="loading_model", message="Loading inference model", progress=15, indeterminate=True)
+        model = ModelRegistry.resolve_model(current_project, model_id)
+        reporter.update(phase="inferencing", message="Running image inference", progress=40, indeterminate=True)
+        result = InferenceEngine.run_image_inference(project=current_project, model=model, input_path=input_path, settings=settings)
+        reporter.update(phase="writing", message="Writing predictions and preview", progress=92, indeterminate=False)
+        return result
+
+    task = task_job_manager.submit(
+        kind="inference",
+        title="Image inference",
+        project_id=project_id,
+        message="Image inference queued",
+        handler=run_inference,
+    )
+    return {"job_id": task["job_id"], "task": task}
+
+
+@router.post("/api/projects/{project_id}/inference/sequence/jobs")
+async def start_sequence_inference_job(
+    project_id: str,
+    model_id: str = Form(...),
+    device: str = Form("cpu"),
+    csv_path: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+):
+    require_feature("inference")()
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        ModelRegistry.resolve_model(project, model_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    inference_dirs = ModelRegistry.ensure_inference_dirs(project)
+    inputs_dir = inference_dirs["jobs"].parent / "inputs" / "sequences"
+    inputs_dir.mkdir(parents=True, exist_ok=True)
+    original_filename = ""
+    if file and file.filename:
+        import uuid
+        ext = Path(file.filename).suffix.lower()
+        if ext != ".csv":
+            raise HTTPException(status_code=400, detail="Only CSV feature sequence files are supported")
+        original_filename = Path(file.filename).name
+        input_path = inputs_dir / f"upload_{uuid.uuid4().hex}{ext}"
+        with open(input_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    elif csv_path:
+        if not LOCAL_TRUSTED_MODE:
+            raise HTTPException(status_code=403, detail="Local CSV path inference requires Local Trusted Mode")
+        from src.security_utils import safe_resolve_under
+        try:
+            input_path = safe_resolve_under(ProjectLayout.from_project(project).project_dir.resolve(), Path(csv_path))
+        except ValueError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        original_filename = Path(csv_path).name
+    else:
+        raise HTTPException(status_code=400, detail="Please provide a CSV file or csv_path")
+
+    def run_inference(reporter):
+        current_project = ProjectManager.get_project(project_id)
+        if not current_project:
+            raise RuntimeError("Project not found")
+        reporter.update(phase="loading_model", message="Loading sequence model", progress=15, indeterminate=True)
+        model = ModelRegistry.resolve_model(current_project, model_id)
+        reporter.update(phase="inferencing", message="Running sequence inference", progress=40, indeterminate=True)
+        result = RNNSequenceInferenceEngine.run_csv_sequence_inference(
+            project=current_project,
+            model=model,
+            input_path=input_path,
+            settings={"device": device, "original_filename": original_filename},
+        )
+        reporter.update(phase="writing", message="Writing inference results", progress=92, indeterminate=False)
+        return result
+
+    task = task_job_manager.submit(
+        kind="inference",
+        title="Sequence inference",
+        project_id=project_id,
+        message="Sequence inference queued",
+        handler=run_inference,
+    )
+    return {"job_id": task["job_id"], "task": task}
 
 
 @router.get("/api/projects/{project_id}/inference/jobs/{job_id}/files/{filename}")

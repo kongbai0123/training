@@ -1,6 +1,6 @@
 import { eventBus } from "../event_bus.js";
 import { appState, getProjectStatus, t } from "../state.js";
-import { apiFetch } from "../api.js";
+import { apiFetch, apiUpload } from "../api.js";
 import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
 import { initTrainingModeSidebar } from "./training_modes.js";
 
@@ -582,7 +582,7 @@ async function importYoloModelFromModal(event) {
   if (resultEl) resultEl.textContent = "Importing model...";
   try {
     const endpoint = getModelImportEndpoint(importType, appState.currentProjectId);
-    const result = await apiFetch(endpoint, {
+    const result = await apiUpload(endpoint, {
       method: "POST",
       body: formData
     });
@@ -2075,7 +2075,7 @@ async function refreshTrainingStatusFromApi() {
   if (trainingStatusPollInFlight || !appState.currentProjectId) return;
   trainingStatusPollInFlight = true;
   try {
-    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/status`);
+    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/status`, { suppressProgress: true });
     applyTrainingStatusUpdate(data);
   } catch (error) {
     console.error("Training status fallback poll failed", error);

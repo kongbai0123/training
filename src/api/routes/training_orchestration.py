@@ -13,6 +13,7 @@ from src.training.compare_service import CompareService, CompareServiceError
 from src.training.export_service import ExportableModelNotFound, ExportService, ExportServiceError
 from src.training.output_compare_service import CNNOutputCompareService, OutputCompareServiceError
 from src.training.start_service import TrainingReadinessError, TrainingRunAlreadyExists, TrainingStartService
+from src.task_jobs import task_job_manager
 
 router = APIRouter()
 
@@ -210,6 +211,86 @@ async def compare_project_image_outputs(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+@router.post("/api/projects/{project_id}/compare/output-image/jobs")
+async def start_compare_project_image_outputs_job(
+    project_id: str,
+    run_ids_json: str = Form(...),
+    conf: float = Form(0.25),
+    iou: float = Form(0.7),
+    imgsz: int = Form(640),
+    device: str = Form("cpu"),
+    mask_opacity: float = Form(0.45),
+    show_mask: bool = Form(True),
+    show_bbox: bool = Form(True),
+    class_filter: Optional[str] = Form(None),
+    image_path: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+):
+    require_feature("inference")()
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        run_ids = CNNOutputCompareService.parse_run_ids(run_ids_json)
+        input_path = CNNOutputCompareService.resolve_image_input(
+            project,
+            upload=file,
+            image_path=image_path,
+            local_trusted_mode=LOCAL_TRUSTED_MODE,
+        )
+    except OutputCompareServiceError as exc:
+        status_code = 403 if "Local image path compare requires Local Trusted Mode" in str(exc) else 400
+        raise HTTPException(status_code=status_code, detail=str(exc))
+
+    settings = {
+        "conf": conf,
+        "iou": iou,
+        "imgsz": imgsz,
+        "device": device,
+        "mask_opacity": mask_opacity,
+        "show_mask": show_mask,
+        "show_bbox": show_bbox,
+        "class_filter": class_filter,
+        "original_filename": Path(file.filename).name if file and file.filename else (Path(image_path).name if image_path else ""),
+    }
+
+    def run_compare(reporter):
+        current_project = ProjectManager.get_project(project_id)
+        if not current_project:
+            raise RuntimeError("Project not found")
+        reporter.update(phase="validating", message="Validating comparison models", progress=8, indeterminate=False)
+        reporter.update(phase="loading_model", message="Loading comparison models", progress=15, indeterminate=True)
+
+        def on_progress(current, total, run_id):
+            reporter.update(
+                phase="inferencing",
+                message=f"Comparing output for {run_id}",
+                progress=20 + (70 * current / max(1, total)),
+                indeterminate=False,
+                current=current,
+                total=total,
+            )
+
+        result = CNNOutputCompareService.compare_image_outputs(
+            project=current_project,
+            run_ids=run_ids,
+            input_path=input_path,
+            settings=settings,
+            progress_callback=on_progress,
+        )
+        reporter.update(phase="writing", message="Writing output comparison", progress=95, indeterminate=False)
+        return result
+
+    task = task_job_manager.submit(
+        kind="evaluation",
+        title="Comparing model outputs",
+        project_id=project_id,
+        message="Output comparison queued",
+        handler=run_compare,
+    )
+    return {"job_id": task["job_id"], "task": task}
+
+
 
 
 # Export API.
@@ -248,6 +329,48 @@ def export_model(
         raise HTTPException(status_code=400, detail=str(exc))
     except ExportServiceError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/api/projects/{project_id}/export/jobs")
+def start_export_job(
+    project_id: str,
+    run_id: Optional[str] = None,
+    model_id: Optional[str] = None,
+    format: Optional[str] = None,
+    precision: Optional[str] = None,
+):
+    """Run model conversion/writing outside the request and expose phase updates."""
+    require_feature("export_onnx")()
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    def run_export(reporter):
+        reporter.update(phase="validating", message="Validating selected model and export settings", progress=5, indeterminate=False)
+        current_project = ProjectManager.get_project(project_id)
+        if not current_project:
+            raise RuntimeError("Project not found")
+        reporter.update(phase="loading_model", message="Loading model weights", progress=15, indeterminate=False)
+        reporter.update(phase="converting", message="Converting model and validating output graph", progress=35, indeterminate=True)
+        result = ExportService.export_project_model(
+            project_id,
+            current_project,
+            run_id=run_id,
+            model_id=model_id,
+            export_format=format,
+            precision=precision,
+        )
+        reporter.update(phase="writing", message="Writing export manifest and final files", progress=90, indeterminate=False)
+        return result
+
+    task = task_job_manager.submit(
+        kind="export",
+        title="Export model",
+        project_id=project_id,
+        message="Export queued",
+        handler=run_export,
+    )
+    return {"job_id": task["job_id"], "task": task}
 
 
 

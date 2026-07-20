@@ -10,6 +10,7 @@ from src.auto_labeling_service import AutoLabelingService, AutoLabelingServiceEr
 from src.feature_gate import require_feature
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
+from src.task_jobs import task_job_manager
 
 router = APIRouter()
 
@@ -111,6 +112,43 @@ def create_auto_labeling_job(project_id: str, req: Dict[str, Any]):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Auto-labeling job failed: {exc}")
     return summary
+
+
+@router.post("/api/projects/{project_id}/auto-labeling/tasks")
+def start_auto_labeling_task(project_id: str, req: Dict[str, Any]):
+    require_feature("auto_labeling")()
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    def run_auto_label(reporter):
+        current_project = ProjectManager.get_project(project_id)
+        if not current_project:
+            raise RuntimeError("Project not found")
+        reporter.update(phase="loading_model", message="Loading auto-label model", progress=10, indeterminate=True)
+
+        def on_progress(current, total, filename):
+            reporter.update(
+                phase="labeling",
+                message=f"Generating draft for {filename}",
+                progress=15 + (75 * current / max(1, total)),
+                indeterminate=False,
+                current=current,
+                total=total,
+            )
+
+        summary = AutoLabelingService.create_draft_job(current_project, req, progress_callback=on_progress)
+        reporter.update(phase="writing", message="Writing draft review queue", progress=95, indeterminate=False)
+        return summary
+
+    task = task_job_manager.submit(
+        kind="auto_label",
+        title="Generate annotation drafts",
+        project_id=project_id,
+        message="Auto-labeling queued",
+        handler=run_auto_label,
+    )
+    return {"job_id": task["job_id"], "task": task}
 
 
 @router.post("/api/projects/{project_id}/auto-labeling/jobs/{job_id}/review")

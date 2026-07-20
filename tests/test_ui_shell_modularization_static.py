@@ -807,7 +807,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         tooltip_js = (ROOT / "static" / "core" / "tooltip.js").read_text(encoding="utf-8")
         project_lifecycle_js = (ROOT / "static" / "core" / "project_lifecycle.js").read_text(encoding="utf-8")
 
-        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260713-model-guide-evidence";', app_js)
+        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260720-task-progress";', app_js)
         self.assertIn("syncPageModeForProject(null, requestedPage);", bootstrap_js)
         self.assertIn("bootstrapApp().catch", app_js)
         self.assertNotIn("bindGlobalNavigation", app_js)

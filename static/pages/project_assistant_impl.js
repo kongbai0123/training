@@ -1,4 +1,5 @@
-import { apiFetch } from "../api.js";
+import { apiFetch, apiUpload } from "../api.js";
+import { followServerTask } from "../core/task_progress.js";
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { buildProjectAssistantContext } from "../core/right_panel.js?v=20260708-rnn-feature-wizard";
@@ -280,7 +281,7 @@ async function uploadDocumentFile() {
   }
   const formData = new FormData();
   formData.append("file", file);
-  const result = await apiFetch(assistantApi("/knowledge-base/upload"), {
+  const result = await apiUpload(assistantApi("/knowledge-base/upload"), {
     method: "POST",
     body: formData,
   });
@@ -292,8 +293,13 @@ async function uploadDocumentFile() {
 
 async function syncProjectArtifacts() {
   if (!requireActiveProject()) return;
-  const result = await apiFetch(`/api/project-assistant/projects/${encodeURIComponent(appState.currentProjectId)}/sync-artifacts`, {
+  const started = await apiFetch(`/api/project-assistant/projects/${encodeURIComponent(appState.currentProjectId)}/sync-artifacts/jobs`, {
     method: "POST",
+  });
+  const result = await followServerTask(started.job_id, {
+    kind: "sync",
+    title: t("task.sync.title"),
+    button: qs("#btn-rag-sync-artifacts"),
   });
   assistantState.status = result.status;
   await loadProjectAssistant({ force: true });

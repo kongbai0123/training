@@ -1,6 +1,7 @@
 import { eventBus } from "../event_bus.js";
 import { appState, getProjectStatus, t } from "../state.js";
-import { apiFetch } from "../api.js";
+import { apiFetch, apiUpload } from "../api.js";
+import { followServerTask } from "../core/task_progress.js";
 import { qs, qsa, setText, setHTML, escapeHtml, copyText, collectDroppedFiles, colorForLabel } from "../utils.js";
 
 let pendingAnnotationFiles = [];
@@ -151,10 +152,11 @@ async function uploadAnnotationFiles(validFiles, csvMapping = null) {
     validFiles.forEach((file) => formData.append("files", file, file.name));
     if (csvMapping) formData.append("csv_mapping", JSON.stringify(csvMapping));
 
-    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-annotations`, {
+    const launch = await apiUpload(`/api/projects/${appState.currentProjectId}/import-annotations/jobs`, {
       method: "POST",
       body: formData
     });
+    const data = await followServerTask(launch.job_id, { kind: "import", title: t("task.import.title") });
 
     appState.latestAnnotationImport = data.report || null;
     const appliedText = data.auto_applied
@@ -403,7 +405,12 @@ async function syncLabelMeLabels(silent = false) {
   if (!silent) eventBus.emit("toast", t("labelme.toast.syncing"));
 
   try {
-    const report = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/sync`, { method: "POST" });
+    const started = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/sync/jobs`, { method: "POST" });
+    const report = await followServerTask(started.job_id, {
+      kind: "sync",
+      title: t("task.sync.title"),
+      button: btn,
+    });
 
     appState.labelme.jsonCount = report.annotated;
     appState.labelme.missingJson = report.missing_json;

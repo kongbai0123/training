@@ -714,6 +714,20 @@ body[data-theme="light"] .global-progress-hud {
   white-space: nowrap;
 }
 
+.global-progress-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#global-progress-count {
+  padding: 2px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--info);
+  font-size: 0.7rem;
+}
+
 .global-progress-message {
   color: var(--text-muted);
   font-size: 0.78rem;
@@ -784,6 +798,89 @@ body[data-theme="light"] .global-progress-bar-bg {
   50% {
     opacity: 1;
   }
+}
+
+.task-progress-inline {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-panel) 88%, var(--info) 12%);
+}
+
+.task-progress-inline__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.task-progress-inline__title,
+.task-progress-inline__percent {
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.task-progress-inline__message {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.task-progress-inline__track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.task-progress-inline__fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), var(--info));
+  transition: width 0.2s ease;
+}
+
+.task-progress-inline.is-indeterminate .task-progress-inline__fill {
+  width: 42% !important;
+  animation: progress-hud-pending 1.15s ease-in-out infinite;
+}
+
+.task-progress-inline.is-completed {
+  border-color: color-mix(in srgb, var(--success) 65%, var(--border) 35%);
+}
+
+.task-progress-inline.is-completed .task-progress-inline__fill {
+  background: var(--success);
+}
+
+.task-progress-inline.is-failed,
+.task-progress-inline.is-cancelled {
+  border-color: color-mix(in srgb, var(--danger) 65%, var(--border) 35%);
+}
+
+.task-progress-inline.is-failed .task-progress-inline__fill,
+.task-progress-inline.is-cancelled .task-progress-inline__fill {
+  background: var(--danger);
+}
+
+.task-button-spinner {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 0.45em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.12em;
+  animation: task-button-spin 0.75s linear infinite;
+}
+
+@keyframes task-button-spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 620px) {

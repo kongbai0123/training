@@ -1,6 +1,7 @@
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
-import { apiFetch, apiFetchBlob } from "../api.js";
+import { apiFetch, apiFetchBlob, apiUpload } from "../api.js";
+import { followServerTask } from "../core/task_progress.js";
 import { qs, qsa, setHTML, escapeHtml, copyText } from "../utils.js";
 
 let loadedProjectId = null;
@@ -232,10 +233,11 @@ async function runInference() {
       const target = targets[index];
       const form = buildInferenceForm(model, target, files.length > 0);
       try {
-        const result = await apiFetch(`/api/projects/${appState.currentProjectId}/inference/image`, {
+        const launch = await apiUpload(`/api/projects/${appState.currentProjectId}/inference/image/jobs`, {
           method: "POST",
           body: form
         });
+        const result = await followServerTask(launch.job_id, { kind: "inference", title: t("task.inference.title") });
         results.push(result);
       } catch (err) {
         failures.push({

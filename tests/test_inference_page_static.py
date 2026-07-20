@@ -12,8 +12,9 @@ class InferencePageStaticTests(unittest.TestCase):
 
         self.assertIn("export async function apiFetchBlob", api_js)
         self.assertIn('extraHeaders["X-VTS-Token"] = token;', api_js)
-        self.assertIn("return res.blob();", api_js)
-        self.assertIn("import { apiFetch, apiFetchBlob }", inference_js)
+        self.assertIn("const payload = await res.blob();", api_js)
+        self.assertIn("return payload;", api_js)
+        self.assertIn("import { apiFetch, apiFetchBlob, apiUpload }", inference_js)
         self.assertIn("const blob = await apiFetchBlob(imageUrl", inference_js)
         self.assertIn("URL.createObjectURL(blob)", inference_js)
         self.assertIn("window.open(resultImageObjectUrl", inference_js)

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
 from src.splitter import DataSplitter
+from src.task_jobs import task_job_manager
 
 router = APIRouter()
 
@@ -54,13 +55,13 @@ def write_split_files(project: Dict[str, Any], splits: Dict[str, List[str]], met
     project["current"]["split_id"] = split_id
     return manifest
 
-# Dataset split API.
-@router.post("/api/projects/{project_id}/split")
-def split_dataset(project_id: str, req: SplitRequest):
+def _perform_split(project_id: str, req: SplitRequest, reporter=None):
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-
+    if reporter:
+        reporter.update(phase="validating", message="Validating split ratios and dataset", progress=5, indeterminate=False)
+        reporter.update(phase="splitting", message="Calculating leakage-aware split assignments", progress=15, indeterminate=True)
     # Build split assignments.
     splits, quality_report = DataSplitter.split_dataset(
         images=project["images"],
@@ -70,7 +71,8 @@ def split_dataset(project_id: str, req: SplitRequest):
     )
 
     # Persist split assignment back to project metadata.
-    for img in project["images"]:
+    total = len(project["images"])
+    for index, img in enumerate(project["images"], start=1):
         fname = img["filename"]
         if fname in splits["train"]:
             img["split"] = "train"
@@ -80,6 +82,15 @@ def split_dataset(project_id: str, req: SplitRequest):
             img["split"] = "test"
         else:
             img["split"] = None
+        if reporter and (index == total or index % 25 == 0):
+            reporter.update(
+                phase="applying",
+                message="Applying split assignments",
+                progress=55 + (30 * index / max(1, total)),
+                indeterminate=False,
+                current=index,
+                total=total,
+            )
 
     project["split_config"] = {
         "method": req.method,
@@ -87,8 +98,31 @@ def split_dataset(project_id: str, req: SplitRequest):
         "split_quality_score": quality_report["score"]
     }
     project["split_report"] = quality_report
+    if reporter:
+        reporter.update(phase="writing", message="Writing split manifests", progress=90, indeterminate=False)
     split_manifest = write_split_files(project, splits, req.method, req.ratio, quality_report)
 
     ProjectManager.save_project(project_id, project)
     return {"message": "Split completed.", "report": quality_report, "split": split_manifest}
+
+
+# Dataset split API.
+@router.post("/api/projects/{project_id}/split")
+def split_dataset(project_id: str, req: SplitRequest):
+    return _perform_split(project_id, req)
+
+
+@router.post("/api/projects/{project_id}/split/jobs")
+def start_split_job(project_id: str, req: SplitRequest):
+    if not ProjectManager.get_project(project_id):
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    task = task_job_manager.submit(
+        kind="sync",
+        title="Creating dataset split",
+        project_id=project_id,
+        message="Dataset split queued",
+        handler=lambda reporter: _perform_split(project_id, req, reporter),
+    )
+    return {"job_id": task["job_id"], "task": task}
 

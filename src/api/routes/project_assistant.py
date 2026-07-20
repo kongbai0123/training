@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from src.project_assistant import ProjectAssistantService
 from src.project_assistant_service import resolve_assistant_project_context
 from src.project_manager import ProjectManager
+from src.task_jobs import task_job_manager
 
 router = APIRouter()
 
@@ -171,6 +172,31 @@ def project_assistant_sync_project_artifacts(project_id: str):
         return ProjectAssistantService.sync_project_artifacts(project)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/api/project-assistant/projects/{project_id}/sync-artifacts/jobs")
+def project_assistant_sync_project_artifacts_job(project_id: str):
+    if not ProjectManager.get_project(project_id):
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    def run_sync(reporter):
+        project = ProjectManager.get_project(project_id)
+        if not project:
+            raise RuntimeError("Project not found.")
+        reporter.update(phase="scanning", message="Scanning project artifacts", progress=10, indeterminate=True)
+        reporter.update(phase="synchronizing", message="Indexing project artifacts", progress=35, indeterminate=True)
+        result = ProjectAssistantService.sync_project_artifacts(project)
+        reporter.update(phase="writing", message="Writing assistant knowledge index", progress=92, indeterminate=False)
+        return result
+
+    task = task_job_manager.submit(
+        kind="sync",
+        title="Synchronizing project assistant artifacts",
+        project_id=project_id,
+        message="Project artifact synchronization queued",
+        handler=run_sync,
+    )
+    return {"job_id": task["job_id"], "task": task}
 
 
 @router.post("/api/project-assistant/retrieval/query")

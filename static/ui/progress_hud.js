@@ -1,13 +1,15 @@
 import { eventBus } from "../event_bus.js";
 import { qs } from "../utils.js";
 import { createCircularProgress } from "./loading.js";
+import { t } from "../state.js";
 
 const AUTO_HIDE_MS = 4200;
 
 let hudEl = null;
 let ring = null;
-let hideTimer = null;
 let activeJobId = null;
+const jobs = new Map();
+const hideTimers = new Map();
 
 function ensureHud() {
   if (hudEl) return hudEl;
@@ -21,7 +23,7 @@ function ensureHud() {
     <div class="global-progress-content">
       <div class="global-progress-header">
         <strong id="global-progress-title">Working</strong>
-        <span id="global-progress-percent">0%</span>
+        <span class="global-progress-meta"><span id="global-progress-count" hidden></span><span id="global-progress-percent">0%</span></span>
       </div>
       <div class="global-progress-message" id="global-progress-message">Preparing...</div>
       <div class="global-progress-bar-bg">
@@ -50,13 +52,15 @@ function normalizeProgress(payload = {}) {
 function showProgress(payload) {
   const data = normalizeProgress(payload);
   const el = ensureHud();
-
-  if (hideTimer) {
-    clearTimeout(hideTimer);
-    hideTimer = null;
-  }
-
+  const existingTimer = hideTimers.get(data.jobId);
+  if (existingTimer) window.clearTimeout(existingTimer);
+  hideTimers.delete(data.jobId);
+  jobs.set(data.jobId, { ...data, updatedAt: Date.now() });
   activeJobId = data.jobId;
+  renderProgress(data, el);
+}
+
+function renderProgress(data, el = ensureHud()) {
   el.classList.remove("hidden", "is-complete", "is-failed");
   el.classList.toggle("is-complete", data.status === "completed");
   el.classList.toggle("is-failed", data.status === "failed");
@@ -71,6 +75,12 @@ function showProgress(payload) {
   ring.set(data.percent);
   const ringText = qs(".global-progress-ring .progress-ring__value-text");
   if (ringText && data.indeterminate) ringText.textContent = "...";
+  const activeCount = Array.from(jobs.values()).filter((job) => job.status === "running").length;
+  const count = qs("#global-progress-count");
+  if (count) {
+    count.hidden = activeCount <= 1;
+    count.textContent = activeCount > 1 ? t("task.common.count", { count: activeCount }) : "";
+  }
 }
 
 function completeProgress(payload = {}) {
@@ -86,12 +96,22 @@ function failProgress(payload = {}) {
 }
 
 function scheduleHide(jobId) {
-  if (hideTimer) clearTimeout(hideTimer);
-  hideTimer = setTimeout(() => {
+  const previous = hideTimers.get(jobId);
+  if (previous) window.clearTimeout(previous);
+  const timer = window.setTimeout(() => {
+    hideTimers.delete(jobId);
+    jobs.delete(jobId);
     if (jobId && activeJobId && jobId !== activeJobId) return;
+    const next = Array.from(jobs.values()).sort((a, b) => b.updatedAt - a.updatedAt)[0];
+    if (next) {
+      activeJobId = next.jobId;
+      renderProgress(next);
+      return;
+    }
     hudEl?.classList.add("hidden");
     activeJobId = null;
   }, AUTO_HIDE_MS);
+  hideTimers.set(jobId, timer);
 }
 
 export function initGlobalProgressHud() {

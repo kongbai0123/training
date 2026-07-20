@@ -8,6 +8,7 @@ import {
 } from "../state.js";
 import { qs, qsa } from "../utils.js";
 import { initGlobalProgressHud } from "../ui/progress_hud.js";
+import { initTaskProgressFramework } from "./task_progress.js";
 import { renderHeaderStatus as renderHeaderStatusCore } from "./header_status.js";
 import { renderPageGuards as renderPageGuardsCore } from "./page_guards.js?v=20260708-rnn-feature-wizard";
 import { updateActionAvailability as updateActionAvailabilityCore } from "./action_availability.js?v=20260712-unlocked-actions";
@@ -42,6 +43,7 @@ const {
 export async function bootstrapApp() {
   initPreferences();
   initGlobalProgressHud();
+  initTaskProgressFramework();
   initDirtyFormTracking();
   initResourceFreshnessTracking();
   initActionGuard();

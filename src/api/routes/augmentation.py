@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from src.augmenter import ImageAugmenter
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
+from src.task_jobs import task_job_manager
 
 router = APIRouter()
 
@@ -121,6 +122,7 @@ def preview_augmentation(project_id: str, req: AugmentPreviewRequest):
 
 @router.post("/api/projects/{project_id}/apply-augmentation")
 def apply_augmentation(project_id: str, req: Dict[str, Any]):
+    reporter = req.get("__task_reporter")
     project = ProjectManager.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -162,12 +164,24 @@ def apply_augmentation(project_id: str, req: Dict[str, Any]):
     skipped_missing = []
     # Keep original images and replace generated augmentation entries.
     original_images = [img for img in project["images"] if not img.get("is_augmented", False)]
+    total_units = len(train_images) * multiplier
+    completed_units = 0
 
     for img in train_images:
         fname = img["filename"]
         raw_img_path = layout.resolve_raw_images_dir().path / fname
         if not raw_img_path.exists():
             skipped_missing.append(fname)
+            completed_units += multiplier
+            if reporter:
+                reporter.update(
+                    phase="augmenting",
+                    message=f"Skipped missing image {fname}",
+                    progress=20 + (70 * completed_units / max(1, total_units)),
+                    indeterminate=False,
+                    current=completed_units,
+                    total=total_units,
+                )
             continue
 
         for i in range(multiplier):
@@ -198,6 +212,17 @@ def apply_augmentation(project_id: str, req: Dict[str, Any]):
             except Exception as e:
                 failed_items.append({"filename": fname, "message": str(e)})
                 print(f"Failed to augment {fname}: {e}")
+            finally:
+                completed_units += 1
+                if reporter:
+                    reporter.update(
+                        phase="augmenting",
+                        message=f"Generated {completed_units} of {total_units} augmented images",
+                        progress=20 + (70 * completed_units / max(1, total_units)),
+                        indeterminate=False,
+                        current=completed_units,
+                        total=total_units,
+                    )
 
     # Persist updated project metadata.
     project["images"] = original_images + augmented_list
@@ -242,6 +267,30 @@ def apply_augmentation(project_id: str, req: Dict[str, Any]):
         "job_id": job_summary["job_id"],
         "summary": job_summary
     }
+
+
+@router.post("/api/projects/{project_id}/apply-augmentation/jobs")
+def start_augmentation_job(project_id: str, req: Dict[str, Any]):
+    if not ProjectManager.get_project(project_id):
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    def run_augmentation(reporter):
+        reporter.update(phase="validating", message="Validating augmentation policy", progress=10, indeterminate=False)
+        reporter.update(phase="augmenting", message="Generating augmented training images", progress=25, indeterminate=True)
+        task_request = dict(req)
+        task_request["__task_reporter"] = reporter
+        result = apply_augmentation(project_id, task_request)
+        reporter.update(phase="writing", message="Writing augmentation job manifest", progress=95, indeterminate=False)
+        return result
+
+    task = task_job_manager.submit(
+        kind="augmentation",
+        title="Apply augmentation",
+        project_id=project_id,
+        message="Augmentation queued",
+        handler=run_augmentation,
+    )
+    return {"job_id": task["job_id"], "task": task}
 
 @router.get("/api/projects/{project_id}/augmentation/jobs")
 def list_augmentation_jobs(project_id: str):

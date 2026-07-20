@@ -129,28 +129,14 @@ export function createProjectLifecycle({ renderAll, navigate }) {
   }
 
   async function requestProjectSave(projectId) {
-    const headers = {};
-    if (appState.bootstrap?.token) {
-      headers["X-VTS-Token"] = appState.bootstrap.token;
-    }
-
-    const res = await fetch(`/api/projects/${projectId}/save`, {
-      method: "POST",
-      headers,
-    });
-    if (res.ok) return res.json();
-    if (res.status === 404 || res.status === 405) {
-      return apiFetch(`/api/projects/${projectId}`);
-    }
-
-    let detail = "";
     try {
-      const data = await res.json();
-      detail = data.detail || JSON.stringify(data);
-    } catch {
-      detail = await res.text();
+      return await apiFetch(`/api/projects/${projectId}/save`, { method: "POST", suppressToast: true });
+    } catch (error) {
+      if (error?.status === 404 || error?.status === 405) {
+        return apiFetch(`/api/projects/${projectId}`);
+      }
+      throw error;
     }
-    throw new Error(detail || `HTTP ${res.status}`);
   }
 
   async function checkCurrentTrainStatus() {

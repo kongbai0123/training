@@ -5,7 +5,7 @@ import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from src.inference_engine import InferenceEngine
 from src.model_registry import ModelRegistry
@@ -78,6 +78,7 @@ class CNNOutputCompareService:
         run_ids: List[str],
         input_path: Path,
         settings: Optional[Dict[str, Any]] = None,
+        progress_callback: Optional[Callable[[int, int, str], None]] = None,
     ) -> Dict[str, Any]:
         settings = settings or {}
         run_ids = [str(run_id or "").strip() for run_id in run_ids or [] if str(run_id or "").strip()]
@@ -92,7 +93,8 @@ class CNNOutputCompareService:
         outputs = []
         warnings: List[str] = []
 
-        for run_id in run_ids:
+        total_runs = len(run_ids)
+        for index, run_id in enumerate(run_ids, start=1):
             model = models[run_id]
             result = InferenceEngine.run_image_inference(
                 project=project,
@@ -113,6 +115,8 @@ class CNNOutputCompareService:
                 "urls": result.get("urls") or {},
                 "paths": result.get("paths") or {},
             })
+            if progress_callback:
+                progress_callback(index, total_runs, run_id)
 
         return {
             "comparison_id": f"outcmp_{datetime.now().strftime('%Y%m%d_%H%M%S')}",

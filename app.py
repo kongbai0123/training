@@ -33,6 +33,7 @@ from src.api.routes.projects import router as projects_router
 from src.api.routes.system import router as system_router
 from src.api.routes.training_orchestration import router as training_orchestration_router
 from src.api.routes.training_recommendation import router as training_recommendation_router
+from src.api.routes.tasks import router as tasks_router
 from src.api.routes.training_runs import router as training_runs_router
 
 APP_IS_PRODUCTION = APP_ENV in {"production", "prod"}
@@ -48,6 +49,7 @@ app.include_router(components_router)
 app.include_router(training_runs_router)
 app.include_router(training_orchestration_router)
 app.include_router(training_recommendation_router)
+app.include_router(tasks_router)
 app.include_router(monitor_router)
 app.include_router(inference_router)
 app.include_router(datasets_router)

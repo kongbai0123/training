@@ -22,6 +22,7 @@ from src.config import BASE_DIR
 from src.labelme_adapter import LabelMeAdapter
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
+from src.task_jobs import task_job_manager
 
 router = APIRouter()
 
@@ -139,6 +140,35 @@ def sync_labelme(project_id: str):
         return report
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to sync LabelMe annotations: {e}")
+
+
+@router.post("/api/projects/{project_id}/labelme/sync/jobs")
+def start_labelme_sync_job(project_id: str):
+    if not ProjectManager.get_project(project_id):
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    def run_sync(reporter):
+        project = ProjectManager.get_project(project_id)
+        if not project:
+            raise RuntimeError("Project not found")
+        reporter.update(phase="validating", message="Validating annotation workspace", progress=5, indeterminate=False)
+        if should_auto_convert_yolo_to_labelme(project):
+            reporter.update(phase="converting", message="Converting YOLO labels to LabelMe", progress=15, indeterminate=True)
+            LabelMeAdapter.convert_yolo_to_labelme(project)
+        reporter.update(phase="synchronizing", message="Synchronizing LabelMe annotations", progress=55, indeterminate=True)
+        report = LabelMeAdapter.sync_labelme_annotations(project)
+        reporter.update(phase="writing", message="Writing synchronized annotation state", progress=92, indeterminate=False)
+        ProjectManager.save_project(project_id, project)
+        return report
+
+    task = task_job_manager.submit(
+        kind="sync",
+        title="Synchronizing LabelMe annotations",
+        project_id=project_id,
+        message="Annotation synchronization queued",
+        handler=run_sync,
+    )
+    return {"job_id": task["job_id"], "task": task}
 
 @router.get("/api/projects/{project_id}/labelme/preview/{filename}")
 def get_labelme_preview(project_id: str, filename: str):
@@ -317,6 +347,101 @@ def import_annotations(
     finally:
         if temp_dir.exists():
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@router.post("/api/projects/{project_id}/import-annotations/jobs")
+def start_annotation_import_job(
+    project_id: str,
+    files: List[UploadFile] = File(...),
+    csv_mapping: Optional[str] = Form(None),
+    auto_apply: bool = Form(True),
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    from src.security_utils import safe_filename, safe_resolve_under, validate_extension
+
+    parsed_csv_mapping: Optional[Dict[str, str]] = None
+    if csv_mapping:
+        try:
+            parsed_csv_mapping = json.loads(csv_mapping)
+            if not isinstance(parsed_csv_mapping, dict):
+                raise ValueError("csv_mapping must be a JSON object")
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid csv_mapping: {exc}") from exc
+
+    layout = ProjectLayout.from_project(project)
+    import_id = AnnotationImporter.create_import_id()
+    temp_dir = layout.tmp_dir / "annotation_import_uploads" / import_id
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    staged_files: List[Path] = []
+    try:
+        for file in files:
+            original_name = file.filename
+            if not original_name:
+                continue
+            validate_extension(original_name, {".json", ".txt", ".csv", ".xml", ".png", ".tif", ".tiff"})
+            cleaned_name = safe_filename(original_name)
+            target_path = safe_resolve_under(temp_dir, temp_dir / cleaned_name)
+            with open(target_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            staged_files.append(target_path)
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+
+    def run_import(reporter):
+        try:
+            current_project = ProjectManager.get_project(project_id)
+            if not current_project:
+                raise RuntimeError("Project not found")
+            reporter.update(phase="validating", message="Validating annotation files", progress=10, indeterminate=False, current=0, total=len(staged_files))
+            reporter.update(phase="converting", message="Converting annotations into LabelMe drafts", progress=30, indeterminate=True)
+            report = AnnotationImporter.import_files(
+                current_project,
+                staged_files,
+                import_id=import_id,
+                csv_mapping=parsed_csv_mapping,
+            )
+            apply_result = None
+            sync_report = None
+            if auto_apply and report.get("converted", 0) > 0:
+                reporter.update(phase="applying", message="Merging converted annotation drafts", progress=70, indeterminate=True)
+                apply_result = AnnotationImporter.apply_import(current_project, import_id)
+                reporter.update(phase="synchronizing", message="Synchronizing LabelMe state", progress=88, indeterminate=True)
+                sync_report = LabelMeAdapter.sync_labelme_annotations(current_project)
+                report = apply_result["report"]
+            reporter.update(phase="writing", message="Writing annotation import report", progress=96, indeterminate=False)
+            current_project["last_annotation_import"] = report
+            ProjectManager.save_project(project_id, current_project)
+            return {
+                "message": "Annotation files imported as LabelMe draft.",
+                "import_id": import_id,
+                "imported_jsons": report.get("labelme_json", 0),
+                "imported_txts": report.get("yolo_txt", 0),
+                "imported_csv": report.get("csv", 0),
+                "imported_xml": report.get("voc_xml", 0),
+                "imported_coco_json": report.get("coco_json", 0),
+                "imported_masks": report.get("mask_png", 0),
+                "converted": report.get("converted", 0),
+                "failed": report.get("failed", 0),
+                "auto_applied": bool(apply_result),
+                "applied_count": apply_result.get("applied_count", 0) if apply_result else 0,
+                "skipped_duplicates": apply_result.get("skipped_duplicates", 0) if apply_result else 0,
+                "sync_status": sync_report,
+                "report": report,
+            }
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    task = task_job_manager.submit(
+        kind="import",
+        title="Import annotations",
+        project_id=project_id,
+        message="Annotation import queued",
+        handler=run_import,
+    )
+    return {"job_id": task["job_id"], "task": task}
 
 
 @router.get("/api/projects/{project_id}/annotations/import/latest")

@@ -1,9 +1,10 @@
+import asyncio
 import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 from src.model_registry import ModelRegistry
@@ -86,6 +87,30 @@ def get_model_install_job(job_id: str):
         return MODEL_INSTALL_MANAGER.get(job_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Model install job not found") from exc
+
+
+@router.websocket("/api/models/install/jobs/{job_id}/ws")
+async def monitor_model_install_job(websocket: WebSocket, job_id: str):
+    await websocket.accept()
+    last_updated = ""
+    try:
+        while True:
+            try:
+                job = MODEL_INSTALL_MANAGER.get(job_id)
+            except KeyError:
+                await websocket.send_json({"job_id": job_id, "status": "failed", "error": "Model install job not found"})
+                await websocket.close(code=4404)
+                return
+            updated = str(job.get("updated_at") or "")
+            if updated != last_updated:
+                await websocket.send_json(job)
+                last_updated = updated
+            if str(job.get("status") or "").lower() in {"completed", "failed", "cancelled"}:
+                await websocket.close()
+                return
+            await asyncio.sleep(0.25)
+    except WebSocketDisconnect:
+        return
 
 
 @router.post("/api/models/install/jobs/{job_id}/cancel")

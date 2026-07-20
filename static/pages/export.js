@@ -1,6 +1,7 @@
 import { eventBus } from "../event_bus.js";
 import { appState, getProjectStatus, t } from "../state.js";
 import { apiFetch } from "../api.js";
+import { beginTask, followServerTask } from "../core/task_progress.js";
 import { escapeHtml, qs, qsa } from "../utils.js";
 
 let loadedProjectId = null;
@@ -135,11 +136,18 @@ async function exportModel(format = "auto") {
   if (format) params.set("format", format);
   if (format === "onnx") params.set("precision", qs("#export-onnx-precision")?.value || "fp32");
   const query = params.toString();
-  const url = `/api/projects/${appState.currentProjectId}/export${query ? `?${query}` : ""}`;
+  const url = `/api/projects/${appState.currentProjectId}/export/jobs${query ? `?${query}` : ""}`;
+  const task = beginTask({
+    kind: "export",
+    title: t("task.export.title"),
+    stage: t("task.export.preparing"),
+    method: "POST",
+  });
 
   try {
     eventBus.emit("toast", t("export.toast.running"));
-    const data = await apiFetch(url);
+    const launch = await apiFetch(url, { method: "POST", suppressProgress: true });
+    const data = await followServerTask(launch.job_id, { controller: task, kind: "export", title: t("task.export.title") });
     lastExportResult = data;
     renderExportResult();
     await loadExportArtifacts();
@@ -147,6 +155,7 @@ async function exportModel(format = "auto") {
       path: resolveExportPath(data)
     }));
   } catch (err) {
+    task.fail({ message: err.message });
     eventBus.emit("toast", t("export.toast.failed", { message: err.message }));
   }
 }

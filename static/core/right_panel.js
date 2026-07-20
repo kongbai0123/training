@@ -3,6 +3,7 @@ import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { qs, setHTML, escapeHtml } from "../utils.js";
 import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260708-i18n-tooltips";
+import { followServerTask } from "./task_progress.js";
 
 function contextCardFor(selector) {
   return qs(selector)?.closest(".workspace-context-card, .summary-section") || null;
@@ -45,8 +46,13 @@ async function syncProjectAssistantContextArtifacts() {
   const button = qs("#btn-project-assistant-sync-context");
   if (button) button.disabled = true;
   try {
-    const result = await apiFetch(`/api/project-assistant/projects/${encodeURIComponent(appState.currentProjectId)}/sync-artifacts`, {
+    const started = await apiFetch(`/api/project-assistant/projects/${encodeURIComponent(appState.currentProjectId)}/sync-artifacts/jobs`, {
       method: "POST",
+    });
+    const result = await followServerTask(started.job_id, {
+      kind: "sync",
+      title: t("task.sync.title"),
+      button,
     });
     eventBus.emit("toast", t("projectAssistant.toast.syncedArtifacts", {
       count: result.document_count || 0,

@@ -6,11 +6,16 @@ from PIL import Image
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, Callable, List, Optional, Tuple
 
 class DatasetUtils:
     @staticmethod
-    def extract_frames(video_path: str, output_dir: str, fps: int = 1) -> List[str]:
+    def extract_frames(
+        video_path: str,
+        output_dir: str,
+        fps: int = 1,
+        progress_callback: Optional[Callable[[int, int, int], None]] = None,
+    ) -> List[str]:
         """讀取影片並自動抽幀"""
         out_path = Path(output_dir)
         out_path.mkdir(parents=True, exist_ok=True)
@@ -30,6 +35,8 @@ class DatasetUtils:
         extracted_files = []
         frame_idx = 0
         saved_count = 0
+        total_frames = max(0, int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0))
+        progress_interval = max(1, total_frames // 100) if total_frames else 25
         
         while True:
             ret, frame = cap.read()
@@ -44,6 +51,8 @@ class DatasetUtils:
                 saved_count += 1
                 
             frame_idx += 1
+            if progress_callback and (frame_idx % progress_interval == 0 or (total_frames and frame_idx >= total_frames)):
+                progress_callback(frame_idx, total_frames, saved_count)
             
         cap.release()
         return extracted_files
@@ -230,7 +239,11 @@ class DatasetUtils:
             return str(raw_img_path.resolve())
 
     @staticmethod
-    def import_zip_package(project_id: str, zip_file_path: str) -> Dict[str, Any]:
+    def import_zip_package(
+        project_id: str,
+        zip_file_path: str,
+        progress_callback: Optional[Callable[[str, int, int, str], None]] = None,
+    ) -> Dict[str, Any]:
         """
         解壓縮 ZIP 檔案，掃描其中的圖片與 LabelMe JSON，將其歸類移入對應的資料夾
         """
@@ -249,7 +262,18 @@ class DatasetUtils:
         # 解壓縮
         try:
             with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-                zip_ref.extractall(temp_dir)
+                members = zip_ref.infolist()
+                total_members = len(members)
+                if progress_callback:
+                    progress_callback("extracting", 0, total_members, "Extracting ZIP archive")
+                temp_root = temp_dir.resolve()
+                for index, member in enumerate(members, start=1):
+                    target = (temp_dir / member.filename).resolve()
+                    if target != temp_root and temp_root not in target.parents:
+                        raise ValueError(f"Unsafe ZIP entry: {member.filename}")
+                    zip_ref.extract(member, temp_dir)
+                    if progress_callback:
+                        progress_callback("extracting", index, total_members, f"Extracting {member.filename}")
         except Exception as e:
             if temp_dir.exists():
                 shutil.rmtree(temp_dir)
@@ -270,36 +294,41 @@ class DatasetUtils:
         imported_txts = []
         
         # 遞迴掃描解壓目錄
-        for root, _, files in os.walk(temp_dir):
-            for file in files:
-                fpath = Path(root) / file
-                ext = fpath.suffix.lower()
+        discovered_files = [Path(root) / file for root, _, files in os.walk(temp_dir) for file in files]
+        total_files = len(discovered_files)
+        for file_index, fpath in enumerate(discovered_files, start=1):
+            file = fpath.name
+            ext = fpath.suffix.lower()
                 
-                if ext in valid_exts:
-                    shutil.copy(str(fpath), str(dest_img_dir / file))
-                    imported_imgs.append(file)
-                    if project and "image_classification" in str(project.get("task_type") or "").lower():
-                        parent_label = fpath.parent.name
-                        if parent_label in set(project.get("class_names") or []):
-                            classification_labels[file] = parent_label
-                elif ext == ".json":
+            if ext in valid_exts:
+                shutil.copy(str(fpath), str(dest_img_dir / file))
+                imported_imgs.append(file)
+                if project and "image_classification" in str(project.get("task_type") or "").lower():
+                    parent_label = fpath.parent.name
+                    if parent_label in set(project.get("class_names") or []):
+                        classification_labels[file] = parent_label
+            elif ext == ".json":
                     # 簡易驗證是否為 LabelMe JSON (包含 shapes 欄位)
-                    try:
-                        with open(fpath, "r", encoding="utf-8") as json_f:
-                            content = json.load(json_f)
-                        if "shapes" in content:
-                            shutil.copy(str(fpath), str(dest_labelme_dir / file))
-                            imported_jsons.append(file)
-                    except Exception:
-                        pass
-                elif ext == ".txt":
-                    shutil.copy(str(fpath), str(dest_labels_dir / file))
-                    imported_txts.append(file)
+                try:
+                    with open(fpath, "r", encoding="utf-8") as json_f:
+                        content = json.load(json_f)
+                    if "shapes" in content:
+                        shutil.copy(str(fpath), str(dest_labelme_dir / file))
+                        imported_jsons.append(file)
+                except Exception:
+                    pass
+            elif ext == ".txt":
+                shutil.copy(str(fpath), str(dest_labels_dir / file))
+                imported_txts.append(file)
+            if progress_callback:
+                progress_callback("converting", file_index, total_files, f"Processing {file}")
                         
         # 刪除暫存區
         shutil.rmtree(temp_dir)
 
         if project is not None and imported_imgs:
+            if progress_callback:
+                progress_callback("writing", 0, 1, "Writing project dataset index")
             project.setdefault("images", [])
             existing_filenames = {img.get("filename") for img in project.get("images", [])}
             for filename in imported_imgs:

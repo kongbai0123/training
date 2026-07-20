@@ -1,6 +1,7 @@
 ﻿import { eventBus } from "../event_bus.js";
 import { appState, augmentationPresets, t } from "../state.js";
 import { apiFetch } from "../api.js";
+import { followServerTask } from "../core/task_progress.js";
 import { qs, qsa, escapeHtml } from "../utils.js";
 
 const SLIDERS = [
@@ -601,7 +602,7 @@ async function applyAugmentationToTrainSplit() {
   renderAugmentationPage(getStatusFromProject());
 
   try {
-    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/apply-augmentation`, {
+    const launch = await apiFetch(`/api/projects/${appState.currentProjectId}/apply-augmentation/jobs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -610,6 +611,7 @@ async function applyAugmentationToTrainSplit() {
         config: getAugmentationConfig()
       })
     });
+    const data = await followServerTask(launch.job_id, { kind: "augmentation", title: t("task.augmentation.title") });
     eventBus.emit("toast", data.message || "已套用到 Train Split。");
     eventBus.emit("refresh-project");
     await loadAugmentationJobs(true);

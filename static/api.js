@@ -1,6 +1,7 @@
 import { eventBus } from "./event_bus.js";
-import { appState } from "./state.js";
+import { appState, t } from "./state.js";
 import { markResourceStaleFromRequest } from "./core/resource_freshness.js";
+import { beginApiTask } from "./core/task_progress.js";
 
 export class VtsApiError extends Error {
   constructor({ code = "API_ERROR", message = "Request failed", details = {}, suggestion = "", retryable = false, fieldErrors = {}, severity = "error", status = 0 } = {}) {
@@ -57,7 +58,13 @@ export async function apiFetch(url, options = {}) {
   const suppressToast = Boolean(options.suppressToast);
   const token = appState.bootstrap?.token;
   const extraHeaders = { ...(options.headers || {}) };
-  const { suppressToast: _suppressToast, ...fetchOptions } = options;
+  const task = beginApiTask(url, options, method);
+  const {
+    suppressToast: _suppressToast,
+    suppressProgress: _suppressProgress,
+    taskProgress: _taskProgress,
+    ...fetchOptions
+  } = options;
 
   if (token) {
     extraHeaders["X-VTS-Token"] = token;
@@ -74,8 +81,11 @@ export async function apiFetch(url, options = {}) {
     }
     markResourceStaleFromRequest(url, method);
     const contentType = res.headers.get("content-type") || "";
-    return contentType.includes("application/json") ? res.json() : res.text();
+    const payload = await (contentType.includes("application/json") ? res.json() : res.text());
+    task?.complete();
+    return payload;
   } catch (err) {
+    task?.fail({ message: err?.message || "Request failed" });
     if (!suppressToast) {
       eventBus.emit("toast", err instanceof VtsApiError ? err : formatApiErrorForToast(err));
     }
@@ -88,7 +98,13 @@ export async function apiFetchBlob(url, options = {}) {
   const suppressToast = Boolean(options.suppressToast);
   const token = appState.bootstrap?.token;
   const extraHeaders = { ...(options.headers || {}) };
-  const { suppressToast: _suppressToast, ...fetchOptions } = options;
+  const task = beginApiTask(url, options, method);
+  const {
+    suppressToast: _suppressToast,
+    suppressProgress: _suppressProgress,
+    taskProgress: _taskProgress,
+    ...fetchOptions
+  } = options;
 
   if (token) {
     extraHeaders["X-VTS-Token"] = token;
@@ -104,11 +120,114 @@ export async function apiFetchBlob(url, options = {}) {
       throw await buildApiError(res);
     }
     markResourceStaleFromRequest(url, method);
-    return res.blob();
+    const payload = await res.blob();
+    task?.complete();
+    return payload;
   } catch (err) {
+    task?.fail({ message: err?.message || "Request failed" });
     if (!suppressToast) {
       eventBus.emit("toast", err instanceof VtsApiError ? err : formatApiErrorForToast(err));
     }
     throw err;
   }
+}
+
+export function apiUpload(url, options = {}) {
+  const method = String(options.method || "POST").toUpperCase();
+  const suppressToast = Boolean(options.suppressToast);
+  const token = appState.bootstrap?.token;
+  const task = beginApiTask(url, {
+    ...options,
+    taskProgress: {
+      title: tUpload("task.upload.title", "Uploading"),
+      stage: tUpload("task.upload.transferring", "Transferring files."),
+      caption: tUpload("task.upload.caption", "Upload"),
+      ...(typeof options.taskProgress === "object" ? options.taskProgress : {}),
+    },
+  }, method);
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url, true);
+    if (token) xhr.setRequestHeader("X-VTS-Token", token);
+    Object.entries(options.headers || {}).forEach(([key, value]) => xhr.setRequestHeader(key, value));
+
+    xhr.upload.addEventListener("progress", (event) => {
+      if (!event.lengthComputable || event.total <= 0) {
+        task?.update({ indeterminate: true, message: tUpload("task.upload.transferring", "Transferring files.") });
+        return;
+      }
+      const percent = Math.max(0, Math.min(100, (event.loaded * 100) / event.total));
+      task?.update({
+        percent,
+        indeterminate: false,
+        message: tUpload("task.upload.bytes", `Uploaded ${event.loaded} of ${event.total} bytes.`, {
+          loaded: formatUploadBytes(event.loaded),
+          total: formatUploadBytes(event.total),
+        }),
+      });
+    });
+
+    xhr.upload.addEventListener("load", () => {
+      task?.update({
+        percent: 100,
+        indeterminate: true,
+        message: tUpload("task.upload.processing", "Upload complete. The application is validating and processing files."),
+      });
+    });
+
+    xhr.addEventListener("load", () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const error = buildXhrApiError(xhr);
+        task?.fail({ message: error.message });
+        if (!suppressToast) eventBus.emit("toast", error);
+        reject(error);
+        return;
+      }
+      markResourceStaleFromRequest(url, method);
+      const contentType = xhr.getResponseHeader("content-type") || "";
+      let payload = xhr.responseText;
+      if (contentType.includes("application/json")) {
+        try { payload = JSON.parse(xhr.responseText || "null"); } catch { payload = null; }
+      }
+      task?.complete();
+      resolve(payload);
+    });
+
+    const failTransport = () => {
+      const error = new VtsApiError({ code: "NETWORK_ERROR", message: tUpload("task.upload.networkFailed", "Upload connection failed."), status: xhr.status || 0 });
+      task?.fail({ message: error.message });
+      if (!suppressToast) eventBus.emit("toast", error);
+      reject(error);
+    };
+    xhr.addEventListener("error", failTransport);
+    xhr.addEventListener("abort", () => {
+      const error = new VtsApiError({ code: "UPLOAD_CANCELLED", message: tUpload("task.upload.cancelled", "Upload cancelled."), status: 0 });
+      task?.cancel({ message: error.message });
+      reject(error);
+    });
+    xhr.send(options.body || null);
+  });
+}
+
+function buildXhrApiError(xhr) {
+  try {
+    const payload = JSON.parse(xhr.responseText || "{}");
+    return new VtsApiError(normalizeApiErrorPayload(payload, xhr.status));
+  } catch {
+    return new VtsApiError({ code: "HTTP_ERROR", message: xhr.responseText || `HTTP ${xhr.status}`, status: xhr.status });
+  }
+}
+
+function formatUploadBytes(value) {
+  const bytes = Math.max(0, Number(value) || 0);
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function tUpload(key, fallback, params = {}) {
+  const translated = t(key, params);
+  if (translated && translated !== key) return translated;
+  return Object.entries(params).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), fallback);
 }

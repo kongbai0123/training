@@ -1,6 +1,7 @@
 ﻿import { eventBus } from "../event_bus.js";
 import { appState, getProjectStatus, t } from "../state.js";
-import { apiFetch } from "../api.js";
+import { apiFetch, apiUpload } from "../api.js";
+import { beginTask, followServerTask } from "../core/task_progress.js";
 import { qs, setText, setHTML, escapeHtml, collectDroppedFiles } from "../utils.js";
 
 const IMAGE_RE = /\.(jpg|jpeg|png|bmp)$/i;
@@ -100,11 +101,14 @@ async function importLocalImages() {
   if (!path) return eventBus.emit("toast", t("dataset.toast.localPathRequired"));
   const formData = new FormData();
   formData.append("path", path);
+  const task = beginTask({ kind: "import", title: t("task.import.title"), stage: t("task.import.processing"), method: "POST" });
   try {
-    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-local`, { method: "POST", body: formData });
+    const launch = await apiFetch(`/api/projects/${appState.currentProjectId}/import-local/jobs`, { method: "POST", body: formData, suppressProgress: true });
+    const data = await followServerTask(launch.job_id, { controller: task, kind: "import", title: t("task.import.title") });
     eventBus.emit("toast", data.message || t("dataset.toast.localImportDone"));
     eventBus.emit("refresh-project");
   } catch (err) {
+    task.fail({ message: err.message });
     eventBus.emit("toast", t("dataset.toast.localImportFailed", { message: err.message }));
   }
 }
@@ -116,11 +120,14 @@ async function importLocalVideo() {
   const formData = new FormData();
   formData.append("video_path", videoPath);
   formData.append("fps", fps);
+  const task = beginTask({ kind: "import", title: t("task.import.title"), stage: t("task.import.processing"), method: "POST" });
   try {
-    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-video`, { method: "POST", body: formData });
+    const launch = await apiFetch(`/api/projects/${appState.currentProjectId}/import-video/jobs`, { method: "POST", body: formData, suppressProgress: true });
+    const data = await followServerTask(launch.job_id, { controller: task, kind: "import", title: t("task.import.title") });
     eventBus.emit("toast", data.message || t("dataset.toast.videoDone"));
     eventBus.emit("refresh-project");
   } catch (err) {
+    task.fail({ message: err.message });
     eventBus.emit("toast", t("dataset.toast.videoFailed", { message: err.message }));
   }
 }
@@ -184,23 +191,30 @@ async function uploadVideoFiles(files) {
   if (videoFiles.length > 5) return eventBus.emit("toast", t("dataset.toast.videoTooMany"));
 
   const dropZone = qs("#video-drop-zone");
-  const progressPanel = ensureProgressPanel("video-dropzone-progress-panel", dropZone);
+  const progress = beginTask({
+    jobId: `video-import-${Date.now()}`,
+    kind: "import",
+    title: t("dataset.progress.videoProcessing"),
+    stage: t("dataset.progress.analyzing"),
+    method: "POST",
+    inlineHost: dropZone?.parentElement,
+  });
   const fps = qs("#input-video-fps")?.value || "1";
   try {
     for (let idx = 0; idx < videoFiles.length; idx += 1) {
       const file = videoFiles[idx];
-      updateProgress(progressPanel, t("dataset.progress.videoProcessing"), Math.round((idx / videoFiles.length) * 100), t("dataset.progress.videoUploading", { name: file.name, index: idx + 1, total: videoFiles.length }));
+      progress.update({ percent: Math.round((idx / videoFiles.length) * 100), indeterminate: false, message: t("dataset.progress.videoUploading", { name: file.name, index: idx + 1, total: videoFiles.length }) });
       const formData = new FormData();
       formData.append("file", file);
       formData.append("fps", fps);
-      await apiFetch(`/api/projects/${appState.currentProjectId}/upload-video`, { method: "POST", body: formData });
+      const launch = await apiUpload(`/api/projects/${appState.currentProjectId}/upload-video/jobs`, { method: "POST", body: formData });
+      await followServerTask(launch.job_id, { kind: "import", title: t("task.import.title") });
     }
-    updateProgress(progressPanel, t("dataset.progress.completed"), 100, t("dataset.toast.videoDone"));
+    progress.complete({ message: t("dataset.toast.videoDone") });
     eventBus.emit("refresh-project");
   } catch (err) {
+    progress.fail({ message: err.message });
     eventBus.emit("toast", t("dataset.toast.videoFailed", { message: err.message }));
-  } finally {
-    setTimeout(() => progressPanel?.remove(), 5000);
   }
 }
 
@@ -210,8 +224,6 @@ async function uploadDatasetFiles(files) {
   if (!allFiles.length) return eventBus.emit("toast", t("dataset.toast.noFiles"));
 
   const dropZone = qs("#zip-drop-zone");
-  const progressPanel = ensureProgressPanel("zip-dropzone-progress-panel", dropZone);
-  updateProgress(progressPanel, t("dataset.progress.filtering"), 0, t("dataset.progress.analyzing"));
 
   const zipFiles = allFiles.filter((file) => file.name.toLowerCase().endsWith(".zip"));
   const imageFiles = allFiles.filter((file) => IMAGE_RE.test(file.name));
@@ -223,19 +235,27 @@ async function uploadDatasetFiles(files) {
   else if (annoFiles.length) eventBus.emit("toast", t("dataset.toast.filteredAnnotations", { count: annoFiles.length }));
 
   if (!zipFiles.length && !imageFiles.length) {
-    progressPanel?.remove();
     return eventBus.emit("toast", t("dataset.toast.noImageOrZip"));
   }
+  const progress = beginTask({
+    jobId: `dataset-import-${Date.now()}`,
+    kind: "import",
+    title: t("task.import.title"),
+    stage: t("dataset.progress.analyzing"),
+    method: "POST",
+    inlineHost: dropZone?.parentElement,
+  });
   let importedImages = 0;
   let duplicateSameHash = 0;
   let renamedCount = 0;
   try {
     for (let idx = 0; idx < zipFiles.length; idx += 1) {
       const file = zipFiles[idx];
-      updateProgress(progressPanel, t("dataset.progress.importingZip"), Math.round((idx / Math.max(1, zipFiles.length)) * 100), t("dataset.progress.processingZip", { name: file.name }));
+      progress.update({ percent: Math.round((idx / Math.max(1, zipFiles.length)) * 100), indeterminate: false, message: t("dataset.progress.processingZip", { name: file.name }) });
       const formData = new FormData();
       formData.append("file", file, file.name);
-      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/import-zip`, { method: "POST", body: formData });
+      const launch = await apiUpload(`/api/projects/${appState.currentProjectId}/import-zip/jobs`, { method: "POST", body: formData });
+      const data = await followServerTask(launch.job_id, { kind: "import", title: t("task.import.title") });
       importedImages += data.imported_images || 0;
     }
 
@@ -244,30 +264,36 @@ async function uploadDatasetFiles(files) {
     for (let i = 0; i < imageFiles.length; i += batchSize) {
       const batchIndex = Math.floor(i / batchSize) + 1;
       const batch = imageFiles.slice(i, i + batchSize);
-      updateProgress(progressPanel, t("dataset.progress.uploadingImages"), Math.round((i / Math.max(1, imageFiles.length)) * 100), t("dataset.progress.uploadingBatch", { index: batchIndex, total: totalBatches, count: batch.length }));
+      progress.update({ percent: Math.round((i / Math.max(1, imageFiles.length)) * 100), indeterminate: false, message: t("dataset.progress.uploadingBatch", { index: batchIndex, total: totalBatches, count: batch.length }) });
       const formData = new FormData();
       batch.forEach((file) => formData.append("files", file, file.name));
-      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/upload-images`, { method: "POST", body: formData });
+      const data = await apiUpload(`/api/projects/${appState.currentProjectId}/upload-images`, { method: "POST", body: formData });
       importedImages += data.uploaded_count || 0;
       duplicateSameHash += data.duplicate_same_hash || 0;
       renamedCount += data.renamed_same_name_diff_hash || 0;
     }
 
-    updateProgress(progressPanel, t("dataset.progress.syncing"), 95, t("dataset.progress.syncingDetail"));
-    try { await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/sync`, { method: "POST" }); } catch (err) { console.warn("Auto sync failed", err); }
-    updateProgress(progressPanel, t("dataset.progress.completed"), 100, t("dataset.progress.importSummary", { imported: importedImages, duplicates: duplicateSameHash, renamed: renamedCount }));
+    progress.update({ percent: 95, indeterminate: false, message: t("dataset.progress.syncingDetail") });
+    try {
+      const syncTask = await apiFetch(`/api/projects/${appState.currentProjectId}/labelme/sync/jobs`, { method: "POST" });
+      await followServerTask(syncTask.job_id, { kind: "sync", title: t("task.sync.title") });
+    } catch (err) { console.warn("Auto sync failed", err); }
+    progress.complete({ message: t("dataset.progress.importSummary", { imported: importedImages, duplicates: duplicateSameHash, renamed: renamedCount }) });
     eventBus.emit("refresh-project");
   } catch (err) {
     eventBus.emit("toast", t("dataset.toast.importFailed", { message: err.message }));
-    updateProgress(progressPanel, t("dataset.progress.failed"), 100, `Error: ${err.message}`);
-  } finally {
-    setTimeout(() => progressPanel?.remove(), 5000);
+    progress.fail({ message: err.message });
   }
 }
 
 async function runQualityCheck() {
   try {
-    const report = await apiFetch(`/api/projects/${appState.currentProjectId}/quality-check`, { method: "POST" });
+    const started = await apiFetch(`/api/projects/${appState.currentProjectId}/quality-check/jobs`, { method: "POST" });
+    const report = await followServerTask(started.job_id, {
+      kind: "evaluation",
+      title: t("task.evaluation.title"),
+      button: qs("#btn-trigger-quality"),
+    });
     eventBus.emit("toast", t("dataset.toast.qualityDone", { score: report.score }));
     eventBus.emit("refresh-project");
   } catch (err) {
@@ -279,41 +305,6 @@ function copyZipPath() {
   const text = qs("#dataset-zip-storage-path")?.textContent;
   if (!text || text === "Not loaded" || text === t("common.notLoaded")) return;
   navigator.clipboard.writeText(text).then(() => eventBus.emit("toast", t("dataset.toast.pathCopied")));
-}
-
-function ensureProgressPanel(id, anchor) {
-  let panel = qs(`#${id}`);
-  if (!panel) {
-    panel = document.createElement("div");
-    panel.id = id;
-    panel.className = "ingest-progress-container";
-    anchor?.parentNode?.insertBefore(panel, anchor.nextSibling);
-  }
-  return panel;
-}
-
-function updateProgress(panel, statusText, percent, detailsText) {
-  if (!panel) return;
-  const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
-  panel.innerHTML = `
-    <div class="ingest-progress-header"><span class="ingest-progress-status">${escapeHtml(statusText)}</span><span class="ingest-progress-percent">${safePercent}%</span></div>
-    <div class="ingest-progress-bar-bg"><div class="ingest-progress-bar-fill" style="width: ${safePercent}%"></div></div>
-    <div class="ingest-progress-details">${escapeHtml(detailsText)}</div>
-  `;
-  const payload = {
-    jobId: panel.id || "dataset-import",
-    title: statusText,
-    message: detailsText,
-    percent: safePercent,
-    caption: "Import"
-  };
-  if (safePercent >= 100 && /error|failed|失敗/i.test(`${statusText} ${detailsText}`)) {
-    eventBus.emit("progress:failed", payload);
-  } else if (safePercent >= 100) {
-    eventBus.emit("progress:complete", payload);
-  } else {
-    eventBus.emit("progress:update", payload);
-  }
 }
 
 export function renderDatasetPage(status) {

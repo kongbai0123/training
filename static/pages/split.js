@@ -1,6 +1,7 @@
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { apiFetch } from "../api.js";
+import { followServerTask } from "../core/task_progress.js";
 import { qs, setText, setHTML, escapeHtml } from "../utils.js";
 
 let isBalancingSplitRatios = false;
@@ -24,18 +25,8 @@ export function initSplit() {
       eventBus.emit("toast", t("split.toast.ratio"));
       return;
     }
-    const jobId = `split-${appState.currentProjectId || "project"}`;
-    eventBus.emit("progress:update", {
-      jobId,
-      title: t("split.progress.title"),
-      message: t("split.progress.running"),
-      percent: 5,
-      caption: "Split",
-      status: "running",
-      indeterminate: true
-    });
     try {
-      const data = await apiFetch(`/api/projects/${appState.currentProjectId}/split`, {
+      const started = await apiFetch(`/api/projects/${appState.currentProjectId}/split/jobs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -43,25 +34,16 @@ export function initSplit() {
           ratio: { train, val, test }
         })
       });
+      const data = await followServerTask(started.job_id, {
+        kind: "sync",
+        title: t("split.progress.title"),
+        button: event.submitter,
+      });
       renderSplitReportUI(data.report);
       eventBus.emit("toast", t("split.toast.done"));
-      eventBus.emit("progress:complete", {
-        jobId,
-        title: t("split.progress.title"),
-        message: t("split.progress.done"),
-        percent: 100,
-        caption: "Split"
-      });
       eventBus.emit("refresh-project");
     } catch (err) {
       eventBus.emit("toast", t("split.toast.failed", { message: err.message }));
-      eventBus.emit("progress:failed", {
-        jobId,
-        title: t("split.progress.title"),
-        message: t("split.toast.failed", { message: err.message }),
-        percent: 100,
-        caption: "Split"
-      });
     }
   });
 }

@@ -1,7 +1,7 @@
 import { appState, t } from "../state.js";
 import { eventBus } from "../event_bus.js";
 import { setText, qs, escapeHtml } from "../utils.js";
-import { apiFetch } from "../api.js";
+import { apiFetch, apiFetchBlob } from "../api.js";
 
 export function initEvaluation() {
   eventBus.on("language-changed", () => renderEvaluationPage());
@@ -154,11 +154,7 @@ function pathExtensionLabel(filename) {
 async function downloadEvaluationPlot(url, filename) {
   if (!url) return;
   try {
-    const headers = {};
-    if (appState.bootstrap?.token) headers["X-VTS-Token"] = appState.bootstrap.token;
-    const response = await fetch(url, { headers });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const blob = await response.blob();
+    const blob = await apiFetchBlob(url);
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = objectUrl;

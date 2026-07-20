@@ -2,7 +2,7 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import cv2
 
@@ -26,6 +26,7 @@ class AutoLabelingService:
         cls,
         project: Dict[str, Any],
         request: Dict[str, Any],
+        progress_callback: Optional[Callable[[int, int, str], None]] = None,
     ) -> Dict[str, Any]:
         layout = ProjectLayout.from_project(project)
         job_id = cls._safe_job_id(request.get("job_id"))
@@ -61,11 +62,13 @@ class AutoLabelingService:
 
         processed: List[Dict[str, Any]] = []
         errors: List[Dict[str, Any]] = []
-        for input_item in inputs:
+        for index, input_item in enumerate(inputs, start=1):
             try:
                 processed.append(cls._run_single_image(project, model, layout, job_dir, draft_dir, input_item, config["settings"]))
             except Exception as exc:
                 errors.append({"filename": input_item["filename"], "error": str(exc)})
+            if progress_callback:
+                progress_callback(index, len(inputs), input_item["filename"])
 
         status = "draft" if processed else "failed"
         summary = {
