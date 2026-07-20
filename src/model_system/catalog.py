@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from src.model_registry import ModelRegistry
 from src.model_system.constants import (
     BUILTIN_MODEL_CATALOG_PATH,
+    VISION_MODEL_CATALOG_PATH,
     MODEL_DECISION_METADATA_PATH,
     IMPORTED_MODELS_RELATIVE_DIR,
     MODEL_MANIFEST_NAME,
@@ -75,6 +76,46 @@ def normalize_task_family(task_type: Optional[str]) -> Optional[str]:
     return task
 
 
+def training_task_category(task_type: Optional[str], segmentation_kind: Optional[str] = None) -> str:
+    """Return the user-facing training category without breaking legacy task ids.
+
+    The project historically stored every mask task as ``segmentation``.  Keep
+    that storage contract stable, but expose the distinction needed by the UI
+    and by backend routing.
+    """
+    task = str(task_type or "").strip().lower()
+    kind = str(segmentation_kind or "").strip().lower()
+    if "semantic" in task or kind == "semantic":
+        return "semantic_segmentation"
+    if "instance" in task or kind == "instance" or task == "segmentation":
+        return "instance_segmentation"
+    if "classif" in task and "sequence" not in task:
+        return "image_classification"
+    if "detect" in task or task in {"bbox", "object_detection"}:
+        return "object_detection"
+    if "sequence" in task and "regression" in task:
+        return "sequence_regression"
+    if "sequence" in task:
+        return "sequence_classification"
+    return task or "other"
+
+
+def model_matches_project_task(model: Dict[str, Any], requested_task: Optional[str]) -> bool:
+    requested = str(requested_task or "").strip().lower()
+    if not requested:
+        return True
+    model_family = normalize_task_family(model.get("task_family"))
+    if model_family != normalize_task_family(requested):
+        return False
+    if "seg" not in requested:
+        return True
+    requested_category = training_task_category(requested)
+    if requested_category not in {"semantic_segmentation", "instance_segmentation"}:
+        return True
+    model_category = training_task_category(model.get("task_family"), model.get("segmentation_kind"))
+    return requested_category == model_category
+
+
 def safe_model_slug(value: str) -> str:
     stem = Path(safe_filename(value or "model")).stem.lower()
     slug = re.sub(r"[^a-z0-9]+", "_", stem).strip("_")
@@ -105,7 +146,7 @@ class ModelCatalog:
             if bool(item.get("trainable"))
         ]
         if normalized_task:
-            models = [item for item in models if normalize_task_family(item.get("task_family")) == normalized_task]
+            models = [item for item in models if model_matches_project_task(item, task_family)]
         return models
 
     @classmethod
@@ -121,7 +162,7 @@ class ModelCatalog:
             if bool(item.get("inference_supported"))
         ]
         if normalized_task:
-            models = [item for item in models if normalize_task_family(item.get("task_family")) == normalized_task]
+            models = [item for item in models if model_matches_project_task(item, task_family)]
         return models
 
     @classmethod
@@ -551,20 +592,22 @@ class ModelCatalog:
 
     @staticmethod
     def _load_builtin_models() -> List[Dict[str, Any]]:
-        if not BUILTIN_MODEL_CATALOG_PATH.exists():
-            return []
-        try:
-            data = json.loads(BUILTIN_MODEL_CATALOG_PATH.read_text(encoding="utf-8"))
-        except Exception:
-            return []
-        models = data if isinstance(data, list) else []
+        models: List[Dict[str, Any]] = []
+        for catalog_path in (BUILTIN_MODEL_CATALOG_PATH, VISION_MODEL_CATALOG_PATH):
+            if not catalog_path.exists():
+                continue
+            try:
+                data = json.loads(catalog_path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if isinstance(data, list):
+                models.extend(item for item in data if isinstance(item, dict))
         decision_metadata = ModelCatalog._load_decision_metadata()
         return [
             resolve_builtin_install_state(ModelCatalog._normalize_entry(
                 ModelCatalog._merge_decision_metadata(item, decision_metadata)
             ))
             for item in models
-            if isinstance(item, dict)
         ]
 
     @staticmethod
@@ -642,18 +685,20 @@ class ModelCatalog:
                 continue
             task_family = normalize_task_family(model.get("task_type") or project.get("task_type"))
             path = model.get("internal_weight_path")
+            backend = model.get("backend") or "ultralytics_yolo"
+            ultralytics_compatible = backend in {"ultralytics_yolo", "ultralytics_rtdetr"}
             entries.append(ModelCatalog._normalize_entry({
                 "model_id": f"trained.{model.get('run_id')}.{weight_type}",
                 "display_name": f"{model.get('run_id')} / {weight_type}.pt",
                 "architecture": model.get("architecture") or "cnn",
-                "backend": model.get("backend") or "ultralytics_yolo",
+                "backend": backend,
                 "task_family": task_family,
                 "source": "project_trained",
                 "format": "pt",
                 "weight": path,
                 "weight_path": path,
-                "trainable": True,
-                "inference_supported": True,
+                "trainable": ultralytics_compatible,
+                "inference_supported": ultralytics_compatible,
                 "evaluation_supported": True,
                 "imported": False,
                 "status": model.get("status") or "available",
@@ -677,6 +722,9 @@ class ModelCatalog:
         normalized.setdefault("evaluation_supported", False)
         normalized.setdefault("imported", normalized.get("source") == "user_import")
         normalized.setdefault("status", "available")
+        normalized["training_category"] = training_task_category(
+            normalized.get("task_family"), normalized.get("segmentation_kind")
+        )
         normalized["training_value"] = normalized.get("weight_path") or normalized.get("weight") or normalized.get("weight_file") or ""
         return normalized
 

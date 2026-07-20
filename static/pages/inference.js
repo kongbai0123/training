@@ -1,5 +1,5 @@
 import { eventBus } from "../event_bus.js";
-import { appState } from "../state.js";
+import { appState, t } from "../state.js";
 import { apiFetch, apiFetchBlob } from "../api.js";
 import { qs, qsa, setHTML, escapeHtml, copyText } from "../utils.js";
 
@@ -120,7 +120,7 @@ function renderModelList(status = null) {
 
   if (!appState.currentProjectId) {
     container.classList.remove("model-registry-scroll");
-    setHTML("#inference-model-list", `<div class="empty-state">請先載入專案。</div>`);
+    setHTML("#inference-model-list", `<div class="empty-state">${escapeHtml(t("inference.empty.loadProject"))}</div>`);
     return;
   }
 
@@ -308,7 +308,7 @@ function renderInferenceResult() {
   const summary = result?.summary;
   if (!summary) {
     resetInferenceResultImage();
-    setHTML("#inference-summary", `<div class="empty-state">尚未執行推論。</div>`);
+    setHTML("#inference-summary", `<div class="empty-state">${escapeHtml(t("inference.empty.noResult"))}</div>`);
     setHTML("#inference-prediction-signals", "");
     return;
   }
@@ -438,7 +438,7 @@ function updateRunButtonState() {
 
 function getRunDisabledReason({ model, hasImage, compatible }) {
   if (appState.inferenceRunning) return "推論執行中，請等待目前工作完成。";
-  if (!appState.currentProjectId) return "尚未載入專案。";
+  if (!appState.currentProjectId) return t("inference.reason.noProject");
   if (modelsLoading) return "正在掃描可用模型權重。";
   if (!model) return "找不到可用模型，請先完成訓練或按 Refresh Models。";
   if (!compatible) return "選擇的模型任務與目前專案任務不相容。";

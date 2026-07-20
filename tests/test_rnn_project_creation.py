@@ -28,7 +28,7 @@ class RNNProjectCreationTests(unittest.TestCase):
             self.assertNotIn("imgsz", config)
             self.assertTrue((project_dir / "sequences").exists())
 
-    def test_cnn_project_keeps_yolo_defaults(self):
+    def test_semantic_segmentation_project_uses_semantic_model_default(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             with patch("src.project_manager.PROJECTS_DIR", root):
@@ -37,8 +37,8 @@ class RNNProjectCreationTests(unittest.TestCase):
             config = project["training_config"]
 
             self.assertEqual(config["architecture"], "cnn")
-            self.assertEqual(config["backend"], "ultralytics_yolo")
-            self.assertEqual(config["model"], "yolov8n-seg.pt")
+            self.assertEqual(config["backend"], "pytorch_torchvision")
+            self.assertEqual(config["model"], "unet")
             self.assertEqual(config["imgsz"], 640)
 
 

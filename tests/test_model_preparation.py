@@ -161,7 +161,7 @@ class ModelPreparationApiTests(unittest.TestCase):
         models = response.json()["models"]
         families = {model.get("model_family") for model in models}
         self.assertTrue({"yolo26", "yolo11", "yolov8"}.issubset(families))
-        self.assertEqual(sum(model.get("hardware_fit") == "recommended" for model in models), 2)
+        self.assertGreaterEqual(sum(model.get("hardware_fit") == "recommended" for model in models), 2)
 
     def test_install_requires_explicit_confirmation(self):
         response = self.client.post("/api/models/install", json={

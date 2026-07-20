@@ -10,6 +10,7 @@ const selectedInferenceJobIds = new Set();
 let pendingDeleteInferenceJobIds = [];
 
 export function initProjects() {
+  eventBus.on("language-changed", () => renderNewProjectClassList());
   qs("#btn-reload-projects")?.addEventListener("click", () => {
     eventBus.emit("reload-projects");
   });
@@ -628,7 +629,7 @@ function setCreateProjectMode(mode, options = {}) {
 
   const selectedMode = getProjectModeFromTaskType(typeSelect.value);
   if (!options.preserveType || selectedMode !== normalizedMode) {
-    typeSelect.value = normalizedMode === "rnn" ? "sequence_classification" : "semantic_segmentation";
+    typeSelect.value = normalizedMode === "rnn" ? "sequence_classification" : "object_detection";
   }
   syncCreateProjectMode();
 }
@@ -653,7 +654,7 @@ function syncCreateProjectMode() {
     "#new-project-class-hint",
     isSequence
       ? "RNN target / label is configured after CSV import."
-      : "CNN projects use this list as detection / segmentation classes."
+      : "Vision projects use this list for image classes, boxes, or mask regions."
   );
   const input = qs("#new-project-class-input");
   if (input) {
@@ -726,7 +727,7 @@ function renderNewProjectClassList() {
   if (!box) return;
 
   if (appState.newProjectClasses.length === 0) {
-    box.innerHTML = `<div class="empty-class-list">尚未新增類別</div>`;
+    box.innerHTML = `<div class="empty-class-list">${escapeHtml(t("dataset.emptyNoClasses"))}</div>`;
     return;
   }
 

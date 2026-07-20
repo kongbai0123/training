@@ -265,6 +265,7 @@ class DatasetUtils:
         
         valid_exts = {".jpg", ".jpeg", ".png", ".bmp"}
         imported_imgs = []
+        classification_labels = {}
         imported_jsons = []
         imported_txts = []
         
@@ -277,6 +278,10 @@ class DatasetUtils:
                 if ext in valid_exts:
                     shutil.copy(str(fpath), str(dest_img_dir / file))
                     imported_imgs.append(file)
+                    if project and "image_classification" in str(project.get("task_type") or "").lower():
+                        parent_label = fpath.parent.name
+                        if parent_label in set(project.get("class_names") or []):
+                            classification_labels[file] = parent_label
                 elif ext == ".json":
                     # 簡易驗證是否為 LabelMe JSON (包含 shapes 欄位)
                     try:
@@ -300,9 +305,11 @@ class DatasetUtils:
             for filename in imported_imgs:
                 if filename in existing_filenames:
                     continue
+                class_name = classification_labels.get(filename)
                 project["images"].append({
                     "filename": filename,
-                    "status": "unannotated",
+                    "status": "annotated" if class_name else "unannotated",
+                    "class_name": class_name,
                     "scene": "unknown",
                     "source_video": "",
                     "annotations": [],
@@ -312,11 +319,13 @@ class DatasetUtils:
                 existing_filenames.add(filename)
             project.setdefault("annotation_progress", {})
             project["annotation_progress"]["total"] = len(project.get("images", []))
+            project["annotation_progress"]["annotated"] = sum(1 for item in project.get("images", []) if item.get("status") == "annotated")
             ProjectManager.save_project(project_id, project)
         
         return {
             "imported_images_count": len(imported_imgs),
             "imported_jsons_count": len(imported_jsons),
             "imported_txts_count": len(imported_txts),
-            "images": imported_imgs
+            "images": imported_imgs,
+            "classification_labels": classification_labels,
         }

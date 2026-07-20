@@ -38,10 +38,21 @@ class ProjectManager:
                 "dropout": 0.2,
                 "bidirectional": False,
             }
+        normalized_task = str(task_type or "").lower()
+        backend = "ultralytics_yolo"
+        model = "yolov8n.pt"
+        if "image_classification" in normalized_task:
+            backend = "pytorch_torchvision"
+            model = "resnet18_imagenet1k_v1.pt"
+        elif "semantic" in normalized_task:
+            backend = "pytorch_torchvision"
+            model = "unet"
+        elif "instance" in normalized_task or normalized_task == "segmentation":
+            model = "yolov8n-seg.pt"
         return {
-            "backend": "ultralytics_yolo",
+            "backend": backend,
             "architecture": "cnn",
-            "model": "yolov8n.pt" if "segmentation" not in str(task_type or "").lower() else "yolov8n-seg.pt",
+            "model": model,
             "epochs": 50,
             "batch_size": 8,
             "imgsz": 640,

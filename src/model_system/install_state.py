@@ -44,6 +44,24 @@ def resolve_builtin_install_state(
         })
         return resolved
 
+    if model_format == "hf_snapshot" and source == "builtin":
+        root = Path(models_dir or MODELS_DIR).resolve()
+        directory_name = Path(str(resolved.get("weight") or resolved.get("model_id") or "model")).name
+        candidate = (root / directory_name).resolve()
+        installed = candidate.is_dir() and (candidate / "config.json").is_file()
+        resolved.update({
+            "status": MODEL_STATUS_AVAILABLE if installed else MODEL_STATUS_NOT_INSTALLED,
+            "installation_required": True,
+            "installed": installed,
+            "usable": installed,
+            "install_state": MODEL_STATUS_AVAILABLE if installed else MODEL_STATUS_NOT_INSTALLED,
+            "integrity": "snapshot_present" if installed else "missing",
+            "resolved_path": candidate.as_posix() if installed else "",
+            "file_size": sum(path.stat().st_size for path in candidate.rglob("*") if path.is_file()) if installed else 0,
+        })
+        resolved["training_value"] = candidate.as_posix() if installed else directory_name
+        return resolved
+
     if source != "builtin":
         return resolved
 

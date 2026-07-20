@@ -564,7 +564,7 @@ function buildDatasetRightPanel(status) {
 function buildLabelMeRightPanel(status) {
   const lm = appState.labelme || {};
   const warnings = [];
-  if (!status.hasDataset) warnings.push("No images found. Import images in Dataset first.");
+  if (!status.hasDataset) warnings.push(t("labelme.empty.noImages"));
   if ((lm.missingJson || 0) > 0) warnings.push(`${lm.missingJson} images are missing LabelMe JSON.`);
   if ((lm.invalidJson || 0) > 0) warnings.push(`${lm.invalidJson} invalid JSON files need review.`);
   if ((lm.unknownLabels || 0) > 0) warnings.push(`${lm.unknownLabels} unknown labels are not in the project class list.`);

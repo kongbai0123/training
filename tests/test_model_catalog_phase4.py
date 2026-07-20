@@ -36,7 +36,9 @@ class ModelCatalogPhase4Tests(unittest.TestCase):
 
             models = ModelCatalog.list_trainable(project=project, task_family=project["task_type"], architecture="cnn")
 
-            self.assertTrue(any(item["model_id"] == "builtin.yolov8n-seg" for item in models))
+            self.assertTrue(any(item["model_id"] == "builtin.torchvision.deeplabv3-mobilenet-v3" for item in models))
+            self.assertTrue(any(item["model_id"] == "template.vision.unet" for item in models))
+            self.assertFalse(any(item["model_id"] == "builtin.yolov8n-seg" for item in models))
             self.assertFalse(any(item["model_id"] == "builtin.yolov8n-det" for item in models))
 
     def test_rnn_catalog_exposes_trainable_rnn_and_planned_xgboost_templates(self):

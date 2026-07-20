@@ -402,9 +402,12 @@ class YOLOTrainer:
             lr0 = float(train_config.get("lr0", 0.01))
             device = cls.resolve_training_device(str(train_config.get("device") or "cpu"))
             workers = int(train_config.get("workers", 4))
-            if getattr(sys, "frozen", False):
+            workers_mode = str(train_config.get("workers_mode") or "auto").lower()
+            if getattr(sys, "frozen", False) and workers_mode != "custom":
                 # PyInstaller on Windows can deadlock when PyTorch dataloader
                 # workers spawn child processes from the frozen executable.
+                # Auto mode therefore uses the safe single-process loader;
+                # an explicit custom value remains the user's informed choice.
                 workers = 0
             from src.training.vector_plot_capture import capture_vector_plots
 

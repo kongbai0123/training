@@ -37,7 +37,7 @@
   border: 1px solid var(--border);
   border-left: 3px solid var(--primary);
   border-radius: var(--radius);
-  background: var(--bg-subtle);
+  background: var(--bg-panel-soft);
   color: var(--text-muted);
   font-size: 0.82rem;
   line-height: 1.5;
@@ -291,12 +291,9 @@
 }
 
 .training-config-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
+  display: grid;
   padding-bottom: 14px;
-  border-bottom: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border);
 }
 
 .training-config-heading {
@@ -317,68 +314,17 @@
   line-height: 1.5;
 }
 
-.config-tabs-nav {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(112px, 1fr));
-  gap: 4px;
-  min-width: 250px;
-  padding: 4px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--bg-subtle);
-}
-
-.config-mode-button {
-  display: grid;
-  gap: 1px;
-  min-height: 48px;
-  padding: 6px 10px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-muted);
-  text-align: left;
-  cursor: pointer;
-}
-
-.config-mode-button strong {
-  color: inherit;
-  font-size: 0.84rem;
-}
-
-.config-mode-button small {
-  color: var(--text-soft);
-  font-size: 0.7rem;
-}
-
-.config-mode-button:hover {
-  background: var(--bg-panel);
-  color: var(--text);
-}
-
-.config-mode-button.active {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-  color: var(--primary);
-}
-
-#config-simple-fields,
-#config-advanced-fields:not(.hidden) {
+#config-simple-fields {
   display: grid;
   gap: 0;
   align-items: start;
-}
-
-#config-advanced-fields:not(.hidden) {
-  margin-top: 2px;
-  border-top: 1px solid var(--border-soft);
 }
 
 .training-config-group,
 .training-model-registry-shell {
   padding: 16px 0;
   border: 0;
-  border-bottom: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border);
   border-radius: 0;
   background: transparent;
 }
@@ -437,11 +383,9 @@
 
 .training-profile-guide {
   display: grid;
-  grid-template-columns: minmax(240px, .8fr) minmax(0, 1.7fr);
-  gap: 16px;
-  margin-top: 12px;
+  gap: 10px;
   padding: 11px 12px;
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
   border-radius: var(--radius);
   background: var(--bg-soft);
@@ -473,8 +417,7 @@
 
 .training-profile-guide ul {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -489,42 +432,306 @@
   gap: 10px;
 }
 
-.training-model-details {
-  border-top: 1px solid var(--border-soft);
+.training-model-workbench {
+  display: grid;
+  grid-template-columns: minmax(290px, 1fr) minmax(310px, 1fr) minmax(360px, 1.08fr);
+  gap: 14px;
+  align-items: stretch;
 }
 
-.training-model-details summary {
+.training-model-controls,
+.training-advanced-column,
+.training-model-details {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.training-model-controls {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-content: start;
+}
+
+.training-model-controls > .training-column-heading {
+  margin: 0;
+  padding: 12px;
+}
+
+.training-model-selector {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.training-model-inline-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.training-model-inline-actions .btn {
+  min-width: 0;
+  justify-content: center;
+}
+
+.training-model-selector select {
+  width: 100%;
+}
+
+.training-model-details {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 12px;
+}
+
+.training-model-details-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  padding: 10px 0 0;
+  min-height: 34px;
   color: var(--text-muted);
-  cursor: pointer;
-  list-style: none;
 }
 
-.training-model-details summary::-webkit-details-marker {
-  display: none;
-}
-
-.training-model-details summary strong {
+.training-model-details-heading strong {
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.training-model-details summary i {
-  transition: transform 0.18s ease;
+.training-parameter-card,
+.training-advanced-column {
+  padding: 12px;
 }
 
-.training-model-details[open] summary i {
-  transform: rotate(180deg);
+.training-parameter-card .training-config-group-heading {
+  margin-bottom: 12px;
 }
 
-.training-model-details .training-model-registry-card {
-  margin-top: 10px;
+.training-parameter-list,
+.training-advanced-list {
+  display: grid;
+  gap: 12px;
+}
+
+.training-parameter-list > label,
+.training-advanced-list > label,
+.training-early-stop-control > label,
+.training-auto-custom-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.training-parameter-list input,
+.training-parameter-list select,
+.training-advanced-list input,
+.training-advanced-list select {
+  width: 100%;
+}
+
+.training-column-heading {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.training-column-heading strong {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.training-column-heading span,
+.training-auto-custom-field small,
+.training-early-stop-control small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.training-auto-custom-field > input.hidden {
+  display: none;
+}
+
+.training-early-stop-control {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel-soft);
+}
+
+.training-control-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.training-inline-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.training-inline-toggle input {
+  appearance: none;
+  position: relative;
+  width: 34px;
+  height: 18px;
+  margin: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-panel);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.training-inline-toggle input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.training-inline-toggle input:checked {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.training-inline-toggle input:checked::after {
+  transform: translateX(16px);
+  background: #ffffff;
+}
+
+.training-secondary-advanced-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.training-secondary-advanced-grid > label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.training-secondary-advanced-grid input {
+  width: 100%;
+}
+
+.training-advanced-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.training-advanced-toggle-grid > .checkbox-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel-soft);
+}
+
+.training-advanced-toggle-grid > .checkbox-row > span {
+  order: 1;
+}
+
+.training-advanced-toggle-grid > .checkbox-row > input {
+  order: 2;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.training-model-registry-card {
+  display: grid;
+  gap: 14px;
+  height: 100%;
+}
+
+.training-model-detail-hero {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.training-model-detail-hero strong {
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.training-model-detail-hero p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.training-model-spec-list {
+  display: grid;
+}
+
+.training-model-spec-list > div {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  border-bottom: 1px solid var(--border);
+}
+
+.training-model-spec-list > div:last-child {
+  border-bottom: 0;
+}
+
+.training-model-spec-list span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.training-model-spec-list strong {
+  color: var(--text);
+  font-size: 0.78rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.training-model-details .model-registry-note {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.training-model-details .model-registry-note.is-compatible {
+  border-color: var(--success);
+  background: rgba(22, 163, 74, 0.1);
+  color: var(--success);
 }
 
 .training-toggle-grid .checkbox-row {
@@ -536,7 +743,7 @@
   padding: 9px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--bg-subtle);
+  background: var(--bg-panel-soft);
 }
 
 .training-toggle-grid .checkbox-row > span {
@@ -562,23 +769,16 @@
     display: grid;
   }
 
-  .config-tabs-nav {
-    width: 100%;
-    min-width: 0;
-  }
-
   .training-field-grid-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
 }
 
 @media (max-width: 680px) {
   .training-field-grid-2,
   .training-field-grid-3,
   .training-field-grid-4 {
-    grid-template-columns: 1fr;
-  }
-  .training-profile-guide ul {
     grid-template-columns: 1fr;
   }
 }
@@ -952,12 +1152,6 @@
 }
 
 @media (max-width: 1100px) {
-  .training-profile-guide {
-    grid-template-columns: 1fr;
-  }
-  .training-profile-guide ul {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
   .training-mode-layout {
     display: block;
   }

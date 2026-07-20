@@ -18,8 +18,13 @@
 | YOLO26 | Detection / Segmentation | n、s、m、l、x | 可執行、選配下載 | `ultralytics_yolo` | AGPL-3.0 或商業授權 |
 | RT-DETR | Detection | L、X | 可執行、選配下載 | `ultralytics_rtdetr` | Ultralytics 發行與執行條款 |
 | RF-DETR | Detection / Segmentation | Nano、Small、Medium、Large | 研究輪廓 | `rfdetr_external` | Apache-2.0；Plus 型號另有 PML 1.0 |
-| D-FINE | Detection | 尚未開放 | 待研究 | 尚未接線 | 需完成授權與 Windows 驗證 |
-| Faster / Mask R-CNN | Detection / Segmentation | 尚未開放 | 待研究 | 尚未接線 | torchvision BSD-3-Clause；產物能力待驗證 |
+| ResNet / MobileNetV3 / EfficientNet | Image Classification | ResNet18、MobileNetV3 Large、EfficientNet-B0 | 可執行、選配下載 | `pytorch_torchvision` | torchvision BSD-3-Clause |
+| D-FINE | Object Detection | Small | 可執行、選配下載 | `transformers_dfine` | Apache-2.0 |
+| Faster R-CNN | Object Detection | MobileNetV3 FPN、ResNet50 FPN v2 | 可執行、選配下載 | `pytorch_torchvision` | torchvision BSD-3-Clause |
+| FCOS | Object Detection | ResNet50 FPN | 可執行、選配下載 | `pytorch_torchvision` | torchvision BSD-3-Clause |
+| Mask R-CNN | Instance Segmentation | ResNet50 FPN v2 | 可執行、選配下載 | `pytorch_torchvision` | torchvision BSD-3-Clause |
+| DeepLabV3 | Semantic Segmentation | MobileNetV3、ResNet50 | 可執行、選配下載 | `pytorch_torchvision` | torchvision BSD-3-Clause |
+| U-Net | Semantic Segmentation | 內建模板 | 可執行、免下載 | `pytorch_torchvision` | 專案內建實作 |
 
 ## RNN 與結構化序列模型
 
@@ -43,6 +48,28 @@
 | x | Extra Large | 最大容量、長時間訓練與高階 GPU |
 
 模型中心會依目前任務、資料量、GPU、VRAM、RAM、磁碟與速度／精度目標排序。硬體不足的模型不會消失，但會顯示不建議或不可使用原因。
+
+## 訓練清單分類
+
+訓練頁不再只按模型家族堆疊，而是先依輸出內容分類：
+
+| 類別 | 模型 | 標註需求 |
+|---|---|---|
+| 圖片分類 | ResNet18、MobileNetV3、EfficientNet-B0 | 每張圖片一個類別，不畫框 |
+| 物件偵測 | YOLO、RT-DETR、D-FINE、Faster R-CNN、FCOS | 每個物件一個方框 |
+| 實例分割 | YOLO Segmentation、Mask R-CNN | 每個物件一個獨立 polygon／遮罩 |
+| 語意分割 | U-Net、DeepLabV3 | 每個類別的像素區域 |
+
+ByteTrack 與 BoT-SORT 是把相鄰影格中的偵測結果串成軌跡的追蹤器，使用偵測模型的輸出，不是可獨立訓練的畫面辨識模型，所以不列入訓練清單。
+
+## 新增視覺後端驗證
+
+2026-07-20 開發機驗證：
+
+- TorchVision 官方 ResNet18、Faster R-CNN MobileNetV3、FCOS、Mask R-CNN v2 與 DeepLabV3 MobileNetV3 權重可下載並嚴格載入。
+- 內建 U-Net 完成 1 epoch CPU 訓練，產生 `best.pt`、`last.pt`、`metrics.json` 與 `results.csv`。
+- D-FINE Small 官方快照可安裝，並完成 1 epoch CUDA 訓練與 checkpoint 輸出。
+- 完整自動測試通過；安裝包仍需在本次變更後重新建置，才算完成 Windows packaged smoke。
 
 ## Benchmark 使用原則
 

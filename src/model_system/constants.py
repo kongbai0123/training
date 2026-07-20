@@ -6,6 +6,7 @@ from src.config import BASE_DIR
 
 
 BUILTIN_MODEL_CATALOG_PATH = BASE_DIR / "data" / "builtin_model_catalog.json"
+VISION_MODEL_CATALOG_PATH = BASE_DIR / "data" / "vision_model_catalog.json"
 MODEL_DECISION_METADATA_PATH = BASE_DIR / "data" / "model_decision_metadata.json"
 MODEL_MANIFEST_NAME = "model_manifest.json"
 SOURCE_MODEL_MANIFEST_NAME = "source_model_manifest.json"

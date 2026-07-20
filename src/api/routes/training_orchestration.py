@@ -24,9 +24,11 @@ class TrainConfigRequest(BaseModel):
     batch_size: int
     imgsz: int
     lr0: float
+    lr0_mode: Optional[str] = "auto"
     device: str
     patience: Optional[int] = 20
     workers: Optional[int] = 4
+    workers_mode: Optional[str] = "auto"
     cache: Optional[bool] = False
     amp: Optional[bool] = True
     seed: Optional[int] = 42

@@ -58,7 +58,6 @@ EXCLUDES = [
     "roboflow",
     "streamlit",
     "flask",
-    "timm",
     "super_gradients",
     "hub_sdk",
     "pymongo",
@@ -78,12 +77,9 @@ EXCLUDES = [
     "jax",
     "flax",
     "diffusers",
-    "transformers",
     "gradio",
     "altair",
     "openai",
-    "huggingface_hub",
-    "hf_xet",
     "yt_dlp",
     "imageio",
     "pyarrow",
@@ -136,6 +132,10 @@ for package_name in [
     "clr_loader",
     "proxy_tools",
     "xgboost",
+    "transformers",
+    "huggingface_hub",
+    "safetensors",
+    "timm",
 ]:
     try:
         package_datas, package_binaries, package_hiddenimports = collect_all(

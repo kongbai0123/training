@@ -4,6 +4,20 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+### Added
+- Added installable and trainable image classification models: ResNet18, MobileNetV3 Large, and EfficientNet-B0.
+- Added installable and trainable detection models: D-FINE Small, Faster R-CNN, and FCOS.
+- Added Mask R-CNN instance segmentation plus DeepLabV3 and built-in U-Net semantic segmentation.
+- Added TorchVision and Transformers D-FINE training backends with standard run artifacts.
+
+### Changed
+- Grouped the training model selector by image classification, object detection, instance segmentation, and semantic segmentation.
+- Kept unavailable optional weights visible with an installation prompt instead of hiding the model.
+- Added class-folder imports and stratified splitting for image-classification projects.
+
+### Fixed
+- Pass the selected model backend from the training UI so non-YOLO models no longer fall back to the YOLO backend.
+
 ## [0.1.1] - 2026-07-16
 
 ### Fixed

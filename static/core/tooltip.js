@@ -15,13 +15,15 @@ export function initInfoTooltips() {
   const normalizeInfoIcons = () => {
     qsa(".info-icon[data-tooltip]").forEach((icon) => {
       if (!icon.hasAttribute("tabindex")) icon.setAttribute("tabindex", "0");
-      if (!icon.hasAttribute("aria-label")) icon.setAttribute("aria-label", icon.dataset.tooltip);
+      if (icon.getAttribute("aria-label") !== icon.dataset.tooltip) {
+        icon.setAttribute("aria-label", icon.dataset.tooltip);
+      }
     });
   };
 
   const renderTooltipContent = (text) => {
     const parts = String(text || "")
-      .split(";")
+      .split(/[;；]/)
       .map((part) => part.trim())
       .filter(Boolean);
     if (parts.length <= 1) return escapeHtml(parts[0] || "");
@@ -91,7 +93,12 @@ export function initInfoTooltips() {
   };
 
   normalizeInfoIcons();
-  new MutationObserver(normalizeInfoIcons).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(normalizeInfoIcons).observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["data-tooltip"],
+  });
 
   document.addEventListener("mouseover", (event) => {
     const target = event.target.closest(".info-icon[data-tooltip]");

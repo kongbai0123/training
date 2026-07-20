@@ -40,61 +40,17 @@ const GROUP_BY_PRESET = {
 };
 
 const PRESET_META = {
-  clear_day: {
-    purpose: "建立低風險晴天基準，微調亮度與對比。",
-    params: "亮度、對比",
-    risk: "Low"
-  },
-  low_light: {
-    purpose: "模擬低照度、陰影與曝光不足場景。",
-    params: "亮度、對比、陰影、雜訊",
-    risk: "Medium"
-  },
-  rainy: {
-    purpose: "模擬雨天與濕潤表面造成的視覺變化。",
-    params: "雨天、對比、運動模糊",
-    risk: "Medium"
-  },
-  foggy: {
-    purpose: "降低能見度並模擬霧氣或霧霾。",
-    params: "霧氣、對比",
-    risk: "Medium"
-  },
-  motion_camera: {
-    purpose: "模擬移動鏡頭、車載影像與相機雜訊。",
-    params: "運動模糊、相機雜訊",
-    risk: "Medium"
-  },
-  strong_shadow: {
-    purpose: "強化樹影、建築陰影與局部暗部變化。",
-    params: "陰影、亮度、對比",
-    risk: "Medium"
-  },
-  wet_reflection: {
-    purpose: "模擬濕地反光與鏡面反射造成的辨識干擾。",
-    params: "雨天、亮度、對比",
-    risk: "Medium"
-  },
-  night_road: {
-    purpose: "模擬夜間道路、低光源與高雜訊影像。",
-    params: "亮度、陰影、相機雜訊",
-    risk: "High"
-  },
-  suburban_mix: {
-    purpose: "混合郊區常見的光照、路面與相機差異。",
-    params: "亮度、對比、雜訊",
-    risk: "Low"
-  },
-  forest_road: {
-    purpose: "模擬樹蔭、斑駁光影與森林道路場景。",
-    params: "陰影、亮度、對比",
-    risk: "Medium"
-  },
-  generalization: {
-    purpose: "平衡各種環境變化，強化整體泛化能力。",
-    params: "亮度、對比、雨天、霧氣、運動模糊、雜訊",
-    risk: "Low"
-  }
+  clear_day: { risk: "Low" },
+  low_light: { risk: "Medium" },
+  rainy: { risk: "Medium" },
+  foggy: { risk: "Medium" },
+  motion_camera: { risk: "Medium" },
+  strong_shadow: { risk: "Medium" },
+  wet_reflection: { risk: "Medium" },
+  night_road: { risk: "High" },
+  suburban_mix: { risk: "Low" },
+  forest_road: { risk: "Medium" },
+  generalization: { risk: "Low" }
 };
 
 export function initAugmentation() {
@@ -148,7 +104,6 @@ export function initAugmentation() {
 }
 
 export function renderAugmentationPage(status) {
-  applyAugmentationStaticCopy();
   updateSliderLabels();
   updateEstimatedCount();
 
@@ -188,31 +143,31 @@ function getAugmentationState(status) {
   const riskPassed = previewState === "ready";
 
   if (!status?.hasProject) {
-    reasons.push("尚未開啟專案。");
-    return { state: "blocked_no_project", label: "Blocked", badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
+    reasons.push(t("augmentation.reason.noProject"));
+    return { state: "blocked_no_project", label: t("augmentation.state.blocked"), badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
   }
   if (!status.hasDataset) {
-    reasons.push("尚未匯入圖片資料。");
-    reasons.push("請先前往 Dataset 匯入圖片。");
-    return { state: "blocked_no_images", label: "Blocked", badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
+    reasons.push(t("augmentation.reason.noImages"));
+    reasons.push(t("augmentation.reason.importImages"));
+    return { state: "blocked_no_images", label: t("augmentation.state.blocked"), badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
   }
   if (!status.splitComplete || trainCount === 0) {
-    reasons.push("尚未建立 Train / Val / Test split。");
-    reasons.push("請先建立 Split，讓擴充只套用到 Train split。");
-    return { state: "blocked_no_split", label: "Blocked", badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
+    reasons.push(t("augmentation.reason.noSplit"));
+    reasons.push(t("augmentation.reason.createSplit"));
+    return { state: "blocked_no_split", label: t("augmentation.state.blocked"), badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
   }
   if (previewCount === 0) {
-    reasons.push("Train split 中沒有可預覽的已標註圖片。");
-    return { state: "blocked_no_preview_image", label: "Blocked", badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
+    reasons.push(t("augmentation.reason.noPreview"));
+    return { state: "blocked_no_preview_image", label: t("augmentation.state.blocked"), badge: "danger", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons };
   }
   if (applying) {
-    return { state: "applying", label: "Applying", badge: "warning", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons: ["擴充作業執行中。"] };
+    return { state: "applying", label: t("augmentation.state.applying"), badge: "warning", canPreview: false, canApply: false, trainCount, valCount, testCount, previewCount, reasons: [t("augmentation.reason.running")] };
   }
   if (applied) {
     return { state: "applied", label: "Applied", badge: "success", canPreview: true, canApply: false, trainCount, valCount, testCount, previewCount, reasons: ["擴充已套用到 Train split，可前往 Training 開始新訓練。"] };
   }
   if (previewState === "ready") {
-    return { state: "preview_ready", label: "Preview Ready", badge: "success", canPreview: true, canApply: true, trainCount, valCount, testCount, previewCount, reasons: ["Preview 已產生，Risk Check 已通過。"] };
+    return { state: "preview_ready", label: t("augmentation.state.previewReady"), badge: "success", canPreview: true, canApply: true, trainCount, valCount, testCount, previewCount, reasons: [t("augmentation.reason.previewDone")] };
   }
   if (previewState === "stale") {
     return { state: "preview_stale", label: "Preview stale", badge: "warning", canPreview: true, canApply: false, trainCount, valCount, testCount, previewCount, reasons: ["設定已變更，請重新產生預覽後再套用。"] };
@@ -220,15 +175,7 @@ function getAugmentationState(status) {
   if (previewState === "failed") {
     return { state: "preview_failed", label: "Preview failed", badge: "danger", canPreview: true, canApply: false, trainCount, valCount, testCount, previewCount, reasons: ["Preview 產生失敗，請調整設定後重試。"] };
   }
-  return { state: "ready", label: "Ready", badge: "success", canPreview: true, canApply: riskPassed, trainCount, valCount, testCount, previewCount, reasons: ["Train 圖片可用，請先產生 Preview。"] };
-}
-
-function applyAugmentationStaticCopy() {
-  setText("#page-augmentation .page-header h1", "物理擴充控制台");
-  setText("#page-augmentation .page-header p", "透過物理擴充提升資料多樣性，並只套用到 Train split。");
-  setText("#aug-readiness-card h2", "擴充就緒狀態");
-  setText("#aug-go-dataset span", "前往 Dataset");
-  setText("#aug-go-split span", "建立 Split");
+  return { state: "ready", label: t("augmentation.state.ready"), badge: "success", canPreview: true, canApply: riskPassed, trainCount, valCount, testCount, previewCount, reasons: [t("augmentation.reason.ready")] };
 }
 
 function renderReadinessGuard(info) {
@@ -254,17 +201,17 @@ function renderReadinessGuard(info) {
 
 function getReadinessMessage(info) {
   switch (info.state) {
-    case "blocked_no_project": return "請先建立或開啟專案。";
-    case "blocked_no_images": return "尚未匯入圖片，無法進行物理擴充。";
-    case "blocked_no_split": return "尚未建立 Train / Val / Test split，無法安全套用擴充。";
-    case "blocked_no_preview_image": return "Train split 中沒有可預覽的已標註圖片。";
-    case "ready": return "Train split 可用，Val/Test 已排除，已可產生預覽。";
-    case "preview_stale": return "設定已變更，請重新產生預覽。";
-    case "preview_failed": return "Preview 產生失敗，請調整設定後重試。";
-    case "preview_ready": return "Preview 已完成，可套用到 Train Split。";
-    case "applying": return "正在套用到 Train Split，請稍候。";
-    case "applied": return "擴充已套用到 Train Split。";
-    default: return "物理擴充只會套用到 Train split，Val/Test 會保持排除。";
+    case "blocked_no_project": return t("augmentation.message.noProject");
+    case "blocked_no_images": return t("augmentation.message.noImages");
+    case "blocked_no_split": return t("augmentation.message.noSplit");
+    case "blocked_no_preview_image": return t("augmentation.message.noPreviewImage");
+    case "ready": return t("augmentation.message.ready", { count: info.trainCount });
+    case "preview_stale": return t("augmentation.message.previewStale");
+    case "preview_failed": return t("augmentation.message.previewFailed");
+    case "preview_ready": return t("augmentation.message.previewReady");
+    case "applying": return t("augmentation.message.applying");
+    case "applied": return t("augmentation.message.applied");
+    default: return t("augmentation.message.default");
   }
 }
 
@@ -290,7 +237,7 @@ function renderPreviewOptions(status) {
   if (!select) return;
 
   const options = getPreviewImages().map((img) => `<option value="${escapeHtml(img.filename)}">${escapeHtml(img.filename)}</option>`);
-  select.innerHTML = options.length ? options.join("") : `<option value="">沒有可預覽的已標註 Train 圖片</option>`;
+  select.innerHTML = options.length ? options.join("") : `<option value="">${escapeHtml(t("augmentation.noPreviewOption"))}</option>`;
   select.disabled = !status?.splitComplete || options.length === 0;
 
   if (select.value) drawBeforeCanvas(select.value);
@@ -312,20 +259,20 @@ function renderRiskCheck(info) {
   };
 
   if (!info.canPreview) {
-    compact("fa-circle-exclamation", "請先修正上方就緒狀態問題。", "is-warning");
+    compact("fa-circle-exclamation", t("augmentation.risk.fixReadiness"), "is-warning");
   } else if (previewState === "stale") {
-    compact("fa-rotate", "設定已變更，請重新產生 Preview。", "is-warning");
+    compact("fa-rotate", t("augmentation.risk.previewStale"), "is-warning");
   } else if (previewState === "failed") {
-    compact("fa-triangle-exclamation", "Preview 產生失敗，請調整設定後重試。", "is-warning");
+    compact("fa-triangle-exclamation", t("augmentation.risk.previewFailed"), "is-warning");
   } else if (previewState !== "ready") {
-    compact("fa-circle-info", "Preview required：產生預覽後才能套用到 Train Split。", "is-info");
+    compact("fa-circle-info", t("augmentation.risk.previewMissing"), "is-info");
   } else {
     const checks = [
-      { kind: "ok", text: "Train split 有目標圖片。" },
-      { kind: "ok", text: "Val/Test 已排除，避免評估資料洩漏。" },
-      { kind: "ok", text: "原圖會保留，系統僅產生擴充副本。" },
-      { kind: "ok", text: "Preview 已成功產生。" },
-      { kind: "info", text: "Perspective 已停用，直到 polygon / bbox 重映射完成驗證。" }
+      { kind: "ok", text: t("augmentation.risk.train") },
+      { kind: "ok", text: t("augmentation.risk.valTest") },
+      { kind: "ok", text: t("augmentation.risk.originals") },
+      { kind: "ok", text: t("augmentation.risk.previewOk") },
+      { kind: "info", text: t("augmentation.risk.perspective") }
     ];
 
     list.innerHTML = checks.map((check) => `
@@ -339,13 +286,13 @@ function renderRiskCheck(info) {
   if (badge) {
     if (info.canApply) {
       badge.className = "summary-badge badge-success";
-      badge.textContent = "Passed";
+      badge.textContent = t("augmentation.risk.passed");
     } else if (info.canPreview) {
       badge.className = "summary-badge badge-warning";
-      badge.textContent = previewState === "stale" ? "Preview stale" : "Preview required";
+      badge.textContent = previewState === "stale" ? t("augmentation.state.previewStale") : t("augmentation.risk.previewRequired");
     } else {
       badge.className = "summary-badge badge-danger";
-      badge.textContent = "Blocked";
+      badge.textContent = t("augmentation.state.blocked");
     }
   }
 }
@@ -370,8 +317,8 @@ function updateControlState(info) {
     previewBtn.dataset.blockReason = !info.canPreview && !applying ? info.reasons.join(" ") : "";
     previewBtn.setAttribute("aria-disabled", info.canPreview ? "false" : "true");
     previewBtn.innerHTML = info.state === "preview_generating"
-      ? `<i class="fa-solid fa-spinner fa-spin"></i> 產生中...`
-      : `<i class="fa-solid fa-eye"></i> 產生預覽`;
+      ? `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t("augmentation.previewRendering"))}`
+      : `<i class="fa-solid fa-eye"></i> ${escapeHtml(t("augmentation.generatePreview"))}`;
   }
 
   const applyBtn = qs("#btn-apply-aug");
@@ -381,8 +328,8 @@ function updateControlState(info) {
     applyBtn.dataset.blockReason = !info.canApply && !applying ? info.reasons.join(" ") : "";
     applyBtn.setAttribute("aria-disabled", info.canApply ? "false" : "true");
     applyBtn.innerHTML = applying
-      ? `<i class="fa-solid fa-spinner fa-spin"></i> 套用中...`
-      : `<i class="fa-solid fa-wand-magic-sparkles"></i> 套用到 Train Split`;
+      ? `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t("augmentation.applyRunning"))}`
+      : `<i class="fa-solid fa-wand-magic-sparkles"></i> ${escapeHtml(t("augmentation.applyTrain"))}`;
   }
 }
 
@@ -395,7 +342,7 @@ function invalidatePreview() {
   if (img) img.style.display = "none";
   if (placeholder) {
     placeholder.style.display = "block";
-    placeholder.textContent = previewState === "stale" ? "設定已變更，請重新產生 Preview。" : "產生 Preview 後檢查結果。";
+    placeholder.textContent = previewState === "stale" ? t("augmentation.message.previewStale") : t("augmentation.previewPlaceholder");
   }
   renderAugmentationPage(appState.currentProject ? getStatusFromProject() : { hasProject: false });
 }
@@ -414,12 +361,12 @@ function resetPreviewUI() {
   if (beforeCanvas) beforeCanvas.style.display = "none";
   if (beforePlaceholder) {
     beforePlaceholder.style.display = "block";
-    beforePlaceholder.textContent = "請選擇已標註的 Train 圖片。";
+    beforePlaceholder.textContent = t("augmentation.beforePlaceholder");
   }
   if (img) img.style.display = "none";
   if (placeholder) {
     placeholder.style.display = "block";
-    placeholder.textContent = "產生 Preview 後檢查結果。";
+    placeholder.textContent = t("augmentation.previewPlaceholder");
   }
 }
 
@@ -541,8 +488,8 @@ function applyAugmentationPreset(presetName) {
 
 function renderPresetDetails(presetName) {
   const meta = PRESET_META[presetName] || PRESET_META.clear_day;
-  setText("#aug-preset-purpose", meta.purpose);
-  setText("#aug-preset-params", meta.params);
+  setText("#aug-preset-purpose", t(`augmentation.presetPurpose.${presetName}`));
+  setText("#aug-preset-params", t(`augmentation.presetParams.${presetName}`));
   setText("#aug-preset-risk", meta.risk);
 }
 
@@ -707,15 +654,15 @@ function renderAugmentationJobHistory() {
   if (!list) return;
 
   if (!appState.currentProjectId) {
-    list.innerHTML = `<div class="empty-state">尚未開啟專案。</div>`;
+    list.innerHTML = `<div class="empty-state">${escapeHtml(t("common.noProjectOpened"))}</div>`;
     return;
   }
   if (augmentationJobsLoading) {
-    list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> 正在讀取擴充紀錄...</div>`;
+    list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t("augmentation.job.loading"))}</div>`;
     return;
   }
   if (!augmentationJobs.length) {
-    list.innerHTML = `<div class="empty-state">尚無擴充紀錄。套用到 Train Split 後會顯示在這裡。</div>`;
+    list.innerHTML = `<div class="empty-state">${escapeHtml(t("augmentation.job.empty"))}</div>`;
     return;
   }
 

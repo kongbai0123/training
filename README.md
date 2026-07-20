@@ -47,7 +47,7 @@ Vision Training Studio 專注於通用模型訓練流程：
 | 資料 | 圖片、ZIP、影片影格 | CSV、CSV ZIP、本機序列檔 |
 | 資料設定 | 類別、LabelMe、標註匯入、自動標註 | 時間欄、序列 ID、特徵、目標、任務類型 |
 | 資料驗證 | 缺圖、缺標註、未知類別、分布與洩漏風險 | 缺失值、型別、序列長度、目標分布與資料洩漏 |
-| 模型 | YOLO、RT-DETR、自訂 YOLO | LSTM、GRU、BiLSTM、XGBoost |
+| 模型 | YOLO、RT-DETR、D-FINE、TorchVision 分類／偵測／分割模型、自訂 YOLO | LSTM、GRU、BiLSTM、XGBoost |
 | 評估 | mAP、Precision、Recall、混淆矩陣、訓練曲線 | Accuracy、Macro-F1、MAE、RMSE、混淆矩陣、殘差診斷 |
 | 比較 | 不同模型與同模型不同 run | 不同架構與同架構不同 run |
 | 匯出 | PT、ONNX、Markdown 報告 | Model Package、Schema、Scaler、Inference Contract、報告 |
@@ -56,9 +56,14 @@ Vision Training Studio 專注於通用模型訓練流程：
 
 - **YOLOv8、YOLO11、YOLO26**：Detection 與 Segmentation 均提供 `n/s/m/l/x` 官方權重選項。
 - **RT-DETR-L/X**：Detection 的訓練、評估、推論與 ONNX 匯出已接入既有 run 生命週期。
+- **圖片分類**：ResNet18、MobileNetV3 Large、EfficientNet-B0，可使用資料夾類別匯入並訓練。
+- **物件偵測**：D-FINE Small、Faster R-CNN、FCOS，可安裝官方預訓練權重並訓練。
+- **實例分割**：Mask R-CNN；每個物件保留獨立遮罩，可分別辨識與計數。
+- **語意分割**：DeepLabV3 與內建 U-Net；將畫面像素分類成區域，不區分同類個體。
 - **RF-DETR**：在模型中心提供官方 benchmark 與選型資訊；Windows 打包與完整依賴驗證尚未通過，因此不開放執行。
-- **D-FINE、Faster R-CNN、Mask R-CNN**：列入研究閘門，未通過驗收前不宣稱可訓練。
 - **RNN/XGBoost**：內建 LSTM、GRU、BiLSTM 與 XGBoost 訓練範本。
+
+訓練頁的模型清單依「圖片分類、物件偵測、物件輪廓分割、畫面區域分割」分組。ByteTrack 與 BoT-SORT 是影片推論時搭配偵測器使用的追蹤器，不是可獨立訓練的辨識模型，因此不會混入訓練模型清單。
 
 詳細能力、授權與驗收狀態請參閱 [模型支援矩陣](docs/MODEL_SUPPORT.md)。
 

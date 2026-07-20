@@ -42,9 +42,11 @@ class TrainingStartServiceTests(unittest.TestCase):
             "batch_size": 2,
             "imgsz": 320,
             "lr0": 0.01,
+            "lr0_mode": "custom",
             "device": "cpu",
             "patience": 5,
             "workers": 1,
+            "workers_mode": "custom",
             "cache": False,
             "amp": True,
             "seed": 42,
@@ -74,6 +76,8 @@ class TrainingStartServiceTests(unittest.TestCase):
         self.assertEqual(self.project["training_config"]["backend"], "fake_start")
         self.assertEqual(self.project["training_config"]["gradient_clip_norm"], 1.0)
         self.assertEqual(self.project["training_config"]["early_stopping_patience"], 7)
+        self.assertEqual(self.project["training_config"]["lr0_mode"], "custom")
+        self.assertEqual(self.project["training_config"]["workers_mode"], "custom")
         fake.validate_readiness.assert_called_once()
         fake.start_training.assert_called_once_with(self.project)
         save_project.assert_called_once()

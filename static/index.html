@@ -77,36 +77,36 @@
         </div>
         <nav class="sidebar-nav" aria-label="Main navigation" data-i18n-aria-label="shell.mainNavigation">
           <div class="training-shared-nav">
-            <button class="sidebar-item active" data-mode-nav="overview"><i class="fa-solid fa-grid-2"></i><span>總覽</span></button>
-            <button class="sidebar-item" data-page="history" data-mode-nav="history"><i class="fa-solid fa-clock"></i><span>歷史紀錄</span></button>
-            <button class="sidebar-item" data-page="settings" data-mode-nav="settings"><i class="fa-solid fa-gear"></i><span>設定</span></button>
+            <button class="sidebar-item active" data-mode-nav="overview"><i class="fa-solid fa-grid-2"></i><span data-i18n="shell.nav.overview">總覽</span></button>
+            <button class="sidebar-item" data-page="history" data-mode-nav="history"><i class="fa-solid fa-clock"></i><span data-i18n="shell.nav.history">歷史紀錄</span></button>
+            <button class="sidebar-item" data-page="settings" data-mode-nav="settings"><i class="fa-solid fa-gear"></i><span data-i18n="shell.nav.settings">設定</span></button>
             <button class="sidebar-item" data-page="model-guide"><i class="fa-solid fa-book-open"></i><span data-i18n="modelGuide.nav">模型指南</span></button>
           </div>
 
           <div class="training-sidebar-divider"></div>
 
           <div id="cnn-mode-nav" class="training-mode-nav">
-            <button class="sidebar-item" data-page="dataset" data-cnn-nav="dataset"><i class="fa-solid fa-images"></i><span>資料集</span></button>
-            <button class="sidebar-item" data-page="labelme" data-cnn-nav="labelme"><i class="fa-solid fa-pen-nib"></i><span>LabelMe</span></button>
-            <button class="sidebar-item" data-page="split" data-cnn-nav="split"><i class="fa-solid fa-code-branch"></i><span>資料分散</span></button>
-            <button class="sidebar-item" data-page="augmentation" data-cnn-nav="augmentation"><i class="fa-solid fa-wand-magic-sparkles"></i><span>物理擴充</span></button>
-            <button class="sidebar-item" data-page="training" data-cnn-nav="training"><i class="fa-solid fa-microchip"></i><span>模型訓練</span></button>
-            <button class="sidebar-item" data-page="evaluation" data-cnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>評估</span></button>
-            <button class="sidebar-item" data-page="inference" data-cnn-nav="inference"><i class="fa-solid fa-magnifying-glass-chart"></i><span>模型測試</span></button>
-            <button class="sidebar-item" data-page="model-compare" data-cnn-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span>模型比較</span></button>
-            <button class="sidebar-item" data-page="auto-labeling" data-cnn-nav="auto-labeling"><i class="fa-solid fa-wand-sparkles"></i><span>自動標註</span></button>
-            <button class="sidebar-item" data-page="export" data-cnn-nav="export"><i class="fa-solid fa-file-export"></i><span>匯出</span></button>
+            <button class="sidebar-item" data-page="dataset" data-cnn-nav="dataset"><i class="fa-solid fa-images"></i><span data-i18n="shell.nav.dataset">資料集</span></button>
+            <button class="sidebar-item" data-page="labelme" data-cnn-nav="labelme"><i class="fa-solid fa-pen-nib"></i><span data-i18n="shell.nav.labelme">LabelMe</span></button>
+            <button class="sidebar-item" data-page="split" data-cnn-nav="split"><i class="fa-solid fa-code-branch"></i><span data-i18n="shell.nav.split">資料分割</span></button>
+            <button class="sidebar-item" data-page="augmentation" data-cnn-nav="augmentation"><i class="fa-solid fa-wand-magic-sparkles"></i><span data-i18n="shell.nav.augmentation">資料增強</span></button>
+            <button class="sidebar-item" data-page="training" data-cnn-nav="training"><i class="fa-solid fa-microchip"></i><span data-i18n="shell.nav.training">模型訓練</span></button>
+            <button class="sidebar-item" data-page="evaluation" data-cnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span data-i18n="shell.nav.evaluation">評估</span></button>
+            <button class="sidebar-item" data-page="inference" data-cnn-nav="inference"><i class="fa-solid fa-magnifying-glass-chart"></i><span data-i18n="shell.nav.inference">模型測試</span></button>
+            <button class="sidebar-item" data-page="model-compare" data-cnn-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span data-i18n="shell.nav.compare">模型比較</span></button>
+            <button class="sidebar-item" data-page="auto-labeling" data-cnn-nav="auto-labeling"><i class="fa-solid fa-wand-sparkles"></i><span data-i18n="shell.nav.autoLabel">自動標註</span></button>
+            <button class="sidebar-item" data-page="export" data-cnn-nav="export"><i class="fa-solid fa-file-export"></i><span data-i18n="shell.nav.export">匯出</span></button>
           </div>
 
           <div id="rnn-mode-nav" class="training-mode-nav hidden">
-            <button class="sidebar-item active" data-rnn-nav="sequence-dataset"><i class="fa-solid fa-table-list"></i><span>序列資料集</span></button>
-            <button class="sidebar-item" data-rnn-nav="features-labels"><i class="fa-solid fa-tag"></i><span>特徵與標籤</span></button>
-            <button class="sidebar-item" data-rnn-nav="windowing"><i class="fa-solid fa-crop-simple"></i><span>序列切片</span></button>
-            <button class="sidebar-item" data-rnn-nav="training"><i class="fa-solid fa-sliders"></i><span>模型訓練</span></button>
-            <button class="sidebar-item" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span>評估</span></button>
-            <button class="sidebar-item" data-rnn-nav="sequence-test"><i class="fa-regular fa-circle-play"></i><span>序列測試</span></button>
-            <button class="sidebar-item" data-rnn-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span>模型比較</span></button>
-            <button class="sidebar-item" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i><span>匯出</span></button>
+            <button class="sidebar-item active" data-rnn-nav="sequence-dataset"><i class="fa-solid fa-table-list"></i><span data-i18n="shell.nav.sequenceDataset">序列資料集</span></button>
+            <button class="sidebar-item" data-rnn-nav="features-labels"><i class="fa-solid fa-tag"></i><span data-i18n="shell.nav.featuresLabels">特徵與標籤</span></button>
+            <button class="sidebar-item" data-rnn-nav="windowing"><i class="fa-solid fa-crop-simple"></i><span data-i18n="shell.nav.windowing">序列切片</span></button>
+            <button class="sidebar-item" data-rnn-nav="training"><i class="fa-solid fa-sliders"></i><span data-i18n="shell.nav.training">模型訓練</span></button>
+            <button class="sidebar-item" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span data-i18n="shell.nav.evaluation">評估</span></button>
+            <button class="sidebar-item" data-rnn-nav="sequence-test"><i class="fa-regular fa-circle-play"></i><span data-i18n="shell.nav.sequenceTest">序列測試</span></button>
+            <button class="sidebar-item" data-rnn-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span data-i18n="shell.nav.compare">模型比較</span></button>
+            <button class="sidebar-item" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i><span data-i18n="shell.nav.export">匯出</span></button>
           </div>
         </nav>
       </aside>
@@ -759,20 +759,20 @@
                     <h2 data-i18n="augmentation.policyTitle">策略設定</h2>
                   </div>
                   <div class="preset-list compact" aria-label="Recommended augmentation presets" data-i18n-aria-label="augmentation.presetAria">
-                    <button type="button" class="preset-item active" data-aug-preset="clear_day"><strong><i class="fa-regular fa-sun"></i>晴天基準</strong><span>少量亮度與對比變化。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="low_light"><strong><i class="fa-regular fa-moon"></i>低光場景</strong><span>夜間、陰影、低照度。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="rainy"><strong><i class="fa-solid fa-cloud-rain"></i>雨天路面</strong><span>濕潤與雨天變化。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="foggy"><strong><i class="fa-solid fa-smog"></i>霧氣 / 霧霾</strong><span>低能見度與霧化。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="motion_camera"><strong><i class="fa-solid fa-camera"></i>移動鏡頭</strong><span>車載影像與相機晃動。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="strong_shadow"><strong><i class="fa-solid fa-circle-half-stroke"></i>強陰影</strong><span>樹影與局部暗部。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="wet_reflection"><strong><i class="fa-solid fa-droplet"></i>濕地反光</strong><span>濕面反射與眩光。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="night_road"><strong><i class="fa-solid fa-road"></i>夜間道路</strong><span>夜間低光與高雜訊。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="suburban_mix"><strong><i class="fa-solid fa-house"></i>郊區混合</strong><span>郊區道路混合條件。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="forest_road"><strong><i class="fa-solid fa-tree"></i>森林道路</strong><span>樹蔭與斑駁光影。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="generalization"><strong><i class="fa-solid fa-shield-halved"></i>通用泛化</strong><span>平衡各種環境變化。</span></button>
+                    <button type="button" class="preset-item active" data-aug-preset="clear_day"><strong><i class="fa-regular fa-sun"></i><span data-i18n="augmentation.preset.clearDay">晴天基準</span></strong><span data-i18n="augmentation.preset.clearDayHelp">少量亮度與對比變化。</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="low_light"><strong><i class="fa-regular fa-moon"></i><span data-i18n="augmentation.preset.lowLight">低光場景</span></strong><span data-i18n="augmentation.preset.lowLightHelp">夜間、陰影、低照度。</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="rainy"><strong><i class="fa-solid fa-cloud-rain"></i><span data-i18n="augmentation.preset.rainy">雨天路面</span></strong><span data-i18n="augmentation.preset.rainyHelp">濕潤與雨天變化。</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="foggy"><strong><i class="fa-solid fa-smog"></i><span data-i18n="augmentation.preset.foggy">霧氣 / 霧霾</span></strong><span data-i18n="augmentation.preset.foggyHelp">低能見度與霧化。</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="motion_camera"><strong><i class="fa-solid fa-camera"></i><span data-i18n="augmentation.preset.motion">移動鏡頭</span></strong><span data-i18n="augmentation.preset.motionHelp">車載影像與相機晃動。</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="strong_shadow"><strong><i class="fa-solid fa-circle-half-stroke"></i><span data-i18n="augmentation.preset.strongShadow">強陰影</span></strong><span data-i18n="augmentation.preset.strongShadowHelp">樹影與局部暗部。</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="wet_reflection"><strong><i class="fa-solid fa-droplet"></i><span data-i18n="augmentation.preset.wetReflection">濕地反光</span></strong><span data-i18n="augmentation.preset.wetReflectionHelp">濕面反射與眩光。</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="night_road"><strong><i class="fa-solid fa-road"></i><span data-i18n="augmentation.preset.nightRoad">夜間道路</span></strong><span data-i18n="augmentation.preset.nightRoadHelp">夜間低光與高雜訊。</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="suburban_mix"><strong><i class="fa-solid fa-house"></i><span data-i18n="augmentation.preset.suburbanMix">郊區混合</span></strong><span data-i18n="augmentation.preset.suburbanMixHelp">郊區道路混合條件。</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="forest_road"><strong><i class="fa-solid fa-tree"></i><span data-i18n="augmentation.preset.forestRoad">森林道路</span></strong><span data-i18n="augmentation.preset.forestRoadHelp">樹蔭與斑駁光影。</span></button>
+                    <button type="button" class="preset-item" data-aug-preset="generalization"><strong><i class="fa-solid fa-shield-halved"></i><span data-i18n="augmentation.preset.generalization">通用泛化</span></strong><span data-i18n="augmentation.preset.generalizationHelp">平衡各種環境變化。</span></button>
                   </div>
                   <div class="aug-preset-detail" id="aug-preset-detail">
-                    <strong>策略說明</strong>
+                    <strong data-i18n="augmentation.presetDetails">策略說明</strong>
                     <div><span data-i18n="augmentation.purpose">用途</span><p id="aug-preset-purpose">建立低風險晴天基準，微調亮度與對比。</p></div>
                     <div><span data-i18n="augmentation.affectedParameters">影響參數</span><p id="aug-preset-params">亮度、對比</p></div>
                     <div><span>Risk level</span><p id="aug-preset-risk">Low</p></div>
@@ -780,26 +780,26 @@
                 </section>
 
                 <section class="panel-section" id="aug-settings-panel">
-                  <div class="section-title compact"><h2>自訂策略 / Custom Settings</h2></div>
+                  <div class="section-title compact"><h2 data-i18n="augmentation.customPolicy">自訂策略</h2></div>
                   <div class="custom-settings-list grouped">
                     <details class="aug-setting-group" data-aug-group="light" open>
-                      <summary>光照</summary>
-                      <div class="custom-setting-item slider-item" data-aug-setting="brightness"><div class="slider-header"><span><strong>亮度</strong><small>調整影像亮度 (-0.50 到 0.50)</small></span><span class="slider-value" id="val-brightness">0.00</span></div><input type="range" id="aug-light-brightness" min="-0.5" max="0.5" step="0.05" value="0"></div>
-                      <div class="custom-setting-item slider-item" data-aug-setting="contrast"><div class="slider-header"><span><strong>對比</strong><small>調整影像對比 (-0.50 到 0.50)</small></span><span class="slider-value" id="val-contrast">0.00</span></div><input type="range" id="aug-light-contrast" min="-0.5" max="0.5" step="0.05" value="0"></div>
-                      <div class="custom-setting-item switch-container" data-aug-setting="shadow"><span><strong>陰影</strong><small>加入隨機陰影效果</small></span><label class="switch"><input type="checkbox" id="aug-light-shadow"><span class="switch-slider"></span></label></div>
+                      <summary data-i18n="augmentation.photometric">光照</summary>
+                      <div class="custom-setting-item slider-item" data-aug-setting="brightness"><div class="slider-header"><span><strong data-i18n="augmentation.brightness">亮度</strong><small data-i18n="augmentation.brightnessHelp">調整影像亮度 (-0.50 到 0.50)</small></span><span class="slider-value" id="val-brightness">0.00</span></div><input type="range" id="aug-light-brightness" min="-0.5" max="0.5" step="0.05" value="0"></div>
+                      <div class="custom-setting-item slider-item" data-aug-setting="contrast"><div class="slider-header"><span><strong data-i18n="augmentation.contrast">對比</strong><small data-i18n="augmentation.contrastHelp">調整影像對比 (-0.50 到 0.50)</small></span><span class="slider-value" id="val-contrast">0.00</span></div><input type="range" id="aug-light-contrast" min="-0.5" max="0.5" step="0.05" value="0"></div>
+                      <div class="custom-setting-item switch-container" data-aug-setting="shadow"><span><strong data-i18n="augmentation.shadow">陰影</strong><small data-i18n="augmentation.shadowHelp">加入隨機陰影效果</small></span><label class="switch"><input type="checkbox" id="aug-light-shadow"><span class="switch-slider"></span></label></div>
                     </details>
                     <details class="aug-setting-group" data-aug-group="weather">
-                      <summary>天氣 / 相機</summary>
-                      <div class="custom-setting-item slider-item" data-aug-setting="rain"><div class="slider-header"><span><strong>雨天</strong><small>模擬雨滴與濕潤視覺 (0.00 到 1.00)</small></span><span class="slider-value" id="val-rain">0.00</span></div><input type="range" id="aug-weather-rain" min="0.0" max="1.0" step="0.05" value="0"></div>
-                      <div class="custom-setting-item slider-item" data-aug-setting="fog"><div class="slider-header"><span><strong>霧氣</strong><small>模擬霧化與低對比 (0.00 到 1.00)</small></span><span class="slider-value" id="val-fog">0.00</span></div><input type="range" id="aug-weather-fog" min="0.0" max="1.0" step="0.05" value="0"></div>
-                      <div class="custom-setting-item slider-item" data-aug-setting="motion"><div class="slider-header"><span><strong>運動模糊</strong><small>模擬移動鏡頭模糊 (0.00 到 1.00)</small></span><span class="slider-value" id="val-motion-blur">0.00</span></div><input type="range" id="aug-motion-blur" min="0.0" max="1.0" step="0.05" value="0"></div>
-                      <div class="custom-setting-item slider-item" data-aug-setting="noise"><div class="slider-header"><span><strong>相機雜訊</strong><small>加入高斯相機雜訊 (0.00 到 1.00)</small></span><span class="slider-value" id="val-camera-noise">0.00</span></div><input type="range" id="aug-camera-noise" min="0.0" max="1.0" step="0.01" value="0"></div>
+                      <summary data-i18n="augmentation.weatherCamera">天氣 / 相機</summary>
+                      <div class="custom-setting-item slider-item" data-aug-setting="rain"><div class="slider-header"><span><strong data-i18n="augmentation.rain">雨天</strong><small data-i18n="augmentation.rainHelp">模擬雨滴與濕潤視覺 (0.00 到 1.00)</small></span><span class="slider-value" id="val-rain">0.00</span></div><input type="range" id="aug-weather-rain" min="0.0" max="1.0" step="0.05" value="0"></div>
+                      <div class="custom-setting-item slider-item" data-aug-setting="fog"><div class="slider-header"><span><strong data-i18n="augmentation.fog">霧氣</strong><small data-i18n="augmentation.fogHelp">模擬霧化與低對比 (0.00 到 1.00)</small></span><span class="slider-value" id="val-fog">0.00</span></div><input type="range" id="aug-weather-fog" min="0.0" max="1.0" step="0.05" value="0"></div>
+                      <div class="custom-setting-item slider-item" data-aug-setting="motion"><div class="slider-header"><span><strong data-i18n="augmentation.motionBlur">運動模糊</strong><small data-i18n="augmentation.motionBlurHelp">模擬移動鏡頭模糊 (0.00 到 1.00)</small></span><span class="slider-value" id="val-motion-blur">0.00</span></div><input type="range" id="aug-motion-blur" min="0.0" max="1.0" step="0.05" value="0"></div>
+                      <div class="custom-setting-item slider-item" data-aug-setting="noise"><div class="slider-header"><span><strong data-i18n="augmentation.cameraNoise">相機雜訊</strong><small data-i18n="augmentation.cameraNoiseHelp">加入高斯相機雜訊 (0.00 到 1.00)</small></span><span class="slider-value" id="val-camera-noise">0.00</span></div><input type="range" id="aug-camera-noise" min="0.0" max="1.0" step="0.01" value="0"></div>
                     </details>
                     <details class="aug-setting-group" data-aug-group="geometry">
-                      <summary>幾何</summary>
+                      <summary data-i18n="augmentation.geometry">幾何</summary>
                       <div class="custom-setting-item slider-item is-disabled" data-aug-setting="perspective"><div class="slider-header"><span><strong data-i18n="augmentation.perspective">透視變形</strong><small data-i18n="augmentation.perspectiveHelp">Phase 2：需先驗證 polygon / bbox 重映射後啟用</small></span><span class="slider-value" id="val-camera-perspective">0.00</span></div><input type="range" id="aug-camera-perspective" min="0.0" max="0.1" step="0.01" value="0" disabled></div>
                     </details>
-                    <div class="custom-setting-item custom-setting-count"><span><strong>生成倍數</strong><small>每張 Train 圖片產生的擴充副本數</small></span><input type="number" id="aug-multiplier" value="1" min="1" max="5"></div>
+                    <div class="custom-setting-item custom-setting-count"><span><strong data-i18n="augmentation.multiplier">生成倍數</strong><small data-i18n="augmentation.multiplierHelp">每張 Train 圖片產生的擴充副本數</small></span><input type="number" id="aug-multiplier" value="1" min="1" max="5"></div>
                     <div class="aug-output-summary">
                       <span><span data-i18n="augmentation.generatedCopies">Generated copies</span> <strong id="aug-scope-output">+0</strong></span>
                       <span><span data-i18n="augmentation.finalTrainCount">Final train count</span> <strong id="aug-final-count">0 → 0</strong></span>
@@ -810,9 +810,9 @@
 
               <div class="augmentation-preview-column">
                 <section class="panel-section">
-                  <div class="section-title compact"><h2>預覽與驗證 / Preview & Validation</h2></div>
+                  <div class="section-title compact"><h2 data-i18n="augmentation.previewValidation">預覽與驗證</h2></div>
                   <div class="aug-preview-toolbar">
-                    <label class="form-stack"><span>預覽圖片</span><select id="aug-preview-select-img"></select></label>
+                    <label class="form-stack"><span data-i18n="augmentation.previewImage">預覽圖片</span><select id="aug-preview-select-img"></select></label>
                     <div class="aug-overlay-buttons" aria-label="Preview overlay options" data-i18n-aria-label="augmentation.overlayOptionsAria">
                       <button type="button" class="btn btn-secondary btn-sm active" data-aug-overlay="overlay"><i class="fa-regular fa-eye"></i> <span data-i18n="augmentation.overlay">Overlay</span></button>
                       <button type="button" class="btn btn-secondary btn-sm active" data-aug-overlay="mask"><i class="fa-regular fa-square"></i> Mask</button>
@@ -820,18 +820,18 @@
                     </div>
                   </div>
                   <div class="aug-preview-container">
-                    <div class="aug-preview-box"><h4>原圖</h4><div class="aug-preview-content"><canvas id="aug-before-canvas" style="display: none;"></canvas><div class="preview-placeholder" id="aug-before-placeholder">請選擇已標註的 Train 圖片。</div></div></div>
-                    <div class="aug-preview-box"><h4>擴充後</h4><div class="aug-preview-content"><img id="aug-preview-img" alt="Augmentation preview" data-i18n-alt="augmentation.previewAlt" style="display: none;"><div class="preview-placeholder" id="aug-preview-placeholder">產生 Preview 後檢查結果。</div></div></div>
+                    <div class="aug-preview-box"><h4 data-i18n="augmentation.original">原圖</h4><div class="aug-preview-content"><canvas id="aug-before-canvas" style="display: none;"></canvas><div class="preview-placeholder" id="aug-before-placeholder" data-i18n="augmentation.beforePlaceholder">請選擇已標註的 Train 圖片。</div></div></div>
+                    <div class="aug-preview-box"><h4 data-i18n="augmentation.augmented">擴充後</h4><div class="aug-preview-content"><img id="aug-preview-img" alt="Augmentation preview" data-i18n-alt="augmentation.previewAlt" style="display: none;"><div class="preview-placeholder" id="aug-preview-placeholder" data-i18n="augmentation.previewPlaceholder">產生 Preview 後檢查結果。</div></div></div>
                   </div>
-                  <div class="section-title compact"><h2>風險檢查 / Risk Check</h2><span class="summary-badge badge-warning" id="aug-risk-badge">Preview required</span></div>
+                  <div class="section-title compact"><h2 data-i18n="augmentation.riskCheck">風險檢查</h2><span class="summary-badge badge-warning" id="aug-risk-badge">Preview required</span></div>
                   <ul class="aug-risk-list" id="aug-risk-list"></ul>
-                  <div class="aug-apply-row"><button class="btn btn-secondary" type="button" id="btn-reset-aug"><i class="fa-solid fa-rotate-left"></i> 重設</button><button type="button" class="btn btn-secondary" id="btn-preview-aug"><i class="fa-solid fa-eye"></i> 產生預覽</button><button class="btn btn-primary guarded" data-requires="split" id="btn-apply-aug" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> 套用到 Train Split</button></div>
+                  <div class="aug-apply-row"><button class="btn btn-secondary" type="button" id="btn-reset-aug"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="augmentation.reset">重設</span></button><button type="button" class="btn btn-secondary" id="btn-preview-aug"><i class="fa-solid fa-eye"></i> <span data-i18n="augmentation.generatePreview">產生預覽</span></button><button class="btn btn-primary guarded" data-requires="split" id="btn-apply-aug" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="augmentation.applyTrain">套用到 Train Split</span></button></div>
                 </section>
                 <section class="panel-section aug-job-history-card">
                   <div class="section-title compact">
-                    <h2>擴充紀錄 / Job History</h2>
+                    <h2 data-i18n="augmentation.jobHistory">擴充紀錄</h2>
                     <button type="button" class="btn btn-sm btn-secondary" id="btn-refresh-aug-jobs">
-                      <i class="fa-solid fa-rotate"></i> 重新整理
+                      <i class="fa-solid fa-rotate"></i> <span data-i18n="common.refresh">重新整理</span>
                     </button>
                   </div>
                   <div class="aug-job-history-list" id="aug-job-history-list">
@@ -925,17 +925,7 @@
               <div class="training-config-header">
                 <div class="training-config-heading">
                   <h2 data-i18n="training.config.title">Training Configuration</h2>
-                  <p data-i18n="training.config.subtitle">Choose the model and core resources first. Open advanced tuning only when the baseline needs adjustment.</p>
-                </div>
-                <div class="config-tabs-nav" role="tablist" aria-label="Training configuration level" data-i18n-aria-label="training.tab.aria">
-                  <button type="button" class="config-mode-button active" id="tab-config-simple" role="tab" aria-selected="true">
-                    <strong data-i18n="training.tab.simple">Simple</strong>
-                    <small data-i18n="training.tab.simpleHelp">Core settings</small>
-                  </button>
-                  <button type="button" class="config-mode-button" id="tab-config-advanced" role="tab" aria-selected="false">
-                    <strong data-i18n="training.tab.advanced">Advanced</strong>
-                    <small data-i18n="training.tab.advancedHelp">Fine tuning</small>
-                  </button>
+                  <p data-i18n="training.config.subtitle">Choose a model, configure training parameters, and review advanced settings and model details in one workspace.</p>
                 </div>
               </div>
 
@@ -946,180 +936,182 @@
 
               <form id="form-training-config" class="form-stack">
                 <div id="config-simple-fields">
-                  <section class="training-config-group training-identity-group">
-                    <div class="training-config-group-heading">
-                      <div>
-                        <strong data-i18n="training.group.identity">Run and profile</strong>
-                        <span data-i18n="training.group.identityHelp">Name this experiment and choose the intended training balance.</span>
+                  <div class="training-model-registry-shell">
+                    <div class="training-model-workbench">
+                    <section class="training-model-controls">
+                      <div class="training-column-heading">
+                        <strong data-i18n="training.modelSelectionTitle">Model Selection</strong>
+                        <span data-i18n="training.modelSelectionHelp">Choose a task-compatible model, then configure its training parameters below.</span>
                       </div>
-                    </div>
-                    <div class="training-field-grid training-field-grid-2">
-                      <label>
-                        <span data-i18n="training.runName">Run Name</span>
-                        <input type="text" id="train-run-id-input" placeholder="Optional, for example run_YYYYMMDD_HHMMSS" data-i18n-placeholder="training.runNamePlaceholder">
-                      </label>
-                      <label>
-                        <span data-i18n="training.profile">Training Profile</span>
-                        <select id="train-profile">
-                          <option value="balanced" selected data-i18n="training.profileBalanced">Balanced</option>
-                          <option value="quick" data-i18n="training.profileQuick">Quick Test</option>
-                          <option value="accuracy" data-i18n="training.profileAccuracy">High Accuracy</option>
-                          <option value="custom" data-i18n="training.profileCustom">Custom</option>
+                      <label class="training-model-selector">
+                          <span><span data-i18n="training.model">Model</span> <span class="info-icon" data-tooltip="Choose by task; Detection outputs boxes; Instance segmentation outputs a separate mask for each object; Confirm compatibility in the details column before training" data-i18n-tooltip="training.modelTooltip">i</span></span>
+                        <select id="train-model">
+                          <option value="yolov8n-seg.pt" data-i18n="training.modelOption.yolov8nSeg">YOLOv8n Segmentation</option>
+                          <option value="yolov8s-seg.pt" data-i18n="training.modelOption.yolov8sSeg">YOLOv8s Segmentation</option>
+                          <option value="yolov8m-seg.pt" data-i18n="training.modelOption.yolov8mSeg">YOLOv8m Segmentation</option>
+                          <option value="yolov8n.pt" data-i18n="training.modelOption.yolov8nDet">YOLOv8n (Detection only)</option>
+                          <option value="yolov8s.pt" data-i18n="training.modelOption.yolov8sDet">YOLOv8s (Detection only)</option>
                         </select>
                       </label>
-                    </div>
-                    <div class="training-profile-guide" id="training-profile-guide" aria-live="polite"></div>
-                  </section>
-                  <div class="training-model-registry-shell">
-                    <div class="model-registry-header">
-                      <div>
-                        <strong data-i18n="training.modelRegistry.title">Model Registry Preview</strong>
-                        <span data-i18n="training.modelRegistry.subtitle">Catalog-driven model selector. Imported YOLO .pt / .yaml models can be used for CNN/YOLO training.</span>
-                      </div>
-                      <div class="model-registry-actions">
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-open-model-selection-center">
-                          <i class="fa-solid fa-chart-simple"></i> <span data-i18n="modelSelection.open">選擇與比較</span>
+                      <div class="training-model-inline-actions">
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-open-model-selection-center">
+                          <i class="fa-solid fa-chart-simple"></i> <span data-i18n="modelSelection.open">Select and Compare</span>
                         </button>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-training-open-model-hub" data-i18n="training.modelRegistry.openHub">
-                          <i class="fa-solid fa-file-import"></i> 匯入模型
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-training-open-model-hub">
+                          <i class="fa-solid fa-file-import"></i> <span data-i18n="training.modelRegistry.openHub">Import Model</span>
                         </button>
                       </div>
-                    </div>
-                    <label>
-                        <span><span data-i18n="training.model">Model</span> <span class="info-icon" data-tooltip="Model selection guide; Match the project task: Detection finds boxes, Segmentation finds masks; Recommended means the default balance for the current task and hardware; An incompatible model cannot start training" data-i18n-tooltip="training.modelTooltip">i</span></span>
-                      <select id="train-model">
-                        <option value="yolov8n-seg.pt" data-i18n="training.modelOption.yolov8nSeg">YOLOv8n Segmentation (Recommended)</option>
-                        <option value="yolov8s-seg.pt" data-i18n="training.modelOption.yolov8sSeg">YOLOv8s Segmentation</option>
-                        <option value="yolov8m-seg.pt" data-i18n="training.modelOption.yolov8mSeg">YOLOv8m Segmentation</option>
-                        <option value="yolov8n.pt" data-i18n="training.modelOption.yolov8nDet">YOLOv8n (Detection only)</option>
-                        <option value="yolov8s.pt" data-i18n="training.modelOption.yolov8sDet">YOLOv8s (Detection only)</option>
-                      </select>
-                    </label>
-                    <details class="training-model-details">
-                      <summary>
-                        <span data-i18n="training.modelRegistry.selected">Selected</span>
-                        <strong class="no-i18n" id="training-model-selected-name">--</strong>
-                        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-                      </summary>
+                      <section class="training-parameter-card">
+                        <div class="training-config-group-heading">
+                          <div>
+                            <strong data-i18n="training.group.resources">Parameter Settings</strong>
+                            <span data-i18n="training.group.resourcesHelp">Set training duration, memory load, input resolution, and compute device.</span>
+                          </div>
+                        </div>
+                        <div class="training-parameter-list">
+                          <label>
+                            <span data-i18n="training.runName">Run Name</span>
+                            <input type="text" id="train-run-id-input" placeholder="Optional, for example run_YYYYMMDD_HHMMSS" data-i18n-placeholder="training.runNamePlaceholder">
+                          </label>
+                          <label>
+                            <span data-i18n="training.profile">Training Profile</span>
+                            <select id="train-profile">
+                              <option value="balanced" selected data-i18n="training.profileBalanced">Balanced</option>
+                              <option value="quick" data-i18n="training.profileQuick">Quick Test</option>
+                              <option value="accuracy" data-i18n="training.profileAccuracy">High Accuracy</option>
+                              <option value="custom" data-i18n="training.profileCustom">Custom</option>
+                            </select>
+                          </label>
+                          <div class="training-profile-guide" id="training-profile-guide" aria-live="polite"></div>
+                          <label>
+                            <span><span data-i18n="training.epochs">Epochs</span> <span class="info-icon" data-tooltip="Training duration; One epoch means the model has seen the full training set once; Too few epochs may underfit; Too many epochs may overfit" data-i18n-tooltip="training.epochsTooltip">i</span></span>
+                            <input type="number" id="train-epochs" value="50" min="5" max="300">
+                          </label>
+                          <label>
+                            <span><span data-i18n="training.batch">Batch Size</span> <span class="info-icon" data-tooltip="Images processed per step; Larger values use more VRAM; Reduce this first if GPU memory is insufficient" data-i18n-tooltip="training.batchTooltip">i</span></span>
+                            <select id="train-batch">
+                              <option value="2">2</option>
+                              <option value="4">4</option>
+                              <option value="8" selected>8</option>
+                              <option value="16">16</option>
+                              <option value="32">32</option>
+                            </select>
+                          </label>
+                          <label>
+                            <span><span data-i18n="training.imgsz">Image Size</span> <span class="info-icon" data-tooltip="Training input resolution; Larger sizes retain more detail; Larger sizes also increase VRAM use and training time" data-i18n-tooltip="training.imgszTooltip">i</span></span>
+                            <select id="train-imgsz">
+                              <option value="320">320</option>
+                              <option value="512">512</option>
+                              <option value="640" selected>640</option>
+                              <option value="768">768</option>
+                              <option value="960">960</option>
+                            </select>
+                          </label>
+                          <label>
+                            <span><span data-i18n="training.device">Hardware Device</span> <span class="info-icon" data-tooltip="Training compute device; GPU (CUDA) is faster when available; CPU mode is compatible but usually much slower" data-i18n-tooltip="training.deviceTooltip">i</span></span>
+                            <select id="train-device">
+                              <option value="gpu">GPU (CUDA)</option>
+                              <option value="cpu">CPU</option>
+                            </select>
+                          </label>
+                        </div>
+                      </section>
+                    </section>
+                    <section class="training-advanced-column" id="config-advanced-fields">
+                      <div class="training-column-heading">
+                        <strong data-i18n="training.tab.advanced">Advanced Settings</strong>
+                        <span data-i18n="training.tab.advancedHelp">Fine tuning and runtime strategy are always visible.</span>
+                      </div>
+                      <div class="training-advanced-list">
+                        <label class="training-auto-custom-field">
+                          <span><span data-i18n="training.lr">Learning Rate</span> <span class="info-icon" data-tooltip="Optimizer step size; Auto uses the value calculated for the current training configuration; Custom allows an exact numeric value; A value that is too high may oscillate, while one that is too low may learn slowly" data-i18n-tooltip="training.lrTooltip">i</span></span>
+                          <select id="train-lr-mode">
+                            <option value="auto" selected data-i18n="training.valueMode.auto">Auto (Suggested)</option>
+                            <option value="custom" data-i18n="training.valueMode.custom">Custom value</option>
+                          </select>
+                          <input type="number" id="train-lr0" class="hidden" value="0.01" step="0.0001" min="0.00001" max="1" aria-label="Custom learning rate" data-i18n-aria-label="training.lrCustomAria">
+                          <small id="train-lr-auto-hint" data-i18n="training.lrAutoHint">Current automatic value: 0.01</small>
+                        </label>
+                        <label>
+                          <span><span data-i18n="training.optimizer">Optimizer</span> <span class="info-icon" data-tooltip="Updates model weights; Auto lets the training backend choose; SGD is stable but often slower; Adam and AdamW usually converge faster" data-i18n-tooltip="training.optimizerTooltip">i</span></span>
+                          <select id="train-optimizer">
+                            <option value="auto" selected data-i18n="training.optimizerAuto">Auto</option>
+                            <option value="SGD">SGD</option>
+                            <option value="Adam">Adam</option>
+                            <option value="AdamW">AdamW</option>
+                          </select>
+                        </label>
+                        <div class="training-early-stop-control">
+                          <div class="training-control-title">
+                            <span><span data-i18n="training.earlyStop">Early Stopping</span> <span class="info-icon" data-tooltip="Stops unproductive training; Compares validation quality after each epoch; Stops only after the configured number of consecutive epochs without improvement; Disable it to always run all epochs" data-i18n-tooltip="training.earlyStopTooltip">i</span></span>
+                            <label class="training-inline-toggle"><input type="checkbox" id="train-early-stop-enabled" checked><span data-i18n="training.enabled">Enabled</span></label>
+                          </div>
+                          <label>
+                            <span data-i18n="training.earlyStopRounds">Epochs without improvement</span>
+                            <input type="number" id="train-patience" value="20" min="1" max="300">
+                          </label>
+                          <small id="train-early-stop-summary" data-i18n="training.earlyStopSummary">Stop automatically after 20 consecutive epochs without improvement.</small>
+                        </div>
+                        <label class="training-auto-custom-field">
+                          <span><span data-i18n="training.workers">Data Loading Workers</span> <span class="info-icon" data-tooltip="Prepares training data in the background; Auto chooses a safe value for the current environment; More workers may keep the GPU supplied with data; Too many workers consume additional CPU and memory" data-i18n-tooltip="training.workersTooltip">i</span></span>
+                          <select id="train-workers-mode">
+                            <option value="auto" selected data-i18n="training.valueMode.auto">Auto (Suggested)</option>
+                            <option value="custom" data-i18n="training.valueMode.custom">Custom value</option>
+                          </select>
+                          <input type="number" id="train-workers" class="hidden" value="4" min="0" max="32" aria-label="Custom data loading workers" data-i18n-aria-label="training.workersCustomAria">
+                          <small id="train-workers-auto-hint" data-i18n="training.workersAutoHint">Current automatic value: 4</small>
+                        </label>
+                        <div class="training-secondary-advanced-grid">
+                          <label>
+                            <span><span data-i18n="training.seed">Seed</span> <span class="info-icon" data-tooltip="Controls repeatable randomness; The same seed helps reproduce comparable runs; Hardware and some GPU operations may still cause small differences" data-i18n-tooltip="training.seedTooltip">i</span></span>
+                            <input type="number" id="train-seed" value="42">
+                          </label>
+                          <label>
+                            <span><span data-i18n="training.savePeriod">Save Period</span> <span class="info-icon" data-tooltip="Checkpoint interval; Saves recoverable weights every N epochs; Smaller intervals use more disk space; Best and final weights are still retained" data-i18n-tooltip="training.savePeriodTooltip">i</span></span>
+                            <input type="number" id="train-save-period" value="5" min="1">
+                          </label>
+                          <label>
+                            <span><span data-i18n="training.closeMosaic">Close Mosaic Epochs</span> <span class="info-icon" data-tooltip="Late-stage augmentation control; Disables Mosaic during the final N epochs; Helps the model converge on more natural image layouts; Use 0 to keep Mosaic enabled" data-i18n-tooltip="training.closeMosaicTooltip">i</span></span>
+                            <input type="number" id="train-close-mosaic" value="10" min="0">
+                          </label>
+                        </div>
+                        <div class="training-advanced-toggle-grid">
+                          <label class="checkbox-row">
+                            <input type="checkbox" id="train-amp" checked>
+                            <span><span data-i18n="training.amp">AMP (Mixed Precision)</span> <span class="info-icon" data-tooltip="GPU acceleration strategy; Reduces VRAM use; Usually speeds up CUDA training; Disable it if numeric instability appears" data-i18n-tooltip="training.ampTooltip">i</span></span>
+                          </label>
+                          <label class="checkbox-row">
+                            <input type="checkbox" id="train-cache">
+                            <span><span data-i18n="training.cache">Cache Images</span> <span class="info-icon" data-tooltip="Reuses decoded images; Can reduce repeated disk reads; Requires additional memory or disk space; Disable it when system resources are limited" data-i18n-tooltip="training.cacheTooltip">i</span></span>
+                          </label>
+                        </div>
+                      </div>
+                    </section>
+                    <section class="training-model-details" aria-live="polite">
+                      <div class="training-column-heading">
+                        <strong data-i18n="training.modelDetailsTitle">Model Details</strong>
+                        <span data-i18n="training.modelDetailsHelp">Review the selected model's task, source, backend, and usable formats.</span>
+                      </div>
                       <div class="training-model-registry-card" id="training-model-registry-card">
-                        <div class="model-registry-meta-grid">
-                          <div><span data-i18n="training.modelRegistry.source">Source</span><code data-i18n="training.modelRegistry.sourceBuiltIn">Built-in candidate</code></div>
-                          <div><span data-i18n="training.modelRegistry.backend">Backend</span><code>Ultralytics</code></div>
-                          <div><span data-i18n="training.modelRegistry.task">Task</span><code id="training-model-task">--</code></div>
-                          <div><span data-i18n="training.modelRegistry.license">License status</span><code data-i18n="training.modelRegistry.licenseReview">Commercial license review required</code></div>
+                        <div class="training-model-detail-hero">
+                          <strong class="no-i18n" id="training-model-selected-name">--</strong>
+                          <p id="training-model-description">--</p>
+                        </div>
+                        <div class="training-model-spec-list">
+                          <div><span data-i18n="training.modelRegistry.task">Task</span><strong id="training-model-task">--</strong></div>
+                          <div><span data-i18n="training.modelRegistry.architecture">Architecture</span><strong id="training-model-architecture">--</strong></div>
+                          <div><span data-i18n="training.modelRegistry.source">Source</span><strong id="training-model-source">--</strong></div>
+                          <div><span data-i18n="training.modelRegistry.backend">Backend</span><strong id="training-model-backend">--</strong></div>
+                          <div><span data-i18n="training.modelRegistry.trainable">Trainable</span><strong id="training-model-trainable">--</strong></div>
+                          <div><span data-i18n="training.modelRegistry.inference">Inference</span><strong id="training-model-inference">--</strong></div>
+                          <div><span data-i18n="training.modelRegistry.license">License status</span><strong id="training-model-license">--</strong></div>
                         </div>
                         <div class="model-registry-note" id="training-model-compatibility">--</div>
                         <div class="form-hint" data-i18n="training.modelRegistry.hubPending">模型匯入會存放在目前專案的 models/imports 底下，不會放進 exe 或全域資料夾。</div>
-                        <div class="model-import-supported-types">
-                          <span><strong>可訓練</strong> YOLO .pt</span>
-                          <span><strong>架構</strong> YOLO .yaml</span>
-                          <span><strong>推論</strong> ONNX .onnx</span>
-                          <span><strong>預覽</strong> RNN package .zip</span>
-                          <span><strong>檢查</strong> Custom package .zip</span>
-                        </div>
                       </div>
-                    </details>
+                    </section>
+                    </div>
                   </div>
-                  <section class="training-config-group training-resource-group">
-                    <div class="training-config-group-heading">
-                      <div>
-                        <strong data-i18n="training.group.resources">Core resources</strong>
-                        <span data-i18n="training.group.resourcesHelp">Set training duration, memory load, input resolution, and compute device.</span>
-                      </div>
-                    </div>
-                    <div class="training-field-grid training-field-grid-4">
-                      <label>
-                        <span><span data-i18n="training.epochs">Epochs</span> <span class="info-icon" data-tooltip="One epoch means the model has seen the full training dataset once. More epochs can improve learning but can also overfit." data-i18n-tooltip="training.epochsTooltip">i</span></span>
-                        <input type="number" id="train-epochs" value="50" min="5" max="300">
-                      </label>
-                      <label>
-                        <span><span data-i18n="training.batch">Batch Size</span> <span class="info-icon" data-tooltip="Number of images processed at once. Larger batches use more VRAM." data-i18n-tooltip="training.batchTooltip">i</span></span>
-                        <select id="train-batch">
-                          <option value="2">2</option>
-                          <option value="4">4</option>
-                          <option value="8" selected>8</option>
-                          <option value="16">16</option>
-                          <option value="32">32</option>
-                        </select>
-                      </label>
-                      <label>
-                        <span><span data-i18n="training.imgsz">Image Size</span> <span class="info-icon" data-tooltip="Input image size for training. Higher sizes may improve detail but use more memory." data-i18n-tooltip="training.imgszTooltip">i</span></span>
-                        <select id="train-imgsz">
-                          <option value="320">320</option>
-                          <option value="512">512</option>
-                          <option value="640" selected>640</option>
-                          <option value="768">768</option>
-                          <option value="960">960</option>
-                        </select>
-                      </label>
-                      <label>
-                        <span><span data-i18n="training.device">Hardware Device</span> <span class="info-icon" data-tooltip="Use GPU when CUDA is available. CPU training is possible but much slower." data-i18n-tooltip="training.deviceTooltip">i</span></span>
-                        <select id="train-device">
-                          <option value="gpu">GPU (CUDA)</option>
-                          <option value="cpu">CPU</option>
-                        </select>
-                      </label>
-                    </div>
-                  </section>
-                </div>
-
-                <div id="config-advanced-fields" class="hidden">
-                  <section class="training-config-group">
-                    <div class="training-config-group-heading"><div><strong data-i18n="training.group.optimization">Optimization</strong><span data-i18n="training.group.optimizationHelp">Control convergence and early stopping.</span></div></div>
-                    <div class="training-field-grid training-field-grid-3">
-                  <label>
-                    <span><span data-i18n="training.lr">Learning Rate</span> <span class="info-icon" data-tooltip="Initial optimizer learning rate. Keep default unless you know why it should change." data-i18n-tooltip="training.lrTooltip">i</span></span>
-                    <input type="number" id="train-lr0" value="0.01" step="0.001" min="0.0001" max="0.1">
-                  </label>
-                  <label>
-                    <span><span data-i18n="training.optimizer">Optimizer</span> <span class="info-icon" data-tooltip="Optimizer used during training. Auto is recommended for most projects." data-i18n-tooltip="training.optimizerTooltip">i</span></span>
-                    <select id="train-optimizer">
-                      <option value="auto" selected data-i18n="training.optimizerAuto">Auto（Recommended）</option>
-                      <option value="SGD">SGD</option>
-                      <option value="Adam">Adam</option>
-                      <option value="AdamW">AdamW</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span><span data-i18n="training.patience">Patience</span> <span class="info-icon" data-tooltip="Early stopping patience. Training stops if validation quality does not improve for this many epochs." data-i18n-tooltip="training.patienceTooltip">i</span></span>
-                    <input type="number" id="train-patience" value="20" min="0">
-                  </label>
-                    </div>
-                  </section>
-                  <section class="training-config-group">
-                    <div class="training-config-group-heading"><div><strong data-i18n="training.group.runtime">Runtime and reproducibility</strong><span data-i18n="training.group.runtimeHelp">Tune data loading, repeatability, and checkpoint frequency.</span></div></div>
-                    <div class="training-field-grid training-field-grid-3">
-                  <label>
-                    <span><span data-i18n="training.workers">Workers</span> <span class="info-icon" data-tooltip="Number of data loading worker processes. Higher values may speed loading but use more CPU and memory." data-i18n-tooltip="training.workersTooltip">i</span></span>
-                    <input type="number" id="train-workers" value="4" min="0" max="16">
-                  </label>
-                  <label>
-                    <span><span data-i18n="training.seed">Seed</span> <span class="info-icon" data-tooltip="Random seed used to make training more reproducible." data-i18n-tooltip="training.seedTooltip">i</span></span>
-                    <input type="number" id="train-seed" value="42">
-                  </label>
-                  <label>
-                    <span><span data-i18n="training.savePeriod">Save Period</span> <span class="info-icon" data-tooltip="Save a checkpoint every N epochs." data-i18n-tooltip="training.savePeriodTooltip">i</span></span>
-                    <input type="number" id="train-save-period" value="5" min="1">
-                  </label>
-                    </div>
-                  </section>
-                  <section class="training-config-group">
-                    <div class="training-config-group-heading"><div><strong data-i18n="training.group.precision">Precision and data strategy</strong><span data-i18n="training.group.precisionHelp">Adjust late-stage augmentation, mixed precision, and image caching.</span></div></div>
-                    <div class="training-field-grid training-field-grid-3 training-toggle-grid">
-                  <label>
-                    <span><span data-i18n="training.closeMosaic">Close Mosaic Epochs</span> <span class="info-icon" data-tooltip="Disable mosaic augmentation near the end of training to improve convergence." data-i18n-tooltip="training.closeMosaicTooltip">i</span></span>
-                    <input type="number" id="train-close-mosaic" value="10" min="0">
-                  </label>
-                  <label class="checkbox-row">
-                    <input type="checkbox" id="train-amp" checked>
-                    <span><span data-i18n="training.amp">AMP（混合精度）</span> <span class="info-icon" data-tooltip="Mixed precision can reduce VRAM usage and speed up GPU training." data-i18n-tooltip="training.ampTooltip">i</span></span>
-                  </label>
-                  <label class="checkbox-row">
-                    <input type="checkbox" id="train-cache">
-                    <span><span data-i18n="training.cache">快取圖片</span> <span class="info-icon" data-tooltip="Cache images in memory or disk to speed data loading. Requires enough system resources." data-i18n-tooltip="training.cacheTooltip">i</span></span>
-                  </label>
-                    </div>
-                  </section>
                 </div>
 
                 <div id="training-start-blocker" class="training-start-blocker hidden"></div>
@@ -1263,25 +1255,25 @@
                   <div id="rnn-training-flow-guide"></div>
                   <div class="rnn-preview-grid rnn-overview-rows">
                     <section class="rnn-preview-card">
-                      <div class="section-title"><h2>序列資料集摘要</h2><span class="summary-badge badge-warning">CSV gated</span></div>
+                      <div class="section-title"><h2 data-i18n="rnn.overview.datasetSummary">序列資料集摘要</h2><span class="summary-badge badge-warning">CSV gated</span></div>
                       <div class="summary-row"><span data-i18n="rnn.readiness.manifest">Manifest</span><code id="rnn-manifest-status" data-i18n="rnn.readiness.manifestNotConnected">sequence_manifest.json not connected</code></div>
                       <div class="summary-row"><span>Source</span><code id="rnn-source-status">CSV / Feature Sequence planned</code></div>
                       <div class="summary-row"><span>Split</span><code id="rnn-split-status">-- / -- / --</code></div>
                     </section>
                     <section class="rnn-preview-card">
-                      <div class="section-title"><h2>特徵與標籤摘要</h2><span class="summary-badge badge-neutral">Schema only</span></div>
+                      <div class="section-title"><h2 data-i18n="rnn.overview.featureSummary">特徵與標籤摘要</h2><span class="summary-badge badge-neutral">Schema only</span></div>
                       <div class="summary-row"><span data-i18n="rnn.readiness.featureColumns">Feature columns</span><code id="rnn-feature-columns-status" data-i18n="rnn.readiness.notParsed">not parsed</code></div>
                       <div class="summary-row"><span>Target column</span><code id="rnn-target-status">label / target</code></div>
                       <div class="summary-row"><span>Feature dim</span><code id="rnn-feature-dim-status">--</code></div>
                     </section>
                     <section class="rnn-preview-card">
-                      <div class="section-title"><h2>序列切片設定摘要</h2><span class="summary-badge badge-warning">Not Ready</span></div>
+                      <div class="section-title"><h2 data-i18n="rnn.overview.windowSummary">序列切片設定摘要</h2><span class="summary-badge badge-warning">Not Ready</span></div>
                       <div class="summary-row"><span>Sequence length</span><code>16</code></div>
                       <div class="summary-row"><span>Stride</span><code>8</code></div>
                       <div class="summary-row"><span>Horizon</span><code>1</code></div>
                     </section>
                     <section class="rnn-preview-card">
-                      <div class="section-title"><h2>模型設定摘要</h2><span class="summary-badge badge-neutral">pytorch_lstm</span></div>
+                      <div class="section-title"><h2 data-i18n="rnn.overview.modelSummary">模型設定摘要</h2><span class="summary-badge badge-neutral">pytorch_lstm</span></div>
                       <div class="summary-row"><span>Model</span><code>LSTM / GRU / BiLSTM</code></div>
                       <div class="summary-row"><span data-i18n="rnn.readiness.taskHead">Task head</span><code>classification / regression</code></div>
                       <div class="summary-row"><span data-i18n="rnn.readiness">Readiness</span><code id="rnn-readiness-status" data-i18n="rnn.readiness.notReadyPreview">Not Ready / Preview</code></div>
@@ -1291,19 +1283,19 @@
 
                 <div id="rnn-sequence-dataset-panel" class="rnn-panel" data-rnn-panel="sequence-dataset">
                   <section class="rnn-preview-card rnn-sequence-dataset-card">
-                    <div class="section-title"><h2>序列資料集</h2><span class="summary-badge badge-warning" id="rnn-dataset-badge">CSV required</span></div>
-                    <p class="form-hint" id="rnn-sequence-dataset-message">匯入 CSV 或包含 CSV 的 ZIP。第一列必須是欄位名稱，建議包含 sequence_id、timestep、split、feature columns、target。</p>
+                    <div class="section-title"><h2 data-i18n="rnn.dataset.title">序列資料集</h2><span class="summary-badge badge-warning" id="rnn-dataset-badge">CSV required</span></div>
+                    <p class="form-hint" id="rnn-sequence-dataset-message" data-i18n="rnn.dataset.help">匯入 CSV 或包含 CSV 的 ZIP。第一列必須是欄位名稱，建議包含 sequence_id、timestep、split、feature columns、target。</p>
                     <div class="rnn-dataset-layout">
                       <div class="rnn-dataset-import-panel">
                         <div class="rnn-import-dropzone" id="rnn-dataset-dropzone" tabindex="0">
                           <input id="rnn-dataset-file" type="file" accept=".csv,.zip,text/csv,application/zip" class="hidden">
                           <i class="fa-solid fa-file-csv"></i>
-                          <strong>拖入 CSV / ZIP，或點擊選擇檔案</strong>
-                          <span>只支援 CSV feature sequence；不接 video、YOLO feature extraction 或 CNN-LSTM。</span>
+                          <strong data-i18n="rnn.dataset.dropTitle">拖入 CSV / ZIP，或點擊選擇檔案</strong>
+                          <span data-i18n="rnn.dataset.dropHelp">只支援 CSV feature sequence；不接 video、YOLO feature extraction 或 CNN-LSTM。</span>
                         </div>
                         <div class="inline-actions rnn-dataset-actions">
-                          <button type="button" class="btn btn-primary" id="rnn-import-dataset"><i class="fa-solid fa-upload"></i> 匯入序列資料</button>
-                          <button type="button" class="btn btn-secondary" id="rnn-refresh-config"><i class="fa-solid fa-rotate"></i> 重新讀取</button>
+                          <button type="button" class="btn btn-primary" id="rnn-import-dataset"><i class="fa-solid fa-upload"></i> <span data-i18n="rnn.dataset.import">匯入序列資料</span></button>
+                          <button type="button" class="btn btn-secondary" id="rnn-refresh-config"><i class="fa-solid fa-rotate"></i> <span data-i18n="rnn.dataset.reload">重新讀取</span></button>
                         </div>
                       </div>
                       <div class="rnn-dataset-preview-panel">
@@ -1317,7 +1309,7 @@
                 <div id="rnn-features-labels-panel" class="rnn-panel" data-rnn-panel="features-labels">
                   <section class="rnn-preview-card">
                     <div class="section-title">
-                      <h2>RNN CSV 設定 <span class="info-icon" data-tooltip="先決定任務與預測目標，再選擇輸入特徵 X，最後設定時間序列切窗欄位。">i</span></h2>
+                      <h2><span data-i18n="rnn.schemaWizard.title">RNN CSV 設定</span> <span class="info-icon" data-tooltip="先決定任務與預測目標，再選擇輸入特徵 X，最後設定時間序列切窗欄位。" data-i18n-tooltip="rnn.schemaWizard.help">i</span></h2>
                       <span class="summary-badge badge-neutral" id="rnn-config-hash-badge">No config</span>
                     </div>
                     <div class="rnn-schema-wizard-guide" id="rnn-schema-wizard-guide"></div>
@@ -1332,8 +1324,8 @@
                         <div class="rnn-feature-step-header">
                           <span class="rnn-step-index">1</span>
                           <div>
-                            <h3>預測目標 / Y</h3>
-                            <p>先決定模型要預測數值還是類別，再選擇目標欄位。</p>
+                            <h3 data-i18n="rnn.schemaWizard.targetStep">預測目標 / Y</h3>
+                            <p data-i18n="rnn.schemaWizard.targetStepHelp">先決定模型要預測數值還是類別，再選擇目標欄位。</p>
                           </div>
                         </div>
                         <div class="rnn-schema-grid two-col">
@@ -1343,23 +1335,23 @@
                         <div class="rnn-config-recommendation" id="rnn-feature-recommendation">
                           <i class="fa-solid fa-wand-magic-sparkles"></i>
                           <span id="rnn-feature-recommendation-text" data-i18n="rnn.schemaWizard.importForRecommendation">匯入 CSV 後取得任務建議。</span>
-                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-apply-feature-recommendation">套用建議</button>
+                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-apply-feature-recommendation" data-i18n="rnn.schemaWizard.applyRecommendation">套用建議</button>
                         </div>
                       </section>
                       <section class="rnn-feature-step">
                         <div class="rnn-feature-step-header">
                           <span class="rnn-step-index">2</span>
                           <div>
-                            <h3>輸入特徵 / X</h3>
-                            <p>選擇模型可用的輸入欄位；Target 與時間欄位會自動排除，避免資料洩漏。</p>
+                            <h3 data-i18n="rnn.schemaWizard.featureStep">輸入特徵 / X</h3>
+                            <p data-i18n="rnn.schemaWizard.featureStepHelp">選擇模型可用的輸入欄位；Target 與時間欄位會自動排除，避免資料洩漏。</p>
                           </div>
                         </div>
                         <input id="rnn-feature-columns" type="hidden" value="">
                         <input id="rnn-feature-dim" type="hidden" value="0">
                         <div class="inline-actions rnn-feature-actions">
-                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-select-numeric-features">全選數值欄位</button>
+                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-select-numeric-features" data-i18n="rnn.schemaWizard.selectNumeric">全選數值欄位</button>
                           <button type="button" class="btn btn-secondary btn-sm" id="rnn-exclude-target-features" data-i18n="rnn.schemaWizard.excludeTargetTime">排除目標 / 時間欄位</button>
-                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-clear-features">清除</button>
+                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-clear-features" data-i18n="common.clear">清除</button>
                         </div>
                         <div class="rnn-feature-checkbox-list" id="rnn-feature-checkbox-list"></div>
                         <div class="rnn-dataset-quality-report" id="rnn-dataset-quality-report"></div>
@@ -1368,8 +1360,8 @@
                         <div class="rnn-feature-step-header">
                           <span class="rnn-step-index">3</span>
                           <div>
-                            <h3>時間序列設定</h3>
-                            <p>指定排序欄位與序列分組欄位；若沒有 Sequence ID，先以單一連續序列方式理解資料。</p>
+                            <h3 data-i18n="rnn.schemaWizard.timeStep">時間序列設定</h3>
+                            <p data-i18n="rnn.schemaWizard.timeStepHelp">指定排序欄位與序列分組欄位；若沒有 Sequence ID，先以單一連續序列方式理解資料。</p>
                           </div>
                         </div>
                         <div class="rnn-schema-grid two-col">
@@ -1381,7 +1373,7 @@
                     <div class="rnn-chip-list" id="rnn-feature-chip-list"></div>
                     <div class="rnn-config-warning hidden" id="rnn-config-mismatch-warning"></div>
                     <div class="inline-actions">
-                      <button type="button" class="btn btn-primary" id="rnn-save-feature-config"><i class="fa-solid fa-floppy-disk"></i> 儲存 RNN CSV 設定</button>
+                      <button type="button" class="btn btn-primary" id="rnn-save-feature-config"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="rnn.schemaWizard.save">儲存 RNN CSV 設定</span></button>
                     </div>
                   </section>
                 </div>
@@ -1389,13 +1381,13 @@
                 <div id="rnn-windowing-panel" class="rnn-panel" data-rnn-panel="windowing">
                   <section class="rnn-preview-card">
                     <div class="section-title">
-                      <h2>序列切片 <span class="info-icon" data-tooltip="把長時間序列切成模型可訓練的樣本。這些設定會影響樣本數、預測距離與資料重疊程度。">i</span></h2>
+                      <h2><span data-i18n="rnn.window.title">序列切片</span> <span class="info-icon" data-tooltip="把長時間序列切成模型可訓練的樣本。這些設定會影響樣本數、預測距離與資料重疊程度。" data-i18n-tooltip="rnn.window.help">i</span></h2>
                       <span class="summary-badge badge-neutral" id="rnn-window-status-badge">Schema only</span>
                     </div>
                     <div class="rnn-schema-grid">
-                      <label><span>sequence_length <span class="info-icon" data-tooltip="每筆訓練樣本要包含幾個 time steps。數值越大，模型看到的歷史越長，但樣本數會變少。">i</span></span><input id="rnn-sequence-length" type="number" min="1" value="16"></label>
-                      <label><span>stride <span class="info-icon" data-tooltip="切片每次往前滑動幾步。數值越小，樣本越多且重疊越高；數值越大，樣本較少但重複性較低。">i</span></span><input id="rnn-stride" type="number" min="1" value="8"></label>
-                      <label><span>horizon <span class="info-icon" data-tooltip="預測距離。horizon=1 代表預測下一步；數值越大代表預測更遠的未來。">i</span></span><input id="rnn-horizon" type="number" min="1" value="1"></label>
+                      <label><span>sequence_length <span class="info-icon" data-tooltip="每筆訓練樣本要包含幾個 time steps。數值越大，模型看到的歷史越長，但樣本數會變少。" data-i18n-tooltip="rnn.window.sequenceLengthHelp">i</span></span><input id="rnn-sequence-length" type="number" min="1" value="16"></label>
+                      <label><span>stride <span class="info-icon" data-tooltip="切片每次往前滑動幾步。數值越小，樣本越多且重疊越高；數值越大，樣本較少但重複性較低。" data-i18n-tooltip="rnn.window.strideHelp">i</span></span><input id="rnn-stride" type="number" min="1" value="8"></label>
+                      <label><span>horizon <span class="info-icon" data-tooltip="預測距離。horizon=1 代表預測下一步；數值越大代表預測更遠的未來。" data-i18n-tooltip="rnn.window.horizonHelp">i</span></span><input id="rnn-horizon" type="number" min="1" value="1"></label>
                     </div>
                     <div class="rnn-window-summary" id="rnn-window-summary">
                       <div><span data-i18n="rnn.window.estimatedWindows">Estimated windows</span><strong>--</strong></div>
@@ -1403,7 +1395,7 @@
                       <div><span data-i18n="rnn.window.minMaxLength">Min / Max length</span><strong>-- / --</strong></div>
                     </div>
                     <div class="rnn-config-warning hidden" id="rnn-window-warning"></div>
-                    <p class="form-hint">sequence_length 決定每個訓練樣本要看幾個 time steps；stride 決定滑動間隔；horizon 決定預測目標距離。</p>
+                    <p class="form-hint" data-i18n="rnn.window.description">sequence_length 決定每個訓練樣本要看幾個 time steps；stride 決定滑動間隔；horizon 決定預測目標距離。</p>
                   </section>
                 </div>
 
@@ -1508,10 +1500,10 @@
                         <div class="rnn-custom-model-panel">
                           <div>
                             <strong>Package registry</strong>
-                            <span>適合放入外部訓練器、轉換器或自訂推論 adapter；啟用前需通過 package contract 檢查。</span>
+                            <span data-i18n="rnn.training.customImportHint">適合放入外部訓練器、轉換器或自訂推論 adapter；啟用前需通過 package contract 檢查。</span>
                           </div>
                           <button type="button" class="btn btn-secondary btn-sm" id="btn-rnn-import-model-package">
-                            <i class="fa-solid fa-file-arrow-up"></i> 匯入 RNN Package
+                            <i class="fa-solid fa-file-arrow-up"></i> <span data-i18n="rnn.training.customImportAction">匯入 RNN Package</span>
                           </button>
                         </div>
                       </section>
@@ -1532,7 +1524,7 @@
                 <div id="rnn-evaluation-panel" class="rnn-panel" data-rnn-panel="evaluation">
                   <section class="rnn-preview-card">
                     <div class="section-title">
-                      <h2>RNN / XGBoost 評估</h2>
+                      <h2 data-i18n="rnn.evaluation.title">RNN / XGBoost 評估</h2>
                       <span id="rnn-eval-run-badge" class="summary-badge badge-neutral" data-i18n="rnn.evaluation.noRun">No run</span>
                     </div>
                     <div class="metric-grid compact rnn-eval-overview-grid">
@@ -1646,20 +1638,20 @@
 
                 <div id="rnn-sequence-test-panel" class="rnn-panel" data-rnn-panel="sequence-test">
                   <section class="rnn-preview-card">
-                    <div class="section-title"><h2>序列測試</h2><span class="summary-badge badge-neutral">CSV sequence only</span></div>
+                    <div class="section-title"><h2 data-i18n="rnn.inference.title">序列測試</h2><span class="summary-badge badge-neutral">CSV sequence only</span></div>
                     <div class="rnn-sequence-test-layout">
                       <div class="rnn-sequence-test-config">
                         <div class="section-title compact"><h3 data-i18n="rnn.inference.testSettings">測試設定</h3><span class="summary-badge badge-neutral" data-i18n="rnn.inference.input">Input</span></div>
                         <div class="rnn-sequence-config-stack">
                           <div class="rnn-sequence-config-group">
-                            <div class="config-group-title">模型與執行</div>
+                            <div class="config-group-title" data-i18n="rnn.inference.modelExecution">模型與執行</div>
                             <div class="rnn-schema-grid two-col">
                               <label><span>RNN model</span><select id="rnn-inference-model"><option value="">Select RNN model</option></select></label>
                               <label><span data-i18n="training.device">Device</span><select id="rnn-inference-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
                             </div>
                           </div>
                           <div class="rnn-sequence-config-group">
-                            <div class="config-group-title">CSV 輸入</div>
+                            <div class="config-group-title" data-i18n="rnn.inference.csvInput">CSV 輸入</div>
                             <div class="rnn-schema-grid two-col">
                               <label><span>Upload CSV</span><input id="rnn-inference-csv-file" type="file" accept=".csv,text/csv"></label>
                               <label><span>Project CSV path</span><input id="rnn-inference-csv-path" type="text" placeholder="sequences/features.csv" data-i18n-placeholder="rnn.inference.csvPathPlaceholder"></label>
@@ -1674,7 +1666,7 @@
                       </div>
                       <div class="rnn-sequence-test-result">
                         <div class="section-title compact">
-                          <h3>測試結果</h3>
+                          <h3 data-i18n="rnn.inference.testResult">測試結果</h3>
                           <div class="inline-actions compact-actions">
                             <button type="button" class="btn btn-secondary btn-sm" id="rnn-refresh-inference-result" data-i18n="rnn.inference.refreshResult">Refresh Result</button>
                             <span class="summary-badge badge-neutral" data-i18n="rnn.inference.result">Result</span>
@@ -1776,7 +1768,7 @@
             </div>
           </section>
           <section class="panel-section evaluation-plots-card">
-            <div class="section-title"><h2>YOLO 評估圖表</h2></div>
+                  <div class="section-title"><h2 data-i18n="evaluation.yoloPlots">YOLO 評估圖表</h2></div>
             <div id="evaluation-plots-grid" class="evaluation-plots-grid">
               <div class="empty-state" data-i18n="evaluation.empty">尚無評估圖表。完成訓練或評估後，圖表會顯示在這裡。</div>
             </div>
@@ -2297,7 +2289,7 @@
           </div>
           <div class="history-filter-row">
             <div class="history-mode-filter" role="group" aria-label="History category filter" data-i18n-aria-label="history.categoryFilterAria">
-              <button type="button" class="active" data-history-filter="all">全部</button>
+              <button type="button" class="active" data-history-filter="all" data-i18n="common.all">全部</button>
               <button type="button" data-history-filter="cnn">CNN</button>
               <button type="button" data-history-filter="rnn">RNN</button>
             </div>
@@ -2570,6 +2562,12 @@
             <option value="yolo11">YOLO11</option>
             <option value="yolov8">YOLOv8</option>
             <option value="rtdetr">RT-DETR</option>
+            <option value="torchvision_classification">Classification</option>
+            <option value="fasterrcnn">Faster R-CNN</option>
+            <option value="fcos">FCOS</option>
+            <option value="maskrcnn">Mask R-CNN</option>
+            <option value="deeplabv3">DeepLabV3</option>
+            <option value="dfine">D-FINE</option>
             <option value="all" data-i18n="common.all">All</option>
           </select>
         </div>
@@ -2588,8 +2586,10 @@
       </div>
       <div class="model-setup-task-filter" data-onboarding-panel="4" hidden>
         <button type="button" class="active" data-model-task="all" data-i18n="common.all">All</button>
-        <button type="button" data-model-task="detection" data-i18n="modelSetup.detection">Detection</button>
-        <button type="button" data-model-task="segmentation" data-i18n="modelSetup.segmentation">Segmentation</button>
+        <button type="button" data-model-task="image_classification" data-i18n="modelSetup.task.imageClassification">圖片分類</button>
+        <button type="button" data-model-task="object_detection" data-i18n="modelSetup.task.objectDetection">物件偵測</button>
+        <button type="button" data-model-task="instance_segmentation" data-i18n="modelSetup.task.instanceSegmentation">物件輪廓分割</button>
+        <button type="button" data-model-task="semantic_segmentation" data-i18n="modelSetup.task.semanticSegmentation">畫面區域分割</button>
         <button type="button" data-model-task="sequence" data-i18n="modelSetup.sequenceModels">Sequence models</button>
       </div>
       <div class="model-setup-list" id="model-setup-list" data-onboarding-panel="4" hidden></div>
@@ -2632,50 +2632,51 @@
     <div class="modal-content project-create-modal">
       <div class="modal-header">
         <div>
-          <h2>New Project</h2>
-          <p>Create a training project. It will be opened automatically after creation.</p>
+          <h2 data-i18n="project.createTitle">New Project</h2>
+          <p data-i18n="project.createHelp">Create a training project. It will be opened automatically after creation.</p>
         </div>
         <button class="icon-btn" id="btn-close-create-project" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
       </div>
       <form id="form-create-project" class="form-stack modal-form">
         <label>
-          <span>Project name</span>
+          <span data-i18n="project.name">Project name</span>
           <input type="text" id="new-project-name" required placeholder="my_vision_project" data-i18n-placeholder="project.newNamePlaceholder">
         </label>
         <div class="project-type-mode-field">
-          <span>Training mode</span>
+          <span data-i18n="project.trainingMode">Training mode</span>
           <div class="project-type-mode-toggle" role="group" aria-label="Training mode" data-i18n-aria-label="project.trainingModeAria">
             <button type="button" class="active" id="new-project-mode-rnn" data-project-mode="rnn">RNN</button>
             <button type="button" id="new-project-mode-cnn" data-project-mode="cnn">CNN</button>
           </div>
         </div>
         <label>
-          <span>Task type</span>
+          <span data-i18n="project.taskType">Task type</span>
           <select id="new-project-type">
             <option value="object_detection">Object Detection</option>
             <option value="image_classification">Image Classification</option>
+            <option value="instance_segmentation">Instance Segmentation</option>
             <option value="semantic_segmentation">Semantic Segmentation</option>
             <option value="sequence_classification">RNN Sequence Classification</option>
             <option value="sequence_regression">RNN Sequence Regression</option>
           </select>
         </label>
         <label id="new-project-class-field">
-          <span id="new-project-class-label">Class list</span>
+          <span id="new-project-class-label" data-i18n="project.classList">Class list</span>
           <div class="class-entry-row">
             <input type="text" id="new-project-class-input" placeholder="Class names, e.g. class_a, class_b; class_c" data-i18n-placeholder="project.classNamesPlaceholder">
             <button type="button" class="btn btn-secondary" id="btn-add-project-class">
               <i class="fa-solid fa-plus"></i>
-              Add
+              <span data-i18n="common.add">Add</span>
             </button>
           </div>
-          <small class="form-hint" id="new-project-class-hint">CNN projects use this list as detection / segmentation classes.</small>
+          <small class="form-hint" id="new-project-class-hint" data-i18n="project.classListHelp">CNN projects use this list as detection / segmentation classes.</small>
         </label>
         <div class="class-list-box" id="new-project-class-list">
           <div class="empty-class-list">No classes added</div>
         </div>
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="btn-cancel-create-project">Cancel</button>
-          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-folder-plus"></i> Create Project</button>
+          <button type="button" class="btn btn-secondary" id="btn-cancel-create-project" data-i18n="common.cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-folder-plus"></i> <span data-i18n="project.createAction">Create Project</span></button>
         </div>
       </form>
     </div>
@@ -2684,7 +2685,7 @@
   <div class="modal-overlay" id="project-history-modal" hidden>
     <div class="modal-content project-history-modal-content">
       <div class="modal-header">
-        <h2>Browse History</h2>
+        <h2 data-i18n="history.browseTitle">Browse History</h2>
         <button class="icon-btn" id="btn-close-history" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
       </div>
       <div class="history-search-row">
@@ -2693,11 +2694,11 @@
           <input type="search" id="project-history-search" placeholder="Search project name, ID, class, task, path" data-i18n-placeholder="history.searchPlaceholder">
         </div>
         <div class="history-mode-filter" role="group" aria-label="Browse history category filter" data-i18n-aria-label="history.browseCategoryFilterAria">
-          <button type="button" class="active" data-history-filter="all">全部</button>
+          <button type="button" class="active" data-history-filter="all" data-i18n="common.all">全部</button>
           <button type="button" data-history-filter="cnn">CNN</button>
           <button type="button" data-history-filter="rnn">RNN</button>
         </div>
-        <button class="btn btn-secondary btn-sm" id="btn-clear-history-search" type="button">Clear</button>
+        <button class="btn btn-secondary btn-sm" id="btn-clear-history-search" type="button" data-i18n="common.clear">Clear</button>
         <span id="project-history-result-count" class="history-result-count">0 projects</span>
       </div>
       <div class="modal-body project-history-scroll" id="modal-project-list"></div>
@@ -2707,15 +2708,15 @@
   <div class="modal-overlay" id="delete-project-modal" hidden>
     <div class="modal-content confirm-modal">
       <div class="modal-header">
-        <h2>Delete Project</h2>
+        <h2 data-i18n="project.deleteTitle">Delete Project</h2>
         <button class="icon-btn" id="btn-close-delete-project" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
       </div>
-      <p id="delete-project-message">Delete this project? This action cannot be undone.</p>
+      <p id="delete-project-message" data-i18n="project.deleteConfirm">Delete this project? This action cannot be undone.</p>
       <div class="modal-actions">
-        <button class="btn btn-secondary" id="btn-cancel-delete-project">Cancel</button>
+        <button class="btn btn-secondary" id="btn-cancel-delete-project" data-i18n="common.cancel">Cancel</button>
         <button class="btn btn-danger" id="btn-confirm-delete-project">
           <i class="fa-solid fa-trash"></i>
-          Delete
+          <span data-i18n="common.delete">Delete</span>
         </button>
       </div>
     </div>
@@ -2725,8 +2726,8 @@
     <div class="modal-content project-history-modal-content">
       <div class="modal-header">
         <div>
-          <h2>Inference Result</h2>
-          <p>CSV sequence and image inference jobs are read from the active project's inference history.</p>
+          <h2 data-i18n="inference.detailTitle">Inference Result</h2>
+          <p data-i18n="inference.detailHelp">CSV sequence and image inference jobs are read from the active project's inference history.</p>
         </div>
         <button class="icon-btn" id="btn-close-inference-job-detail" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
       </div>
@@ -2751,14 +2752,14 @@
     <div class="modal-content confirm-modal model-import-modal-content">
       <div class="modal-header">
         <div>
-          <h2>Import Model</h2>
-          <p>匯入模型會寫入目前專案範圍；只有 YOLO .pt 會進入 CNN 訓練選單。Custom package 支援 manifest.yaml / model_manifest.json，只做 manifest validation，不執行程式。</p>
+          <h2 data-i18n="modelImport.title">Import Model</h2>
+          <p data-i18n="modelImport.help">匯入模型會寫入目前專案範圍；只有 YOLO .pt 會進入 CNN 訓練選單。Custom package 支援 manifest.yaml / model_manifest.json，只做 manifest validation，不執行程式。</p>
         </div>
         <button class="icon-btn" id="btn-close-model-import-modal" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
       </div>
       <form id="form-import-model" class="form-stack modal-form">
         <label>
-          <span>Import type</span>
+          <span data-i18n="modelImport.type">Import type</span>
           <select id="model-import-type">
             <option value="yolo_pt">YOLO Weight (.pt)</option>
             <option value="yolo_yaml">YOLO Model Architecture (.yaml / .yml)</option>
@@ -2768,11 +2769,11 @@
           </select>
         </label>
         <label>
-          <span>Display name</span>
+          <span data-i18n="modelImport.displayName">Display name</span>
           <input type="text" id="model-import-display-name" placeholder="Custom RoadSeg YOLO" data-i18n-placeholder="modelImport.displayNamePlaceholder">
         </label>
         <label>
-          <span>Task family</span>
+          <span data-i18n="modelImport.taskFamily">Task family</span>
           <select id="model-import-task-family">
             <option value="segmentation">Segmentation</option>
             <option value="detection">Detection</option>
@@ -2785,25 +2786,25 @@
           <input type="file" id="model-import-file" accept=".pt" hidden>
           <div class="model-import-drop-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
           <div>
-            <strong id="model-import-drop-title">拖入 YOLO .pt 模型檔</strong>
-            <p id="model-import-drop-help">點擊選擇或拖曳檔案到此。可接受：.pt</p>
+            <strong id="model-import-drop-title" data-i18n="modelImport.yoloPtTitle">拖入 YOLO .pt 模型檔</strong>
+            <p id="model-import-drop-help" data-i18n="modelImport.yoloPtHelp">點擊選擇或拖曳檔案到此。可接受：.pt</p>
           </div>
-          <code id="model-import-selected-file">尚未選擇檔案</code>
+          <code id="model-import-selected-file" data-i18n="modelImport.noFile">尚未選擇檔案</code>
         </div>
         <div class="model-import-supported-types model-import-modal-types">
-          <span><strong>YOLO .pt</strong> 可作為 CNN/YOLO 訓練起點</span>
-          <span><strong>YOLO .yaml</strong> 僅限模型架構 YAML，不接受 dataset YAML</span>
-          <span><strong>ONNX .onnx</strong> inference-only，不會啟動訓練</span>
-          <span><strong>RNN .zip</strong> 需包含 model.pt、feature_schema、normalization_stats、sequence_config</span>
-          <span><strong>Custom .zip</strong> 必須包含 manifest.yaml、manifest.yml 或 model_manifest.json；本階段只檢查，不執行</span>
+          <span><strong>YOLO .pt</strong> <span data-i18n="modelImport.typeHelp.yoloPt">可作為 CNN/YOLO 訓練起點</span></span>
+          <span><strong>YOLO .yaml</strong> <span data-i18n="modelImport.typeHelp.yoloYaml">僅限模型架構 YAML，不接受 dataset YAML</span></span>
+          <span><strong>ONNX .onnx</strong> <span data-i18n="modelImport.typeHelp.onnx">inference-only，不會啟動訓練</span></span>
+          <span><strong>RNN .zip</strong> <span data-i18n="modelImport.typeHelp.rnn">需包含 model.pt、feature_schema、normalization_stats、sequence_config</span></span>
+          <span><strong>Custom .zip</strong> <span data-i18n="modelImport.typeHelp.custom">必須包含 manifest.yaml、manifest.yml 或 model_manifest.json；本階段只檢查，不執行</span></span>
         </div>
         <div class="status-guard warning">
           <i class="fa-solid fa-shield-halved"></i>
-          <span>Custom package validation does not enable training or inference. Unknown code will not be executed.</span>
+          <span data-i18n="modelImport.safety">Custom package validation does not enable training or inference. Unknown code will not be executed.</span>
         </div>
         <div id="model-import-result" class="form-hint"></div>
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="btn-cancel-model-import">Cancel</button>
+          <button type="button" class="btn btn-secondary" id="btn-cancel-model-import" data-i18n="common.cancel">Cancel</button>
           <button type="submit" class="btn btn-primary" id="btn-submit-model-import">
             <i class="fa-solid fa-file-import"></i> Import YOLO .pt
           </button>
@@ -2816,49 +2817,49 @@
     <div class="modal-content confirm-modal weight-manager-modal-content">
       <div class="modal-header">
         <div>
-          <h2>模型權重管理</h2>
-          <p>管理目前專案訓練產生的 best.pt / last.pt。刪除只會移除 checkpoint 檔案，不會刪除 run history、metrics 或訓練紀錄。</p>
+          <h2 data-i18n="weightManager.title">模型權重管理</h2>
+          <p data-i18n="weightManager.help">管理目前專案訓練產生的 best.pt / last.pt。刪除只會移除 checkpoint 檔案，不會刪除 run history、metrics 或訓練紀錄。</p>
         </div>
         <button class="icon-btn" id="btn-close-weight-manager" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
       </div>
       <div class="weight-manager-toolbar">
         <label>
-          <span>權重類型</span>
+          <span data-i18n="weightManager.type">權重類型</span>
           <select id="weight-manager-filter">
-            <option value="all">全部</option>
+            <option value="all" data-i18n="common.all">全部</option>
             <option value="best">best.pt</option>
             <option value="last">last.pt</option>
           </select>
         </label>
         <label>
-          <span>排序</span>
+          <span data-i18n="weightManager.sort">排序</span>
           <select id="weight-manager-sort">
-            <option value="newest">依 run 日期：新到舊</option>
-            <option value="oldest">依 run 日期：舊到新</option>
+            <option value="newest" data-i18n="weightManager.newest">依 run 日期：新到舊</option>
+            <option value="oldest" data-i18n="weightManager.oldest">依 run 日期：舊到新</option>
           </select>
         </label>
         <div class="weight-manager-toolbar-actions">
           <button type="button" class="btn btn-secondary btn-sm" id="btn-weight-manager-select-old-checkpoints">
-            選取舊 last.pt
+            <span data-i18n="weightManager.selectOldLast">選取舊 last.pt</span>
           </button>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-weight-manager-refresh">
-            <i class="fa-solid fa-rotate"></i> 重新整理
+            <i class="fa-solid fa-rotate"></i> <span data-i18n="common.refresh">重新整理</span>
           </button>
         </div>
       </div>
-      <div id="weight-manager-summary" class="weight-manager-summary">尚未載入權重清單。</div>
+      <div id="weight-manager-summary" class="weight-manager-summary" data-i18n="weightManager.notLoaded">尚未載入權重清單。</div>
       <div id="weight-manager-list" class="weight-manager-list"></div>
       <div class="run-cleanup-panel">
         <div class="run-cleanup-header">
           <div>
-            <h3>測試 Run 清理</h3>
-            <p>列出 run_id 含 smoke / probe / test / workers0 等測試標記的訓練紀錄。刪除會同步移除 run history、weights、metrics 與 artifacts。</p>
+            <h3 data-i18n="weightManager.testRunTitle">測試 Run 清理</h3>
+            <p data-i18n="weightManager.testRunHelp">列出 run_id 含 smoke / probe / test / workers0 等測試標記的訓練紀錄。刪除會同步移除 run history、weights、metrics 與 artifacts。</p>
           </div>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-run-cleanup-refresh">
-            <i class="fa-solid fa-rotate"></i> 掃描測試 Run
+            <i class="fa-solid fa-rotate"></i> <span data-i18n="weightManager.scanTestRuns">掃描測試 Run</span>
           </button>
         </div>
-        <div id="run-cleanup-summary" class="weight-manager-summary">尚未掃描測試 Run。</div>
+        <div id="run-cleanup-summary" class="weight-manager-summary" data-i18n="weightManager.notScanned">尚未掃描測試 Run。</div>
         <div id="run-cleanup-list" class="weight-manager-list"></div>
         <div id="run-cleanup-confirmation" class="status-guard danger weight-manager-confirmation" hidden>
           <i class="fa-solid fa-triangle-exclamation"></i>
@@ -2888,12 +2889,12 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" id="btn-cancel-weight-manager">關閉</button>
+        <button type="button" class="btn btn-secondary" id="btn-cancel-weight-manager" data-i18n="common.close">關閉</button>
         <button type="button" class="btn btn-danger" id="btn-cleanup-selected-runs" disabled>
-          <i class="fa-solid fa-trash"></i> 清理選取測試 Run
+          <i class="fa-solid fa-trash"></i> <span data-i18n="weightManager.cleanupSelectedRuns">清理選取測試 Run</span>
         </button>
         <button type="button" class="btn btn-danger" id="btn-delete-selected-weights" disabled>
-          <i class="fa-solid fa-trash"></i> 刪除選取權重
+          <i class="fa-solid fa-trash"></i> <span data-i18n="weightManager.deleteSelectedWeights">刪除選取權重</span>
         </button>
       </div>
     </div>

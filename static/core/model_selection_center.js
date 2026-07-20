@@ -367,6 +367,9 @@ function localized(value) {
 
 function taskLabel(task) {
   const normalized = String(task || "unknown").toLowerCase();
+  if (normalized.includes("image") && normalized.includes("classif")) return "圖片分類";
+  if (normalized.includes("semantic")) return "語意分割";
+  if (normalized.includes("instance")) return "實例分割";
   if (normalized.includes("seg")) return t("modelSelection.taskLabel.segmentation");
   if (normalized.includes("detect")) return t("modelSelection.taskLabel.detection");
   if (normalized.includes("sequence") && normalized.includes("regression")) return t("modelSelection.taskLabel.sequence_regression");
@@ -380,7 +383,7 @@ function sourceLabel(source) {
 }
 
 function familyLabel(family) {
-  const labels = { yolo26: "YOLO26", yolo11: "YOLO11", yolov8: "YOLOv8", rtdetr: "RT-DETR", "rf-detr": "RF-DETR", lstm: "LSTM", gru: "GRU", bilstm: "BiLSTM", xgboost: "XGBoost" };
+  const labels = { yolo26: "YOLO26", yolo11: "YOLO11", yolov8: "YOLOv8", rtdetr: "RT-DETR", "rf-detr": "RF-DETR", dfine: "D-FINE", fasterrcnn: "Faster R-CNN", fcos: "FCOS", maskrcnn: "Mask R-CNN", deeplabv3: "DeepLabV3", unet: "U-Net", torchvision_classification: "TorchVision Classification", lstm: "LSTM", gru: "GRU", bilstm: "BiLSTM", xgboost: "XGBoost" };
   return labels[family] || family;
 }
 

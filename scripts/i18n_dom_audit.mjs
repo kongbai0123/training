@@ -14,6 +14,7 @@ const lang = args.lang || "zh-TW";
 const failOnIssues = Boolean(args["fail-on-issues"]);
 const auditTargets = parseAuditTargets(args.pages || args.nav || "");
 const englishPattern = /[A-Za-z]{3,}(?:\s+[A-Za-z]{2,})?/;
+const cjkPattern = /[\u3400-\u4DBF\u4E00-\u9FFF]/;
 const mojibakePattern = /[�]|嚗|銝|撠|蝣|閮|隢||||||/;
 
 let chromium;
@@ -29,7 +30,7 @@ try {
 }
 
 const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+const context = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
 await context.addInitScript((nextLang) => {
   localStorage.setItem("vts-language", nextLang);
   localStorage.setItem("vts-model-setup-reviewed", "audit-skip");
@@ -61,6 +62,8 @@ try {
         issues.push({ ...scopedItem, issue: "mojibake" });
       } else if (lang.toLowerCase().startsWith("zh") && englishPattern.test(text) && !allowedEnglish(text)) {
         issues.push({ ...scopedItem, issue: "english_in_zh_mode" });
+      } else if (!lang.toLowerCase().startsWith("zh") && cjkPattern.test(text)) {
+        issues.push({ ...scopedItem, issue: "cjk_in_non_zh_mode" });
       }
     }
   }
@@ -107,6 +110,20 @@ async function navigateAuditTarget(page, target) {
     if (await clickFirstVisible(page, "[data-assistant-open]")) {
       await page.waitForSelector("#project-assistant-drawer:not([hidden])", { timeout: 5000 });
     }
+    return;
+  }
+  if (target.page === "model-setup") {
+    if (await clickFirstVisible(page, "#btn-open-model-setup")) {
+      await page.waitForSelector("#model-setup-modal:not([hidden])", { timeout: 5000 });
+    }
+    return;
+  }
+  if (target.page.endsWith("-modal")) {
+    await page.evaluate((modalId) => {
+      document.querySelectorAll(".modal-overlay").forEach((modal) => { modal.hidden = true; });
+      const modal = document.getElementById(modalId);
+      if (modal) modal.hidden = false;
+    }, target.page);
     return;
   }
   const pageAliases = {
@@ -163,6 +180,7 @@ async function collectSnapshot(page) {
     const attrs = [];
     const attrNames = ["data-tooltip", "placeholder", "title", "aria-label", "alt"];
     document.querySelectorAll("*").forEach((element) => {
+      if (!isVisible(element)) return;
       if (element.closest(".no-i18n, [data-i18n-ignore]")) return;
       attrNames.forEach((attr) => {
         const value = element.getAttribute(attr);
@@ -240,7 +258,7 @@ function allowedEnglish(text) {
   if (/^[a-z0-9][a-z0-9_.-]*[_0-9.-][a-z0-9_.-]*$/i.test(trimmed)) return true;
   if (/^[A-Za-z]:[\\/]/.test(trimmed) || /[A-Za-z]:[\\/]/.test(trimmed) || trimmed.includes(":/")) return true;
   if (/run_YYYYMMDD_HHMMSS/i.test(trimmed)) return true;
-  if (/\b(run|mAP|IoU|bbox|COCO|mask|ZIP|TXT|RAG|RNN|CNN|CSV|XML|JSON|HTML|CSS|JS|API|LLM|GGUF|ONNX|TensorRT|PyTorch|Ultralytics|YOLO|LSTM|GRU|BiLSTM|XGBoost|Window|Python|Markdown|schema|learning rate|Mosaic|Stratified|Group|epoch|checkpoint|VRAM|CUDA|CPU|GPU|Auto|timestep|timestamp|Date Time|time steps|sequence_length|stride|horizon|class_[a-z]|class_names|sequence_id|machine_id|batch_id|RoadSeg|builtin|ultralytics_yolo|Instance Segmentation|my_vision_project|defect|scratch|stain)\b/i.test(trimmed)) {
+  if (/\b(run|mAP|IoU|bbox|COCO|mask|ZIP|TXT|RAG|RNN|CNN|CSV|XML|JSON|HTML|CSS|JS|API|LLM|GGUF|ONNX|TensorRT|PyTorch|Ultralytics|YOLO|LSTM|GRU|BiLSTM|XGBoost|AMP|SGD|Adam|AdamW|Window|Python|Markdown|schema|learning rate|Mosaic|Stratified|Group|epoch|checkpoint|VRAM|CUDA|CPU|GPU|Auto|timestep|timestamp|Date Time|time steps|sequence_length|stride|horizon|class_[a-z]|class_names|sequence_id|machine_id|batch_id|RoadSeg|builtin|ultralytics_yolo|Instance Segmentation|my_vision_project|defect|scratch|stain)\b/i.test(trimmed)) {
     return true;
   }
   if (/\b(MP4|AVI|MKV|MOV|WMV|FLV|WEBM|P0|best\.pt|last\.pt|\.pt|\.onnx|annotations\/|training\/runs|train\/loss|val\/loss)\b/i.test(trimmed)) return true;

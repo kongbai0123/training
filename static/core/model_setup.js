@@ -39,6 +39,13 @@ export function initModelSetup() {
   qs("#btn-select-labelme-component")?.addEventListener("click", () => qs("#labelme-component-file")?.click());
   qs("#labelme-component-file")?.addEventListener("change", installLabelMeComponent);
   eventBus.on("open-model-setup", () => openModelSetup({ mode: "manage" }));
+  eventBus.on("language-changed", () => {
+    if (catalogPayload) {
+      renderModels(catalogPayload.models || []);
+      renderSources(catalogPayload.sources || []);
+    }
+    renderModelSetupSettings();
+  });
   restoreOnboardingPreferences();
 }
 
@@ -234,7 +241,7 @@ function renderModels(models) {
   const installable = models.filter((model) => {
     if (selectedTask === "sequence") return model.architecture === "rnn";
     if (model.architecture !== "cnn" || !model.installation_required) return false;
-    if (selectedTask !== "all" && model.task_family !== selectedTask) return false;
+    if (selectedTask !== "all" && model.training_category !== selectedTask) return false;
     if (filter === "all") return true;
     if (filter === "recommended") return model.installed || model.hardware_fit === "recommended";
     return model.model_family === filter;
@@ -290,7 +297,13 @@ function renderModelCard(model) {
   const selected = "";
   const disabled = installed || job?.status === "downloading" ? "disabled" : "";
   const size = formatBytes(model.download_size || 0);
-  const task = model.task_family === "segmentation" ? t("modelSetup.segmentation") : t("modelSetup.detection");
+  const taskLabels = {
+    image_classification: t("modelSetup.task.imageClassification"),
+    object_detection: t("modelSetup.task.objectDetection"),
+    instance_segmentation: t("modelSetup.task.instanceSegmentation"),
+    semantic_segmentation: t("modelSetup.task.semanticSegmentation"),
+  };
+  const task = taskLabels[model.training_category] || model.task_family || "--";
   const statusLabel = installed ? t("modelSetup.installed") : t(`modelSetup.fit.${fit}`);
   const statusClass = installed ? "installed" : fit;
   const progress = job ? renderJobProgress(job) : "";

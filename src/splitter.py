@@ -12,6 +12,9 @@ class DataSplitter:
     def _image_class_counts(image: Dict[str, Any], class_names: List[str]) -> Counter:
         valid_classes = set(class_names)
         counts = Counter()
+        image_class = image.get("class_name") or image.get("category")
+        if image_class in valid_classes:
+            counts[image_class] += 1
         for ann in image.get("annotations", []):
             cls = DataSplitter._annotation_class(ann)
             if cls in valid_classes:
@@ -135,6 +138,10 @@ class DataSplitter:
                     if cat in class_distribution[split_name]:
                         class_distribution[split_name][cat] += 1
                         total_class_counts[cat] += 1
+                image_class = img.get("class_name") or img.get("category")
+                if image_class in class_distribution[split_name]:
+                    class_distribution[split_name][image_class] += 1
+                    total_class_counts[image_class] += 1
 
         # 3. 計算品質分數 (扣分法)
         # 對比每個類別的 Train/Val/Test 實際比例與預期比例的 RMSE
