@@ -105,10 +105,14 @@
 
 .model-compare-layout {
   display: grid;
-  grid-template-columns: minmax(360px, 1fr) minmax(320px, 0.85fr);
+  grid-template-columns: minmax(280px, 30%) minmax(0, 1fr);
   gap: 14px;
   margin-bottom: 14px;
 }
+.compare-workspace { display: grid; gap: 14px; min-width: 0; }
+.compare-run-sidebar { position: sticky; top: 12px; align-self: start; }
+.compare-selection-summary { padding-block: 10px; }
+.compare-selection-summary .compare-selected-tray { display: flex; flex-wrap: wrap; max-height: none; overflow: visible; }
 
 .compare-run-list,
 .compare-selected-tray {

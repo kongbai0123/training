@@ -105,6 +105,7 @@ let rnnLossChart = null;
 let rnnRunComparisonCharts = [];
 let rnnMonitorQualityChart = null;
 let rnnMonitorLossChart = null;
+const rnnMonitorChartSignatures = new Map();
 let currentRnnEvaluationDashboard = null;
 let currentRnnComparisons = [];
 
@@ -187,6 +188,10 @@ export function initTrainingModeSidebar() {
     trainingModeState.rnn.exportLoaded = false;
     trainingModeState.rnn.inferenceModelsLoaded = false;
     trainingModeState.rnn.inferenceResultLoaded = false;
+  });
+  eventBus.on("training-status-changed", () => {
+    renderRnnLiveMonitor();
+    updateRnnStartControls();
   });
   loadRnnModelGuides();
   renderTrainingModeSidebar();
@@ -348,6 +353,7 @@ function toggleRnnEvaluationRightPanel(visible) {
 export function initRnnPreviewEvents() {
   preferGpuDevice("#rnn-device");
   preferGpuDevice("#rnn-inference-device");
+  syncRnnAdvancedParameterControls();
 
   qs("#rnn-create-project")?.addEventListener("click", () => {
     eventBus.emit("open-create-project-modal", {
@@ -485,6 +491,11 @@ export function initRnnPreviewEvents() {
     updateRnnInferenceControls();
   });
   qs("#rnn-run-sequence-inference")?.addEventListener("click", runRnnSequenceInference);
+  ["#rnn-epochs", "#rnn-batch-size", "#rnn-device", "#rnn-hidden-size", "#rnn-layers", "#rnn-dropout", "#rnn-gradient-clip", "#rnn-early-stopping-patience", "#rnn-learning-rate", "#rnn-optimizer"].forEach((selector) => {
+    qs(selector)?.addEventListener("input", renderRnnTrainingAdjustmentSummary);
+  });
+  qs("#rnn-lr-mode")?.addEventListener("change", syncRnnAdvancedParameterControls);
+  qs("#rnn-early-stop-enabled")?.addEventListener("change", syncRnnAdvancedParameterControls);
 }
 
 async function loadRnnReadiness(options = {}) {
@@ -1093,6 +1104,11 @@ function renderRnnReadiness() {
     requirementRows
   } = summarizeRnnReadiness(readiness);
 
+  setText("#rnn-context-window-count", String(sequenceCount || "--"));
+  setText("#rnn-context-feature-count", String(featureDim || "--"));
+  setText("#rnn-context-sequence-length", String(trainingModeState.rnn.config?.sequence_length || qs("#rnn-sequence-length")?.value || "--"));
+  renderRnnTrainingAdjustmentSummary();
+
   setText("#rnn-manifest-status", manifest.exists ? t("rnn.sequenceCountValue", { count: manifest.sequence_count || 0 }) : t("rnn.readiness.manifestNotConnected"));
   setText("#rnn-source-status", source === "manifest" ? "sequence_manifest.json" : source === "csv" ? `${csvFiles} CSV feature file(s)` : t("rnn.readiness.noSequenceSource"));
   setText("#rnn-split-status", splitText);
@@ -1179,6 +1195,9 @@ function renderRnnMonitorChart(canvasId, emptyId, chartModel, variant) {
   const hasSeries = chartModel?.series?.some((item) => item.values?.some((value) => value !== null));
   canvas.classList.toggle("hidden", !hasSeries);
   empty?.classList.toggle("hidden", hasSeries);
+  const signature = JSON.stringify({ labels: chartModel?.labels || [], series: chartModel?.series || [] });
+  if (hasSeries && rnnMonitorChartSignatures.get(canvasId) === signature) return;
+  rnnMonitorChartSignatures.set(canvasId, signature);
   const previous = canvasId === "rnn-monitor-quality-chart" ? rnnMonitorQualityChart : rnnMonitorLossChart;
   previous?.destroy();
   if (typeof Chart !== "undefined" && typeof Chart.getChart === "function") {
@@ -2317,6 +2336,33 @@ function renderRnnModelGuide() {
   });
 }
 
+function syncRnnAdvancedParameterControls() {
+  const customLearningRate = qs("#rnn-lr-mode")?.value === "custom";
+  qs("#rnn-learning-rate")?.classList.toggle("hidden", !customLearningRate);
+  const earlyStopEnabled = Boolean(qs("#rnn-early-stop-enabled")?.checked);
+  qs("#rnn-patience-field")?.classList.toggle("hidden", !earlyStopEnabled);
+  const patience = Math.max(1, Number(qs("#rnn-early-stopping-patience")?.value || 10));
+  setText("#rnn-patience-summary", earlyStopEnabled
+    ? t("rnn.training.patienceSummary", { count: patience })
+    : t("rnn.training.earlyStopDisabled"));
+  renderRnnTrainingAdjustmentSummary();
+}
+
+function renderRnnTrainingAdjustmentSummary() {
+  const entry = getSelectedRnnModelEntry();
+  const modelName = entry?.display_name || qs("#rnn-model-family")?.selectedOptions?.[0]?.textContent || "--";
+  setText("#rnn-summary-model", modelName);
+  setText("#rnn-summary-model-note", getSelectedRnnTaskHead() === "regression"
+    ? t("rnn.training.regressionSummary")
+    : t("rnn.training.classificationSummary"));
+  const hidden = Math.max(1, Number(qs("#rnn-hidden-size")?.value || 128));
+  const layers = Math.max(1, Number(qs("#rnn-layers")?.value || 2));
+  const batch = Math.max(1, Number(qs("#rnn-batch-size")?.value || 16));
+  const estimatedMb = Math.max(256, Math.round((hidden * layers * batch * 0.45 + 384) / 64) * 64);
+  setText("#rnn-estimated-memory", estimatedMb >= 1024 ? `${(estimatedMb / 1024).toFixed(1)} GB` : `${estimatedMb} MB`);
+  setText("#rnn-estimated-epoch-time", t("rnn.training.estimatePending"));
+}
+
 function canStartRnnTraining() {
   return canStartRnnTrainingFromState({
     hasProject: Boolean(appState.currentProjectId),
@@ -2431,10 +2477,14 @@ function collectRnnTrainingFormValues() {
     sequenceLength: qs("#rnn-sequence-length")?.value,
     stride: qs("#rnn-stride")?.value,
     horizon: qs("#rnn-horizon")?.value,
+    learningRateMode: qs("#rnn-lr-mode")?.value || "auto",
+    learningRate: qs("#rnn-learning-rate")?.value,
+    optimizer: qs("#rnn-optimizer")?.value || "auto",
     hiddenSize: qs("#rnn-hidden-size")?.value,
     layers: qs("#rnn-layers")?.value,
     dropout: qs("#rnn-dropout")?.value,
     gradientClipNorm: qs("#rnn-gradient-clip")?.value,
+    earlyStopEnabled: Boolean(qs("#rnn-early-stop-enabled")?.checked),
     earlyStoppingPatience: qs("#rnn-early-stopping-patience")?.value
   };
 }

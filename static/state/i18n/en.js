@@ -2501,7 +2501,30 @@
     "rnn.intelligence.signal.early_stopping.title": "Early stopping completed normally",
     "rnn.intelligence.signal.early_stopping.help": "The best weights from epoch {best} were retained.",
     "rnn.intelligence.signal.insufficient_context.title": "No obvious metric anomaly",
-    "rnn.intelligence.signal.insufficient_context.help": "Confirm deployability with independent sequences and business error tolerances."
+    "rnn.intelligence.signal.insufficient_context.help": "Confirm deployability with independent sequences and business error tolerances.",
+    "rnn.training.singlePageHelp": "Configure parameters, verify readiness, and monitor training on one page.",
+    "rnn.training.pageTitle": "RNN Model Training",
+    "rnn.training.windows": "windows",
+    "rnn.training.features": "features",
+    "rnn.training.sequenceLength": "sequence length",
+    "rnn.training.gpuAvailable": "GPU available",
+    "rnn.training.basicParameters": "Basic parameters",
+    "rnn.training.learningRate": "Learning rate",
+    "rnn.training.optimizer": "Optimizer",
+    "rnn.training.earlyStopMechanism": "Early stopping",
+    "rnn.training.earlyStopPatience": "Early-stop patience",
+    "rnn.training.adjustmentSummary": "Adjustment summary",
+    "rnn.training.selectedModel": "Selected model",
+    "rnn.training.estimatedMemory": "Estimated memory",
+    "rnn.training.estimatedEpoch": "Estimated per epoch",
+    "rnn.training.readinessCheck": "Readiness check",
+    "rnn.training.openModelGuide": "Open Model Guide",
+    "rnn.training.patienceSummary": "Stop after {count} epochs without validation improvement.",
+    "rnn.training.earlyStopDisabled": "Early stopping is off; training runs for all configured epochs.",
+    "rnn.training.regressionSummary": "Configured for continuous-value prediction.",
+    "rnn.training.classificationSummary": "Configured for sequence classification.",
+    "rnn.training.estimatePending": "Calculated after start",
+    "rnn.monitor.perEpoch": "Updates each epoch"
 };
 
 for (const key of Object.keys(en)) {

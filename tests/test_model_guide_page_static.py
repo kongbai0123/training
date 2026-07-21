@@ -48,7 +48,8 @@ class ModelGuidePageStaticTests(unittest.TestCase):
     def test_model_guide_has_dedicated_responsive_styles(self):
         css = (ROOT / "static" / "styles" / "pages" / "model_guide.css").read_text(encoding="utf-8")
         self.assertIn(".model-guide-workspace", css)
-        self.assertIn("grid-template-columns: minmax(250px, 28%)", css)
+        self.assertIn("grid-template-columns: minmax(270px, 28%) minmax(0, 1fr)", css)
+        self.assertIn(".model-guide-detail-workspace", css)
         self.assertIn("@media (max-width: 800px)", css)
 
     def test_task_selector_explains_classifier_and_regressor_outputs(self):

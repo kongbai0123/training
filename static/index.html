@@ -1403,56 +1403,52 @@
                   <div class="rnn-training-layout">
                     <section class="rnn-preview-card rnn-training-config-section">
                       <div class="section-title">
-                        <h2 data-i18n="rnn.training.setupTitle">訓練設定</h2>
+                        <div><h2 data-i18n="rnn.training.pageTitle">RNN 模型訓練</h2><p class="section-subtitle" data-i18n="rnn.training.singlePageHelp">在同一頁完成參數設定、就緒檢查與訓練監控。</p></div>
                         <div class="button-row">
                           <button type="button" class="btn btn-secondary btn-sm" id="btn-rnn-open-model-selection-center"><i class="fa-solid fa-chart-simple"></i> <span data-i18n="modelSelection.open">選擇與比較</span></button>
                           <span class="summary-badge badge-warning" id="rnn-training-state-badge">Readiness required</span>
                         </div>
                       </div>
-                      <p class="rnn-section-note" data-i18n="rnn.training.setupNote">選擇通用 RNN / XGBoost 模板並設定訓練參數；已訓練的 best.pt / last.pt 會在評估、測試與匯出頁使用。</p>
-                      <div class="rnn-training-setup-grid">
-                        <div class="rnn-training-form-stack">
-                          <div class="rnn-form-group">
-                            <h3 data-i18n="rnn.training.modelTask">Model & Task</h3>
-                            <div class="rnn-schema-grid two-col">
-                              <label><span><span data-i18n="training.model">Model</span> <span class="info-icon" id="rnn-model-info-icon" data-tooltip="LSTM: balanced sequence baseline. GRU: fewer gates and often faster. BiLSTM: uses both directions for offline sequences. XGBoost: tabular baseline for CSV sequence features." data-i18n-tooltip="rnn.modelTooltip.lstm">i</span></span><select id="rnn-model-family"><option value="lstm">LSTM Classifier</option></select></label>
-                              <label><span data-i18n="rnn.training.taskHead">Task Head</span><select id="rnn-task-head"><option value="classification">Classification</option><option value="regression">Regression</option></select></label>
-                              <input id="rnn-backend" type="hidden" value="pytorch_lstm">
-                            </div>
+                      <div class="rnn-training-context-strip" aria-label="Training context">
+                        <span><i class="fa-regular fa-folder-open"></i><strong id="rnn-context-window-count">--</strong><small data-i18n="rnn.training.windows">視窗</small></span>
+                        <span><i class="fa-regular fa-file-lines"></i><strong id="rnn-context-feature-count">--</strong><small data-i18n="rnn.training.features">個特徵</small></span>
+                        <span><i class="fa-regular fa-circle-xmark"></i><strong id="rnn-context-sequence-length">--</strong><small data-i18n="rnn.training.sequenceLength">序列長度</small></span>
+                        <span><i class="fa-solid fa-circle rnn-gpu-dot"></i><strong data-i18n="rnn.training.gpuAvailable">GPU 可用</strong></span>
+                      </div>
+                      <div class="rnn-training-parameter-grid">
+                        <section class="rnn-parameter-column">
+                          <h3 data-i18n="rnn.training.basicParameters">基本參數</h3>
+                          <div class="training-parameter-list">
+                            <label><span><span data-i18n="training.model">模型</span> <span class="info-icon" id="rnn-model-info-icon" data-tooltip="LSTM: balanced sequence baseline. GRU: fewer gates and often faster. BiLSTM: uses both directions for offline sequences. XGBoost: tabular baseline for CSV sequence features." data-i18n-tooltip="rnn.modelTooltip.lstm">i</span></span><select id="rnn-model-family"><option value="lstm">LSTM Classifier</option></select></label>
+                            <label><span data-i18n="rnn.training.taskHead">任務類型</span><select id="rnn-task-head"><option value="classification">Classification</option><option value="regression">Regression</option></select></label>
+                            <input id="rnn-backend" type="hidden" value="pytorch_lstm">
+                            <label><span data-i18n="training.epochs">訓練輪數 Epoch</span><input id="rnn-epochs" type="number" min="1" value="10"></label>
+                            <label><span data-i18n="training.batch">批次大小 Batch Size</span><input id="rnn-batch-size" type="number" min="1" value="16"></label>
+                            <label><span data-i18n="training.device">運算裝置</span><select id="rnn-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
                           </div>
-                          <div class="rnn-form-group">
-                            <h3 data-i18n="rnn.training.coreParameters">Core Parameters</h3>
-                            <div class="rnn-schema-grid three-col">
-                              <label><span data-i18n="training.epochs">Epochs</span><input id="rnn-epochs" type="number" min="1" value="10"></label>
-                              <label><span data-i18n="training.batch">Batch Size</span><input id="rnn-batch-size" type="number" min="1" value="16"></label>
-                              <label><span data-i18n="training.device">Device</span><select id="rnn-device"><option value="gpu" selected>GPU</option><option value="cpu">CPU</option></select></label>
-                            </div>
+                        </section>
+                        <section class="rnn-parameter-column rnn-advanced-parameters">
+                          <h3 data-i18n="rnn.training.advancedParameters">進階參數</h3>
+                          <div class="training-advanced-list">
+                            <label><span data-i18n="rnn.training.learningRate">學習率</span><div class="training-auto-custom-field"><select id="rnn-lr-mode"><option value="auto" data-i18n="training.autoRecommended">自動（建議）</option><option value="custom" data-i18n="training.custom">自訂</option></select><input id="rnn-learning-rate" class="hidden" type="number" min="0.000001" step="0.0001" value="0.001"></div></label>
+                            <label><span data-i18n="rnn.training.optimizer">優化器</span><select id="rnn-optimizer"><option value="auto">Auto</option><option value="adam">Adam</option><option value="adamw">AdamW</option></select></label>
+                            <div class="training-early-stop-control"><label class="training-inline-toggle"><span><span data-i18n="rnn.training.earlyStopMechanism">早停機制</span> <span class="info-icon" data-i18n-tooltip="rnn.training.earlyStopTooltip" data-tooltip="驗證指標持續未改善時停止訓練。">i</span></span><input id="rnn-early-stop-enabled" type="checkbox" checked></label><label id="rnn-patience-field"><span data-i18n="rnn.training.earlyStopPatience">早停耐心值</span><input id="rnn-early-stopping-patience" type="number" min="1" value="10"></label><p class="form-hint" id="rnn-patience-summary"></p></div>
+                            <label><span data-i18n="rnn.training.hiddenSize">隱藏層維度</span><input id="rnn-hidden-size" type="number" min="1" value="128"></label>
+                            <label><span data-i18n="rnn.training.layers">層數</span><input id="rnn-layers" type="number" min="1" value="2"></label>
+                            <label><span data-i18n="rnn.training.dropout">Dropout</span><input id="rnn-dropout" type="number" min="0" max="0.9" step="0.1" value="0.2"></label>
+                            <label><span><span data-i18n="rnn.training.gradientClip">梯度裁剪</span> <span class="info-icon" data-i18n-tooltip="rnn.training.gradientClipTooltip" data-tooltip="限制梯度大小以降低梯度爆炸。">i</span></span><input id="rnn-gradient-clip" type="number" min="0" step="0.1" value="1.0"></label>
                           </div>
-                          <details class="advanced-collapse rnn-advanced-parameters">
-                            <summary data-i18n="rnn.training.advancedParameters">Advanced Parameters</summary>
-                            <div class="rnn-schema-grid two-col rnn-advanced-grid">
-                              <label><span data-i18n="rnn.training.hiddenSize">Hidden Size</span><input id="rnn-hidden-size" type="number" min="1" value="128"></label>
-                              <label><span data-i18n="rnn.training.layers">Layers</span><input id="rnn-layers" type="number" min="1" value="2"></label>
-                              <label><span data-i18n="rnn.training.dropout">Dropout</span><input id="rnn-dropout" type="number" min="0" max="0.9" step="0.1" value="0.2"></label>
-                              <label><span><span data-i18n="rnn.training.gradientClip">Gradient Clip</span> <span class="info-icon" data-tooltip="Clips RNN gradients by norm to reduce exploding gradients. Use 0 to disable." data-i18n-tooltip="rnn.training.gradientClipTooltip">i</span></span><input id="rnn-gradient-clip" type="number" min="0" step="0.1" value="1.0"></label>
-                              <label><span><span data-i18n="rnn.training.earlyStop">Early Stop</span> <span class="info-icon" data-tooltip="Stops after this many epochs without validation improvement. Use 0 to disable." data-i18n-tooltip="rnn.training.earlyStopTooltip">i</span></span><input id="rnn-early-stopping-patience" type="number" min="0" value="10"></label>
-                            </div>
-                          </details>
-                        </div>
-                        <aside class="rnn-training-start-panel">
-                          <strong data-i18n="rnn.training.readinessStart">Readiness / Start</strong>
-                          <p data-i18n="rnn.training.readinessStartHelp">先完成序列資料集、特徵欄位與切片設定；若仍有缺項，按下訓練時會提示應前往的設定頁面。</p>
-                          <div class="rnn-start-checklist">
-                            <span data-i18n="rnn.training.sequenceCsv">Sequence CSV</span>
-                            <span data-i18n="rnn.training.featureConfig">Feature config</span>
-                            <span data-i18n="rnn.training.windowing">Windowing</span>
-                          </div>
+                        </section>
+                        <aside class="rnn-training-start-panel rnn-adjustment-summary">
+                          <h3 data-i18n="rnn.training.adjustmentSummary">調整摘要</h3>
+                          <div class="rnn-selected-model-summary"><span data-i18n="rnn.training.selectedModel">選定模型</span><strong id="rnn-summary-model">LSTM</strong><small id="rnn-summary-model-note">--</small></div>
+                          <div class="rnn-estimate-grid"><div><span data-i18n="rnn.training.estimatedMemory">預估記憶體</span><strong id="rnn-estimated-memory">--</strong></div><div><span data-i18n="rnn.training.estimatedEpoch">預估每輪</span><strong id="rnn-estimated-epoch-time">--</strong></div></div>
+                          <strong data-i18n="rnn.training.readinessCheck">就緒檢查</strong>
+                          <div class="rnn-start-checklist"><span data-i18n="rnn.training.sequenceCsv">序列資料</span><span data-i18n="rnn.training.featureConfig">特徵與標籤</span><span data-i18n="rnn.training.windowing">序列切片</span><span>GPU</span></div>
                           <div class="rnn-start-guidance" id="rnn-training-start-guidance" role="status"></div>
-                          <span class="rnn-disabled-action-hitbox">
-                            <button type="button" class="btn btn-primary" id="rnn-start-disabled">
-                              <i class="fa-solid fa-play"></i> <span data-i18n="rnn.training.startShort">開始 RNN 訓練</span>
-                            </button>
-                          </span>
+                          <span class="rnn-disabled-action-hitbox"><button type="button" class="btn btn-primary" id="rnn-start-disabled"><i class="fa-solid fa-play"></i> <span data-i18n="rnn.training.startShort">開始 RNN 訓練</span></button></span>
+                          <button type="button" class="btn btn-link" data-page="model-guide"><span data-i18n="rnn.training.openModelGuide">前往模型指南</span> <i class="fa-solid fa-arrow-up-right-from-square"></i></button>
+                          <div id="rnn-model-guide" class="hidden" aria-hidden="true"></div>
                         </aside>
                       </div>
                     </section>
@@ -1473,51 +1469,18 @@
                       <div class="metric-grid compact rnn-monitor-metric-grid" id="rnn-monitor-metrics"></div>
                       <div class="rnn-eval-chart-grid rnn-monitor-chart-grid">
                         <div class="rnn-chart-shell">
-                          <div class="rnn-chart-heading"><strong data-i18n="rnn.monitor.qualityChart">任務品質指標</strong><span data-i18n="rnn.monitor.live">即時更新</span></div>
+                          <div class="rnn-chart-heading"><strong data-i18n="rnn.monitor.qualityChart">任務品質指標</strong><span data-i18n="rnn.monitor.perEpoch">每個 Epoch 更新</span></div>
                           <canvas id="rnn-monitor-quality-chart"></canvas>
                           <div class="rnn-eval-chart-empty" id="rnn-monitor-quality-empty" data-i18n="rnn.monitor.waitingFirstEpoch">等待第一個 Epoch 完成。</div>
                         </div>
                         <div class="rnn-chart-shell">
-                          <div class="rnn-chart-heading"><strong data-i18n="rnn.evaluation.lossCurve">Loss curve</strong><span data-i18n="rnn.monitor.live">即時更新</span></div>
+                          <div class="rnn-chart-heading"><strong data-i18n="rnn.evaluation.lossCurve">Loss curve</strong><span data-i18n="rnn.monitor.perEpoch">每個 Epoch 更新</span></div>
                           <canvas id="rnn-monitor-loss-chart"></canvas>
                           <div class="rnn-eval-chart-empty" id="rnn-monitor-loss-empty" data-i18n="rnn.monitor.waitingFirstEpoch">等待第一個 Epoch 完成。</div>
                         </div>
                       </div>
                     </section>
 
-                    <section class="rnn-preview-card rnn-model-guidance-section">
-                      <div class="section-title"><h2 data-i18n="rnn.training.guidanceTitle">模型指引 / Decision Support</h2><span class="summary-badge badge-neutral" data-i18n="rnn.training.reference">Reference</span></div>
-                      <div class="rnn-model-guide" id="rnn-model-guide">
-                        <div class="section-title"><h3 data-i18n="modelGuide.title">模型選擇參考</h3><span class="summary-badge badge-neutral" data-i18n="common.loading">Loading</span></div>
-                        <p data-i18n="modelGuide.loading">Loading model guide...</p>
-                      </div>
-                    </section>
-
-                    <div class="rnn-training-secondary-grid">
-                      <section class="rnn-preview-card rnn-custom-model-section">
-                        <div class="section-title"><h2 data-i18n="rnn.training.customImport">自訂 RNN 模型匯入</h2><span class="summary-badge badge-neutral">Optional</span></div>
-                        <p class="rnn-section-note" data-i18n="rnn.training.customImportHelp">匯入 RNN package .zip 或 Custom package .zip 做驗證式登錄；這裡不混用 CNN selector，也不取代上方通用訓練模板。</p>
-                        <div class="rnn-custom-model-panel">
-                          <div>
-                            <strong>Package registry</strong>
-                            <span data-i18n="rnn.training.customImportHint">適合放入外部訓練器、轉換器或自訂推論 adapter；啟用前需通過 package contract 檢查。</span>
-                          </div>
-                          <button type="button" class="btn btn-secondary btn-sm" id="btn-rnn-import-model-package">
-                            <i class="fa-solid fa-file-arrow-up"></i> <span data-i18n="rnn.training.customImportAction">匯入 RNN Package</span>
-                          </button>
-                        </div>
-                      </section>
-
-                      <section class="rnn-preview-card rnn-training-output-section">
-                        <div class="section-title"><h2 data-i18n="rnn.training.outputTitle">訓練結果 / 產物</h2><span class="summary-badge badge-neutral">After run</span></div>
-                        <p class="rnn-section-note" data-i18n="rnn.training.outputHelp">訓練完成後，metrics、history 與 artifact 不在本設定區展開；請到專門頁面檢視與操作。</p>
-                        <div class="rnn-output-handoff-grid">
-                          <button type="button" class="btn btn-secondary" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i> <span data-i18n="rnn.training.openEvaluation">開啟 RNN 評估</span></button>
-                          <button type="button" class="btn btn-secondary" data-rnn-nav="sequence-test"><i class="fa-regular fa-circle-play"></i> <span data-i18n="rnn.training.openSequenceTest">開啟序列測試</span></button>
-                          <button type="button" class="btn btn-secondary" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i> <span data-i18n="rnn.training.openExport">開啟 RNN 匯出</span></button>
-                        </div>
-                      </section>
-                    </div>
                   </div>
                 </div>
 
@@ -1826,7 +1789,7 @@
           </section>
 
           <div class="model-compare-layout">
-            <section class="panel-section">
+            <section class="panel-section compare-run-sidebar">
               <div class="section-title">
                 <h2 data-i18n="compare.availableRuns">Available Runs</h2>
                 <span id="compare-run-count" class="summary-badge badge-neutral">0 runs</span>
@@ -1834,14 +1797,14 @@
               <div id="compare-run-list" class="compare-run-list"></div>
             </section>
 
-            <section class="panel-section">
+            <div class="compare-workspace">
+            <section class="panel-section compare-selection-summary">
               <div class="section-title">
                 <h2 data-i18n="compare.selectedModels">Selected Models</h2>
                 <span class="summary-badge badge-neutral" data-i18n="compare.requiredRuns">2-4 runs</span>
               </div>
               <div id="compare-selected-tray" class="compare-selected-tray"></div>
             </section>
-          </div>
 
           <section class="panel-section compare-performance-panel" id="compare-page-decision">
             <div class="section-title">
@@ -1929,6 +1892,8 @@
               <div class="empty-state" data-i18n="compare.exportAfterComparison">Export a report after comparison to download JSON, Markdown, CSV, and PDF files.</div>
             </div>
           </section>
+            </div>
+          </div>
         </section>
 
         <section class="page" id="page-inference">
@@ -2330,39 +2295,39 @@
               <div id="model-guide-list" class="model-guide-list"><div class="empty-state" data-i18n="common.loading">載入中</div></div>
             </section>
 
-            <section class="model-guide-detail-panel" id="model-guide-detail">
-              <div class="empty-state" data-i18n="modelGuide.selectModel">選擇模型以查看完整分析。</div>
-            </section>
-
-            <aside class="model-guide-decision-panel">
-              <div class="section-title compact"><h2 data-i18n="modelGuide.decisionSummary">決策摘要</h2></div>
-              <div id="model-guide-decision" class="model-guide-decision"><div class="empty-state" data-i18n="modelGuide.selectModel">選擇模型以查看完整分析。</div></div>
-              <div class="model-guide-actions">
-                <button type="button" class="btn btn-primary" id="btn-model-guide-apply"><i class="fa-solid fa-play"></i> <span data-i18n="modelGuide.applyTraining">套用到訓練設定</span></button>
-                <button type="button" class="btn btn-secondary" id="btn-model-guide-build-report"><i class="fa-solid fa-file-lines"></i> <span data-i18n="modelGuide.buildReport">建立模型報告</span></button>
-              </div>
-            </aside>
+            <div class="model-guide-detail-workspace">
+              <section class="model-guide-detail-panel" id="model-guide-detail">
+                <div class="empty-state" data-i18n="modelGuide.selectModel">選擇模型以查看完整分析。</div>
+              </section>
+              <aside class="model-guide-decision-panel">
+                <div class="section-title compact"><h2 data-i18n="modelGuide.decisionSummary">決策摘要</h2></div>
+                <div id="model-guide-decision" class="model-guide-decision"><div class="empty-state" data-i18n="modelGuide.selectModel">選擇模型以查看完整分析。</div></div>
+                <div class="model-guide-actions">
+                  <button type="button" class="btn btn-primary" id="btn-model-guide-apply"><i class="fa-solid fa-play"></i> <span data-i18n="modelGuide.applyTraining">套用到訓練設定</span></button>
+                  <button type="button" class="btn btn-secondary" id="btn-model-guide-build-report"><i class="fa-solid fa-file-lines"></i> <span data-i18n="modelGuide.buildReport">建立模型報告</span></button>
+                </div>
+              </aside>
+              <section class="panel-section model-guide-report-panel">
+                <div class="section-title">
+                  <div><h2 data-i18n="modelGuide.reportPreview">模型選型報告預覽</h2><p data-i18n="modelGuide.reportHelp">官方資料與本機實測會分開標示，避免混淆。</p></div>
+                  <span class="summary-badge" id="model-guide-report-status" data-i18n="modelGuide.notGenerated">尚未建立</span>
+                </div>
+                <div class="model-guide-report-tabs" role="tablist">
+                  <button type="button" class="active" data-model-guide-report-tab="summary" data-i18n="modelGuide.reportSummary">摘要</button>
+                  <button type="button" data-model-guide-report-tab="official" data-i18n="modelGuide.officialBenchmark">官方基準</button>
+                  <button type="button" data-model-guide-report-tab="local" data-i18n="modelGuide.localRuns">本機實測</button>
+                  <button type="button" data-model-guide-report-tab="deployment" data-i18n="modelGuide.deployment">部署</button>
+                  <button type="button" data-model-guide-report-tab="risk" data-i18n="modelGuide.risks">風險</button>
+                </div>
+                <div id="model-guide-report-preview" class="model-guide-report-preview"><div class="empty-state" data-i18n="modelGuide.reportEmpty">選擇模型並建立報告後，內容會顯示在這裡。</div></div>
+                <div class="model-guide-report-actions">
+                  <button type="button" class="btn btn-secondary" data-model-guide-export="markdown"><i class="fa-brands fa-markdown"></i> Markdown</button>
+                  <button type="button" class="btn btn-secondary" data-model-guide-export="html"><i class="fa-solid fa-code"></i> HTML</button>
+                  <button type="button" class="btn btn-secondary" data-model-guide-export="pdf"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                </div>
+              </section>
+            </div>
           </div>
-
-          <section class="panel-section model-guide-report-panel">
-            <div class="section-title">
-              <div><h2 data-i18n="modelGuide.reportPreview">模型選型報告預覽</h2><p data-i18n="modelGuide.reportHelp">官方資料與本機實測會分開標示，避免混淆。</p></div>
-              <span class="summary-badge" id="model-guide-report-status" data-i18n="modelGuide.notGenerated">尚未建立</span>
-            </div>
-            <div class="model-guide-report-tabs" role="tablist">
-              <button type="button" class="active" data-model-guide-report-tab="summary" data-i18n="modelGuide.reportSummary">摘要</button>
-              <button type="button" data-model-guide-report-tab="official" data-i18n="modelGuide.officialBenchmark">官方基準</button>
-              <button type="button" data-model-guide-report-tab="local" data-i18n="modelGuide.localRuns">本機實測</button>
-              <button type="button" data-model-guide-report-tab="deployment" data-i18n="modelGuide.deployment">部署</button>
-              <button type="button" data-model-guide-report-tab="risk" data-i18n="modelGuide.risks">風險</button>
-            </div>
-            <div id="model-guide-report-preview" class="model-guide-report-preview"><div class="empty-state" data-i18n="modelGuide.reportEmpty">選擇模型並建立報告後，內容會顯示在這裡。</div></div>
-            <div class="model-guide-report-actions">
-              <button type="button" class="btn btn-secondary" data-model-guide-export="markdown"><i class="fa-brands fa-markdown"></i> Markdown</button>
-              <button type="button" class="btn btn-secondary" data-model-guide-export="html"><i class="fa-solid fa-code"></i> HTML</button>
-              <button type="button" class="btn btn-secondary" data-model-guide-export="pdf"><i class="fa-solid fa-file-pdf"></i> PDF</button>
-            </div>
-          </section>
         </section>
 
         <section class="page" id="page-settings">

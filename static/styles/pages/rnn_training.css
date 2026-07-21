@@ -199,12 +199,51 @@
 .rnn-training-config-section {
   border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
 }
-.rnn-training-setup-grid {
+.rnn-training-parameter-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.32fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   align-items: start;
 }
+.rnn-training-context-strip {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 10px 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+.rnn-training-context-strip > span { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 20px; border-right: 1px solid var(--border); }
+.rnn-training-context-strip > span:last-child { border-right: 0; }
+.rnn-training-context-strip i { color: var(--text-muted); }
+.rnn-training-context-strip small { color: var(--text-muted); }
+.rnn-training-context-strip .rnn-gpu-dot { color: var(--success); font-size: 10px; }
+.rnn-parameter-column {
+  min-width: 0;
+  min-height: 100%;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+.rnn-parameter-column h3,
+.rnn-adjustment-summary h3 { margin: 0 0 14px; font-size: 1rem; }
+.rnn-parameter-column .training-parameter-list,
+.rnn-parameter-column .training-advanced-list { display: grid; gap: 12px; }
+.rnn-parameter-column label { display: grid; gap: 6px; }
+.rnn-parameter-column .training-auto-custom-field { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; }
+.rnn-parameter-column .training-early-stop-control { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius); }
+.rnn-parameter-column .training-inline-toggle { display: flex; align-items: center; justify-content: space-between; }
+.rnn-selected-model-summary { display: grid; gap: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.rnn-selected-model-summary span,
+.rnn-selected-model-summary small,
+.rnn-estimate-grid span { color: var(--text-muted); font-size: .78rem; }
+.rnn-selected-model-summary strong { font-size: 1.1rem; }
+.rnn-estimate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--border); }
+.rnn-estimate-grid > div { display: grid; gap: 4px; padding: 10px 0; }
+.rnn-estimate-grid > div + div { padding-left: 14px; border-left: 1px solid var(--border); }
 .rnn-training-form-stack {
   display: grid;
   gap: 12px;
@@ -262,6 +301,8 @@
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--primary) 8%, var(--bg-panel));
 }
+.rnn-adjustment-summary { align-content: start; background: var(--bg-panel-soft); border-color: var(--border); }
+.rnn-adjustment-summary .btn-link { justify-self: center; color: var(--primary); }
 .rnn-training-start-panel p {
   margin: 0;
   color: var(--text-muted);
@@ -1354,7 +1395,7 @@
 
 .rnn-sequence-test-layout {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(300px, 34%) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
@@ -1697,7 +1738,7 @@
 @media (max-width: 840px) {
   .rnn-training-secondary-grid,
   .rnn-output-handoff-grid,
-  .rnn-training-setup-grid,
+  .rnn-training-parameter-grid,
   .rnn-feature-wizard-summary,
   .rnn-schema-grid.three-col,
   .rnn-schema-grid.two-col {
@@ -1711,7 +1752,7 @@
 @media (max-width: 980px) {
   .rnn-overview-rows .rnn-preview-card,
   .rnn-sequence-test-layout,
-  .rnn-training-setup-grid,
+  .rnn-training-parameter-grid,
   .rnn-custom-model-panel {
     grid-template-columns: 1fr;
   }

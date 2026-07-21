@@ -38,6 +38,20 @@ def test_rnn_live_monitor_uses_task_specific_metrics():
     assert 'TrainingStateStore.set_field(project_id, "task_type"' in read("src/training/backends/rnn_backend.py")
 
 
+def test_training_heartbeat_updates_monitor_without_rerendering_the_whole_app():
+    training = read("static/pages/training.js")
+    modes = read("static/pages/training_modes.js")
+    update_block = training.split("function applyTrainingStatusUpdate(data)", 1)[1].split(
+        "function scheduleTrainingStatusPoll", 1
+    )[0]
+
+    assert 'eventBus.emit("training-status-changed"' in update_block
+    assert 'eventBus.emit("state-changed")' not in update_block
+    assert 'eventBus.on("training-status-changed"' in modes
+    assert "rnnMonitorChartSignatures" in modes
+    assert "if (hasSeries && rnnMonitorChartSignatures.get(canvasId) === signature) return;" in modes
+
+
 def test_rnn_evaluation_has_smart_advice_and_true_svg_downloads():
     html = read("static/index.html")
     helpers = read("static/pages/rnn_intelligence_helpers.js")

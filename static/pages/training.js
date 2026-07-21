@@ -2051,9 +2051,16 @@ function startMonitorWebSocket() {
 function applyTrainingStatusUpdate(data) {
   if (!data || typeof data !== "object") return;
   const previousStatus = appState.trainingStatus?.status || "idle";
+  const previousEpoch = Number(appState.trainingStatus?.epoch ?? appState.trainingStatus?.current_epoch ?? 0);
   appState.trainingStatus = data;
   renderTrainingMonitor();
-  eventBus.emit("state-changed");
+  const currentEpoch = Number(data.epoch ?? data.current_epoch ?? 0);
+  eventBus.emit("training-status-changed", {
+    statusChanged: previousStatus !== data.status,
+    epochChanged: previousEpoch !== currentEpoch,
+    previousEpoch,
+    currentEpoch
+  });
 
   if (TERMINAL_TRAINING_STATUSES.has(data.status)) {
     stopTrainingStatusPolling();
