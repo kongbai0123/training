@@ -15,6 +15,11 @@ class ProjectCreate(BaseModel):
     class_names: List[str]
 
 
+class ProjectTaskUpdate(BaseModel):
+    task_type: str
+    confirm: bool = False
+
+
 @router.get("/api/projects")
 def list_projects():
     return ProjectManager.get_all_projects()
@@ -34,6 +39,22 @@ def get_project(project_id: str):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
+
+
+@router.patch("/api/projects/{project_id}/task-type")
+def update_project_task_type(project_id: str, data: ProjectTaskUpdate):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if str(project.get("task_type") or "").lower() != str(data.task_type or "").lower() and not data.confirm:
+        raise HTTPException(status_code=409, detail="Changing the task type requires explicit confirmation")
+    try:
+        return ProjectManager.update_task_type(project_id, data.task_type)
+    except ValueError as exc:
+        message = str(exc)
+        raise HTTPException(status_code=404 if message == "Project not found" else 400, detail=message) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/api/projects/{project_id}/save")

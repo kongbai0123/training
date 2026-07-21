@@ -4,8 +4,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from src.training.backends import xgboost_backend as xgboost_backend_module
 from src.training.backends.xgboost_backend import XGBoostBackend
 from src.training.dispatcher import TrainerDispatcher
+from src.training.rnn.xgboost_trainer import _history_from_evals
 from src.training.state_store import TrainingStateStore
 
 
@@ -54,6 +56,78 @@ class XGBoostBackendPhaseR1FTests(unittest.TestCase):
         backend = TrainerDispatcher.resolve_backend({"training_config": {"backend": "sklearn_xgboost"}})
         self.assertEqual(backend.backend_name, "sklearn_xgboost")
         self.assertEqual(backend.architecture, "rnn")
+
+    def test_regression_history_contains_mae_and_rmse_for_every_round(self):
+        history = _history_from_evals(
+            {
+                "train": {"rmse": [3.0, 2.0], "mae": [2.5, 1.5]},
+                "val": {"rmse": [4.0, 3.0], "mae": [3.5, 2.5]},
+            },
+            is_regression=True,
+        )
+
+        self.assertEqual(len(history), 2)
+        self.assertEqual(history[0]["val/rmse"], 4.0)
+        self.assertEqual(history[0]["val/mae"], 3.5)
+        self.assertEqual(history[1]["val/rmse"], 3.0)
+        self.assertEqual(history[1]["val/mae"], 2.5)
+
+    def test_start_training_sets_regression_task_type_and_starts_runner(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project = self._project(Path(temp_dir), task_head="regression")
+            backend = XGBoostBackend()
+            runner_result = {
+                "started": True,
+                "project_id": "proj_xgb",
+                "run_id": "run_xgb_unit",
+                "thread_name": "training-proj_xgb-run_xgb_unit",
+            }
+
+            with patch.object(
+                xgboost_backend_module.DEFAULT_THREAD_TRAINING_RUNNER,
+                "start",
+                return_value=runner_result,
+            ) as start:
+                result = backend.start_training(project)
+
+            self.assertEqual(result["status"], "started")
+            self.assertEqual(TrainingStateStore.get_state("proj_xgb")["task_type"], "sequence_regression")
+            start.assert_called_once()
+
+    def test_start_training_recovers_stale_training_state(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project = self._project(Path(temp_dir), task_head="regression")
+            backend = XGBoostBackend()
+            TrainingStateStore.init_run("proj_xgb", "stale_run", 40, "rnn", "sklearn_xgboost")
+
+            with patch.object(
+                xgboost_backend_module.DEFAULT_THREAD_TRAINING_RUNNER,
+                "start",
+                return_value={"started": True, "run_id": "run_xgb_unit"},
+            ):
+                result = backend.start_training(project)
+
+            state = TrainingStateStore.get_state("proj_xgb")
+            self.assertEqual(result["status"], "started")
+            self.assertEqual(state["status"], "training")
+            self.assertEqual(state["run_id"], "run_xgb_unit")
+
+    def test_start_training_marks_failed_when_runner_raises(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project = self._project(Path(temp_dir), task_head="regression")
+            backend = XGBoostBackend()
+
+            with patch.object(
+                xgboost_backend_module.DEFAULT_THREAD_TRAINING_RUNNER,
+                "start",
+                side_effect=RuntimeError("runner failed"),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "runner failed"):
+                    backend.start_training(project)
+
+            state = TrainingStateStore.get_state("proj_xgb")
+            self.assertEqual(state["status"], "failed")
+            self.assertEqual(state["error"], "runner failed")
 
     def test_run_training_writes_xgboost_contracts_without_real_xgboost_training(self):
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -2,7 +2,7 @@ import { apiFetch } from "../api.js";
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { qs, setHTML, escapeHtml } from "../utils.js";
-import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260708-i18n-tooltips";
+import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260721-rnn-evaluation-sync";
 import { followServerTask } from "./task_progress.js";
 
 function contextCardFor(selector) {

@@ -54,22 +54,34 @@ class RNNBackend(TrainingBackend):
         if DEFAULT_THREAD_TRAINING_RUNNER.is_running(project_id):
             return {"status": "already_running", "backend": self.backend_name, "architecture": self.architecture, "run_id": run_id}
         if TrainingStateStore.is_training(project_id):
-            return {"status": "stale_training_state", "backend": self.backend_name, "architecture": self.architecture, "run_id": run_id}
+            TrainingStateStore.mark_failed(
+                project_id,
+                "The previous RNN training did not start or exited without reporting a final state.",
+            )
 
         with self._lock:
             self._stop_flags[project_id] = False
 
         total_epochs = _int(config.get("epochs"), 10)
         TrainingStateStore.init_run(project_id, run_id, total_epochs, self.architecture, self.backend_name)
-        TrainingStateStore.set_field(project_id, "task_type", _rnn_task_type(config))
-        result = DEFAULT_THREAD_TRAINING_RUNNER.start(
-            project_id=project_id,
-            run_id=run_id,
-            target=self._run_training,
-            args=(project,),
-            daemon=False,
-        )
+        try:
+            TrainingStateStore.set_field(project_id, "task_type", _rnn_task_type(config))
+            result = DEFAULT_THREAD_TRAINING_RUNNER.start(
+                project_id=project_id,
+                run_id=run_id,
+                target=self._run_training,
+                args=(project,),
+                daemon=False,
+            )
+        except Exception as exc:
+            TrainingStateStore.mark_failed(project_id, str(exc), run_id=run_id)
+            raise
         if not result.get("started"):
+            TrainingStateStore.mark_failed(
+                project_id,
+                "RNN training could not start because another training job is already running.",
+                run_id=run_id,
+            )
             return {"status": "already_running", "backend": self.backend_name, "architecture": self.architecture, "run_id": result.get("run_id", run_id)}
         return {"status": "started", "backend": self.backend_name, "architecture": self.architecture, "run_id": run_id}
 
@@ -155,14 +167,25 @@ class RNNBackend(TrainingBackend):
         feature_config_hash: str | None = None,
     ) -> Dict[str, Any]:
         best_metrics = (metrics_payload or {}).get("best_metrics", {})
+        config = self._summary_config(run_dir)
+        primary_key = "val/mae" if "regression" in task_type else "val/macro_f1"
         summary = {
             "run_id": run_dir.name,
             "status": status,
             "task_type": task_type,
             "architecture": self.architecture,
             "backend": self.backend_name,
+            "model": str(config.get("model") or (metrics_payload or {}).get("model") or "lstm"),
+            "epochs": _int(config.get("epochs"), (metrics_payload or {}).get("total_epochs", 0) or 0),
+            "batch_size": _int(config.get("batch_size"), (metrics_payload or {}).get("batch_size", 0) or 0),
+            "sequence_length": _int(config.get("sequence_length"), (metrics_payload or {}).get("sequence_length", 0) or 0),
+            "stride": _int(config.get("stride"), (metrics_payload or {}).get("stride", 0) or 0),
+            "horizon": _int(config.get("horizon"), (metrics_payload or {}).get("horizon", 0) or 0),
             "best_epoch": (metrics_payload or {}).get("best_epoch", 0),
             "best_metrics": best_metrics,
+            "primary_metric_key": primary_key,
+            "primary_metric_name": "MAE" if primary_key == "val/mae" else "Macro-F1",
+            "primary_metric_value": best_metrics.get(primary_key),
             "platform_score": _platform_score(best_metrics, task_type),
             "error": error,
             "completed_at": datetime.now().isoformat(),
@@ -170,6 +193,17 @@ class RNNBackend(TrainingBackend):
         }
         (run_dir / "run_summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
         return summary
+
+    @staticmethod
+    def _summary_config(run_dir: Path) -> Dict[str, Any]:
+        path = run_dir / "train_config.json"
+        if not path.is_file():
+            return {}
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            return payload if isinstance(payload, dict) else {}
+        except (OSError, ValueError, TypeError):
+            return {}
 
     def _write_contracts(self, run_dir: Path, run_id: str, task_type: str, status: str, created_at: str) -> None:
         completed_at = datetime.now().isoformat()

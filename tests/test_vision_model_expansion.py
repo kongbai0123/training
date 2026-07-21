@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from PIL import Image
 
@@ -9,10 +10,16 @@ from src.model_system.catalog import ModelCatalog
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
 from src.training.dispatcher import TrainerDispatcher
+from src.training.backends import torchvision_backend as torchvision_backend_module
+from src.training.backends.torchvision_backend import TorchVisionBackend
+from src.training.state_store import TrainingStateStore
 from src.training.vision.torchvision_trainer import train_torchvision_model
 
 
 class VisionModelExpansionTests(unittest.TestCase):
+    def setUp(self):
+        TrainingStateStore._states.clear()
+
     def test_catalog_lists_recommended_trainable_models_by_task(self):
         classification = {item["model_id"] for item in ModelCatalog.list_trainable(task_family="image_classification", architecture="cnn")}
         detection = {item["model_id"] for item in ModelCatalog.list_trainable(task_family="object_detection", architecture="cnn")}
@@ -53,7 +60,15 @@ class VisionModelExpansionTests(unittest.TestCase):
         source = (Path(__file__).parents[1] / "static" / "pages" / "training.js").read_text(encoding="utf-8")
         self.assertIn("trainingCategoryLabel(category)", source)
         self.assertIn("option.dataset.trainingCategory", source)
+        self.assertIn("usage=train_all", source)
+        self.assertIn('option.dataset.compatible = compatible ? "true" : "false"', source)
+        self.assertIn('selectedOption?.dataset?.trainingCategory', source)
+        self.assertNotIn('const isSegModel = modelName.includes("-seg")', source)
         self.assertIn('backend: selectedOption?.dataset?.backend || "ultralytics_yolo"', source)
+
+        route_source = (Path(__file__).parents[1] / "src" / "api" / "routes" / "models.py").read_text(encoding="utf-8")
+        self.assertIn('elif usage == "train_all":', route_source)
+        self.assertIn("ModelCatalog.list_trainable(project=project, architecture=architecture)", route_source)
         self.assertIn("圖片分類（整張圖，不畫框）", source)
         self.assertIn("物件輪廓分割（可分別計數）", source)
 
@@ -100,6 +115,26 @@ class VisionModelExpansionTests(unittest.TestCase):
             self.assertEqual(result["best_epoch"], 1)
             self.assertTrue((run_dir / "weights" / "best.pt").exists())
             self.assertEqual(json.loads((run_dir / "metrics.json").read_text(encoding="utf-8"))["backend"], "pytorch_torchvision")
+
+    def test_torchvision_start_failure_does_not_leave_training_state(self):
+        project = {
+            "project_id": "vision_start_failure",
+            "task_type": "semantic_segmentation",
+            "training_config": {"run_id": "run_failure", "epochs": 1},
+        }
+        backend = TorchVisionBackend()
+
+        with patch.object(
+            torchvision_backend_module.DEFAULT_THREAD_TRAINING_RUNNER,
+            "start",
+            side_effect=RuntimeError("runner failed"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "runner failed"):
+                backend.start_training(project)
+
+        state = TrainingStateStore.get_state("vision_start_failure")
+        self.assertEqual(state["status"], "failed")
+        self.assertEqual(state["error"], "runner failed")
 
 
 if __name__ == "__main__":

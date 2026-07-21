@@ -41,9 +41,9 @@ class ProjectsPageStaticTests(unittest.TestCase):
         app_js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("../pages/projects.js?v=20260709-project-open-delegation", page_registry_js)
-        self.assertIn("./core/bootstrap.js?v=20260720-task-progress", app_js)
-        self.assertIn("/static/app.js?v=20260720-task-progress", index_html)
+        self.assertIn("../pages/projects.js?v=20260721-project-task-edit", page_registry_js)
+        self.assertIn("./core/bootstrap.js?v=20260721-project-task-edit", app_js)
+        self.assertIn("/static/app.js?v=20260721-project-task-edit", index_html)
 
 
 if __name__ == "__main__":

@@ -57,22 +57,34 @@ class XGBoostBackend(TrainingBackend):
         if DEFAULT_THREAD_TRAINING_RUNNER.is_running(project_id):
             return {"status": "already_running", "backend": self.backend_name, "architecture": self.architecture, "run_id": run_id}
         if TrainingStateStore.is_training(project_id):
-            return {"status": "stale_training_state", "backend": self.backend_name, "architecture": self.architecture, "run_id": run_id}
+            TrainingStateStore.mark_failed(
+                project_id,
+                "The previous XGBoost training did not start or exited without reporting a final state.",
+            )
 
         with self._lock:
             self._stop_flags[project_id] = False
 
         total_epochs = _int(config.get("epochs"), 100)
         TrainingStateStore.init_run(project_id, run_id, total_epochs, self.architecture, self.backend_name)
-        TrainingStateStore.set_field(project_id, "task_type", _rnn_task_type(config))
-        result = DEFAULT_THREAD_TRAINING_RUNNER.start(
-            project_id=project_id,
-            run_id=run_id,
-            target=self._run_training,
-            args=(project,),
-            daemon=False,
-        )
+        try:
+            TrainingStateStore.set_field(project_id, "task_type", _xgboost_task_type(config))
+            result = DEFAULT_THREAD_TRAINING_RUNNER.start(
+                project_id=project_id,
+                run_id=run_id,
+                target=self._run_training,
+                args=(project,),
+                daemon=False,
+            )
+        except Exception as exc:
+            TrainingStateStore.mark_failed(project_id, str(exc), run_id=run_id)
+            raise
         if not result.get("started"):
+            TrainingStateStore.mark_failed(
+                project_id,
+                "XGBoost training could not start because another training job is already running.",
+                run_id=run_id,
+            )
             return {"status": "already_running", "backend": self.backend_name, "architecture": self.architecture, "run_id": result.get("run_id", run_id)}
         return {"status": "started", "backend": self.backend_name, "architecture": self.architecture, "run_id": run_id}
 

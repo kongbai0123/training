@@ -13,6 +13,15 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv"}
 
 class ProjectManager:
+    SUPPORTED_TASK_TYPES = {
+        "object_detection",
+        "image_classification",
+        "instance_segmentation",
+        "semantic_segmentation",
+        "sequence_classification",
+        "sequence_regression",
+    }
+
     @staticmethod
     def _is_sequence_task(task_type: str) -> bool:
         normalized = str(task_type or "").lower()
@@ -233,6 +242,65 @@ class ProjectManager:
         
         ProjectManager.save_project(project_id, project_data)
         return project_data
+
+    @staticmethod
+    def update_task_type(project_id: str, task_type: str) -> Dict[str, Any]:
+        normalized = str(task_type or "").strip().lower()
+        if normalized not in ProjectManager.SUPPORTED_TASK_TYPES:
+            raise ValueError(f"Unsupported project task type: {normalized or '--'}")
+
+        project = ProjectManager.get_project(project_id)
+        if not project:
+            raise ValueError("Project not found")
+
+        previous = str(project.get("task_type") or "").strip().lower()
+        if previous == normalized:
+            return {
+                "project": project,
+                "change": {
+                    "changed": False,
+                    "previous_task_type": previous,
+                    "task_type": normalized,
+                    "preserved": [],
+                    "reset": [],
+                },
+            }
+
+        changed_at = datetime.now().isoformat()
+        project["task_type"] = normalized
+        project["training_config"] = ProjectManager._default_training_config(normalized)
+
+        current = project.setdefault("current", {})
+        current["training_run_id"] = None
+        current["best_model_id"] = None
+        current["export_id"] = None
+
+        if ProjectManager._is_sequence_task(normalized):
+            rnn_config = project.setdefault("rnn_config", {})
+            rnn_config["task_head"] = "regression" if "regression" in normalized else "classification"
+
+        project.setdefault("task_type_history", []).append({
+            "from": previous,
+            "to": normalized,
+            "changed_at": changed_at,
+        })
+
+        if not ProjectManager.save_project(project_id, project):
+            raise RuntimeError("Unable to save project task type")
+        saved = ProjectManager.get_project(project_id)
+        if not saved:
+            raise RuntimeError("Unable to reload updated project")
+        return {
+            "project": saved,
+            "change": {
+                "changed": True,
+                "previous_task_type": previous,
+                "task_type": normalized,
+                "preserved": ["dataset", "annotations", "splits", "training_runs"],
+                "reset": ["training_config", "current.training_run_id", "current.best_model_id", "current.export_id"],
+                "changed_at": changed_at,
+            },
+        }
 
     @staticmethod
     def get_project(project_id: str) -> Optional[Dict[str, Any]]:

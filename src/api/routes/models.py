@@ -223,6 +223,8 @@ def list_project_model_catalog(
             model for model in ModelCatalog.list_all(project=project, architecture=architecture)
             if normalize_task_family(model.get("task_family")) == normalized_task
         ]
+    elif usage == "train_all":
+        models = ModelCatalog.list_trainable(project=project, architecture=architecture)
     elif usage == "all":
         models = ModelCatalog.list_all(project=project, architecture=architecture)
     else:

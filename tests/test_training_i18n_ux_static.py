@@ -14,6 +14,7 @@ class TrainingI18nUxStaticTests(unittest.TestCase):
         cls.trainer_py = (ROOT / "src" / "trainer.py").read_text(encoding="utf-8")
         cls.augmentation_js = (ROOT / "static" / "pages" / "augmentation.js").read_text(encoding="utf-8")
         cls.inference_js = (ROOT / "static" / "pages" / "inference.js").read_text(encoding="utf-8")
+        cls.projects_js = (ROOT / "static" / "pages" / "projects.js").read_text(encoding="utf-8")
         cls.rnn_guide_js = (ROOT / "static" / "pages" / "rnn_model_render_helpers.js").read_text(encoding="utf-8")
         cls.training_css = (ROOT / "static" / "styles" / "pages" / "training.css").read_text(encoding="utf-8")
         cls.zh_catalog = (ROOT / "static" / "state" / "i18n" / "zh-TW.js").read_text(encoding="utf-8")
@@ -84,15 +85,22 @@ class TrainingI18nUxStaticTests(unittest.TestCase):
         self.assertNotIn("raw.githubusercontent.com", self.training_js)
         self.assertIn('t("training.reportImageUnavailable")', self.training_js)
 
-    def test_training_profiles_apply_presets_and_explain_tradeoffs(self):
-        self.assertIn('id="training-profile-guide"', self.index_html)
-        self.assertIn("const TRAINING_PROFILES", self.training_js)
-        self.assertIn("function applyTrainingProfile(profile)", self.training_js)
-        self.assertIn("function renderTrainingProfileGuide()", self.training_js)
-        self.assertIn('"#train-epochs": preset.epochs', self.training_js)
+    def test_training_profiles_use_hidden_contextual_explanations(self):
+        self.assertNotIn('id="training-profile-guide"', self.index_html)
+        self.assertIn('id="training-profile-info"', self.index_html)
+        self.assertNotIn("const TRAINING_PROFILES", self.training_js)
+        self.assertNotIn("function applyTrainingProfile(profile)", self.training_js)
+        self.assertNotIn("applyTrainingProfile(event.target.value)", self.training_js)
+        self.assertIn("function syncTrainingProfileTooltip()", self.training_js)
+        self.assertNotIn('"#train-epochs": preset.epochs', self.training_js)
+        self.assertNotIn('t("training.profileParameters")', self.training_js)
+        self.assertNotIn(".training-profile-guide {", self.training_css)
+        for profile in ("Balanced", "Quick", "Accuracy", "Custom"):
+            self.assertIn(f'"training.profile{profile}Use"', self.training_js)
+            self.assertIn(f'"training.profile{profile}Benefit"', self.training_js)
+            self.assertIn(f'"training.profile{profile}Caution"', self.training_js)
         self.assertIn('"training.profileQuickCaution"', self.zh_catalog)
         self.assertIn('"training.profileAccuracyBenefit"', self.zh_catalog)
-        self.assertIn(".training-profile-guide {", self.training_css)
 
     def test_shell_and_model_task_filters_have_bidirectional_i18n_keys(self):
         shell_keys = (
@@ -145,11 +153,12 @@ class TrainingI18nUxStaticTests(unittest.TestCase):
             r"@media \(max-width: 980px\)[\s\S]*?\.training-model-workbench\s*\{\s*grid-template-columns:\s*1fr;",
         )
 
-    def test_learning_rate_and_workers_offer_auto_and_custom_modes(self):
+    def test_cnn_and_rnn_learning_rate_fields_offer_auto_and_custom_modes(self):
         self.assertIn('id="train-lr-mode"', self.index_html)
         self.assertIn('id="train-workers-mode"', self.index_html)
-        self.assertEqual(self.index_html.count('data-i18n="training.valueMode.auto"'), 2)
-        self.assertEqual(self.index_html.count('data-i18n="training.valueMode.custom"'), 2)
+        self.assertIn('id="rnn-lr-mode"', self.index_html)
+        self.assertEqual(self.index_html.count('data-i18n="training.valueMode.auto"'), 3)
+        self.assertEqual(self.index_html.count('data-i18n="training.valueMode.custom"'), 3)
         self.assertIn("AUTO_PARAMETER_FIELDS", self.training_js)
         self.assertIn('lr0_mode: qs("#train-lr-mode")?.value || "auto"', self.training_js)
         self.assertIn('workers_mode: qs("#train-workers-mode")?.value || "auto"', self.training_js)
@@ -221,6 +230,57 @@ class TrainingI18nUxStaticTests(unittest.TestCase):
                 self.assertIn(f'data-i18n="{token}"', self.index_html)
                 self.assertIn(f'"{token}"', self.en_catalog)
                 self.assertIn(f'"{token}"', self.zh_catalog)
+
+    def test_project_task_selector_uses_plain_language_in_both_languages(self):
+        task_keys = (
+            "project.task.objectDetection",
+            "project.task.imageClassification",
+            "project.task.instanceSegmentation",
+            "project.task.semanticSegmentation",
+            "project.task.sequenceClassification",
+            "project.task.sequenceRegression",
+        )
+        for token in task_keys:
+            with self.subTest(token=token):
+                self.assertIn(f'data-i18n="{token}"', self.index_html)
+                self.assertIn(f'"{token}"', self.zh_catalog)
+                self.assertIn(f'"{token}"', self.en_catalog)
+        self.assertIn('id="new-project-task-hint"', self.index_html)
+        self.assertIn('t(`project.taskHelp.${type}`)', self.projects_js)
+        self.assertNotIn('<option value="image_classification">Image Classification</option>', self.index_html)
+
+    def test_project_task_selector_has_quick_guide_tooltip_and_edit_flow(self):
+        self.assertGreaterEqual(self.index_html.count('data-i18n-tooltip="project.taskTypeTooltip"'), 2)
+        self.assertIn('id="new-project-task-quick-guide"', self.index_html)
+        self.assertIn('id="project-task-edit-modal"', self.index_html)
+        self.assertIn('id="project-task-edit-quick-guide"', self.index_html)
+        self.assertIn('data-edit-project-task=', self.projects_js)
+        self.assertIn('data-project-task-choice=', self.projects_js)
+        self.assertIn('method: "PATCH"', self.projects_js)
+        self.assertIn('JSON.stringify({ task_type: taskType, confirm: true })', self.projects_js)
+        for task_type in (
+            "object_detection",
+            "image_classification",
+            "instance_segmentation",
+            "semantic_segmentation",
+            "sequence_classification",
+            "sequence_regression",
+        ):
+            with self.subTest(task_type=task_type):
+                for prefix in ("project.taskShort", "project.taskCard"):
+                    token = f'{prefix}.{task_type}'
+                    self.assertIn(f'"{token}"', self.zh_catalog)
+                    self.assertIn(f'"{token}"', self.en_catalog)
+        for token in (
+            "project.taskTypeTooltip",
+            "project.taskEditTitle",
+            "project.taskEditImpact",
+            "project.taskEditButton",
+            "project.taskEditSuccess",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(f'"{token}"', self.zh_catalog)
+                self.assertIn(f'"{token}"', self.en_catalog)
 
 
 if __name__ == "__main__":

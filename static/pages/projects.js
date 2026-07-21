@@ -8,9 +8,23 @@ let historyModeFilter = "all";
 let inferenceHistoryLoading = false;
 const selectedInferenceJobIds = new Set();
 let pendingDeleteInferenceJobIds = [];
+let editingProjectTaskId = "";
+
+const PROJECT_TASK_GUIDES = {
+  object_detection: { icon: "fa-vector-square", labelKey: "project.taskShort.object_detection", cardKey: "project.taskCard.object_detection" },
+  image_classification: { icon: "fa-image", labelKey: "project.taskShort.image_classification", cardKey: "project.taskCard.image_classification" },
+  instance_segmentation: { icon: "fa-draw-polygon", labelKey: "project.taskShort.instance_segmentation", cardKey: "project.taskCard.instance_segmentation" },
+  semantic_segmentation: { icon: "fa-layer-group", labelKey: "project.taskShort.semantic_segmentation", cardKey: "project.taskCard.semantic_segmentation" },
+  sequence_classification: { icon: "fa-tags", labelKey: "project.taskShort.sequence_classification", cardKey: "project.taskCard.sequence_classification" },
+  sequence_regression: { icon: "fa-chart-line", labelKey: "project.taskShort.sequence_regression", cardKey: "project.taskCard.sequence_regression" },
+};
 
 export function initProjects() {
-  eventBus.on("language-changed", () => renderNewProjectClassList());
+  eventBus.on("language-changed", () => {
+    renderNewProjectClassList();
+    syncCreateProjectMode();
+    if (editingProjectTaskId) syncProjectTaskEdit();
+  });
   qs("#btn-reload-projects")?.addEventListener("click", () => {
     eventBus.emit("reload-projects");
   });
@@ -24,6 +38,17 @@ export function initProjects() {
   qs("#project-create-modal")?.addEventListener("click", (event) => {
     if (event.target.id === "project-create-modal") closeCreateProjectModal();
   });
+
+  qs("#btn-close-project-task-edit")?.addEventListener("click", closeProjectTaskEditModal);
+  qs("#btn-cancel-project-task-edit")?.addEventListener("click", closeProjectTaskEditModal);
+  qs("#project-task-edit-modal")?.addEventListener("click", (event) => {
+    if (event.target.id === "project-task-edit-modal") closeProjectTaskEditModal();
+  });
+  qs("#project-task-edit-type")?.addEventListener("change", syncProjectTaskEdit);
+  qsa("[data-edit-project-mode]").forEach((button) => {
+    button.addEventListener("click", () => setEditProjectMode(button.dataset.editProjectMode));
+  });
+  qs("#form-project-task-edit")?.addEventListener("submit", saveProjectTaskEdit);
 
   qs("#btn-add-project-class")?.addEventListener("click", addProjectClassFromInput);
   qs("#new-project-class-input")?.addEventListener("keydown", (event) => {
@@ -245,13 +270,13 @@ function renderProjectCard(project, options = {}) {
           <div class="project-history-title-row">
             <h3>${escapeHtml(projectName)}</h3>
             <span class="badge badge-info">${escapeHtml(getProjectHistoryModeLabel(project))}</span>
-            <span class="badge badge-muted">${escapeHtml(project.task_type || "--")}</span>
+            <span class="badge badge-muted">${escapeHtml(projectTaskLabel(project.task_type))}</span>
           </div>
           <p>${escapeHtml(progressText)} - ${escapeHtml(t("history.updated"))} ${escapeHtml(updatedAt || "--")}</p>
         </div>
         <div class="button-row">
           <button class="btn btn-secondary btn-sm" data-open-project="${escapeHtml(project.project_id)}">${escapeHtml(t("historyOpen"))}</button>
-          ${options.includeDelete ? `<button class="btn btn-danger btn-sm" data-delete-project="${escapeHtml(project.project_id)}"><i class="fa-solid fa-trash"></i><span>${escapeHtml(t("historyDelete"))}</span></button>` : ""}
+          ${options.includeDelete ? `<button class="btn btn-secondary btn-sm" data-edit-project-task="${escapeHtml(project.project_id)}"><i class="fa-solid fa-pen-to-square"></i><span>${escapeHtml(t("project.taskEditButton"))}</span></button><button class="btn btn-danger btn-sm" data-delete-project="${escapeHtml(project.project_id)}"><i class="fa-solid fa-trash"></i><span>${escapeHtml(t("historyDelete"))}</span></button>` : ""}
         </div>
       </div>
       ${options.showFiles ? `
@@ -428,6 +453,23 @@ function handleProjectListActionClick(event) {
     closeHistoryModal();
     closeCreateProjectModal();
     eventBus.emit("open-project", openBtn.dataset.openProject);
+    return;
+  }
+
+  const editTaskBtn = event.target.closest("[data-edit-project-task]");
+  if (editTaskBtn) {
+    closeHistoryModal();
+    openProjectTaskEditModal(editTaskBtn.dataset.editProjectTask);
+    return;
+  }
+
+  const taskChoice = event.target.closest("[data-project-task-choice]");
+  if (taskChoice) {
+    const select = qs(`#${taskChoice.dataset.projectTaskSelect}`);
+    if (!select) return;
+    select.value = taskChoice.dataset.projectTaskChoice;
+    if (select.id === "new-project-type") syncCreateProjectMode();
+    else syncProjectTaskEdit();
     return;
   }
 
@@ -649,19 +691,121 @@ function syncCreateProjectMode() {
     appState.newProjectClasses = [];
     renderNewProjectClassList();
   }
-  setText("#new-project-class-label", "Class list");
+  setText("#new-project-task-hint", t(`project.taskHelp.${type}`));
+  setText("#new-project-class-label", t("project.classList"));
   setText(
     "#new-project-class-hint",
     isSequence
-      ? "RNN target / label is configured after CSV import."
-      : "Vision projects use this list for image classes, boxes, or mask regions."
+      ? t("project.classListHelp.sequence")
+      : t("project.classListHelp.vision")
   );
   const input = qs("#new-project-class-input");
   if (input) {
     input.placeholder = isSequence
-      ? "Configured after CSV import"
-      : "Class name, e.g. class_a; comma separated is supported";
+      ? t("project.classPlaceholder.sequence")
+      : t("project.classPlaceholder.vision");
     input.disabled = isSequence;
+  }
+  renderProjectTaskQuickGuide("#new-project-task-quick-guide", "new-project-type");
+}
+
+function projectTaskLabel(taskType) {
+  const guide = PROJECT_TASK_GUIDES[String(taskType || "").toLowerCase()];
+  return guide ? t(guide.labelKey) : (taskType || "--");
+}
+
+function renderProjectTaskQuickGuide(hostSelector, selectId) {
+  const host = qs(hostSelector);
+  const select = qs(`#${selectId}`);
+  if (!host || !select) return;
+  const selected = select.value;
+  const mode = getProjectModeFromTaskType(selected);
+  const html = Object.entries(PROJECT_TASK_GUIDES)
+    .filter(([taskType]) => getProjectModeFromTaskType(taskType) === mode)
+    .map(([taskType, guide]) => `
+      <button type="button" class="project-task-choice ${taskType === selected ? "active" : ""}"
+        data-project-task-choice="${escapeHtml(taskType)}" data-project-task-select="${escapeHtml(selectId)}">
+        <i class="fa-solid ${escapeHtml(guide.icon)}"></i>
+        <span><strong>${escapeHtml(t(guide.labelKey))}</strong><small>${escapeHtml(t(guide.cardKey))}</small></span>
+      </button>
+    `).join("");
+  setHTML(hostSelector, html);
+}
+
+function openProjectTaskEditModal(projectId) {
+  const project = (appState.projects || []).find((item) => item.project_id === projectId);
+  const modal = qs("#project-task-edit-modal");
+  const select = qs("#project-task-edit-type");
+  if (!project || !modal || !select) return;
+  editingProjectTaskId = projectId;
+  select.value = project.task_type || "object_detection";
+  setText("#project-task-edit-current", projectTaskLabel(project.task_type));
+  setEditProjectMode(getProjectModeFromTaskType(select.value), { preserveType: true });
+  syncProjectTaskEdit();
+  modal.hidden = false;
+}
+
+function closeProjectTaskEditModal() {
+  const modal = qs("#project-task-edit-modal");
+  if (modal) modal.hidden = true;
+  editingProjectTaskId = "";
+}
+
+function setEditProjectMode(mode, options = {}) {
+  const normalizedMode = mode === "rnn" ? "rnn" : "cnn";
+  qsa("[data-edit-project-mode]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.editProjectMode === normalizedMode);
+  });
+  const select = qs("#project-task-edit-type");
+  if (!select) return;
+  Array.from(select.options).forEach((option) => {
+    const matches = getProjectModeFromTaskType(option.value) === normalizedMode;
+    option.hidden = !matches;
+    option.disabled = !matches;
+  });
+  if (!options.preserveType || getProjectModeFromTaskType(select.value) !== normalizedMode) {
+    select.value = normalizedMode === "rnn" ? "sequence_classification" : "object_detection";
+  }
+  syncProjectTaskEdit();
+}
+
+function syncProjectTaskEdit() {
+  const project = (appState.projects || []).find((item) => item.project_id === editingProjectTaskId);
+  const taskType = qs("#project-task-edit-type")?.value || "";
+  const mode = getProjectModeFromTaskType(taskType);
+  qsa("[data-edit-project-mode]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.editProjectMode === mode);
+  });
+  setText("#project-task-edit-hint", t(`project.taskHelp.${taskType}`));
+  renderProjectTaskQuickGuide("#project-task-edit-quick-guide", "project-task-edit-type");
+  if (!project) return;
+  const files = project.file_summary || {};
+  const dataCount = getProjectHistoryCategory(project) === "rnn"
+    ? Number(files.sequence_csv_files || 0)
+    : Number(files.images || project.annotation_progress?.total || 0);
+  const runCount = Array.isArray(project.training_runs) ? project.training_runs.length : 0;
+  setText("#project-task-edit-impact", t("project.taskEditImpact", { dataCount, runCount }));
+}
+
+async function saveProjectTaskEdit(event) {
+  event.preventDefault();
+  const projectId = editingProjectTaskId;
+  const taskType = qs("#project-task-edit-type")?.value;
+  if (!projectId || !taskType) return;
+  try {
+    await apiFetch(`/api/projects/${projectId}/task-type`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ task_type: taskType, confirm: true }),
+    });
+    const isCurrentProject = appState.currentProjectId === projectId;
+    closeProjectTaskEditModal();
+    eventBus.emit("toast", t("project.taskEditSuccess"));
+    eventBus.emit("reload-projects", isCurrentProject
+      ? { openProjectId: projectId, page: isSequenceProjectType(taskType) ? "training" : "dashboard" }
+      : {});
+  } catch (err) {
+    eventBus.emit("toast", t("project.taskEditFailed", { error: err.message }));
   }
 }
 

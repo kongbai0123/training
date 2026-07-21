@@ -59,7 +59,7 @@ def train_xgboost_from_dataset(
     }
 
     if is_regression:
-        params = {"objective": "reg:squarederror", "eval_metric": "rmse", **common_params}
+        params = {"objective": "reg:squarederror", "eval_metric": ["rmse", "mae"], **common_params}
     else:
         params = {
             "objective": "multi:softprob" if int(dataset["num_outputs"]) > 2 else "binary:logistic",
@@ -81,7 +81,7 @@ def train_xgboost_from_dataset(
         verbose_eval=False,
     )
 
-    history = _history_from_evals(evals_result)
+    history = _history_from_evals(evals_result, is_regression=is_regression)
     final_metrics = _evaluate_final(model, dval, y_val, is_regression, int(dataset["num_outputs"]))
     diagnostics = final_metrics.pop("diagnostics", {})
     if history:
@@ -101,6 +101,7 @@ def train_xgboost_from_dataset(
     metrics_payload = {
         "backend": "sklearn_xgboost",
         "architecture": "rnn",
+        "model": str(config.get("model") or ("xgboost_regressor" if is_regression else "xgboost_classifier")),
         "task_type": "sequence_regression" if is_regression else "sequence_classification",
         "primary_metric": best_metric_key,
         "history": history,
@@ -119,17 +120,28 @@ def _flatten(values: np.ndarray) -> np.ndarray:
     return array.reshape(array.shape[0], -1)
 
 
-def _history_from_evals(result: Dict[str, Dict[str, List[float]]]) -> List[Dict[str, Any]]:
-    train_metrics = next(iter((result.get("train") or {}).values()), [])
-    val_metrics = next(iter((result.get("val") or {}).values()), [])
+def _history_from_evals(
+    result: Dict[str, Dict[str, List[float]]],
+    is_regression: bool = False,
+) -> List[Dict[str, Any]]:
+    train_result = result.get("train") or {}
+    val_result = result.get("val") or {}
+    train_metrics = train_result.get("rmse") or next(iter(train_result.values()), [])
+    val_metrics = val_result.get("rmse") or next(iter(val_result.values()), [])
+    val_mae = val_result.get("mae") or []
     length = max(len(train_metrics), len(val_metrics))
     history: List[Dict[str, Any]] = []
     for index in range(length):
-        history.append({
+        row = {
             "epoch": index + 1,
             "train/loss": round(float(train_metrics[index]), 6) if index < len(train_metrics) else 0.0,
             "val/loss": round(float(val_metrics[index]), 6) if index < len(val_metrics) else 0.0,
-        })
+        }
+        if is_regression:
+            row["val/rmse"] = row["val/loss"]
+            if index < len(val_mae):
+                row["val/mae"] = round(float(val_mae[index]), 6)
+        history.append(row)
     return history
 
 

@@ -237,7 +237,34 @@ class RunManager:
                 if summary_file.exists():
                     try:
                         with open(summary_file, "r", encoding="utf-8") as f:
-                            runs.append(json.load(f))
+                            summary = json.load(f)
+                        if isinstance(summary, dict):
+                            config_file = d / "train_config.json"
+                            if config_file.is_file():
+                                try:
+                                    config = json.loads(config_file.read_text(encoding="utf-8"))
+                                except (OSError, ValueError, TypeError):
+                                    config = {}
+                                if isinstance(config, dict):
+                                    for key in ("model", "epochs", "batch_size", "sequence_length", "stride", "horizon"):
+                                        if summary.get(key) in (None, "", 0):
+                                            summary[key] = config.get(key)
+                            metrics_file = d / "metrics.json"
+                            if metrics_file.is_file():
+                                try:
+                                    metrics = json.loads(metrics_file.read_text(encoding="utf-8"))
+                                except (OSError, ValueError, TypeError):
+                                    metrics = {}
+                                if isinstance(metrics, dict):
+                                    summary.setdefault("model", metrics.get("model"))
+                                    summary.setdefault("best_epoch", metrics.get("best_epoch"))
+                                    summary.setdefault("best_metrics", metrics.get("best_metrics") or {})
+                                    primary_key = metrics.get("primary_metric")
+                                    if primary_key:
+                                        summary.setdefault("primary_metric_key", primary_key)
+                                        summary.setdefault("primary_metric_name", "MAE" if primary_key == "val/mae" else "Macro-F1")
+                                        summary.setdefault("primary_metric_value", (metrics.get("best_metrics") or {}).get(primary_key))
+                            runs.append(summary)
                     except Exception:
                         pass
                 else:

@@ -28,6 +28,39 @@ class AppPathsProjectScopeTests(unittest.TestCase):
             self.assertEqual(reloaded.PROJECTS_DIR, target.resolve())
             self.assertTrue(reloaded.PROJECTS_DIR.exists())
 
+    def test_development_models_share_installed_app_store(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            local_app_data = Path(tmp) / "local-app-data"
+            with patch.dict(
+                "os.environ",
+                {
+                    "VTS_USER_DATA_DIR": "",
+                    "VTS_PROJECTS_DIR": "",
+                    "VTS_MODELS_DIR": "",
+                    "LOCALAPPDATA": str(local_app_data),
+                },
+                clear=False,
+            ):
+                reloaded = importlib.reload(app_paths)
+
+            self.assertEqual(
+                reloaded.MODELS_DIR,
+                (local_app_data / "VisionTrainingStudio" / "models").resolve(),
+            )
+            self.assertEqual(reloaded.PROJECTS_DIR, reloaded.APP_HOME / "projects")
+
+    def test_explicit_user_data_keeps_models_self_contained(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            user_data = Path(tmp) / "user-data"
+            with patch.dict(
+                "os.environ",
+                {"VTS_USER_DATA_DIR": str(user_data), "VTS_MODELS_DIR": ""},
+                clear=False,
+            ):
+                reloaded = importlib.reload(app_paths)
+
+            self.assertEqual(reloaded.MODELS_DIR, (user_data / "models").resolve())
+
     def test_frozen_paths_use_explicit_portable_root(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

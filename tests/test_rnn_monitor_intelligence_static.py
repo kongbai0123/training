@@ -23,14 +23,19 @@ def test_rnn_start_action_is_only_in_training_panel_and_not_readiness_locked():
     assert 't("rnn.training.blocker.settings")' in read("static/pages/rnn_readiness_helpers.js")
 
 
-def test_rnn_live_monitor_uses_task_specific_metrics():
+def test_rnn_training_page_keeps_progress_but_defers_metrics_to_evaluation():
     html = read("static/index.html")
     helpers = read("static/pages/rnn_intelligence_helpers.js")
     modes = read("static/pages/training_modes.js")
+    training = read("static/pages/training.js")
 
-    assert 'id="rnn-live-monitor"' in html
-    assert 'id="rnn-monitor-quality-chart"' in html
-    assert 'id="rnn-monitor-loss-chart"' in html
+    assert 'id="rnn-live-monitor"' not in html
+    assert 'id="rnn-monitor-quality-chart"' not in html
+    assert 'id="rnn-monitor-loss-chart"' not in html
+    assert 'id="rnn-evaluation-panel"' in html
+    assert 'id="rnn-eval-score-chart"' in html
+    assert 'id="rnn-eval-loss-chart"' in html
+    assert "updateGlobalTrainingProgress(trainState, progressPercent, showMonitor);" in training
     for metric in ("val/accuracy", "val/macro_f1", "val/precision", "val/recall", "val/mae", "val/rmse"):
         assert metric in helpers
     assert "buildRnnLiveMonitorViewModel(appState.trainingStatus" in modes
@@ -50,6 +55,50 @@ def test_training_heartbeat_updates_monitor_without_rerendering_the_whole_app():
     assert 'eventBus.on("training-status-changed"' in modes
     assert "rnnMonitorChartSignatures" in modes
     assert "if (hasSeries && rnnMonitorChartSignatures.get(canvasId) === signature) return;" in modes
+
+
+def test_rnn_training_modes_has_one_initializer_and_one_module_identity():
+    registry = read("static/core/page_registry.js")
+    guards = read("static/core/page_guards.js")
+    right_panel = read("static/core/right_panel.js")
+    assistant = read("static/pages/project_assistant_impl.js")
+    training = read("static/pages/training.js")
+    modes = read("static/pages/training_modes.js")
+    module_url = "training_modes.js?v=20260721-rnn-evaluation-sync"
+
+    assert module_url in registry
+    assert module_url in guards
+    assert module_url in right_panel
+    assert module_url in assistant
+    assert 'from "./training_modes.js"' not in training
+    assert "initTrainingModeSidebar();" not in training
+    assert "let trainingModeSidebarInitialized = false;" in modes
+    assert "if (trainingModeSidebarInitialized) return;" in modes
+
+
+def test_rnn_evaluation_refetches_metrics_and_rejects_stale_responses():
+    modes = read("static/pages/training_modes.js")
+    state = read("static/pages/training_mode_state.js")
+    select_block = modes.split("async function selectRnnEvaluationRun(runId)", 1)[1].split(
+        "function hasUsableRnnEvaluationMetrics", 1
+    )[0]
+
+    assert "evaluationRequestSeq: 0" in state
+    assert "evaluationActiveRequestSeq: 0" in state
+    assert "requestSeq !== trainingModeState.rnn.evaluationRequestSeq" in modes
+    assert "hasUsableRnnEvaluationMetrics(metrics)" in modes
+    assert "/metrics`" in select_block
+    assert "trainingModeState.rnn.evaluationMetrics = metrics || null;" in select_block
+    assert 'change.statusChanged && ["completed", "stopped", "failed"].includes(status)' in modes
+    assert "loadRnnEvaluation({ force: true, runId:" in modes
+    assert "window.setTimeout(() => loadRnnEvaluation({" in modes
+    assert modes.count("dedupe: false") >= 5
+    load_block = modes.split("async function loadRnnEvaluation(options = {})", 1)[1].split(
+        "async function selectRnnEvaluationRun", 1
+    )[0]
+    assert load_block.index("evaluationLoading && !options.force") < load_block.index("const projectChanged")
+    assert "trainingModeState.rnn.evaluationProjectId = projectId;" in load_block
+    assert "trainingModeState.rnn.evaluationActiveRequestSeq === requestSeq" in load_block
 
 
 def test_rnn_evaluation_has_smart_advice_and_true_svg_downloads():
@@ -91,3 +140,11 @@ def test_metrics_endpoint_supplies_training_context_for_assessment():
     route = read("src/api/routes/training_runs.py")
     assert 'payload.setdefault("train_config", config_payload)' in route
     assert 'payload.setdefault("run_summary", summary_payload)' in route
+
+
+def test_rnn_optimizer_selection_is_honored_by_the_neural_backend():
+    trainer = read("src/training/rnn/trainer.py")
+    assert 'optimizer_name = str(config.get("optimizer") or "auto")' in trainer
+    assert "torch.optim.AdamW" in trainer
+    assert 'if optimizer_name == "adamw"' in trainer
+    assert '"optimizer": "adamw" if optimizer_name == "adamw" else "adam"' in trainer

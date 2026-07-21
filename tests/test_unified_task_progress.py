@@ -107,6 +107,7 @@ class UnifiedTaskProgressStaticTests(unittest.TestCase):
         self.assertIn("event.loaded * 100", api)
         self.assertIn('xhr.upload.addEventListener("load"', api)
         self.assertIn('tUpload("task.upload.processing"', api)
+        self.assertIn("options.onUploadProgress(payload)", api)
 
     def test_long_operations_use_job_status_and_websocket(self):
         routes = (ROOT / "src" / "api" / "routes" / "tasks.py").read_text(encoding="utf-8")

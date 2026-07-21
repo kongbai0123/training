@@ -52,17 +52,33 @@ class YOLOTrainerRunnerBridgePhase1CTests(unittest.TestCase):
         runner.start.assert_not_called()
         self.assertNotIn("project_1", YOLOTrainer._threads)
 
-    def test_stale_training_state_prevents_start_without_runner(self):
+    def test_stale_training_state_is_recovered_before_start(self):
         TrainingStateStore.init_run("project_1", "run_1", 2, "cnn", "ultralytics_yolo")
         project = {"project_id": "project_1", "training_config": {"run_id": "run_2"}}
         runner = MagicMock()
         runner.is_running.return_value = False
+        runner.start.return_value = {"started": True, "run_id": "run_2", "thread_name": "training-project_1-run_2"}
 
         with patch("src.trainer.DEFAULT_THREAD_TRAINING_RUNNER", runner):
             YOLOTrainer.start_training(project)
 
-        runner.start.assert_not_called()
-        self.assertNotIn("project_1", YOLOTrainer._threads)
+        runner.start.assert_called_once()
+        self.assertEqual(YOLOTrainer._threads["project_1"]["run_id"], "run_2")
+        self.assertEqual(TrainingStateStore.get_state("project_1")["status"], "training")
+
+    def test_runner_exception_marks_training_failed(self):
+        project = {"project_id": "project_1", "training_config": {"run_id": "run_1"}}
+        runner = MagicMock()
+        runner.is_running.return_value = False
+        runner.start.side_effect = RuntimeError("runner failed")
+
+        with patch("src.trainer.DEFAULT_THREAD_TRAINING_RUNNER", runner):
+            with self.assertRaisesRegex(RuntimeError, "runner failed"):
+                YOLOTrainer.start_training(project)
+
+        state = TrainingStateStore.get_state("project_1")
+        self.assertEqual(state["status"], "failed")
+        self.assertEqual(state["error"], "runner failed")
 
     def test_stop_training_keeps_stop_flag_ownership_and_does_not_cleanup_runner(self):
         TrainingStateStore.init_run("project_1", "run_1", 2, "cnn", "ultralytics_yolo")

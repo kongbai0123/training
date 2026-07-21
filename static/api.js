@@ -201,6 +201,13 @@ export function apiUpload(url, options = {}) {
     xhr.upload.addEventListener("progress", (event) => {
       if (!event.lengthComputable || event.total <= 0) {
         task?.update({ indeterminate: true, message: tUpload("task.upload.transferring", "Transferring files.") });
+        notifyUploadProgress(options, {
+          phase: "upload",
+          loaded: event.loaded || 0,
+          total: event.total || 0,
+          percent: 0,
+          indeterminate: true,
+        });
         return;
       }
       const percent = Math.max(0, Math.min(100, (event.loaded * 100) / event.total));
@@ -212,6 +219,13 @@ export function apiUpload(url, options = {}) {
           total: formatUploadBytes(event.total),
         }),
       });
+      notifyUploadProgress(options, {
+        phase: "upload",
+        loaded: event.loaded,
+        total: event.total,
+        percent,
+        indeterminate: false,
+      });
     });
 
     xhr.upload.addEventListener("load", () => {
@@ -219,6 +233,11 @@ export function apiUpload(url, options = {}) {
         percent: 100,
         indeterminate: true,
         message: tUpload("task.upload.processing", "Upload complete. The application is validating and processing files."),
+      });
+      notifyUploadProgress(options, {
+        phase: "processing",
+        percent: 100,
+        indeterminate: true,
       });
     });
 
@@ -271,6 +290,15 @@ function formatUploadBytes(value) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function notifyUploadProgress(options, payload) {
+  if (typeof options.onUploadProgress !== "function") return;
+  try {
+    options.onUploadProgress(payload);
+  } catch (error) {
+    console.warn("Upload progress callback failed", error);
+  }
 }
 
 function tUpload(key, fallback, params = {}) {

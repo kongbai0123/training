@@ -55,11 +55,28 @@ def _resolve_projects_dir(user_data_dir: Path) -> Path:
     return user_data_dir / "projects"
 
 
+def _resolve_models_dir(user_data_dir: Path) -> Path:
+    explicit = os.environ.get("VTS_MODELS_DIR")
+    if explicit:
+        return Path(explicit).expanduser().resolve()
+
+    # Explicit/portable user-data roots remain self-contained. During source
+    # development, only projects stay in the checkout; downloaded models share
+    # the same per-user store as the installed application.
+    if os.environ.get("VTS_USER_DATA_DIR") or getattr(sys, "frozen", False):
+        return (user_data_dir / "models").resolve()
+
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        return (Path(local_app_data).expanduser() / "VisionTrainingStudio" / "models").resolve()
+    return (user_data_dir / "models").resolve()
+
+
 APP_HOME = _resolve_app_home()
 USER_DATA_DIR = _resolve_user_data_root()
 
 PROJECTS_DIR = _resolve_projects_dir(USER_DATA_DIR)
-MODELS_DIR = USER_DATA_DIR / "models"
+MODELS_DIR = _resolve_models_dir(USER_DATA_DIR)
 LOGS_DIR = USER_DATA_DIR / "logs"
 CONFIG_DIR = USER_DATA_DIR / "config"
 LICENSES_DIR = USER_DATA_DIR / "licenses"

@@ -283,7 +283,11 @@ class YOLOTrainer:
         if DEFAULT_THREAD_TRAINING_RUNNER.is_running(project_id):
             return
         if TrainingStateStore.is_training(project_id):
-            return
+            state = TrainingStateStore.mark_failed(
+                project_id,
+                "The previous YOLO training did not start or exited without reporting a final state.",
+            )
+            cls._mirror_state(project_id, state)
             
         cls._stop_flags[project_id] = False
         state = TrainingStateStore.init_run(
@@ -295,13 +299,18 @@ class YOLOTrainer:
         )
         cls._mirror_state(project_id, state)
         
-        result = DEFAULT_THREAD_TRAINING_RUNNER.start(
-            project_id=project_id,
-            run_id=run_id,
-            target=cls._run_yolo,
-            args=(project_data,),
-            daemon=False,
-        )
+        try:
+            result = DEFAULT_THREAD_TRAINING_RUNNER.start(
+                project_id=project_id,
+                run_id=run_id,
+                target=cls._run_yolo,
+                args=(project_data,),
+                daemon=False,
+            )
+        except Exception as exc:
+            state = TrainingStateStore.mark_failed(project_id, str(exc), run_id=run_id)
+            cls._mirror_state(project_id, state)
+            raise
         if result.get("started"):
             cls._threads[project_id] = dict(result)
         else:

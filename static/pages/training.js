@@ -2,7 +2,6 @@ import { eventBus } from "../event_bus.js";
 import { appState, getProjectStatus, t } from "../state.js";
 import { apiFetch, apiUpload } from "../api.js";
 import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
-import { initTrainingModeSidebar } from "./training_modes.js";
 
 // Training UI helper
 let metricsCharts = [];
@@ -46,19 +45,17 @@ function setMetricsDashboardActive(active) {
 }
 
 export function initTraining() {
-  initTrainingModeSidebar();
   loadTrainingModelCatalog(true);
   initTrainingParameterModes();
 
   ["#train-model", "#train-batch", "#train-imgsz", "#train-device"].forEach((selector) => {
     qs(selector)?.addEventListener("change", () => renderTrainingMonitor());
   });
-  qs("#train-profile")?.addEventListener("change", (event) => {
-    applyTrainingProfile(event.target.value);
-    renderTrainingProfileGuide();
+  qs("#train-profile")?.addEventListener("change", () => {
+    syncTrainingProfileTooltip();
     renderTrainingMonitor();
   });
-  renderTrainingProfileGuide();
+  syncTrainingProfileTooltip();
   qs("#btn-training-open-model-hub")?.addEventListener("click", () => {
     openModelImportModal();
   });
@@ -230,7 +227,7 @@ export function initTraining() {
     emptyRunListProjectId = "";
   });
   eventBus.on("language-changed", () => {
-    renderTrainingProfileGuide();
+    syncTrainingProfileTooltip();
     renderTrainingMonitor();
     updateModelImportTypeUi();
     syncTrainingParameterModes();
@@ -239,49 +236,24 @@ export function initTraining() {
   eventBus.on("state-changed", () => loadTrainingModelCatalog());
 }
 
-const TRAINING_PROFILES = {
-  balanced: { epochs: 50, batch: 8, imgsz: 640, patience: 20 },
-  quick: { epochs: 5, batch: 4, imgsz: 512, patience: 5 },
-  accuracy: { epochs: 100, batch: 4, imgsz: 768, patience: 30 },
-};
-
-function applyTrainingProfile(profile) {
-  const preset = TRAINING_PROFILES[profile];
-  if (!preset) return;
-  const earlyStop = qs("#train-early-stop-enabled");
-  if (earlyStop) earlyStop.checked = true;
-  Object.entries({
-    "#train-epochs": preset.epochs,
-    "#train-batch": preset.batch,
-    "#train-imgsz": preset.imgsz,
-    "#train-patience": preset.patience,
-  }).forEach(([selector, value]) => {
-    const field = qs(selector);
-    if (!field) return;
-    field.value = String(value);
-    field.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-  syncTrainingParameterModes();
-}
-
-function renderTrainingProfileGuide() {
-  const host = qs("#training-profile-guide");
-  if (!host) return;
+function syncTrainingProfileTooltip() {
+  const info = qs("#training-profile-info");
+  if (!info) return;
   const profile = qs("#train-profile")?.value || "balanced";
-  const keys = {
-    balanced: ["fa-scale-balanced", "training.profileBalanced", "training.profileBalancedUse", "training.profileBalancedBenefit", "training.profileBalancedCaution", "50 / 8 / 640 / 20"],
-    quick: ["fa-bolt", "training.profileQuick", "training.profileQuickUse", "training.profileQuickBenefit", "training.profileQuickCaution", "5 / 4 / 512 / 5"],
-    accuracy: ["fa-bullseye", "training.profileAccuracy", "training.profileAccuracyUse", "training.profileAccuracyBenefit", "training.profileAccuracyCaution", "100 / 4 / 768 / 30"],
-    custom: ["fa-sliders", "training.profileCustom", "training.profileCustomUse", "training.profileCustomBenefit", "training.profileCustomCaution", t("training.profileCustomValues")],
+  const descriptions = {
+    balanced: ["training.profileBalancedUse", "training.profileBalancedBenefit", "training.profileBalancedCaution"],
+    quick: ["training.profileQuickUse", "training.profileQuickBenefit", "training.profileQuickCaution"],
+    accuracy: ["training.profileAccuracyUse", "training.profileAccuracyBenefit", "training.profileAccuracyCaution"],
+    custom: ["training.profileCustomUse", "training.profileCustomBenefit", "training.profileCustomCaution"],
   };
-  const [icon, title, use, benefit, caution, values] = keys[profile] || keys.balanced;
-  host.innerHTML = `
-    <div class="training-profile-guide-title"><i class="fa-solid ${icon}"></i><span><strong>${escapeHtml(t(title))}</strong><small>${escapeHtml(t(use))}</small></span></div>
-    <ul>
-      <li><strong>${escapeHtml(t("training.profileParameters"))}</strong><span class="no-i18n">${escapeHtml(values)}</span></li>
-      <li><strong>${escapeHtml(t("training.profileBenefit"))}</strong><span>${escapeHtml(t(benefit))}</span></li>
-      <li><strong>${escapeHtml(t("training.profileCaution"))}</strong><span>${escapeHtml(t(caution))}</span></li>
-    </ul>`;
+  const [use, benefit, caution] = descriptions[profile] || descriptions.balanced;
+  const message = [
+    t(use),
+    `${t("training.profileBenefit")}：${t(benefit)}`,
+    `${t("training.profileCaution")}：${t(caution)}`,
+  ].join("\n");
+  info.dataset.tooltip = message;
+  info.setAttribute("aria-label", message);
 }
 
 async function loadTrainingModelCatalog(force = false) {
@@ -296,7 +268,7 @@ async function loadTrainingModelCatalog(force = false) {
     return;
   }
   try {
-    const response = await apiFetch(`/api/projects/${appState.currentProjectId}/models/catalog?architecture=cnn&usage=train`);
+    const response = await apiFetch(`/api/projects/${appState.currentProjectId}/models/catalog?architecture=cnn&usage=train_all`);
     trainingModelCatalog = Array.isArray(response.models) ? response.models : [];
     loadedTrainingModelCatalogProjectId = appState.currentProjectId;
     renderTrainingModelOptions(select, trainingModelCatalog);
@@ -391,6 +363,7 @@ function setAutomaticParameterValue(inputSelector, value) {
 
 function renderTrainingModelOptions(select, models) {
   const previous = select.value;
+  const projectCategory = trainingCategory(getProjectStatus(appState.currentProject).taskType);
   const grouped = new Map();
   models.forEach((item) => {
     const category = item.training_category || trainingCategory(item.task_family, item.segmentation_kind);
@@ -400,9 +373,14 @@ function renderTrainingModelOptions(select, models) {
         : family;
     const key = `${category}::${source}`;
     if (!grouped.has(key)) grouped.set(key, { label: `${trainingCategoryLabel(category)}｜${source}`, items: [] });
-    grouped.get(key).items.push(item);
+    const modelGroup = grouped.get(key);
+    modelGroup.category = category;
+    modelGroup.compatible = !projectCategory || category === projectCategory;
+    modelGroup.items.push(item);
   });
-  const groups = Array.from(grouped.values()).sort((left, right) => left.label.localeCompare(right.label));
+  const groups = Array.from(grouped.values()).sort((left, right) =>
+    Number(right.compatible) - Number(left.compatible) || left.label.localeCompare(right.label)
+  );
   select.innerHTML = "";
   groups.forEach(({ label, items }) => {
     const group = document.createElement("optgroup");
@@ -420,15 +398,30 @@ function renderTrainingModelOptions(select, models) {
         option.dataset.backend = item.backend || "";
         option.dataset.status = item.status || "";
         option.dataset.installed = item.installed ? "true" : "false";
+        const category = categoryForModel(item);
+        const compatible = !projectCategory || category === projectCategory;
+        option.dataset.installationRequired = item.installation_required ? "true" : "false";
+        option.dataset.compatible = compatible ? "true" : "false";
+        const statusNotes = [];
+        if (item.installed) statusNotes.push(t("modelSetup.installed"));
+        else if (item.installation_required) statusNotes.push(t("modelSelection.installRequired"));
+        if (!compatible) statusNotes.push(t("training.modelRegistry.differentTask"));
+        const statusNote = statusNotes.length ? ` (${statusNotes.join(" · ")})` : "";
+        option.textContent = `${stripModelRecommendationLabel(item.display_name || item.model_id)}${statusNote}`;
         option.title = `${item.source || "--"} / ${item.backend || "--"} / ${item.task_family || "--"} / ${item.status || "--"}`;
         group.appendChild(option);
       });
     select.appendChild(group);
   });
-  if (previous && Array.from(select.options).some((option) => option.value === previous && !option.disabled)) {
+  const options = Array.from(select.options);
+  if (previous && options.some((option) =>
+    option.value === previous && option.dataset.compatible === "true" && option.dataset.installed === "true"
+  )) {
     select.value = previous;
   } else {
-    const firstValid = Array.from(select.options).find((option) => !option.disabled);
+    const firstValid = options.find((option) =>
+      option.dataset.compatible === "true" && option.dataset.installed === "true"
+    ) || options.find((option) => option.dataset.compatible === "true") || options[0];
     if (firstValid) select.value = firstValid.value;
   }
   updateTrainingModelRegistrySkeleton(getProjectStatus(appState.currentProject));
@@ -1185,11 +1178,12 @@ export async function loadRecommendedConfig() {
 // Training UI helper
 function getTrainingBlockers(status) {
   const blockers = [];
-  const modelName = qs("#train-model")?.value || "";
+  const modelSelect = qs("#train-model");
+  const selectedOption = modelSelect?.selectedOptions?.[0];
   const taskType = String(status.taskType || "").toLowerCase();
   const isImageClassification = taskType.includes("image_classification");
-  const isSegTask = taskType.includes("segmentation") || taskType.includes("seg");
-  const isSegModel = modelName.includes("-seg");
+  const projectCategory = trainingCategory(taskType);
+  const selectedCategory = selectedOption?.dataset?.trainingCategory || "";
 
   if (!status.hasProject) {
     blockers.push({ text: t("training.blocker.noProject"), action: t("training.action.openProject"), nav: "dashboard" });
@@ -1212,8 +1206,22 @@ function getTrainingBlockers(status) {
       nav: "auto-labeling"
     });
   }
-  if (isSegTask && !isSegModel) {
-    blockers.push({ text: t("training.blocker.model"), action: t("training.action.chooseSegModel"), nav: null });
+  if (projectCategory && selectedCategory && projectCategory !== selectedCategory) {
+    blockers.push({
+      text: t("training.blocker.modelMismatch", {
+        modelTask: trainingCategoryLabel(selectedCategory),
+        projectTask: trainingCategoryLabel(projectCategory)
+      }),
+      action: t("training.action.chooseSegModel"),
+      nav: null
+    });
+  }
+  if (selectedOption?.dataset?.installationRequired === "true" && selectedOption?.dataset?.installed !== "true") {
+    blockers.push({
+      text: t("training.blocker.modelInstall", { model: stripModelRecommendationLabel(selectedOption.textContent) }),
+      action: t("training.action.openModelSetup"),
+      nav: "settings"
+    });
   }
   return blockers;
 }

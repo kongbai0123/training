@@ -42,6 +42,7 @@ def train_rnn_from_dataset(
     epochs = max(1, int(config.get("epochs") or 10))
     batch_size = max(1, int(config.get("batch_size") or 16))
     learning_rate = float(config.get("lr0") or 0.001)
+    optimizer_name = str(config.get("optimizer") or "auto").strip().lower()
     gradient_clip_norm = max(0.0, float(config.get("gradient_clip_norm") or 0.0))
     early_stopping_patience = max(0, int(config.get("early_stopping_patience") or 0))
 
@@ -56,7 +57,11 @@ def train_rnn_from_dataset(
         regression=is_regression,
     ).to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = (
+        torch.optim.AdamW(model.parameters(), lr=learning_rate)
+        if optimizer_name == "adamw"
+        else torch.optim.Adam(model.parameters(), lr=learning_rate)
+    )
     criterion = nn.MSELoss() if is_regression else nn.CrossEntropyLoss()
     train_loader = _loader(dataset["tensors"]["train"], batch_size, torch, TensorDataset, DataLoader, shuffle=True)
     val_loader = _loader(dataset["tensors"]["val"], batch_size, torch, TensorDataset, DataLoader, shuffle=False)
@@ -101,7 +106,18 @@ def train_rnn_from_dataset(
     metrics_payload = {
         "backend": "pytorch_lstm",
         "architecture": "rnn",
+        "model": model_name,
         "task_type": "sequence_regression" if is_regression else "sequence_classification",
+        "total_epochs": epochs,
+        "batch_size": batch_size,
+        "sequence_length": int(config.get("sequence_length") or dataset["summary"].get("sequence_length") or 0),
+        "stride": int(config.get("stride") or dataset["summary"].get("stride") or 0),
+        "horizon": int(config.get("horizon") or 1),
+        "hidden_size": hidden_size,
+        "num_layers": num_layers,
+        "dropout": dropout,
+        "optimizer": "adamw" if optimizer_name == "adamw" else "adam",
+        "bidirectional": bidirectional,
         "primary_metric": "val/mae" if is_regression else "val/macro_f1",
         "history": history,
         "best_epoch": best_epoch,

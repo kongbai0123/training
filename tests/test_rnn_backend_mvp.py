@@ -4,9 +4,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from src.training.backends import rnn_backend as rnn_backend_module
 from src.training.backends.rnn_backend import RNNBackend
 from src.training.dispatcher import TrainerDispatcher
 from src.training.rnn.sequence_dataset import RNNSequenceDatasetError, load_csv_feature_sequences
+from src.training.run_manager import RunManager
 from src.training.state_store import TrainingStateStore
 
 
@@ -106,6 +108,70 @@ class RNNBackendMVPTests(unittest.TestCase):
 
             self.assertTrue(any("CSV feature sequence" in error for error in errors))
 
+    def test_run_listing_backfills_legacy_rnn_summary_details(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runs_dir = Path(temp_dir) / "runs"
+            run_dir = runs_dir / "run_legacy_rnn"
+            run_dir.mkdir(parents=True)
+            (run_dir / "run_summary.json").write_text(json.dumps({
+                "run_id": "run_legacy_rnn",
+                "status": "completed",
+                "task_type": "sequence_regression",
+                "backend": "pytorch_lstm",
+            }), encoding="utf-8")
+            (run_dir / "train_config.json").write_text(json.dumps({
+                "model": "gru",
+                "epochs": 4,
+                "batch_size": 8,
+                "sequence_length": 12,
+                "stride": 3,
+                "horizon": 1,
+            }), encoding="utf-8")
+            (run_dir / "metrics.json").write_text(json.dumps({
+                "primary_metric": "val/mae",
+                "best_epoch": 3,
+                "best_metrics": {"val/mae": 0.25},
+            }), encoding="utf-8")
+
+            runs = RunManager.list_project_runs(runs_dir)
+
+            self.assertEqual(len(runs), 1)
+            self.assertEqual(runs[0]["model"], "gru")
+            self.assertEqual(runs[0]["epochs"], 4)
+            self.assertEqual(runs[0]["primary_metric_name"], "MAE")
+            self.assertEqual(runs[0]["primary_metric_value"], 0.25)
+
+    def test_start_training_recovers_stale_state(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project = self._project(Path(temp_dir))
+            backend = RNNBackend()
+            TrainingStateStore.init_run("proj_rnn_mvp", "stale_run", 2, "rnn", "pytorch_lstm")
+
+            with patch.object(
+                rnn_backend_module.DEFAULT_THREAD_TRAINING_RUNNER,
+                "start",
+                return_value={"started": True, "run_id": "run_rnn_unit"},
+            ):
+                result = backend.start_training(project)
+
+            self.assertEqual(result["status"], "started")
+            self.assertEqual(TrainingStateStore.get_state("proj_rnn_mvp")["run_id"], "run_rnn_unit")
+
+    def test_start_training_marks_failed_when_runner_raises(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project = self._project(Path(temp_dir))
+            backend = RNNBackend()
+
+            with patch.object(
+                rnn_backend_module.DEFAULT_THREAD_TRAINING_RUNNER,
+                "start",
+                side_effect=RuntimeError("runner failed"),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "runner failed"):
+                    backend.start_training(project)
+
+            self.assertEqual(TrainingStateStore.get_state("proj_rnn_mvp")["status"], "failed")
+
     def test_run_training_writes_rnn_contracts_without_real_torch_training(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -145,6 +211,13 @@ class RNNBackendMVPTests(unittest.TestCase):
             backend_contract = json.loads(run_dir.joinpath("backend.json").read_text(encoding="utf-8"))
             self.assertEqual(backend_contract["architecture"], "rnn")
             self.assertEqual(backend_contract["backend"], "pytorch_lstm")
+            summary = json.loads(run_dir.joinpath("run_summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["model"], "lstm")
+            self.assertEqual(summary["epochs"], 1)
+            self.assertEqual(summary["batch_size"], 2)
+            self.assertEqual(summary["sequence_length"], 2)
+            self.assertEqual(summary["primary_metric_name"], "Macro-F1")
+            self.assertEqual(summary["primary_metric_value"], 1.0)
             self.assertEqual(TrainingStateStore.get_state("proj_rnn_mvp")["status"], "completed")
 
 

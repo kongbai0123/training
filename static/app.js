@@ -1,5 +1,5 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js?v=20260720-task-progress";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260721-project-task-edit";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

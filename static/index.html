@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260720-task-progress">
+  <link rel="stylesheet" href="/static/style.css?v=20260721-project-task-edit">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -804,6 +804,11 @@
                       <span><span data-i18n="augmentation.generatedCopies">Generated copies</span> <strong id="aug-scope-output">+0</strong></span>
                       <span><span data-i18n="augmentation.finalTrainCount">Final train count</span> <strong id="aug-final-count">0 → 0</strong></span>
                     </div>
+                    <div class="aug-apply-row aug-settings-actions">
+                      <button class="btn btn-secondary" type="button" id="btn-reset-aug"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="augmentation.reset">重設</span></button>
+                      <button type="button" class="btn btn-secondary" id="btn-preview-aug"><i class="fa-solid fa-eye"></i> <span data-i18n="augmentation.generatePreview">產生預覽</span></button>
+                      <button class="btn btn-primary guarded" data-requires="split" id="btn-apply-aug" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="augmentation.applyTrain">套用到 Train Split</span></button>
+                    </div>
                   </div>
                 </section>
               </div>
@@ -825,7 +830,6 @@
                   </div>
                   <div class="section-title compact"><h2 data-i18n="augmentation.riskCheck">風險檢查</h2><span class="summary-badge badge-warning" id="aug-risk-badge">Preview required</span></div>
                   <ul class="aug-risk-list" id="aug-risk-list"></ul>
-                  <div class="aug-apply-row"><button class="btn btn-secondary" type="button" id="btn-reset-aug"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="augmentation.reset">重設</span></button><button type="button" class="btn btn-secondary" id="btn-preview-aug"><i class="fa-solid fa-eye"></i> <span data-i18n="augmentation.generatePreview">產生預覽</span></button><button class="btn btn-primary guarded" data-requires="split" id="btn-apply-aug" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="augmentation.applyTrain">套用到 Train Split</span></button></div>
                 </section>
                 <section class="panel-section aug-job-history-card">
                   <div class="section-title compact">
@@ -974,7 +978,7 @@
                             <input type="text" id="train-run-id-input" placeholder="Optional, for example run_YYYYMMDD_HHMMSS" data-i18n-placeholder="training.runNamePlaceholder">
                           </label>
                           <label>
-                            <span data-i18n="training.profile">Training Profile</span>
+                            <span><span data-i18n="training.profile">Training Strategy Reference</span> <span class="info-icon" id="training-profile-info" data-tooltip="Choose a strategy to receive a concise explanation of its purpose, benefit, and caution.">i</span></span>
                             <select id="train-profile">
                               <option value="balanced" selected data-i18n="training.profileBalanced">Balanced</option>
                               <option value="quick" data-i18n="training.profileQuick">Quick Test</option>
@@ -982,7 +986,6 @@
                               <option value="custom" data-i18n="training.profileCustom">Custom</option>
                             </select>
                           </label>
-                          <div class="training-profile-guide" id="training-profile-guide" aria-live="polite"></div>
                           <label>
                             <span><span data-i18n="training.epochs">Epochs</span> <span class="info-icon" data-tooltip="Training duration; One epoch means the model has seen the full training set once; Too few epochs may underfit; Too many epochs may overfit" data-i18n-tooltip="training.epochsTooltip">i</span></span>
                             <input type="number" id="train-epochs" value="50" min="5" max="300">
@@ -1129,87 +1132,7 @@
               </form>
             </section>
 
-            <section class="panel-section training-monitor-panel">
-              <div class="section-title"><h2 data-i18n="training.monitor.title">Live Training Monitor</h2></div>
-              <div id="training-monitor-empty" class="training-empty-state">
-                <i class="fa-solid fa-chart-line"></i>
-                <strong data-i18n="training.monitor.emptyTitle">No active training run.</strong>
-                <span data-i18n="training.monitor.emptySubtitle">Start training after readiness checks pass.</span>
-              </div>
-              <div id="training-monitor-active">
-                <div class="training-status-grid">
-                  <div class="metric-card"><span data-i18n="training.monitor.status">Status</span><strong id="train-status-label">Idle</strong></div>
-                  <div class="metric-card"><span data-i18n="training.monitor.progress">Progress</span><strong id="train-progress-text">--</strong></div>
-                  <div class="metric-card"><span id="monitor-primary-label">mAP50(M)</span><strong id="monitor-map50">--</strong></div>
-                  <div class="metric-card"><span id="monitor-secondary-label">mAP50-95(M)</span><strong id="monitor-map50-95">--</strong></div>
-                  <div class="metric-card"><span id="monitor-loss-label" data-i18n="training.monitor.loss">Loss</span><strong id="monitor-loss">--</strong></div>
-                </div>
-                <div id="training-monitor-outcome" class="training-monitor-outcome hidden" role="status" aria-live="polite"></div>
-              </div>
-            </section>
           </div>
-
-          <section class="panel-section training-chart-card">
-            <div class="section-title training-chart-title">
-              <h2 data-i18n="training.metrics.title">Metrics Dashboard</h2>
-              <div class="chart-tabs" id="metrics-chart-tabs">
-                <button class="tab-btn active" data-chart-tab="primary" data-i18n="training.metrics.primary">Primary Metrics</button>
-                <button class="tab-btn" data-chart-tab="loss" data-i18n="training.metrics.lossBreakdown">Loss Breakdown</button>
-                <button class="tab-btn" data-chart-tab="mask" data-i18n="training.metrics.mask">Mask Metrics</button>
-                <button class="tab-btn" data-chart-tab="box" data-i18n="training.metrics.box">Box Metrics</button>
-                <button class="tab-btn" data-chart-tab="report" data-i18n="training.metrics.report">Report View</button>
-              </div>
-            </div>
-
-            <div id="training-metrics-empty" class="training-empty-state">
-              <i class="fa-solid fa-chart-simple"></i>
-              <strong data-i18n="training.metrics.emptyTitle">No training metrics yet.</strong>
-              <span data-i18n="training.metrics.emptySubtitle">Complete a training run to view charts, artifacts, and trend diagnostics.</span>
-            </div>
-
-            <div id="training-metrics-active">
-              <div class="chart-control-panel">
-                <div class="chart-filters">
-                  <label class="checkbox-row">
-                    <input type="checkbox" id="chart-show-raw" checked>
-                    <span data-i18n="training.metrics.showRaw">Show Raw Curve</span>
-                  </label>
-                  <label class="checkbox-row">
-                    <input type="checkbox" id="chart-show-smooth" checked>
-                    <span data-i18n="training.metrics.showSmooth">Show EMA Smooth</span>
-                  </label>
-                  <label class="range-inline">
-                    <span data-i18n="training.metrics.smoothFactor">Smooth Factor (&alpha;):</span>
-                    <input type="range" id="chart-ema-alpha" min="0.05" max="0.95" step="0.05" value="0.25">
-                    <span id="chart-ema-alpha-val">0.25</span>
-                  </label>
-                </div>
-                <div class="trend-diagnostic-card">
-                  <div class="trend-header">
-                    <span data-i18n="training.convergence">Convergence Diagnostic</span>
-                    <span class="status-badge" id="trend-health-badge">Good</span>
-                  </div>
-                  <div class="trend-stats">
-                    <div><span data-i18n="training.bestEpoch">Best Epoch:</span> <span id="trend-best-epoch">--</span></div>
-                    <div><span data-i18n="training.platformScore">Platform Score:</span> <span id="trend-platform-score">--</span></div>
-                  </div>
-                  <div id="trend-suggestions" data-i18n="training.suggestions.empty">Complete a run to generate training suggestions.</div>
-                </div>
-              </div>
-
-              <div id="chart-drawing-container" class="chart-drawing-container">
-                <div id="metrics-chart-grid" class="metrics-chart-grid" aria-live="polite"></div>
-              </div>
-
-              <div id="chart-report-container" class="hidden chart-report-container">
-                <img id="static-report-img" alt="YOLO results.png" data-i18n-alt="evaluation.staticReportAlt">
-                <div class="action-bar">
-                  <a class="btn btn-secondary btn-sm" id="btn-download-results-png" target="_blank"><i class="fa-solid fa-download"></i> <span data-i18n="training.report.downloadPng">Download results.png</span></a>
-                  <a class="btn btn-secondary btn-sm" id="btn-download-results-csv" target="_blank"><i class="fa-solid fa-file-csv"></i> <span data-i18n="training.report.downloadCsv">Download results.csv</span></a>
-                </div>
-              </div>
-            </div>
-          </section>
 
           <div class="training-lower-grid">
             <section class="panel-section">
@@ -1307,73 +1230,68 @@
                 </div>
 
                 <div id="rnn-features-labels-panel" class="rnn-panel" data-rnn-panel="features-labels">
-                  <section class="rnn-preview-card">
+                  <section class="rnn-preview-card rnn-feature-workbench-card">
                     <div class="section-title">
-                      <h2><span data-i18n="rnn.schemaWizard.title">RNN CSV 設定</span> <span class="info-icon" data-tooltip="先決定任務與預測目標，再選擇輸入特徵 X，最後設定時間序列切窗欄位。" data-i18n-tooltip="rnn.schemaWizard.help">i</span></h2>
+                      <h2 data-i18n="shell.nav.featuresLabels">特徵與標籤</h2>
                       <span class="summary-badge badge-neutral" id="rnn-config-hash-badge">No config</span>
                     </div>
-                    <div class="rnn-schema-wizard-guide" id="rnn-schema-wizard-guide"></div>
                     <div class="rnn-feature-wizard-summary" id="rnn-feature-wizard-summary">
                       <div><span data-i18n="rnn.featureSummary.rows">資料筆數</span><strong id="rnn-feature-summary-rows">--</strong></div>
                       <div><span data-i18n="rnn.featureSummary.task">建議任務</span><strong id="rnn-feature-summary-task">--</strong></div>
                       <div><span data-i18n="rnn.featureSummary.selectedX">已選特徵</span><strong id="rnn-feature-summary-x">0</strong></div>
                       <div><span data-i18n="rnn.featureSummary.targetY">目標欄位</span><strong id="rnn-feature-summary-y">未設定</strong></div>
                     </div>
-                    <div class="rnn-feature-wizard">
-                      <section class="rnn-feature-step">
-                        <div class="rnn-feature-step-header">
-                          <span class="rnn-step-index">1</span>
-                          <div>
-                            <h3 data-i18n="rnn.schemaWizard.targetStep">預測目標 / Y</h3>
-                            <p data-i18n="rnn.schemaWizard.targetStepHelp">先決定模型要預測數值還是類別，再選擇目標欄位。</p>
-                          </div>
+                    <div class="rnn-feature-workbench">
+                      <section class="rnn-feature-workbench-column rnn-feature-goal-column">
+                        <div class="rnn-feature-column-heading">
+                          <h3 data-i18n="rnn.featureWorkbench.goalTitle">目標與序列</h3>
+                          <p data-i18n="rnn.featureWorkbench.goalHelp">定義預測任務及資料的排序與分組方式。</p>
                         </div>
-                        <div class="rnn-schema-grid two-col">
+                        <div class="rnn-schema-grid one-col">
                           <label><span><span data-i18n="rnn.schemaWizard.taskType">任務類型</span> <span class="info-icon" data-tooltip="回歸用於預測連續數值；分類用於預測離散類別標籤。" data-i18n-tooltip="rnn.schemaWizard.taskTooltip">i</span></span><select id="rnn-feature-task-head"><option value="classification" data-i18n="rnn.task.classification">分類</option><option value="regression" data-i18n="rnn.task.regression">回歸</option></select></label>
                           <label><span><span data-i18n="rnn.schemaWizard.targetColumn">目標欄位</span> <span class="info-icon" data-tooltip="要預測的 y 欄位。回歸通常選數值欄位；分類必須選類別標籤欄位。" data-i18n-tooltip="rnn.schemaWizard.targetTooltip">i</span></span><select id="rnn-target-column"><option value="" data-i18n="rnn.schemaWizard.targetPlaceholder">選擇目標欄位</option></select></label>
-                        </div>
-                        <div class="rnn-config-recommendation" id="rnn-feature-recommendation">
-                          <i class="fa-solid fa-wand-magic-sparkles"></i>
-                          <span id="rnn-feature-recommendation-text" data-i18n="rnn.schemaWizard.importForRecommendation">匯入 CSV 後取得任務建議。</span>
-                          <button type="button" class="btn btn-secondary btn-sm" id="rnn-apply-feature-recommendation" data-i18n="rnn.schemaWizard.applyRecommendation">套用建議</button>
+                          <label><span><span data-i18n="rnn.schemaWizard.timeColumn">時間欄位</span> <span class="info-icon" data-tooltip="用來排序序列內時間步的欄位，例如 timestep、timestamp 或 Date Time。" data-i18n-tooltip="rnn.schemaWizard.timeTooltip">i</span></span><select id="rnn-time-column"><option value="" data-i18n="rnn.schemaWizard.noTimeColumn">不使用時間欄位</option></select></label>
+                          <label><span><span data-i18n="rnn.schemaWizard.sequenceColumn">資料分組欄位（選填）</span> <span class="info-icon" data-tooltip="只有同一份 CSV 混合多台機器、多位對象或多個批次時才需要選擇。若整份資料是一條連續時間序列，保持不分組即可。此欄位不是預測目標。" data-i18n-tooltip="rnn.schemaWizard.sequenceTooltip">i</span></span><select id="rnn-sequence-column"><option value="" data-i18n="rnn.schemaWizard.noSequenceColumn">不分組（整份 CSV 視為一條序列）</option></select><small class="form-hint" data-i18n="rnn.schemaWizard.sequencePlainHelp">CSV 內混合多台機器或多個對象時才選擇分組欄位；只有一條時間序列時請保持不分組。</small></label>
                         </div>
                       </section>
-                      <section class="rnn-feature-step">
-                        <div class="rnn-feature-step-header">
-                          <span class="rnn-step-index">2</span>
+
+                      <section class="rnn-feature-workbench-column rnn-feature-selection-column">
+                        <div class="rnn-feature-column-heading rnn-feature-selection-heading">
                           <div>
                             <h3 data-i18n="rnn.schemaWizard.featureStep">輸入特徵 / X</h3>
                             <p data-i18n="rnn.schemaWizard.featureStepHelp">選擇模型可用的輸入欄位；Target 與時間欄位會自動排除，避免資料洩漏。</p>
                           </div>
+                          <strong id="rnn-feature-visible-count">0 / 0</strong>
                         </div>
                         <input id="rnn-feature-columns" type="hidden" value="">
                         <input id="rnn-feature-dim" type="hidden" value="0">
+                        <div class="rnn-feature-toolbar">
+                          <label class="rnn-feature-search"><i class="fa-solid fa-magnifying-glass"></i><input id="rnn-feature-search" type="search" data-i18n-placeholder="rnn.featureWorkbench.searchPlaceholder" placeholder="搜尋欄位名稱"></label>
+                          <div class="rnn-feature-filter-group" role="group" aria-label="Feature filters" data-i18n-aria-label="rnn.featureWorkbench.filtersAria">
+                            <button type="button" class="btn btn-secondary btn-sm active" data-rnn-feature-filter="all" aria-pressed="true" data-i18n="rnn.featureWorkbench.filterAll">全部</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-rnn-feature-filter="selected" aria-pressed="false" data-i18n="rnn.featureWorkbench.filterSelected">已選</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-rnn-feature-filter="warning" aria-pressed="false" data-i18n="rnn.featureWorkbench.filterWarning">警告</button>
+                          </div>
+                        </div>
                         <div class="inline-actions rnn-feature-actions">
                           <button type="button" class="btn btn-secondary btn-sm" id="rnn-select-numeric-features" data-i18n="rnn.schemaWizard.selectNumeric">全選數值欄位</button>
                           <button type="button" class="btn btn-secondary btn-sm" id="rnn-exclude-target-features" data-i18n="rnn.schemaWizard.excludeTargetTime">排除目標 / 時間欄位</button>
                           <button type="button" class="btn btn-secondary btn-sm" id="rnn-clear-features" data-i18n="common.clear">清除</button>
                         </div>
                         <div class="rnn-feature-checkbox-list" id="rnn-feature-checkbox-list"></div>
+                      </section>
+
+                      <aside class="rnn-feature-workbench-column rnn-feature-quality-column">
+                        <div class="rnn-feature-column-heading">
+                          <h3 data-i18n="rnn.featureWorkbench.qualityTitle">品質與調整摘要</h3>
+                          <p data-i18n="rnn.featureWorkbench.qualityHelp">確認建議、資料品質及目前選擇後再儲存。</p>
+                        </div>
                         <div class="rnn-dataset-quality-report" id="rnn-dataset-quality-report"></div>
-                      </section>
-                      <section class="rnn-feature-step">
-                        <div class="rnn-feature-step-header">
-                          <span class="rnn-step-index">3</span>
-                          <div>
-                            <h3 data-i18n="rnn.schemaWizard.timeStep">時間序列設定</h3>
-                            <p data-i18n="rnn.schemaWizard.timeStepHelp">指定排序欄位與序列分組欄位；若沒有 Sequence ID，先以單一連續序列方式理解資料。</p>
-                          </div>
+                        <div class="rnn-config-warning hidden" id="rnn-config-mismatch-warning"></div>
+                        <div class="inline-actions rnn-feature-save-actions">
+                          <button type="button" class="btn btn-primary" id="rnn-save-feature-config"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="rnn.featureWorkbench.save">儲存特徵與標籤設定</span></button>
                         </div>
-                        <div class="rnn-schema-grid two-col">
-                          <label><span><span data-i18n="rnn.schemaWizard.timeColumn">時間欄位</span> <span class="info-icon" data-tooltip="用來排序序列內時間步的欄位，例如 timestep、timestamp 或 Date Time。" data-i18n-tooltip="rnn.schemaWizard.timeTooltip">i</span></span><select id="rnn-time-column"><option value="" data-i18n="rnn.schemaWizard.noTimeColumn">不使用時間欄位</option></select></label>
-                          <label><span><span data-i18n="rnn.schemaWizard.sequenceColumn">序列 ID 欄位</span> <span class="info-icon" data-tooltip="用來區分不同序列的欄位，例如 sequence_id、machine_id 或 batch_id。沒有此欄位時代表單一連續序列。" data-i18n-tooltip="rnn.schemaWizard.sequenceTooltip">i</span></span><select id="rnn-sequence-column"><option value="" data-i18n="rnn.schemaWizard.noSequenceColumn">無，視為單一連續序列</option></select></label>
-                        </div>
-                      </section>
-                    </div>
-                    <div class="rnn-chip-list" id="rnn-feature-chip-list"></div>
-                    <div class="rnn-config-warning hidden" id="rnn-config-mismatch-warning"></div>
-                    <div class="inline-actions">
-                      <button type="button" class="btn btn-primary" id="rnn-save-feature-config"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="rnn.schemaWizard.save">儲存 RNN CSV 設定</span></button>
+                      </aside>
                     </div>
                   </section>
                 </div>
@@ -1428,15 +1346,34 @@
                           </div>
                         </section>
                         <section class="rnn-parameter-column rnn-advanced-parameters">
-                          <h3 data-i18n="rnn.training.advancedParameters">進階參數</h3>
+                          <div class="training-column-heading">
+                            <strong data-i18n="rnn.training.advancedParameters">進階參數</strong>
+                            <span data-i18n="rnn.training.advancedHelp">依序列模型調整最佳化、早停與網路結構；不適用於目前模型的欄位會自動隱藏。</span>
+                          </div>
+                          <div class="model-registry-note hidden" id="rnn-advanced-applicability-note" data-i18n="rnn.training.xgboostAdvancedNote">XGBoost 使用學習率與訓練輪數；神經網路結構、優化器、梯度裁剪與早停欄位不適用，因此已隱藏。</div>
                           <div class="training-advanced-list">
-                            <label><span data-i18n="rnn.training.learningRate">學習率</span><div class="training-auto-custom-field"><select id="rnn-lr-mode"><option value="auto" data-i18n="training.autoRecommended">自動（建議）</option><option value="custom" data-i18n="training.custom">自訂</option></select><input id="rnn-learning-rate" class="hidden" type="number" min="0.000001" step="0.0001" value="0.001"></div></label>
-                            <label><span data-i18n="rnn.training.optimizer">優化器</span><select id="rnn-optimizer"><option value="auto">Auto</option><option value="adam">Adam</option><option value="adamw">AdamW</option></select></label>
-                            <div class="training-early-stop-control"><label class="training-inline-toggle"><span><span data-i18n="rnn.training.earlyStopMechanism">早停機制</span> <span class="info-icon" data-i18n-tooltip="rnn.training.earlyStopTooltip" data-tooltip="驗證指標持續未改善時停止訓練。">i</span></span><input id="rnn-early-stop-enabled" type="checkbox" checked></label><label id="rnn-patience-field"><span data-i18n="rnn.training.earlyStopPatience">早停耐心值</span><input id="rnn-early-stopping-patience" type="number" min="1" value="10"></label><p class="form-hint" id="rnn-patience-summary"></p></div>
-                            <label><span data-i18n="rnn.training.hiddenSize">隱藏層維度</span><input id="rnn-hidden-size" type="number" min="1" value="128"></label>
-                            <label><span data-i18n="rnn.training.layers">層數</span><input id="rnn-layers" type="number" min="1" value="2"></label>
-                            <label><span data-i18n="rnn.training.dropout">Dropout</span><input id="rnn-dropout" type="number" min="0" max="0.9" step="0.1" value="0.2"></label>
-                            <label><span><span data-i18n="rnn.training.gradientClip">梯度裁剪</span> <span class="info-icon" data-i18n-tooltip="rnn.training.gradientClipTooltip" data-tooltip="限制梯度大小以降低梯度爆炸。">i</span></span><input id="rnn-gradient-clip" type="number" min="0" step="0.1" value="1.0"></label>
+                            <label class="training-auto-custom-field">
+                              <span><span data-i18n="training.lr">學習率</span> <span class="info-icon" data-i18n-tooltip="training.lrTooltip" data-tooltip="控制每次更新模型的幅度；自動模式使用序列模型的安全預設值。">i</span></span>
+                              <select id="rnn-lr-mode"><option value="auto" data-i18n="training.valueMode.auto">自動（建議）</option><option value="custom" data-i18n="training.valueMode.custom">自訂值</option></select>
+                              <input id="rnn-learning-rate" class="hidden" type="number" min="0.000001" step="0.0001" value="0.001" aria-label="Custom RNN learning rate" data-i18n-aria-label="rnn.training.lrCustomAria">
+                              <small id="rnn-lr-auto-hint" data-i18n="rnn.training.lrAutoHint">目前自動值：0.001</small>
+                            </label>
+                            <label data-rnn-neural-only>
+                              <span><span data-i18n="training.optimizer">優化器</span> <span class="info-icon" data-i18n-tooltip="rnn.training.optimizerTooltip" data-tooltip="負責更新序列模型權重；自動模式使用 Adam，AdamW 會加入解耦權重衰減。">i</span></span>
+                              <select id="rnn-optimizer"><option value="auto" data-i18n="training.optimizerAuto">Auto</option><option value="adam">Adam</option><option value="adamw">AdamW</option></select>
+                            </label>
+                            <div class="training-early-stop-control" data-rnn-neural-only>
+                              <div class="training-control-title">
+                                <span><span data-i18n="training.earlyStop">早停機制</span> <span class="info-icon" data-i18n-tooltip="training.earlyStopTooltip" data-tooltip="驗證品質連續多輪沒有改善時停止訓練。">i</span></span>
+                                <label class="training-inline-toggle"><input id="rnn-early-stop-enabled" type="checkbox" checked><span data-i18n="training.enabled">啟用</span></label>
+                              </div>
+                              <label id="rnn-patience-field"><span data-i18n="training.earlyStopRounds">連續未改善輪數</span><input id="rnn-early-stopping-patience" type="number" min="1" value="10"></label>
+                              <small id="rnn-patience-summary"></small>
+                            </div>
+                            <label data-rnn-neural-only><span><span data-i18n="rnn.training.hiddenSize">隱藏層維度</span> <span class="info-icon" data-i18n-tooltip="rnn.training.hiddenSizeTooltip" data-tooltip="控制每個循環層可保留的特徵容量。">i</span></span><input id="rnn-hidden-size" type="number" min="1" value="128"></label>
+                            <label data-rnn-neural-only><span><span data-i18n="rnn.training.layers">層數</span> <span class="info-icon" data-i18n-tooltip="rnn.training.layersTooltip" data-tooltip="堆疊更多循環層可提高表達能力，也會增加耗時與過擬合風險。">i</span></span><input id="rnn-layers" type="number" min="1" value="2"></label>
+                            <label data-rnn-neural-only><span><span data-i18n="rnn.training.dropout">Dropout</span> <span class="info-icon" data-i18n-tooltip="rnn.training.dropoutTooltip" data-tooltip="在多層 RNN 之間隨機停用部分連結以降低過擬合。">i</span></span><input id="rnn-dropout" type="number" min="0" max="0.9" step="0.1" value="0.2"></label>
+                            <label data-rnn-neural-only><span><span data-i18n="rnn.training.gradientClip">梯度裁剪</span> <span class="info-icon" data-i18n-tooltip="rnn.training.gradientClipTooltip" data-tooltip="限制梯度大小以降低梯度爆炸。">i</span></span><input id="rnn-gradient-clip" type="number" min="0" step="0.1" value="1.0"></label>
                           </div>
                         </section>
                         <aside class="rnn-training-start-panel rnn-adjustment-summary">
@@ -1450,34 +1387,6 @@
                           <button type="button" class="btn btn-link" data-page="model-guide"><span data-i18n="rnn.training.openModelGuide">前往模型指南</span> <i class="fa-solid fa-arrow-up-right-from-square"></i></button>
                           <div id="rnn-model-guide" class="hidden" aria-hidden="true"></div>
                         </aside>
-                      </div>
-                    </section>
-
-                    <section class="rnn-preview-card rnn-live-monitor-section" id="rnn-live-monitor">
-                      <div class="section-title">
-                        <div>
-                          <h2 data-i18n="rnn.monitor.title">RNN 即時訓練監控</h2>
-                          <p class="section-subtitle" data-i18n="rnn.monitor.subtitle">依分類或回歸任務顯示對應的 Epoch、損失與品質指標。</p>
-                        </div>
-                        <span class="summary-badge badge-neutral" id="rnn-monitor-status" data-i18n="training.monitor.statusIdle">等待訓練</span>
-                      </div>
-                      <div class="rnn-monitor-progress-row">
-                        <strong id="rnn-monitor-progress-text">Epoch 0 / --</strong>
-                        <span id="rnn-monitor-progress-percent">0%</span>
-                      </div>
-                      <div class="rnn-monitor-progress-track"><span id="rnn-monitor-progress-bar"></span></div>
-                      <div class="metric-grid compact rnn-monitor-metric-grid" id="rnn-monitor-metrics"></div>
-                      <div class="rnn-eval-chart-grid rnn-monitor-chart-grid">
-                        <div class="rnn-chart-shell">
-                          <div class="rnn-chart-heading"><strong data-i18n="rnn.monitor.qualityChart">任務品質指標</strong><span data-i18n="rnn.monitor.perEpoch">每個 Epoch 更新</span></div>
-                          <canvas id="rnn-monitor-quality-chart"></canvas>
-                          <div class="rnn-eval-chart-empty" id="rnn-monitor-quality-empty" data-i18n="rnn.monitor.waitingFirstEpoch">等待第一個 Epoch 完成。</div>
-                        </div>
-                        <div class="rnn-chart-shell">
-                          <div class="rnn-chart-heading"><strong data-i18n="rnn.evaluation.lossCurve">Loss curve</strong><span data-i18n="rnn.monitor.perEpoch">每個 Epoch 更新</span></div>
-                          <canvas id="rnn-monitor-loss-chart"></canvas>
-                          <div class="rnn-eval-chart-empty" id="rnn-monitor-loss-empty" data-i18n="rnn.monitor.waitingFirstEpoch">等待第一個 Epoch 完成。</div>
-                        </div>
                       </div>
                     </section>
 
@@ -2615,16 +2524,18 @@
           </div>
         </div>
         <label>
-          <span data-i18n="project.taskType">Task type</span>
+          <span><span data-i18n="project.taskType">Task type</span> <span class="info-icon" data-i18n-tooltip="project.taskTypeTooltip" data-tooltip="先想清楚模型最後要輸出什麼：整張圖類別、物件方框、獨立物件輪廓，或整片畫面區域。">i</span></span>
           <select id="new-project-type">
-            <option value="object_detection">Object Detection</option>
-            <option value="image_classification">Image Classification</option>
-            <option value="instance_segmentation">Instance Segmentation</option>
-            <option value="semantic_segmentation">Semantic Segmentation</option>
-            <option value="sequence_classification">RNN Sequence Classification</option>
-            <option value="sequence_regression">RNN Sequence Regression</option>
+            <option value="object_detection" data-i18n="project.task.objectDetection">物件偵測｜畫方框，找出物件位置</option>
+            <option value="image_classification" data-i18n="project.task.imageClassification">圖片分類｜整張圖片判斷一個類別</option>
+            <option value="instance_segmentation" data-i18n="project.task.instanceSegmentation">物件輪廓分割｜描出每個物件，可分開計數</option>
+            <option value="semantic_segmentation" data-i18n="project.task.semanticSegmentation">畫面區域分割｜標示道路、背景等區域</option>
+            <option value="sequence_classification" data-i18n="project.task.sequenceClassification">序列分類｜根據一段資料判斷類別</option>
+            <option value="sequence_regression" data-i18n="project.task.sequenceRegression">數值預測｜根據一段資料預測數值</option>
           </select>
+          <small class="form-hint" id="new-project-task-hint" data-i18n="project.taskHelp.object_detection">標註方式：方框（Box）。輸出每個物件的位置與類別。</small>
         </label>
+        <div class="project-task-quick-guide" id="new-project-task-quick-guide" aria-live="polite"></div>
         <label id="new-project-class-field">
           <span id="new-project-class-label" data-i18n="project.classList">Class list</span>
           <div class="class-entry-row">
@@ -2642,6 +2553,49 @@
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" id="btn-cancel-create-project" data-i18n="common.cancel">Cancel</button>
           <button type="submit" class="btn btn-primary"><i class="fa-solid fa-folder-plus"></i> <span data-i18n="project.createAction">Create Project</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="project-task-edit-modal" hidden>
+    <div class="modal-content project-task-edit-modal-content">
+      <div class="modal-header">
+        <div>
+          <h2 data-i18n="project.taskEditTitle">修改專案任務類型</h2>
+          <p data-i18n="project.taskEditHelp">資料與歷史訓練會保留；系統會重設目前模型與新的預設訓練參數。</p>
+        </div>
+        <button class="icon-btn" id="btn-close-project-task-edit" aria-label="Close" data-i18n-aria-label="common.close">&times;</button>
+      </div>
+      <form id="form-project-task-edit" class="form-stack modal-form">
+        <div class="project-task-current-row"><span data-i18n="project.currentTask">目前任務</span><strong id="project-task-edit-current">--</strong></div>
+        <div class="project-type-mode-field">
+          <span data-i18n="project.trainingMode">Training mode</span>
+          <div class="project-type-mode-toggle" role="group" aria-label="Edit training mode" data-i18n-aria-label="project.taskEditModeAria">
+            <button type="button" data-edit-project-mode="cnn">CNN</button>
+            <button type="button" data-edit-project-mode="rnn">RNN</button>
+          </div>
+        </div>
+        <label>
+          <span><span data-i18n="project.taskType">Task type</span> <span class="info-icon" data-i18n-tooltip="project.taskTypeTooltip" data-tooltip="先想清楚模型最後要輸出什麼：整張圖類別、物件方框、獨立物件輪廓，或整片畫面區域。">i</span></span>
+          <select id="project-task-edit-type">
+            <option value="object_detection" data-i18n="project.task.objectDetection">物件偵測｜畫方框，找出物件位置</option>
+            <option value="image_classification" data-i18n="project.task.imageClassification">圖片分類｜整張圖片判斷一個類別</option>
+            <option value="instance_segmentation" data-i18n="project.task.instanceSegmentation">物件輪廓分割｜描出每個物件，可分開計數</option>
+            <option value="semantic_segmentation" data-i18n="project.task.semanticSegmentation">畫面區域分割｜標示道路、背景等區域</option>
+            <option value="sequence_classification" data-i18n="project.task.sequenceClassification">序列分類｜根據一段資料判斷類別</option>
+            <option value="sequence_regression" data-i18n="project.task.sequenceRegression">數值預測｜根據一段資料預測數值</option>
+          </select>
+          <small class="form-hint" id="project-task-edit-hint"></small>
+        </label>
+        <div class="project-task-quick-guide" id="project-task-edit-quick-guide" aria-live="polite"></div>
+        <div class="project-task-change-impact">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <div><strong data-i18n="project.taskEditImpactTitle">變更後會發生什麼</strong><p id="project-task-edit-impact"></p></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-project-task-edit" data-i18n="common.cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-pen-to-square"></i> <span data-i18n="project.taskEditAction">確認修改任務</span></button>
         </div>
       </form>
     </div>
@@ -2868,7 +2822,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260720-task-progress"></script>
+  <script type="module" src="/static/app.js?v=20260721-project-task-edit"></script>
 </body>
 </html>
 

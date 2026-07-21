@@ -207,8 +207,15 @@ export function isSinglePointBaselineRun(context = {}, history = []) {
   const backend = String(context.backend || "").toLowerCase();
   const model = String(context.model || "").toLowerCase();
   if (!(backend === "sklearn_xgboost" || model.includes("xgboost"))) return false;
-  const metricKeys = ["val/accuracy", "val/macro_f1", "val/mae", "val/rmse"];
-  return metricKeys.some((key) => extractMetricSeries(history, key).length <= 1);
+  const taskType = String(context.task_type || "").toLowerCase();
+  const isRegression = taskType.includes("regression") || history.some((row) => row?.["val/mae"] !== undefined);
+  const metricKeys = isRegression
+    ? ["val/mae", "val/rmse"]
+    : ["val/accuracy", "val/macro_f1"];
+  const pointCounts = metricKeys
+    .map((key) => extractMetricSeries(history, key).length)
+    .filter((count) => count > 0);
+  return pointCounts.length > 0 && Math.max(...pointCounts) <= 1;
 }
 
 export function buildRnnMetricTrendRows({ history = [], isRegression = false, metricContext = {} } = {}) {

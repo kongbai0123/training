@@ -728,6 +728,17 @@ body[data-theme="light"] .aug-preview-box h4 {
   min-width: 190px;
 }
 
+.aug-settings-actions {
+  margin-top: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.aug-settings-actions .btn {
+  min-height: 38px;
+}
+
 @media (max-width: 1200px) {
   .aug-scope-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));

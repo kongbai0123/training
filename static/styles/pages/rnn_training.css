@@ -937,6 +937,166 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.rnn-feature-workbench-card {
+  display: grid;
+  gap: 10px;
+}
+.rnn-feature-workbench-card .rnn-feature-wizard-summary {
+  margin-bottom: 0;
+}
+.rnn-feature-workbench {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.88fr) minmax(430px, 1.62fr) minmax(300px, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+.rnn-feature-workbench-column {
+  min-width: 0;
+  min-height: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+.rnn-feature-column-heading {
+  min-height: 48px;
+  display: grid;
+  gap: 3px;
+  align-content: start;
+}
+.rnn-feature-column-heading h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+.rnn-feature-column-heading p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+.rnn-feature-selection-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rnn-feature-selection-heading > strong {
+  flex: 0 0 auto;
+  color: var(--primary);
+  font-size: 0.78rem;
+}
+.rnn-schema-grid.one-col {
+  grid-template-columns: minmax(0, 1fr);
+}
+.rnn-feature-workbench .rnn-schema-grid input,
+.rnn-feature-workbench .rnn-schema-grid select {
+  padding: 9px 10px;
+}
+.rnn-feature-toolbar {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.rnn-feature-search {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: var(--text-muted);
+}
+.rnn-feature-search:focus-within {
+  border-color: var(--primary);
+}
+.rnn-feature-search input {
+  min-width: 0;
+  width: 100%;
+  padding: 9px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+}
+.rnn-feature-filter-group {
+  display: flex;
+  gap: 6px;
+}
+.rnn-feature-filter-group .btn.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+.rnn-feature-workbench .rnn-feature-checkbox-list {
+  max-height: 414px;
+  flex: 1 1 auto;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+.rnn-feature-workbench .rnn-feature-check {
+  padding: 7px 9px;
+}
+.rnn-feature-quality-column .rnn-config-recommendation {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.rnn-feature-quality-column .rnn-config-recommendation .btn {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+}
+.rnn-feature-quality-column .rnn-schema-wizard-guide,
+.rnn-feature-quality-column .rnn-dataset-quality-report {
+  margin: 0;
+}
+.rnn-feature-quality-column .rnn-schema-wizard-head,
+.rnn-feature-quality-column .rnn-quality-head {
+  align-items: flex-start;
+}
+.rnn-feature-quality-column .rnn-schema-role-pills {
+  justify-content: flex-end;
+}
+.rnn-feature-quality-column .rnn-quality-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.rnn-quality-summary-list {
+  display: grid;
+  gap: 6px;
+}
+.rnn-quality-summary-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rnn-quality-summary-list > div:last-child {
+  border-bottom: 0;
+}
+.rnn-quality-summary-list span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.rnn-quality-summary-list strong {
+  color: var(--text);
+}
+.rnn-feature-quality-column .rnn-chip-list {
+  max-height: 88px;
+  margin-top: 0;
+  overflow: auto;
+}
+.rnn-feature-save-actions {
+  margin-top: auto;
+}
+.rnn-feature-save-actions .btn {
+  width: 100%;
+  justify-content: center;
+}
 .rnn-feature-wizard {
   display: grid;
   gap: 12px;
@@ -1778,5 +1938,14 @@
   .rnn-preview-grid,
   .rnn-schema-grid {
     grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 1350px) {
+  .rnn-feature-workbench {
+    grid-template-columns: minmax(240px, 0.8fr) minmax(420px, 1.4fr);
+  }
+  .rnn-feature-quality-column {
+    min-height: auto;
+    grid-column: 1 / -1;
   }
 }

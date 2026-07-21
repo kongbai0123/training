@@ -3,7 +3,7 @@ import { followServerTask } from "../core/task_progress.js";
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { buildProjectAssistantContext } from "../core/right_panel.js?v=20260708-rnn-feature-wizard";
-import { trainingModeState } from "./training_modes.js?v=20260708-i18n-tooltips";
+import { trainingModeState } from "./training_modes.js?v=20260721-rnn-evaluation-sync";
 import { escapeHtml, qs, setHTML, setText } from "../utils.js";
 
 const assistantState = {

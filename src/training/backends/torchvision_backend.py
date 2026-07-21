@@ -52,15 +52,30 @@ class TorchVisionBackend(TrainingBackend):
         project_id = str(project.get("project_id") or "")
         config = project.get("training_config") or {}
         run_id = str(config.get("run_id") or f"run_vision_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
-        if DEFAULT_THREAD_TRAINING_RUNNER.is_running(project_id) or TrainingStateStore.is_training(project_id):
+        if DEFAULT_THREAD_TRAINING_RUNNER.is_running(project_id):
             return {"status": "already_running", "backend": self.backend_name, "architecture": self.architecture, "run_id": run_id}
+        if TrainingStateStore.is_training(project_id):
+            TrainingStateStore.mark_failed(
+                project_id,
+                "The previous vision training did not start or exited without reporting a final state.",
+            )
         with self._lock:
             self._stop_flags[project_id] = False
         TrainingStateStore.init_run(project_id, run_id, int(config.get("epochs") or 10), self.architecture, self.backend_name)
-        TrainingStateStore.set_field(project_id, "task_type", project.get("task_type"))
-        result = DEFAULT_THREAD_TRAINING_RUNNER.start(
-            project_id=project_id, run_id=run_id, target=self._run_training, args=(project,), daemon=False
-        )
+        try:
+            TrainingStateStore.set_field(project_id, "task_type", project.get("task_type"))
+            result = DEFAULT_THREAD_TRAINING_RUNNER.start(
+                project_id=project_id, run_id=run_id, target=self._run_training, args=(project,), daemon=False
+            )
+        except Exception as exc:
+            TrainingStateStore.mark_failed(project_id, str(exc), run_id=run_id)
+            raise
+        if not result.get("started"):
+            TrainingStateStore.mark_failed(
+                project_id,
+                "Vision training could not start because another training job is already running.",
+                run_id=run_id,
+            )
         return {
             "status": "started" if result.get("started") else "already_running",
             "backend": self.backend_name,
