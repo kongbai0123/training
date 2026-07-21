@@ -282,6 +282,15 @@ class TrainingI18nUxStaticTests(unittest.TestCase):
                 self.assertIn(f'"{token}"', self.zh_catalog)
                 self.assertIn(f'"{token}"', self.en_catalog)
 
+    def test_installed_models_are_uncluttered_and_saved_run_model_wins_over_recommendation(self):
+        self.assertNotIn('if (item.installed) statusNotes.push(t("modelSetup.installed"))', self.training_js)
+        self.assertIn('if (!item.installed && item.installation_required)', self.training_js)
+        self.assertIn('const savedRunModel = appState.currentProject?.training_config?.run_id', self.training_js)
+        self.assertIn('const preferred = [savedRunModel, previous].find(', self.training_js)
+        self.assertIn('const hasSavedRunConfig = Boolean(savedConfig.run_id);', self.training_js)
+        self.assertIn('const data = hasSavedRunConfig ? { ...recommendation, ...savedConfig } : recommendation;', self.training_js)
+        self.assertIn('Array.from(modelSelect.options).some((option) => option.value === data.model)', self.training_js)
+
 
 if __name__ == "__main__":
     unittest.main()

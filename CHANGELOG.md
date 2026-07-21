@@ -17,6 +17,8 @@ All notable changes to Vision Training Studio are tracked here.
 
 ### Fixed
 - Pass the selected model backend from the training UI so non-YOLO models no longer fall back to the YOLO backend.
+- Preserve the saved Run model when the training page refreshes instead of replacing it with the generic hardware recommendation.
+- Remove redundant installed-status text from trainable model options while retaining installation and task-compatibility guidance where action is required.
 
 ## [0.1.1] - 2026-07-16
 

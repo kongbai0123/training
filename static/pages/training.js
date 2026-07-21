@@ -403,8 +403,7 @@ function renderTrainingModelOptions(select, models) {
         option.dataset.installationRequired = item.installation_required ? "true" : "false";
         option.dataset.compatible = compatible ? "true" : "false";
         const statusNotes = [];
-        if (item.installed) statusNotes.push(t("modelSetup.installed"));
-        else if (item.installation_required) statusNotes.push(t("modelSelection.installRequired"));
+        if (!item.installed && item.installation_required) statusNotes.push(t("modelSelection.installRequired"));
         if (!compatible) statusNotes.push(t("training.modelRegistry.differentTask"));
         const statusNote = statusNotes.length ? ` (${statusNotes.join(" · ")})` : "";
         option.textContent = `${stripModelRecommendationLabel(item.display_name || item.model_id)}${statusNote}`;
@@ -414,10 +413,14 @@ function renderTrainingModelOptions(select, models) {
     select.appendChild(group);
   });
   const options = Array.from(select.options);
-  if (previous && options.some((option) =>
-    option.value === previous && option.dataset.compatible === "true" && option.dataset.installed === "true"
-  )) {
-    select.value = previous;
+  const savedRunModel = appState.currentProject?.training_config?.run_id
+    ? String(appState.currentProject.training_config.model || "")
+    : "";
+  const preferred = [savedRunModel, previous].find((value) => value && options.some((option) =>
+    option.value === value && option.dataset.compatible === "true" && option.dataset.installed === "true"
+  ));
+  if (preferred) {
+    select.value = preferred;
   } else {
     const firstValid = options.find((option) =>
       option.dataset.compatible === "true" && option.dataset.installed === "true"
@@ -1128,11 +1131,14 @@ function buildTrainingHudPendingPhase(elapsedSeconds) {
 export async function loadRecommendedConfig() {
   if (!appState.currentProjectId) return;
   try {
-    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/recommend`);
+    const recommendation = await apiFetch(`/api/projects/${appState.currentProjectId}/train/recommend`);
+    const savedConfig = appState.currentProject?.training_config || {};
+    const hasSavedRunConfig = Boolean(savedConfig.run_id);
+    const data = hasSavedRunConfig ? { ...recommendation, ...savedConfig } : recommendation;
     
     // Training UI helper
     const modelSelect = qs("#train-model");
-    if (modelSelect) {
+    if (modelSelect && data.model && Array.from(modelSelect.options).some((option) => option.value === data.model)) {
       modelSelect.value = data.model;
     }
     
