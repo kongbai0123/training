@@ -38,9 +38,16 @@ class TrainingMonitorResilienceStaticTests(unittest.TestCase):
             "appState.trainingStatus?.run_id || appState.currentProject?.current?.training_run_id",
             script,
         )
-        self.assertIn("runs.find((run) => run.run_id === preferredRunId) || runs[0]", script)
+        self.assertIn("run.run_id === preferredRunId && run.metrics_available !== false", script)
         self.assertIn("requestId !== metricLoadRequestId", script)
         self.assertIn("latestRun.run_id === metricLoadInFlightRunId", script)
+
+    def test_training_page_restores_latest_available_run_per_project(self):
+        script = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
+        self.assertIn("syncTrainingMetricsProjectScope();", script)
+        self.assertIn("loadedMetricsProjectId === projectId", script)
+        self.assertIn("runs.find((run) => run.metrics_available !== false)", script)
+        self.assertIn("projectId !== appState.currentProjectId", script)
 
     def test_training_page_uses_native_scale_separate_charts_in_three_by_two_grid(self):
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")

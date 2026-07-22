@@ -10,7 +10,7 @@ import { qs, setText, setHTML, escapeHtml } from "../utils.js";
 import {
   loadPageRecommendedConfig,
   syncPageModeForProject,
-} from "./page_registry.js?v=20260722-cnn-epoch-monitor";
+} from "./page_registry.js?v=20260722-run-restore-history-count";
 import { showToast as showToastCore } from "./toast.js";
 
 export function createProjectLifecycle({ renderAll, navigate }) {

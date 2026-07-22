@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -75,6 +76,31 @@ class ProjectHistorySequenceSummaryTests(unittest.TestCase):
             self.assertEqual(record["copy_path"], expected_path)
             self.assertEqual(record["path"], expected_path)
             self.assertEqual(record["file_summary"]["project_root"], expected_path)
+
+    def test_project_history_recalculates_stale_annotation_progress_from_images(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            projects_root = Path(tmp)
+            project_dir = projects_root / "proj_stale_progress"
+            project_dir.mkdir(parents=True)
+            payload = {
+                "project_id": "proj_stale_progress",
+                "project_name": "Stale Progress",
+                "task_type": "instance_segmentation",
+                "created_at": "2026-01-01T00:00:00",
+                "updated_at": "2026-01-02T00:00:00",
+                "annotation_progress": {"total": 362, "annotated": 210},
+                "images": [
+                    {"filename": f"image_{index}.jpg", "status": "annotated"}
+                    for index in range(362)
+                ],
+            }
+            (project_dir / "project.json").write_text(json.dumps(payload), encoding="utf-8")
+
+            with patch("src.project_manager.PROJECTS_DIR", projects_root):
+                projects = ProjectManager.get_all_projects()
+
+            self.assertEqual(projects[0]["annotation_progress"]["total"], 362)
+            self.assertEqual(projects[0]["annotation_progress"]["annotated"], 362)
 
     def test_sequence_history_record_includes_rnn_schema_and_runs(self):
         with tempfile.TemporaryDirectory() as tmp:

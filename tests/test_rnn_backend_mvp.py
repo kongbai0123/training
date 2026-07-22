@@ -141,6 +141,28 @@ class RNNBackendMVPTests(unittest.TestCase):
             self.assertEqual(runs[0]["primary_metric_name"], "MAE")
             self.assertEqual(runs[0]["primary_metric_value"], 0.25)
 
+    def test_run_listing_includes_custom_named_run_with_metrics(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runs_dir = Path(temp_dir) / "runs"
+            run_dir = runs_dir / "test_cnn"
+            run_dir.mkdir(parents=True)
+            (run_dir / "run_summary.json").write_text(json.dumps({
+                "run_id": "test_cnn",
+                "status": "completed",
+                "completed_at": "2026-07-22T10:00:00",
+            }), encoding="utf-8")
+            (run_dir / "metrics.json").write_text(json.dumps({
+                "epochs": [1, 2],
+                "raw": {"metrics/mAP50(M)": [0.5, 0.6]},
+            }), encoding="utf-8")
+            unrelated_dir = runs_dir / "temporary_files"
+            unrelated_dir.mkdir()
+
+            runs = RunManager.list_project_runs(runs_dir)
+
+            self.assertEqual([run["run_id"] for run in runs], ["test_cnn"])
+            self.assertTrue(runs[0]["metrics_available"])
+
     def test_start_training_recovers_stale_state(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             project = self._project(Path(temp_dir))

@@ -232,8 +232,11 @@ class RunManager:
             return runs
 
         for d in runs_dir.iterdir():
-            if d.is_dir() and d.name.startswith("run_"):
+            if d.is_dir():
                 summary_file = d / "run_summary.json"
+                metrics_file = d / "metrics.json"
+                if not d.name.startswith("run_") and not (summary_file.is_file() or metrics_file.is_file()):
+                    continue
                 if summary_file.exists():
                     try:
                         with open(summary_file, "r", encoding="utf-8") as f:
@@ -249,7 +252,7 @@ class RunManager:
                                     for key in ("model", "epochs", "batch_size", "sequence_length", "stride", "horizon"):
                                         if summary.get(key) in (None, "", 0):
                                             summary[key] = config.get(key)
-                            metrics_file = d / "metrics.json"
+                            summary["metrics_available"] = metrics_file.is_file()
                             if metrics_file.is_file():
                                 try:
                                     metrics = json.loads(metrics_file.read_text(encoding="utf-8"))
@@ -272,8 +275,15 @@ class RunManager:
                     runs.append({
                         "run_id": d.name,
                         "status": "unknown",
-                        "completed_at": None
+                        "completed_at": None,
+                        "metrics_available": (d / "metrics.json").is_file(),
                     })
         # 降序排序
-        runs.sort(key=lambda x: x.get("run_id", ""), reverse=True)
+        runs.sort(
+            key=lambda item: (
+                str(item.get("completed_at") or item.get("updated_at") or item.get("created_at") or ""),
+                str(item.get("run_id") or ""),
+            ),
+            reverse=True,
+        )
         return runs

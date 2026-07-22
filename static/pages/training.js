@@ -18,6 +18,7 @@ let trainingStatusPollInFlight = false;
 let metricLoadRequestId = 0;
 let metricLoadInFlightRunId = "";
 let emptyRunListProjectId = "";
+let loadedMetricsProjectId = "";
 
 const ACTIVE_TRAINING_STATUSES = new Set(["training", "stopping"]);
 const TERMINAL_TRAINING_STATUSES = new Set(["completed", "failed", "stopped"]);
@@ -820,6 +821,7 @@ async function handleModelImportDryRunAction(button) {
 }
 
 export function renderTrainingMonitor() {
+  syncTrainingMetricsProjectScope();
   const status = getProjectStatus(appState.currentProject);
   const trainState = appState.trainingStatus || {};
   const blockers = getTrainingBlockers(status);
@@ -1518,6 +1520,19 @@ function updateMonitorMetricLabels(isRnn, metrics = {}) {
 
 // Training UI helper
 let lastLoadedRunId = null;
+function syncTrainingMetricsProjectScope() {
+  const projectId = appState.currentProjectId || "";
+  if (loadedMetricsProjectId === projectId) return;
+  loadedMetricsProjectId = projectId;
+  metricLoadRequestId += 1;
+  metricLoadInFlightRunId = "";
+  lastLoadedRunId = null;
+  emptyRunListProjectId = "";
+  currentChartData = null;
+  lastRenderedMetricRunId = "";
+  lastRenderedMetricEpochCount = -1;
+}
+
 async function loadLatestRunMetricsOnce() {
   if (!appState.currentProjectId) return;
   if (emptyRunListProjectId === appState.currentProjectId) return;
@@ -1540,7 +1555,13 @@ async function loadLatestRunMetricsOnce() {
     
     // Training UI helper
     const preferredRunId = appState.trainingStatus?.run_id || appState.currentProject?.current?.training_run_id || "";
-    const latestRun = runs.find((run) => run.run_id === preferredRunId) || runs[0];
+    const preferredRun = runs.find((run) => run.run_id === preferredRunId && run.metrics_available !== false);
+    const latestRun = preferredRun || runs.find((run) => run.metrics_available !== false);
+    if (!latestRun) {
+      emptyRunListProjectId = appState.currentProjectId;
+      setMetricsDashboardActive(false);
+      return;
+    }
     if ((latestRun.run_id === lastLoadedRunId && currentChartData) || latestRun.run_id === metricLoadInFlightRunId) {
       return; // Training UI helper
     }
@@ -1554,11 +1575,12 @@ async function loadLatestRunMetricsOnce() {
 
 // Training UI helper
 async function loadRunMetrics(runId) {
+  const projectId = appState.currentProjectId;
   const requestId = ++metricLoadRequestId;
   metricLoadInFlightRunId = runId;
   try {
-    const data = await apiFetch(`/api/projects/${appState.currentProjectId}/train/runs/${runId}/metrics`, { suppressToast: true });
-    if (requestId !== metricLoadRequestId) return;
+    const data = await apiFetch(`/api/projects/${projectId}/train/runs/${runId}/metrics`, { suppressToast: true });
+    if (requestId !== metricLoadRequestId || projectId !== appState.currentProjectId) return;
     currentChartData = normalizeStoredTrainingMetrics(data);
     lastLoadedRunId = runId;
     lastRenderedMetricRunId = runId;

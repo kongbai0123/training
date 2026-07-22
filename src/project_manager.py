@@ -70,6 +70,25 @@ class ProjectManager:
         }
 
     @staticmethod
+    def _derive_annotation_progress(data: Dict[str, Any]) -> Dict[str, int]:
+        """Derive history counts from image records instead of stale cache."""
+        stored = data.get("annotation_progress") or {}
+        images = data.get("images")
+        if not isinstance(images, list):
+            return {
+                "total": int(stored.get("total") or 0),
+                "annotated": int(stored.get("annotated") or 0),
+                "flagged": int(stored.get("flagged") or 0),
+                "skipped": int(stored.get("skipped") or 0),
+            }
+        return {
+            "total": len(images),
+            "annotated": sum(1 for image in images if isinstance(image, dict) and image.get("status") == "annotated"),
+            "flagged": sum(1 for image in images if isinstance(image, dict) and image.get("status") == "flagged"),
+            "skipped": sum(1 for image in images if isinstance(image, dict) and image.get("status") == "skipped"),
+        }
+
+    @staticmethod
     def get_all_projects() -> List[Dict[str, Any]]:
         """列出 projects 目錄下所有專案"""
         projects = []
@@ -92,7 +111,7 @@ class ProjectManager:
                                 "created_at": data.get("created_at"),
                                 "updated_at": data.get("updated_at"),
                                 "class_names": [] if is_sequence else data.get("class_names", []),
-                                "annotation_progress": data.get("annotation_progress", {"total": 0, "annotated": 0}),
+                                "annotation_progress": ProjectManager._derive_annotation_progress(data),
                                 "current": data.get("current", {}),
                                 "rnn_config": data.get("rnn_config", {}) if is_sequence else {},
                                 "training_runs": data.get("training_runs", []) if is_sequence else [],
