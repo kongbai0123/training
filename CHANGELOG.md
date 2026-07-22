@@ -4,22 +4,32 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-07-22
+
 ### Added
 - Added installable and trainable image classification models: ResNet18, MobileNetV3 Large, and EfficientNet-B0.
 - Added installable and trainable detection models: D-FINE Small, Faster R-CNN, and FCOS.
 - Added Mask R-CNN instance segmentation plus DeepLabV3 and built-in U-Net semantic segmentation.
 - Added TorchVision and Transformers D-FINE training backends with standard run artifacts.
+- Added task-aware CNN augmentation for overcast light, sun suppression, depth fog, layered rain, wet surfaces, puddles, splashes, and isolated lens droplets.
+- Added draggable before/after augmentation preview with Polygon/BBox overlays and geometry remapping.
+- Added dynamic risk guidance for vertical flips, random crops, and geometry-label review without blocking the operation.
 
 ### Changed
 - Grouped the training model selector by image classification, object detection, instance segmentation, and semantic segmentation.
 - Kept unavailable optional weights visible with an installation prompt instead of hiding the model.
 - Added class-folder imports and stratified splitting for image-classification projects.
 - Restored the compact CNN training monitor with native-scale per-metric charts arranged in a Full HD 3-by-2 grid and updated once per completed epoch.
+- Reworked augmentation controls into six aligned Full HD parameter groups and kept risky transforms disabled by default.
+- Unified long-running task progress, page lifecycle caching, and completed-run restoration across CNN and RNN workflows.
+- Redesigned RNN training, testing, comparison, feature/label configuration, and shared model guidance workspaces.
 
 ### Fixed
 - Pass the selected model backend from the training UI so non-YOLO models no longer fall back to the YOLO backend.
 - Preserve the saved Run model when the training page refreshes instead of replacing it with the generic hardware recommendation.
 - Remove redundant installed-status text from trainable model options while retaining installation and task-compatibility guidance where action is required.
+- Keep project task selection editable and explain visual task types with consistent Traditional Chinese and English guidance.
+- Prevent stale augmentation previews from being applied after parameter or source-image changes.
 
 ## [0.1.1] - 2026-07-16
 

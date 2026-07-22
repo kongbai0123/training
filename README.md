@@ -7,7 +7,7 @@
 支援 CNN 影像任務與 RNN 序列任務，從資料匯入、資料角色設定、訓練、評估、模型比較到交付產物，均在同一套本機介面完成。
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](docs/INSTALL.md)
-[![Version](https://img.shields.io/badge/version-0.1.1-2563EB)](VERSION)
+[![Version](https://img.shields.io/badge/version-0.1.2-2563EB)](VERSION)
 [![Package](https://img.shields.io/badge/package-Portable%20EXE-16A34A)](docs/INSTALL.md)
 [![Runtime](https://img.shields.io/badge/end--user%20runtime-No%20Python%20required-0F766E)](docs/INSTALL.md)
 
@@ -66,6 +66,13 @@ Vision Training Studio 專注於通用模型訓練流程：
 訓練頁的模型清單依「圖片分類、物件偵測、物件輪廓分割、畫面區域分割」分組。ByteTrack 與 BoT-SORT 是影片推論時搭配偵測器使用的追蹤器，不是可獨立訓練的辨識模型，因此不會混入訓練模型清單。
 
 詳細能力、授權與驗收狀態請參閱 [模型支援矩陣](docs/MODEL_SUPPORT.md)。
+
+## 資料增強
+
+- 支援陰天光色、晴天線索抑制、深度雨霧、三層雨絲、濕地面、積水、水花及獨立鏡頭水滴。
+- 即時預覽使用可拖曳的原圖／增強圖分割線，設定變更後必須重新預覽才能大量套用。
+- 旋轉、縮放、透視、翻轉與裁剪會同步重映射 Polygon／BBox；垂直翻轉或隨機裁剪啟用時，介面會提示使用者抽查標註與場景方向。
+- 增強副本只加入 Train split，Val／Test 與原圖保持不變。
 
 ## 初次啟動
 
@@ -132,6 +139,7 @@ docs/                使用、架構、部署與疑難排解文件
 - [部署指南](docs/DEPLOYMENT.md)
 - [測試規範](docs/TESTING_GUIDELINES.md)
 - [乾淨 Windows 驗證](docs/CLEAN_MACHINE_VALIDATION.md)
+- [0.1.2 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-22.md)
 - [已知限制](docs/KNOWN_ISSUES.md)
 - [疑難排解](docs/TROUBLESHOOTING.md)
 

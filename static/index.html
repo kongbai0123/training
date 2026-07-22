@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260721-project-task-edit">
+  <link rel="stylesheet" href="/static/style.css?v=20260722-augmentation-compare2">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -728,122 +728,154 @@
         </section>
 
         <section class="page" id="page-augmentation">
-          <div class="page-header">
-            <div>
-              <h1 data-i18n="augmentation.title">Physical Augmentation Console</h1>
-              <p data-i18n="augmentation.subtitle">Apply physical augmentation safely to Train split only, after preview and risk checks pass.</p>
-            </div>
-          </div>
-
           <div class="augmentation-workspace">
-            <section class="panel-section aug-readiness-card" id="aug-readiness-card">
-              <div class="aug-readiness-icon"><i class="fa-solid fa-shield-halved"></i></div>
-              <div class="aug-readiness-content">
-                <div class="section-title compact">
-                  <h2 data-i18n="augmentation.readinessTitle">Augmentation Readiness</h2>
-                  <span class="summary-badge badge-danger" id="aug-readiness-badge">Blocked</span>
-                </div>
-                <p id="aug-readiness-message">Create a project and prepare a train split before augmentation.</p>
-                <ul class="aug-readiness-reasons" id="aug-readiness-reasons"></ul>
+            <section class="aug-strategy-section">
+              <div class="section-title compact"><h2 data-i18n="augmentation.policyTitle">擴充策略</h2></div>
+              <div class="aug-strategy-tabs" aria-label="Recommended augmentation presets" data-i18n-aria-label="augmentation.presetAria">
+                <button type="button" class="aug-strategy-tab active" data-aug-preset="generalization"><span data-i18n="augmentation.strategy.balance">標準平衡</span></button>
+                <button type="button" class="aug-strategy-tab" data-aug-preset="clear_day"><span data-i18n="augmentation.strategy.light">光照強化</span></button>
+                <button type="button" class="aug-strategy-tab" data-aug-preset="rainy"><span data-i18n="augmentation.strategy.harsh">嚴苛環境</span></button>
+                <button type="button" class="aug-strategy-tab" data-aug-preset="motion_camera"><span data-i18n="augmentation.strategy.blur">模糊挑戰</span></button>
+                <button type="button" class="aug-strategy-tab" data-aug-preset="lens_rain"><span data-i18n="augmentation.strategy.sensor">感測器模擬</span></button>
+                <button type="button" class="aug-strategy-tab" data-aug-preset="wet_reflection"><span data-i18n="augmentation.strategy.stress">極端壓力測試</span></button>
               </div>
-              <div class="aug-readiness-actions">
-                <button type="button" class="btn btn-secondary" data-nav="dataset" id="aug-go-dataset"><i class="fa-solid fa-images"></i> <span data-i18n="augmentation.goDataset">Go to Dataset</span></button>
-                <button type="button" class="btn btn-secondary" data-nav="split" id="aug-go-split"><i class="fa-solid fa-code-branch"></i> <span data-i18n="augmentation.createSplit">Create Split</span></button>
+              <div class="aug-strategy-description" id="aug-preset-detail">
+                <strong data-i18n="augmentation.presetDetails">策略說明</strong>
+                <p id="aug-preset-purpose"></p>
+                <span class="sr-only" id="aug-preset-params"></span>
+                <span class="sr-only" id="aug-preset-risk"></span>
               </div>
             </section>
 
-            <section class="augmentation-console-grid">
-              <div class="augmentation-policy-column">
-                <section class="panel-section">
-                  <div class="section-title compact">
-                    <h2 data-i18n="augmentation.policyTitle">策略設定</h2>
-                  </div>
-                  <div class="preset-list compact" aria-label="Recommended augmentation presets" data-i18n-aria-label="augmentation.presetAria">
-                    <button type="button" class="preset-item active" data-aug-preset="clear_day"><strong><i class="fa-regular fa-sun"></i><span data-i18n="augmentation.preset.clearDay">晴天基準</span></strong><span data-i18n="augmentation.preset.clearDayHelp">少量亮度與對比變化。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="low_light"><strong><i class="fa-regular fa-moon"></i><span data-i18n="augmentation.preset.lowLight">低光場景</span></strong><span data-i18n="augmentation.preset.lowLightHelp">夜間、陰影、低照度。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="rainy"><strong><i class="fa-solid fa-cloud-rain"></i><span data-i18n="augmentation.preset.rainy">雨天路面</span></strong><span data-i18n="augmentation.preset.rainyHelp">濕潤與雨天變化。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="foggy"><strong><i class="fa-solid fa-smog"></i><span data-i18n="augmentation.preset.foggy">霧氣 / 霧霾</span></strong><span data-i18n="augmentation.preset.foggyHelp">低能見度與霧化。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="motion_camera"><strong><i class="fa-solid fa-camera"></i><span data-i18n="augmentation.preset.motion">移動鏡頭</span></strong><span data-i18n="augmentation.preset.motionHelp">車載影像與相機晃動。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="strong_shadow"><strong><i class="fa-solid fa-circle-half-stroke"></i><span data-i18n="augmentation.preset.strongShadow">強陰影</span></strong><span data-i18n="augmentation.preset.strongShadowHelp">樹影與局部暗部。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="wet_reflection"><strong><i class="fa-solid fa-droplet"></i><span data-i18n="augmentation.preset.wetReflection">濕地反光</span></strong><span data-i18n="augmentation.preset.wetReflectionHelp">濕面反射與眩光。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="night_road"><strong><i class="fa-solid fa-road"></i><span data-i18n="augmentation.preset.nightRoad">夜間道路</span></strong><span data-i18n="augmentation.preset.nightRoadHelp">夜間低光與高雜訊。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="suburban_mix"><strong><i class="fa-solid fa-house"></i><span data-i18n="augmentation.preset.suburbanMix">郊區混合</span></strong><span data-i18n="augmentation.preset.suburbanMixHelp">郊區道路混合條件。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="forest_road"><strong><i class="fa-solid fa-tree"></i><span data-i18n="augmentation.preset.forestRoad">森林道路</span></strong><span data-i18n="augmentation.preset.forestRoadHelp">樹蔭與斑駁光影。</span></button>
-                    <button type="button" class="preset-item" data-aug-preset="generalization"><strong><i class="fa-solid fa-shield-halved"></i><span data-i18n="augmentation.preset.generalization">通用泛化</span></strong><span data-i18n="augmentation.preset.generalizationHelp">平衡各種環境變化。</span></button>
-                  </div>
-                  <div class="aug-preset-detail" id="aug-preset-detail">
-                    <strong data-i18n="augmentation.presetDetails">策略說明</strong>
-                    <div><span data-i18n="augmentation.purpose">用途</span><p id="aug-preset-purpose">建立低風險晴天基準，微調亮度與對比。</p></div>
-                    <div><span data-i18n="augmentation.affectedParameters">影響參數</span><p id="aug-preset-params">亮度、對比</p></div>
-                    <div><span>Risk level</span><p id="aug-preset-risk">Low</p></div>
-                  </div>
+            <section class="aug-parameter-section" id="aug-settings-panel">
+              <div class="section-title compact"><h2 data-i18n="augmentation.customPolicy">自訂策略</h2></div>
+              <div class="aug-parameter-grid">
+                <section class="aug-parameter-card" data-aug-group="light">
+                  <div class="aug-card-heading"><h3 data-i18n="augmentation.photometric">光照</h3><span class="info-icon" data-i18n-tooltip="augmentation.group.lightHelp" data-tooltip="控制亮度、對比與陰影變化。">i</span></div>
+                  <label class="aug-control" data-aug-setting="brightness"><span><span data-i18n="augmentation.brightness">亮度</span><output class="slider-value" id="val-brightness">0.00</output></span><input type="range" id="aug-light-brightness" min="-0.5" max="0.5" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="contrast"><span><span data-i18n="augmentation.contrast">對比</span><output class="slider-value" id="val-contrast">0.00</output></span><input type="range" id="aug-light-contrast" min="-0.5" max="0.5" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="temperature"><span><span data-i18n="augmentation.temperature">色溫偏移</span><output class="slider-value" id="val-temperature">0.00</output></span><input type="range" id="aug-light-temperature" min="-1" max="1" step="0.05" value="0"></label>
+                  <div class="aug-switch-row" data-aug-setting="shadow"><span data-i18n="augmentation.shadow">陰影</span><label class="switch"><input type="checkbox" id="aug-light-shadow"><span class="switch-slider"></span></label></div>
                 </section>
 
-                <section class="panel-section" id="aug-settings-panel">
-                  <div class="section-title compact"><h2 data-i18n="augmentation.customPolicy">自訂策略</h2></div>
-                  <div class="custom-settings-list grouped">
-                    <details class="aug-setting-group" data-aug-group="light" open>
-                      <summary data-i18n="augmentation.photometric">光照</summary>
-                      <div class="custom-setting-item slider-item" data-aug-setting="brightness"><div class="slider-header"><span><strong data-i18n="augmentation.brightness">亮度</strong><small data-i18n="augmentation.brightnessHelp">調整影像亮度 (-0.50 到 0.50)</small></span><span class="slider-value" id="val-brightness">0.00</span></div><input type="range" id="aug-light-brightness" min="-0.5" max="0.5" step="0.05" value="0"></div>
-                      <div class="custom-setting-item slider-item" data-aug-setting="contrast"><div class="slider-header"><span><strong data-i18n="augmentation.contrast">對比</strong><small data-i18n="augmentation.contrastHelp">調整影像對比 (-0.50 到 0.50)</small></span><span class="slider-value" id="val-contrast">0.00</span></div><input type="range" id="aug-light-contrast" min="-0.5" max="0.5" step="0.05" value="0"></div>
-                      <div class="custom-setting-item switch-container" data-aug-setting="shadow"><span><strong data-i18n="augmentation.shadow">陰影</strong><small data-i18n="augmentation.shadowHelp">加入隨機陰影效果</small></span><label class="switch"><input type="checkbox" id="aug-light-shadow"><span class="switch-slider"></span></label></div>
-                    </details>
-                    <details class="aug-setting-group" data-aug-group="weather">
-                      <summary data-i18n="augmentation.weatherCamera">天氣 / 相機</summary>
-                      <div class="custom-setting-item slider-item" data-aug-setting="rain"><div class="slider-header"><span><strong data-i18n="augmentation.rain">雨天</strong><small data-i18n="augmentation.rainHelp">模擬雨滴與濕潤視覺 (0.00 到 1.00)</small></span><span class="slider-value" id="val-rain">0.00</span></div><input type="range" id="aug-weather-rain" min="0.0" max="1.0" step="0.05" value="0"></div>
-                      <div class="custom-setting-item slider-item" data-aug-setting="fog"><div class="slider-header"><span><strong data-i18n="augmentation.fog">霧氣</strong><small data-i18n="augmentation.fogHelp">模擬霧化與低對比 (0.00 到 1.00)</small></span><span class="slider-value" id="val-fog">0.00</span></div><input type="range" id="aug-weather-fog" min="0.0" max="1.0" step="0.05" value="0"></div>
-                      <div class="custom-setting-item slider-item" data-aug-setting="motion"><div class="slider-header"><span><strong data-i18n="augmentation.motionBlur">運動模糊</strong><small data-i18n="augmentation.motionBlurHelp">模擬移動鏡頭模糊 (0.00 到 1.00)</small></span><span class="slider-value" id="val-motion-blur">0.00</span></div><input type="range" id="aug-motion-blur" min="0.0" max="1.0" step="0.05" value="0"></div>
-                      <div class="custom-setting-item slider-item" data-aug-setting="noise"><div class="slider-header"><span><strong data-i18n="augmentation.cameraNoise">相機雜訊</strong><small data-i18n="augmentation.cameraNoiseHelp">加入高斯相機雜訊 (0.00 到 1.00)</small></span><span class="slider-value" id="val-camera-noise">0.00</span></div><input type="range" id="aug-camera-noise" min="0.0" max="1.0" step="0.01" value="0"></div>
-                    </details>
-                    <details class="aug-setting-group" data-aug-group="geometry">
-                      <summary data-i18n="augmentation.geometry">幾何</summary>
-                      <div class="custom-setting-item slider-item is-disabled" data-aug-setting="perspective"><div class="slider-header"><span><strong data-i18n="augmentation.perspective">透視變形</strong><small data-i18n="augmentation.perspectiveHelp">Phase 2：需先驗證 polygon / bbox 重映射後啟用</small></span><span class="slider-value" id="val-camera-perspective">0.00</span></div><input type="range" id="aug-camera-perspective" min="0.0" max="0.1" step="0.01" value="0" disabled></div>
-                    </details>
-                    <div class="custom-setting-item custom-setting-count"><span><strong data-i18n="augmentation.multiplier">生成倍數</strong><small data-i18n="augmentation.multiplierHelp">每張 Train 圖片產生的擴充副本數</small></span><input type="number" id="aug-multiplier" value="1" min="1" max="5"></div>
-                    <div class="aug-output-summary">
-                      <span><span data-i18n="augmentation.generatedCopies">Generated copies</span> <strong id="aug-scope-output">+0</strong></span>
-                      <span><span data-i18n="augmentation.finalTrainCount">Final train count</span> <strong id="aug-final-count">0 → 0</strong></span>
-                    </div>
-                    <div class="aug-apply-row aug-settings-actions">
-                      <button class="btn btn-secondary" type="button" id="btn-reset-aug"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="augmentation.reset">重設</span></button>
-                      <button type="button" class="btn btn-secondary" id="btn-preview-aug"><i class="fa-solid fa-eye"></i> <span data-i18n="augmentation.generatePreview">產生預覽</span></button>
-                      <button class="btn btn-primary guarded" data-requires="split" id="btn-apply-aug" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="augmentation.applyTrain">套用到 Train Split</span></button>
-                    </div>
-                  </div>
+                <section class="aug-parameter-card" data-aug-group="weather">
+                  <div class="aug-card-heading"><h3 data-i18n="augmentation.weatherCamera">天氣／相機</h3><span class="info-icon" data-i18n-tooltip="augmentation.group.weatherHelp" data-tooltip="控制陰天光色、雨絲與深度雨霧。">i</span></div>
+                  <label class="aug-control" data-aug-setting="overcast"><span><span data-i18n="augmentation.overcast">陰天光色</span><output class="slider-value" id="val-overcast">0.00</output></span><input type="range" id="aug-weather-overcast" min="0" max="1" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="sun-suppression"><span><span data-i18n="augmentation.sunSuppression">晴天線索抑制</span><output class="slider-value" id="val-sun-suppression">0.00</output></span><input type="range" id="aug-weather-sun-suppression" min="0" max="1" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="rain"><span><span data-i18n="augmentation.rain">三層雨絲</span><output class="slider-value" id="val-rain">0.00</output></span><input type="range" id="aug-weather-rain" min="0" max="1" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="fog"><span><span data-i18n="augmentation.fog">深度雨霧</span><output class="slider-value" id="val-fog">0.00</output></span><input type="range" id="aug-weather-fog" min="0" max="1" step="0.05" value="0"></label>
+                </section>
+
+                <section class="aug-parameter-card" data-aug-group="blur">
+                  <div class="aug-card-heading"><h3 data-i18n="augmentation.group.blurNoise">模糊／雜訊</h3><span class="info-icon" data-i18n-tooltip="augmentation.group.blurHelp" data-tooltip="模擬移動模糊、感光雜訊與鏡頭水滴。">i</span></div>
+                  <label class="aug-control" data-aug-setting="motion"><span><span data-i18n="augmentation.motionBlur">運動模糊</span><output class="slider-value" id="val-motion-blur">0.00</output></span><input type="range" id="aug-motion-blur" min="0" max="1" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="gaussian-blur"><span><span data-i18n="augmentation.gaussianBlur">高斯模糊</span><output class="slider-value" id="val-gaussian-blur">0.00</output></span><input type="range" id="aug-gaussian-blur" min="0" max="1" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="noise"><span><span data-i18n="augmentation.cameraNoise">相機雜訊</span><output class="slider-value" id="val-camera-noise">0.00</output></span><input type="range" id="aug-camera-noise" min="0" max="1" step="0.01" value="0"></label>
+                  <label class="aug-control" data-aug-setting="compression"><span><span data-i18n="augmentation.compressionNoise">壓縮雜訊</span><output class="slider-value" id="val-compression">0.00</output></span><input type="range" id="aug-camera-compression" min="0" max="1" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="lens-droplets"><span><span data-i18n="augmentation.lensDroplets">鏡頭水滴</span><output class="slider-value" id="val-lens-droplets">0.00</output></span><input type="range" id="aug-camera-lens-droplets" min="0" max="1" step="0.05" value="0"></label>
+                </section>
+
+                <section class="aug-parameter-card" data-aug-group="geometry">
+                  <div class="aug-card-heading"><h3 data-i18n="augmentation.group.geometryView">幾何／視角</h3><span class="info-icon" data-i18n-tooltip="augmentation.group.geometryHelp" data-tooltip="幾何變換需同步重映射 polygon 與 bbox。">i</span></div>
+                  <label class="aug-control" data-aug-setting="rotation"><span><span data-i18n="augmentation.rotation">旋轉角度</span><output class="slider-value" id="val-rotation">0°</output></span><input type="range" id="aug-rotation" min="0" max="20" step="1" value="0"></label>
+                  <label class="aug-control" data-aug-setting="scale"><span><span data-i18n="augmentation.scaleVariance">縮放變化</span><output class="slider-value" id="val-scale">0.00</output></span><input type="range" id="aug-scale" min="0" max="0.2" step="0.02" value="0"></label>
+                  <label class="aug-control" data-aug-setting="perspective"><span><span data-i18n="augmentation.perspective">透視變形</span><output class="slider-value" id="val-camera-perspective">0.00</output></span><input type="range" id="aug-camera-perspective" min="0" max="0.08" step="0.01" value="0"></label>
+                  <div class="aug-switch-row" data-aug-setting="horizontal-flip"><span data-i18n="augmentation.horizontalFlip">水平翻轉</span><label class="switch"><input type="checkbox" id="aug-horizontal-flip"><span class="switch-slider"></span></label></div>
+                  <div class="aug-switch-row" data-aug-setting="vertical-flip"><span data-i18n="augmentation.verticalFlip">垂直翻轉</span><label class="switch"><input type="checkbox" id="aug-vertical-flip"><span class="switch-slider"></span></label></div>
+                </section>
+
+                <section class="aug-parameter-card" data-aug-group="occlusion">
+                  <div class="aug-card-heading"><h3 data-i18n="augmentation.group.occlusion">遮擋／保護</h3><span class="info-icon" data-i18n-tooltip="augmentation.group.occlusionHelp" data-tooltip="限制增強效果覆蓋標註目標的程度。">i</span></div>
+                  <div class="aug-switch-row" data-aug-setting="visibility"><span data-i18n="augmentation.visibilityProtection">保護小型目標可見度</span><label class="switch"><input type="checkbox" id="aug-visibility-protection" checked><span class="switch-slider"></span></label></div>
+                  <label class="aug-control" data-aug-setting="random-occlusion"><span><span data-i18n="augmentation.randomOcclusion">隨機遮擋</span><output class="slider-value" id="val-random-occlusion">0.00</output></span><input type="range" id="aug-random-occlusion" min="0" max="0.5" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="random-crop"><span><span data-i18n="augmentation.randomCrop">隨機裁剪</span><output class="slider-value" id="val-random-crop">0.00</output></span><input type="range" id="aug-random-crop" min="0" max="0.2" step="0.02" value="0"></label>
+                  <label class="aug-control" data-aug-setting="occlusion-limit"><span><span data-i18n="augmentation.maxOcclusion">最大遮擋比例</span><output class="slider-value" id="val-max-occlusion">0.15</output></span><input type="range" id="aug-max-occlusion" min="0.05" max="0.35" step="0.05" value="0.15"></label>
+                </section>
+
+                <section class="aug-parameter-card" data-aug-group="surface">
+                  <div class="aug-card-heading"><h3 data-i18n="augmentation.group.surfaceOther">顏色／地表</h3><span class="info-icon" data-i18n-tooltip="augmentation.group.surfaceHelp" data-tooltip="控制色彩、銳利度與濕地效果。">i</span></div>
+                  <label class="aug-control" data-aug-setting="saturation"><span><span data-i18n="augmentation.saturation">色彩飽和度</span><output class="slider-value" id="val-saturation">0.00</output></span><input type="range" id="aug-color-saturation" min="-1" max="1" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="hue"><span><span data-i18n="augmentation.hueShift">色調偏移</span><output class="slider-value" id="val-hue">0.00</output></span><input type="range" id="aug-color-hue" min="-0.5" max="0.5" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="sharpness"><span><span data-i18n="augmentation.sharpness">銳化程度</span><output class="slider-value" id="val-sharpness">0.00</output></span><input type="range" id="aug-color-sharpness" min="0" max="1" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="wet-surface"><span><span data-i18n="augmentation.wetSurface">濕地面</span><output class="slider-value" id="val-wet-surface">0.00</output></span><input type="range" id="aug-weather-wet-surface" min="0" max="1" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="puddle"><span><span data-i18n="augmentation.puddle">積水</span><output class="slider-value" id="val-puddle">0.00</output></span><input type="range" id="aug-weather-puddle" min="0" max="1" step="0.05" value="0"></label>
+                  <label class="aug-control" data-aug-setting="splash"><span><span data-i18n="augmentation.splash">地面水花</span><output class="slider-value" id="val-splash">0.00</output></span><input type="range" id="aug-weather-splash" min="0" max="1" step="0.05" value="0"></label>
                 </section>
               </div>
+            </section>
 
-              <div class="augmentation-preview-column">
-                <section class="panel-section">
-                  <div class="section-title compact"><h2 data-i18n="augmentation.previewValidation">預覽與驗證</h2></div>
-                  <div class="aug-preview-toolbar">
-                    <label class="form-stack"><span data-i18n="augmentation.previewImage">預覽圖片</span><select id="aug-preview-select-img"></select></label>
-                    <div class="aug-overlay-buttons" aria-label="Preview overlay options" data-i18n-aria-label="augmentation.overlayOptionsAria">
-                      <button type="button" class="btn btn-secondary btn-sm active" data-aug-overlay="overlay"><i class="fa-regular fa-eye"></i> <span data-i18n="augmentation.overlay">Overlay</span></button>
-                      <button type="button" class="btn btn-secondary btn-sm active" data-aug-overlay="mask"><i class="fa-regular fa-square"></i> Mask</button>
-                      <button type="button" class="btn btn-secondary btn-sm active" data-aug-overlay="polygon"><i class="fa-solid fa-draw-polygon"></i> <span data-i18n="augmentation.polygon">Polygon</span></button>
+            <section class="aug-execution-grid">
+              <section class="panel-section aug-quantity-card">
+                <div class="section-title compact"><h2 data-i18n="augmentation.quantityTitle">擴充數量</h2></div>
+                <label data-i18n="augmentation.multiplier">生成倍數</label>
+                <div class="aug-stepper">
+                  <button type="button" class="btn btn-secondary" id="aug-multiplier-decrease" aria-label="Decrease multiplier">−</button>
+                  <input type="number" id="aug-multiplier" value="1" min="1" max="5" aria-label="Augmentation multiplier">
+                  <button type="button" class="btn btn-secondary" id="aug-multiplier-increase" aria-label="Increase multiplier">＋</button>
+                </div>
+                <div class="aug-quantity-stat"><span data-i18n="augmentation.finalTrainCount">最終訓練集數量</span><strong id="aug-final-count">0 → 0</strong></div>
+                <div class="aug-quantity-stat"><span data-i18n="augmentation.generatedCopies">產生副本</span><strong id="aug-scope-output">+0</strong></div>
+                <div class="aug-apply-row aug-settings-actions">
+                  <button class="btn btn-secondary" type="button" id="btn-reset-aug"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="augmentation.reset">重設</span></button>
+                  <button type="button" class="btn btn-secondary" id="btn-preview-aug"><i class="fa-solid fa-eye"></i> <span data-i18n="augmentation.generatePreview">產生預覽</span></button>
+                  <button class="btn btn-primary guarded" data-requires="split" id="btn-apply-aug" disabled><i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="augmentation.applyTrain">套用至訓練分割</span></button>
+                </div>
+              </section>
+
+              <section class="panel-section aug-live-preview-card">
+                <div class="section-title compact"><h2 data-i18n="augmentation.livePreview">即時預覽</h2></div>
+                <div class="aug-preview-toolbar">
+                  <label class="form-stack"><span data-i18n="augmentation.previewImage">預覽圖片</span><select id="aug-preview-select-img"></select></label>
+                  <div class="aug-overlay-buttons" aria-label="Preview overlay options" data-i18n-aria-label="augmentation.overlayOptionsAria">
+                    <button type="button" class="btn btn-secondary btn-sm" data-aug-overlay="annotations"><i class="fa-regular fa-eye"></i> <span data-i18n="augmentation.showAnnotations">顯示標註</span></button>
+                  </div>
+                </div>
+                <div class="aug-preview-labels"><span data-i18n="augmentation.original">原圖</span><span data-i18n="augmentation.augmented">增強後</span></div>
+                <div class="aug-preview-container" id="aug-compare-stage" style="--compare-position: 50%;">
+                  <canvas id="aug-before-canvas" class="aug-compare-image aug-compare-before" style="display:none"></canvas>
+                  <div class="aug-compare-after" id="aug-compare-after">
+                    <canvas id="aug-after-canvas" class="aug-compare-image" aria-label="Augmentation preview" style="display:none"></canvas>
+                  </div>
+                  <div class="preview-placeholder aug-before-placeholder" id="aug-before-placeholder" data-i18n="augmentation.beforePlaceholder">請選擇已標註的訓練圖片。</div>
+                  <div class="preview-placeholder aug-after-placeholder" id="aug-preview-placeholder" data-i18n="augmentation.previewPlaceholder">產生預覽後檢查結果。</div>
+                  <input type="range" class="aug-compare-slider" id="aug-compare-slider" min="0" max="100" value="50" aria-label="Before and after comparison" data-i18n-aria-label="augmentation.compareAria">
+                  <div class="aug-compare-divider" aria-hidden="true"><span><i class="fa-solid fa-left-right"></i></span></div>
+                </div>
+              </section>
+
+              <aside class="aug-status-column">
+                <section class="panel-section aug-readiness-card" id="aug-readiness-card">
+                  <div class="aug-readiness-content">
+                    <div class="section-title compact"><h2 data-i18n="augmentation.previewStatus">預覽狀態</h2><span class="summary-badge badge-danger" id="aug-readiness-badge">受阻</span></div>
+                    <p id="aug-readiness-message"></p>
+                    <ul class="aug-readiness-reasons" id="aug-readiness-reasons"></ul>
+                    <div class="aug-readiness-actions">
+                      <button type="button" class="btn btn-sm btn-secondary" data-nav="dataset" id="aug-go-dataset"><i class="fa-solid fa-images"></i> <span data-i18n="augmentation.goDataset">前往資料集</span></button>
+                      <button type="button" class="btn btn-sm btn-secondary" data-nav="split" id="aug-go-split"><i class="fa-solid fa-code-branch"></i> <span data-i18n="augmentation.createSplit">建立分割</span></button>
                     </div>
                   </div>
-                  <div class="aug-preview-container">
-                    <div class="aug-preview-box"><h4 data-i18n="augmentation.original">原圖</h4><div class="aug-preview-content"><canvas id="aug-before-canvas" style="display: none;"></canvas><div class="preview-placeholder" id="aug-before-placeholder" data-i18n="augmentation.beforePlaceholder">請選擇已標註的 Train 圖片。</div></div></div>
-                    <div class="aug-preview-box"><h4 data-i18n="augmentation.augmented">擴充後</h4><div class="aug-preview-content"><img id="aug-preview-img" alt="Augmentation preview" data-i18n-alt="augmentation.previewAlt" style="display: none;"><div class="preview-placeholder" id="aug-preview-placeholder" data-i18n="augmentation.previewPlaceholder">產生 Preview 後檢查結果。</div></div></div>
-                  </div>
-                  <div class="section-title compact"><h2 data-i18n="augmentation.riskCheck">風險檢查</h2><span class="summary-badge badge-warning" id="aug-risk-badge">Preview required</span></div>
+                </section>
+                <section class="panel-section">
+                  <div class="section-title compact"><h2 data-i18n="augmentation.riskCheck">風險檢查</h2><span class="summary-badge badge-warning" id="aug-risk-badge">需要預覽</span></div>
                   <ul class="aug-risk-list" id="aug-risk-list"></ul>
                 </section>
-                <section class="panel-section aug-job-history-card">
-                  <div class="section-title compact">
-                    <h2 data-i18n="augmentation.jobHistory">擴充紀錄</h2>
-                    <button type="button" class="btn btn-sm btn-secondary" id="btn-refresh-aug-jobs">
-                      <i class="fa-solid fa-rotate"></i> <span data-i18n="common.refresh">重新整理</span>
-                    </button>
-                  </div>
-                  <div class="aug-job-history-list" id="aug-job-history-list">
-                    <div class="empty-state">尚無擴充紀錄。套用到 Train Split 後會顯示在這裡。</div>
-                  </div>
+                <section class="panel-section aug-strategy-summary">
+                  <div class="section-title compact"><h2 data-i18n="augmentation.strategySummary">策略摘要</h2></div>
+                  <dl>
+                    <div><dt data-i18n="augmentation.currentStrategy">目前策略</dt><dd id="aug-selected-strategy">標準平衡</dd></div>
+                    <div><dt data-i18n="augmentation.riskLevel">風險等級</dt><dd id="aug-summary-risk">Low</dd></div>
+                    <div><dt data-i18n="augmentation.estimatedOutput">估計產生數量</dt><dd id="aug-summary-output">0 → 0</dd></div>
+                  </dl>
                 </section>
-              </div>
+              </aside>
             </section>
+
+            <details class="panel-section aug-job-history-card">
+              <summary><span data-i18n="augmentation.jobHistory">增強作業紀錄</span><span class="summary-badge badge-neutral" id="aug-job-count">0</span></summary>
+              <div class="section-title compact aug-history-toolbar"><span></span><button type="button" class="btn btn-sm btn-secondary" id="btn-refresh-aug-jobs"><i class="fa-solid fa-rotate"></i> <span data-i18n="common.refresh">重新整理</span></button></div>
+              <div class="aug-job-history-list" id="aug-job-history-list"><div class="empty-state">尚無增強作業紀錄。</div></div>
+            </details>
+            <span class="sr-only" id="aug-scope-train"></span><span class="sr-only" id="aug-scope-val"></span><span class="sr-only" id="aug-scope-test"></span><span class="sr-only" id="aug-info-train-count"></span><span class="sr-only" id="aug-info-multiplier"></span><span class="sr-only" id="aug-info-total-count"></span>
           </div>
         </section>
 

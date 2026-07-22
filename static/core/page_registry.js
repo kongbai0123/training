@@ -4,7 +4,7 @@ import { initProjects, renderProjectsPage } from "../pages/projects.js?v=2026072
 import { initDataset, renderDatasetPage } from "../pages/dataset.js?v=20260630-progress-hud";
 import { initLabelMe, renderLabelMeManager } from "../pages/labelme.js?v=20260711-layout-export-precision";
 import { initSplit, renderSplitPage } from "../pages/split.js";
-import { initAugmentation, renderAugmentationPage } from "../pages/augmentation.js?v=20260711-layout-export-precision";
+import { initAugmentation, renderAugmentationPage } from "../pages/augmentation.js?v=20260722-augmentation-compare2";
 import { initTraining, renderTrainingMonitor, loadRecommendedConfig } from "../pages/training.js?v=20260722-run-restore-history-count";
 import {
   initTrainingModeSidebar,

@@ -81,7 +81,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/split.css?v=20260711-layout-export-precision";\n'
                 '@import "./styles/pages/training.css?v=20260722-cnn-epoch-monitor";\n'
                 '@import "./styles/pages/rnn_training.css";\n'
-                '@import "./styles/pages/augmentation.css?v=20260711-augmentation-preview-focus";\n'
+                '@import "./styles/pages/augmentation.css?v=20260722-augmentation-compare2";\n'
                 '@import "./styles/pages/model_compare.css";\n'
                 '@import "./styles/pages/inference.css";\n'
                 '@import "./styles/pages/auto_labeling.css";\n'
@@ -409,12 +409,12 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("@media (max-width: 1100px) {", rnn_training_css)
 
         self.assertRegex(augmentation_css, r"(?m)^\.augmentation-workspace \{")
-        self.assertRegex(augmentation_css, r"(?m)^\.augmentation-settings-layout \{")
-        self.assertRegex(augmentation_css, r"(?m)^\.custom-setting-item \{")
-        self.assertRegex(augmentation_css, r"(?m)^\.preset-item \{")
+        self.assertRegex(augmentation_css, r"(?m)^\.aug-strategy-tabs \{")
+        self.assertRegex(augmentation_css, r"(?m)^\.aug-parameter-grid \{")
+        self.assertRegex(augmentation_css, r"(?m)^\.aug-execution-grid \{")
         self.assertRegex(augmentation_css, r"(?m)^\.aug-preview-container \{")
-        self.assertIn("Physical Augmentation Redesign Styles", augmentation_css)
-        self.assertIn("@media (max-width: 840px) {", augmentation_css)
+        self.assertIn("grid-template-columns: repeat(6, minmax(0, 1fr));", augmentation_css)
+        self.assertIn("@media (max-width: 980px) {", augmentation_css)
 
         self.assertIn("Model Compare Center", model_compare_css)
         self.assertRegex(model_compare_css, r"(?m)^\.model-compare-mode-card \{")

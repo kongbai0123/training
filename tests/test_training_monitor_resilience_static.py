@@ -85,14 +85,14 @@ class TrainingMonitorResilienceStaticTests(unittest.TestCase):
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
         css = (ROOT / "static" / "styles" / "pages" / "augmentation.css").read_text(encoding="utf-8")
         settings_start = html.index('id="aug-settings-panel"')
-        summary_start = html.index('class="aug-output-summary"', settings_start)
-        preview_start = html.index('class="augmentation-preview-column"', settings_start)
+        summary_start = html.index('class="aug-quantity-stat"', settings_start)
+        preview_start = html.index('aug-live-preview-card', settings_start)
         for button_id in ("btn-reset-aug", "btn-preview-aug", "btn-apply-aug"):
             self.assertEqual(html.count(f'id="{button_id}"'), 1)
             button_position = html.index(f'id="{button_id}"')
             self.assertLess(summary_start, button_position)
             self.assertLess(button_position, preview_start)
-        self.assertIn(".aug-settings-actions", css)
+        self.assertIn(".aug-apply-row", css)
 
     def test_training_scroll_regions_keep_context_visible(self):
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")

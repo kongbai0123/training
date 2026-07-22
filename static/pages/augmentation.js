@@ -7,24 +7,48 @@ import { qs, qsa, escapeHtml } from "../utils.js";
 const SLIDERS = [
   "#aug-light-brightness",
   "#aug-light-contrast",
+  "#aug-light-temperature",
+  "#aug-weather-overcast",
+  "#aug-weather-sun-suppression",
   "#aug-weather-rain",
   "#aug-weather-fog",
+  "#aug-weather-wet-surface",
+  "#aug-weather-puddle",
+  "#aug-weather-splash",
+  "#aug-max-occlusion",
   "#aug-motion-blur",
-  "#aug-camera-noise"
+  "#aug-gaussian-blur",
+  "#aug-camera-noise",
+  "#aug-camera-compression",
+  "#aug-camera-lens-droplets",
+  "#aug-rotation",
+  "#aug-scale",
+  "#aug-camera-perspective",
+  "#aug-random-occlusion",
+  "#aug-random-crop",
+  "#aug-color-saturation",
+  "#aug-color-hue",
+  "#aug-color-sharpness"
 ];
 
 const SHADOW = "#aug-light-shadow";
+const VISIBILITY_PROTECTION = "#aug-visibility-protection";
+const GEOMETRY_SWITCHES = ["#aug-horizontal-flip", "#aug-vertical-flip"];
 const MULTIPLIER = "#aug-multiplier";
 const PREVIEW_SELECT = "#aug-preview-select-img";
+const COMPARE_SLIDER = "#aug-compare-slider";
 
 let augmentationUiState = "blocked_no_project";
 let previewState = "not_generated";
 let applying = false;
 let applied = false;
-let selectedPreset = "clear_day";
+let selectedPreset = "generalization";
 let augmentationJobs = [];
 let augmentationJobsProjectId = null;
 let augmentationJobsLoading = false;
+let augmentedPreviewImage = null;
+let augmentedPreviewAnnotations = [];
+let selectedPreviewFilename = "";
 
 const GROUP_BY_PRESET = {
   clear_day: "light",
@@ -34,6 +58,7 @@ const GROUP_BY_PRESET = {
   motion_camera: "weather",
   strong_shadow: "light",
   wet_reflection: "weather",
+  lens_rain: "lens",
   night_road: "light",
   suburban_mix: "weather",
   forest_road: "light",
@@ -48,6 +73,7 @@ const PRESET_META = {
   motion_camera: { risk: "Medium" },
   strong_shadow: { risk: "Medium" },
   wet_reflection: { risk: "Medium" },
+  lens_rain: { risk: "High" },
   night_road: { risk: "High" },
   suburban_mix: { risk: "Low" },
   forest_road: { risk: "Medium" },
@@ -67,6 +93,8 @@ export function initAugmentation() {
   });
 
   qs(SHADOW)?.addEventListener("change", invalidatePreview);
+  qs(VISIBILITY_PROTECTION)?.addEventListener("change", invalidatePreview);
+  GEOMETRY_SWITCHES.forEach((selector) => qs(selector)?.addEventListener("change", invalidatePreview));
 
   const multEl = qs(MULTIPLIER);
   if (multEl) {
@@ -80,9 +108,14 @@ export function initAugmentation() {
     });
   }
 
+  qs("#aug-multiplier-decrease")?.addEventListener("click", () => adjustMultiplier(-1));
+  qs("#aug-multiplier-increase")?.addEventListener("click", () => adjustMultiplier(1));
+  qs(COMPARE_SLIDER)?.addEventListener("input", updateComparePosition);
+
   qs(PREVIEW_SELECT)?.addEventListener("change", () => {
+    const filename = qs(PREVIEW_SELECT)?.value || "";
+    selectedPreviewFilename = filename;
     invalidatePreview();
-    const filename = qs(PREVIEW_SELECT)?.value;
     if (filename) drawBeforeCanvas(filename);
     else resetPreviewUI();
   });
@@ -91,17 +124,29 @@ export function initAugmentation() {
     button.addEventListener("click", () => applyAugmentationPreset(button.dataset.augPreset));
   });
   qsa("[data-aug-overlay]").forEach((button) => {
-    button.addEventListener("click", () => button.classList.toggle("active"));
+    button.addEventListener("click", () => {
+      button.classList.toggle("active");
+      const filename = qs(PREVIEW_SELECT)?.value;
+      if (filename) drawBeforeCanvas(filename);
+      drawAfterCanvas();
+    });
   });
 
   qs("#btn-preview-aug")?.addEventListener("click", triggerAugPreview);
   qs("#btn-reset-aug")?.addEventListener("click", resetAugmentationPolicy);
   qs("#btn-apply-aug")?.addEventListener("click", applyAugmentationToTrainSplit);
   qs("#btn-refresh-aug-jobs")?.addEventListener("click", () => loadAugmentationJobs(true));
-  renderPresetDetails(selectedPreset);
-  expandRelevantGroup(selectedPreset);
-  highlightPresetSettings(selectedPreset);
+  applyAugmentationPreset(selectedPreset);
+  updateComparePosition();
   renderAugmentationJobHistory();
+}
+
+function updateComparePosition() {
+  const slider = qs(COMPARE_SLIDER);
+  const stage = qs("#aug-compare-stage");
+  if (!slider || !stage) return;
+  const value = Math.max(0, Math.min(100, Number(slider.value || 50)));
+  stage.style.setProperty("--compare-position", `${value}%`);
 }
 
 export function renderAugmentationPage(status) {
@@ -198,6 +243,8 @@ function renderReadinessGuard(info) {
   if (card) {
     card.dataset.state = info.state;
   }
+  const actions = qs(".aug-readiness-actions");
+  if (actions) actions.style.display = info.canPreview ? "none" : "flex";
 }
 
 function getReadinessMessage(info) {
@@ -231,15 +278,37 @@ function renderTargetScope(status) {
   setText("#aug-info-train-count", `${train}`);
   setText("#aug-info-multiplier", `${multiplier}x`);
   setText("#aug-info-total-count", `+${output}`);
+  setText("#aug-summary-output", `${train} → ${train + output}`);
+}
+
+function adjustMultiplier(delta) {
+  const input = qs(MULTIPLIER);
+  if (!input || input.disabled) return;
+  const min = Number(input.min || 1);
+  const max = Number(input.max || 5);
+  const current = Number(input.value || min);
+  const next = Math.max(min, Math.min(max, current + delta));
+  if (next === current) return;
+  input.value = String(next);
+  updateEstimatedCount();
+  invalidatePreview();
 }
 
 function renderPreviewOptions(status) {
   const select = qs(PREVIEW_SELECT);
   if (!select) return;
 
-  const options = getPreviewImages().map((img) => `<option value="${escapeHtml(img.filename)}">${escapeHtml(img.filename)}</option>`);
+  const previewImages = getPreviewImages();
+  const filenames = previewImages.map((img) => img.filename);
+  const currentSelection = selectedPreviewFilename || select.value;
+  const options = previewImages.map((img) => `<option value="${escapeHtml(img.filename)}">${escapeHtml(img.filename)}</option>`);
   select.innerHTML = options.length ? options.join("") : `<option value="">${escapeHtml(t("augmentation.noPreviewOption"))}</option>`;
   select.disabled = !status?.splitComplete || options.length === 0;
+
+  if (currentSelection && filenames.includes(currentSelection)) {
+    select.value = currentSelection;
+  }
+  selectedPreviewFilename = select.value || "";
 
   if (select.value) drawBeforeCanvas(select.value);
   else resetPreviewUI();
@@ -249,6 +318,20 @@ function renderRiskCheck(info) {
   const list = qs("#aug-risk-list");
   const badge = qs("#aug-risk-badge");
   if (!list) return;
+
+  const verticalFlipEnabled = Boolean(qs("#aug-vertical-flip")?.checked);
+  const randomCrop = Number(qs("#aug-random-crop")?.value || 0);
+  const geometryEnabled = verticalFlipEnabled
+    || Boolean(qs("#aug-horizontal-flip")?.checked)
+    || Number(qs("#aug-rotation")?.value || 0) > 0
+    || Number(qs("#aug-scale")?.value || 0) > 0
+    || Number(qs("#aug-camera-perspective")?.value || 0) > 0
+    || randomCrop > 0;
+  const activeParameterRisks = [
+    verticalFlipEnabled ? { kind: "warning", text: t("augmentation.risk.verticalFlip") } : null,
+    randomCrop > 0 ? { kind: "warning", text: t("augmentation.risk.randomCrop") } : null,
+    geometryEnabled ? { kind: "info", text: t("augmentation.risk.geometryReview") } : null
+  ].filter(Boolean);
 
   const compact = (icon, text, stateClass = "is-warning") => {
     list.innerHTML = `
@@ -273,12 +356,12 @@ function renderRiskCheck(info) {
       { kind: "ok", text: t("augmentation.risk.valTest") },
       { kind: "ok", text: t("augmentation.risk.originals") },
       { kind: "ok", text: t("augmentation.risk.previewOk") },
-      { kind: "info", text: t("augmentation.risk.perspective") }
+      ...activeParameterRisks
     ];
 
     list.innerHTML = checks.map((check) => `
-      <li class="${check.kind === "ok" ? "is-ok" : "is-info"}">
-        <i class="fa-solid ${check.kind === "ok" ? "fa-circle-check" : "fa-circle-info"}"></i>
+      <li class="${check.kind === "ok" ? "is-ok" : check.kind === "warning" ? "is-warning" : "is-info"}">
+        <i class="fa-solid ${check.kind === "ok" ? "fa-circle-check" : check.kind === "warning" ? "fa-triangle-exclamation" : "fa-circle-info"}"></i>
         <span>${escapeHtml(check.text)}</span>
       </li>
     `).join("");
@@ -286,8 +369,12 @@ function renderRiskCheck(info) {
 
   if (badge) {
     if (info.canApply) {
-      badge.className = "summary-badge badge-success";
-      badge.textContent = t("augmentation.risk.passed");
+      badge.className = activeParameterRisks.some((risk) => risk.kind === "warning")
+        ? "summary-badge badge-warning"
+        : "summary-badge badge-success";
+      badge.textContent = activeParameterRisks.some((risk) => risk.kind === "warning")
+        ? t("augmentation.risk.reviewRequired")
+        : t("augmentation.risk.passed");
     } else if (info.canPreview) {
       badge.className = "summary-badge badge-warning";
       badge.textContent = previewState === "stale" ? t("augmentation.state.previewStale") : t("augmentation.risk.previewRequired");
@@ -300,11 +387,7 @@ function renderRiskCheck(info) {
 
 function updateControlState(info) {
   const settingsDisabled = applying;
-  qsa("#aug-settings-panel input, #aug-settings-panel button").forEach((el) => {
-    if (el.id === "aug-camera-perspective") {
-      el.disabled = true;
-      return;
-    }
+  qsa("#aug-settings-panel input, #aug-settings-panel button, #aug-multiplier, #aug-multiplier-decrease, #aug-multiplier-increase").forEach((el) => {
     el.disabled = settingsDisabled;
   });
   qsa("[data-aug-preset]").forEach((button) => {
@@ -338,9 +421,12 @@ function invalidatePreview() {
   if (previewState === "ready") previewState = "stale";
   else if (previewState !== "stale") previewState = "not_generated";
   applied = false;
-  const img = qs("#aug-preview-img");
+  const canvas = qs("#aug-after-canvas");
   const placeholder = qs("#aug-preview-placeholder");
-  if (img) img.style.display = "none";
+  augmentedPreviewImage = null;
+  augmentedPreviewAnnotations = [];
+  qs("#aug-compare-stage")?.classList.remove("has-comparison");
+  if (canvas) canvas.style.display = "none";
   if (placeholder) {
     placeholder.style.display = "block";
     placeholder.textContent = previewState === "stale" ? t("augmentation.message.previewStale") : t("augmentation.previewPlaceholder");
@@ -356,7 +442,7 @@ function validatePreviewSuccess() {
 function resetPreviewUI() {
   const beforeCanvas = qs("#aug-before-canvas");
   const beforePlaceholder = qs("#aug-before-placeholder");
-  const img = qs("#aug-preview-img");
+  const canvas = qs("#aug-after-canvas");
   const placeholder = qs("#aug-preview-placeholder");
 
   if (beforeCanvas) beforeCanvas.style.display = "none";
@@ -364,7 +450,10 @@ function resetPreviewUI() {
     beforePlaceholder.style.display = "block";
     beforePlaceholder.textContent = t("augmentation.beforePlaceholder");
   }
-  if (img) img.style.display = "none";
+  augmentedPreviewImage = null;
+  augmentedPreviewAnnotations = [];
+  qs("#aug-compare-stage")?.classList.remove("has-comparison");
+  if (canvas) canvas.style.display = "none";
   if (placeholder) {
     placeholder.style.display = "block";
     placeholder.textContent = t("augmentation.previewPlaceholder");
@@ -391,7 +480,7 @@ function drawBeforeCanvas(filename) {
     canvas.width = img.width;
     canvas.height = img.height;
     ctx.drawImage(img, 0, 0);
-    drawAnnotations(ctx, img, imgMetadata.annotations || []);
+    if (showPreviewAnnotations()) drawAnnotations(ctx, img, imgMetadata.annotations || []);
   };
   img.onerror = () => {
     canvas.style.display = "none";
@@ -401,6 +490,25 @@ function drawBeforeCanvas(filename) {
     }
   };
   img.src = `/api/projects/${appState.currentProjectId}/images/${encodeURIComponent(filename)}`;
+}
+
+function showPreviewAnnotations() {
+  return Boolean(qs('[data-aug-overlay="annotations"]')?.classList.contains("active"));
+}
+
+function drawAfterCanvas() {
+  const canvas = qs("#aug-after-canvas");
+  const filename = qs(PREVIEW_SELECT)?.value;
+  if (!canvas || !augmentedPreviewImage) return;
+  const ctx = canvas.getContext("2d");
+  canvas.width = augmentedPreviewImage.width;
+  canvas.height = augmentedPreviewImage.height;
+  ctx.drawImage(augmentedPreviewImage, 0, 0);
+  if (showPreviewAnnotations()) {
+    drawAnnotations(ctx, augmentedPreviewImage, augmentedPreviewAnnotations);
+  }
+  canvas.style.display = "block";
+  qs("#aug-compare-stage")?.classList.add("has-comparison");
 }
 
 function drawAnnotations(ctx, img, annotations) {
@@ -467,12 +575,31 @@ function applyAugmentationPreset(presetName) {
 
   setValue("#aug-light-brightness", preset.brightness);
   setValue("#aug-light-contrast", preset.contrast);
+  setValue("#aug-light-temperature", preset.temperature || 0);
   setChecked("#aug-light-shadow", preset.shadow);
+  setValue("#aug-weather-overcast", preset.overcast || 0);
+  setValue("#aug-weather-sun-suppression", preset.sunSuppression || 0);
   setValue("#aug-weather-rain", preset.rain);
   setValue("#aug-weather-fog", preset.fog);
+  setValue("#aug-weather-wet-surface", preset.wetSurface || 0);
+  setValue("#aug-weather-puddle", preset.puddle || 0);
+  setValue("#aug-weather-splash", preset.splash || 0);
+  setValue("#aug-max-occlusion", preset.maxOcclusion || 0.15);
+  setValue("#aug-camera-lens-droplets", preset.lensDroplets || 0);
   setValue("#aug-motion-blur", preset.motionBlur);
+  setValue("#aug-gaussian-blur", preset.gaussianBlur || 0);
   setValue("#aug-camera-noise", preset.noise);
-  setValue("#aug-camera-perspective", 0);
+  setValue("#aug-camera-compression", preset.compression || 0);
+  setValue("#aug-camera-perspective", preset.perspective || 0);
+  setValue("#aug-rotation", preset.rotation || 0);
+  setValue("#aug-scale", preset.scale || 0);
+  setChecked("#aug-horizontal-flip", preset.horizontalFlip || false);
+  setChecked("#aug-vertical-flip", preset.verticalFlip || false);
+  setValue("#aug-random-occlusion", preset.randomOcclusion || 0);
+  setValue("#aug-random-crop", preset.randomCrop || 0);
+  setValue("#aug-color-saturation", preset.saturation || 0);
+  setValue("#aug-color-hue", preset.hue || 0);
+  setValue("#aug-color-sharpness", preset.sharpness || 0);
 
   qsa("[data-aug-preset]").forEach((button) => {
     button.classList.toggle("active", button.dataset.augPreset === presetName);
@@ -492,6 +619,16 @@ function renderPresetDetails(presetName) {
   setText("#aug-preset-purpose", t(`augmentation.presetPurpose.${presetName}`));
   setText("#aug-preset-params", t(`augmentation.presetParams.${presetName}`));
   setText("#aug-preset-risk", meta.risk);
+  const strategyKey = {
+    generalization: "balance",
+    clear_day: "light",
+    rainy: "harsh",
+    motion_camera: "blur",
+    lens_rain: "sensor",
+    wet_reflection: "stress"
+  }[presetName] || "balance";
+  setText("#aug-selected-strategy", t(`augmentation.strategy.${strategyKey}`));
+  setText("#aug-summary-risk", t(`augmentation.riskValue.${meta.risk.toLowerCase()}`));
 }
 
 function expandRelevantGroup(presetName) {
@@ -506,15 +643,16 @@ function highlightPresetSettings(presetName) {
   const related = {
     clear_day: ["brightness", "contrast"],
     low_light: ["brightness", "contrast", "shadow", "noise"],
-    rainy: ["rain", "contrast", "motion"],
-    foggy: ["fog", "contrast"],
+    rainy: ["overcast", "sun-suppression", "rain", "fog", "visibility"],
+    foggy: ["overcast", "sun-suppression", "fog", "visibility"],
     motion_camera: ["motion", "noise"],
     strong_shadow: ["shadow", "brightness", "contrast"],
-    wet_reflection: ["rain", "brightness", "contrast"],
+    wet_reflection: ["overcast", "sun-suppression", "rain", "fog", "wet-surface", "puddle", "splash", "visibility", "occlusion-limit"],
+    lens_rain: ["lens-droplets"],
     night_road: ["brightness", "shadow", "noise"],
     suburban_mix: ["brightness", "contrast", "noise"],
     forest_road: ["shadow", "brightness", "contrast"],
-    generalization: ["brightness", "contrast", "rain", "fog", "motion", "noise"]
+    generalization: ["brightness", "contrast", "overcast", "sun-suppression", "rain", "fog", "wet-surface", "visibility", "occlusion-limit", "motion", "noise"]
   };
   (related[presetName] || []).forEach((name) => {
     qs(`[data-aug-setting="${name}"]`)?.classList.add("is-related");
@@ -522,7 +660,8 @@ function highlightPresetSettings(presetName) {
 }
 
 function resetAugmentationPolicy() {
-  applyAugmentationPreset("clear_day");
+  applyAugmentationPreset("generalization");
+  setChecked(VISIBILITY_PROTECTION, true);
   setValue(MULTIPLIER, 1);
   invalidatePreview();
 }
@@ -532,18 +671,45 @@ function getAugmentationConfig() {
     light: {
       brightness: Number(qs("#aug-light-brightness")?.value || 0),
       contrast: Number(qs("#aug-light-contrast")?.value || 0),
+      temperature: Number(qs("#aug-light-temperature")?.value || 0),
       shadow: Boolean(qs("#aug-light-shadow")?.checked)
     },
     weather: {
+      overcast: Number(qs("#aug-weather-overcast")?.value || 0),
+      sun_suppression: Number(qs("#aug-weather-sun-suppression")?.value || 0),
       rain: Number(qs("#aug-weather-rain")?.value || 0),
-      fog: Number(qs("#aug-weather-fog")?.value || 0)
+      fog: Number(qs("#aug-weather-fog")?.value || 0),
+      wet_surface: Number(qs("#aug-weather-wet-surface")?.value || 0),
+      puddle: Number(qs("#aug-weather-puddle")?.value || 0),
+      splash: Number(qs("#aug-weather-splash")?.value || 0),
+      wind_angle: -12,
+      visibility_protection: Boolean(qs(VISIBILITY_PROTECTION)?.checked ?? true),
+      max_occlusion: Number(qs("#aug-max-occlusion")?.value || 0.15)
     },
     motion: {
-      motion_blur: Number(qs("#aug-motion-blur")?.value || 0)
+      motion_blur: Number(qs("#aug-motion-blur")?.value || 0),
+      gaussian_blur: Number(qs("#aug-gaussian-blur")?.value || 0)
     },
     camera: {
       noise: Number(qs("#aug-camera-noise")?.value || 0),
-      perspective: 0
+      compression: Number(qs("#aug-camera-compression")?.value || 0),
+      lens_droplets: Number(qs("#aug-camera-lens-droplets")?.value || 0),
+      perspective: Number(qs("#aug-camera-perspective")?.value || 0)
+    },
+    geometry: {
+      rotation: Number(qs("#aug-rotation")?.value || 0),
+      scale: Number(qs("#aug-scale")?.value || 0),
+      horizontal_flip: Boolean(qs("#aug-horizontal-flip")?.checked),
+      vertical_flip: Boolean(qs("#aug-vertical-flip")?.checked),
+      random_crop: Number(qs("#aug-random-crop")?.value || 0)
+    },
+    occlusion: {
+      intensity: Number(qs("#aug-random-occlusion")?.value || 0)
+    },
+    color: {
+      saturation: Number(qs("#aug-color-saturation")?.value || 0),
+      hue: Number(qs("#aug-color-hue")?.value || 0),
+      sharpness: Number(qs("#aug-color-sharpness")?.value || 0)
     },
     preset: selectedPreset
   };
@@ -556,7 +722,7 @@ async function triggerAugPreview() {
   if (!info.canPreview || !appState.currentProjectId || !filename) return;
 
   const btn = qs("#btn-preview-aug");
-  const img = qs("#aug-preview-img");
+  const canvas = qs("#aug-after-canvas");
   const placeholder = qs("#aug-preview-placeholder");
 
   try {
@@ -574,15 +740,21 @@ async function triggerAugPreview() {
       body: JSON.stringify({ filename, config: getAugmentationConfig() })
     });
 
-    if (img) {
-      img.src = data.preview;
-      img.style.display = "block";
-    }
+    augmentedPreviewImage = new Image();
+    augmentedPreviewAnnotations = Array.isArray(data.bboxes) ? data.bboxes : [];
+    await new Promise((resolve, reject) => {
+      augmentedPreviewImage.onload = resolve;
+      augmentedPreviewImage.onerror = () => reject(new Error(t("augmentation.loadPreviewFailed")));
+      augmentedPreviewImage.src = data.preview;
+    });
+    drawAfterCanvas();
     if (placeholder) placeholder.style.display = "none";
     validatePreviewSuccess();
   } catch (err) {
     previewState = "failed";
-    if (img) img.style.display = "none";
+    augmentedPreviewImage = null;
+    augmentedPreviewAnnotations = [];
+    if (canvas) canvas.style.display = "none";
     if (placeholder) {
       placeholder.style.display = "block";
       placeholder.textContent = `Preview 產生失敗：${err.message}`;
@@ -654,6 +826,7 @@ async function loadAugmentationJobs(force = false) {
 function renderAugmentationJobHistory() {
   const list = qs("#aug-job-history-list");
   if (!list) return;
+  setText("#aug-job-count", String(augmentationJobs.length));
 
   if (!appState.currentProjectId) {
     list.innerHTML = `<div class="empty-state">${escapeHtml(t("common.noProjectOpened"))}</div>`;
@@ -682,7 +855,7 @@ function renderAugmentationJobHistory() {
       ? t("augmentation.job.valTestExcluded")
       : t("augmentation.job.checkPolicy");
     const params = Array.isArray(job.applied_parameters) && job.applied_parameters.length
-      ? job.applied_parameters.join(", ")
+      ? job.applied_parameters.map(formatAppliedParameter).join(", ")
       : t("augmentation.job.default");
     const outputPath = job.outputs?.images || "-";
     return `
@@ -709,6 +882,39 @@ function renderAugmentationJobHistory() {
   }).join("");
 }
 
+function formatAppliedParameter(name) {
+  const keys = {
+    brightness: "augmentation.brightness",
+    contrast: "augmentation.contrast",
+    shadow: "augmentation.shadow",
+    overcast_grade: "augmentation.overcast",
+    sunny_cue_suppression: "augmentation.sunSuppression",
+    three_layer_rain: "augmentation.rain",
+    depth_fog: "augmentation.fog",
+    wet_surface: "augmentation.wetSurface",
+    puddles: "augmentation.puddle",
+    ground_splashes: "augmentation.splash",
+    lens_droplets: "augmentation.lensDroplets",
+    annotation_visibility_protection: "augmentation.visibilityProtection",
+    motion_blur: "augmentation.motionBlur",
+    gaussian_blur: "augmentation.gaussianBlur",
+    camera_noise: "augmentation.cameraNoise",
+    compression_noise: "augmentation.compressionNoise",
+    color_temperature: "augmentation.temperature",
+    saturation: "augmentation.saturation",
+    hue_shift: "augmentation.hueShift",
+    sharpness: "augmentation.sharpness",
+    rotation: "augmentation.rotation",
+    scale: "augmentation.scaleVariance",
+    perspective: "augmentation.perspective",
+    horizontal_flip: "augmentation.horizontalFlip",
+    vertical_flip: "augmentation.verticalFlip",
+    random_crop: "augmentation.randomCrop",
+    random_occlusion: "augmentation.randomOcclusion"
+  };
+  return keys[name] ? t(keys[name]) : name;
+}
+
 function formatJobTime(value) {
   if (!value) return "-";
   const date = new Date(value);
@@ -726,16 +932,36 @@ function updateSliderLabels() {
   const map = {
     "#aug-light-brightness": "#val-brightness",
     "#aug-light-contrast": "#val-contrast",
+    "#aug-light-temperature": "#val-temperature",
+    "#aug-weather-overcast": "#val-overcast",
+    "#aug-weather-sun-suppression": "#val-sun-suppression",
     "#aug-weather-rain": "#val-rain",
     "#aug-weather-fog": "#val-fog",
+    "#aug-weather-wet-surface": "#val-wet-surface",
+    "#aug-weather-puddle": "#val-puddle",
+    "#aug-weather-splash": "#val-splash",
+    "#aug-max-occlusion": "#val-max-occlusion",
     "#aug-motion-blur": "#val-motion-blur",
+    "#aug-gaussian-blur": "#val-gaussian-blur",
     "#aug-camera-noise": "#val-camera-noise",
-    "#aug-camera-perspective": "#val-camera-perspective"
+    "#aug-camera-compression": "#val-compression",
+    "#aug-camera-perspective": "#val-camera-perspective",
+    "#aug-camera-lens-droplets": "#val-lens-droplets",
+    "#aug-rotation": "#val-rotation",
+    "#aug-scale": "#val-scale",
+    "#aug-random-occlusion": "#val-random-occlusion",
+    "#aug-random-crop": "#val-random-crop",
+    "#aug-color-saturation": "#val-saturation",
+    "#aug-color-hue": "#val-hue",
+    "#aug-color-sharpness": "#val-sharpness"
   };
   Object.entries(map).forEach(([inputSelector, labelSelector]) => {
     const input = qs(inputSelector);
     const label = qs(labelSelector);
-    if (input && label) label.textContent = Number(input.value || 0).toFixed(2);
+    if (input && label) {
+      const value = Number(input.value || 0);
+      label.textContent = inputSelector === "#aug-rotation" ? `${value.toFixed(0)}°` : value.toFixed(2);
+    }
   });
 }
 
