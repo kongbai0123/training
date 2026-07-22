@@ -1048,23 +1048,29 @@ class ProjectAssistantService:
         conversation_state: Optional[List[Dict[str, Any]]] = None,
         profile_id: str = "lexical_default",
         filters: Optional[Dict[str, Any]] = None,
+        locale: str = "en",
     ) -> Dict[str, Any]:
         start_time = time.perf_counter()
         settings = cls.get_settings()
         filters = cls._normalize_retrieval_filters(filters)
+        zh = str(locale or "").lower().replace("_", "-").startswith("zh")
         if settings["mode"] == "disabled":
             sources = []
             latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
-            answer = "Project Assistant is disabled. Enable Local Search Only to search project reports and logs."
+            answer = (
+                "專案助理目前已停用。請在助理設定中啟用「僅本機搜尋」，即可搜尋專案報告、訓練紀錄與錯誤日誌。"
+                if zh else
+                "Project Assistant is disabled. Enable Local Search Only to search project reports and logs."
+            )
             run = {
                 "run_id": _safe_id("assistant_run"),
                 "query": message,
                 "answer": answer,
                 "sources": sources,
                 "agent_trace": [
-                    cls._agent_step("parse", "done", "Parsed user request."),
-                    cls._agent_step("settings", "failed", "Assistant mode is disabled."),
-                    cls._agent_step("final", "done", "Returned disabled-mode response."),
+                    cls._agent_step("parse", "done", "已解析使用者問題。" if zh else "Parsed user request."),
+                    cls._agent_step("settings", "failed", "助理模式目前已停用。" if zh else "Assistant mode is disabled."),
+                    cls._agent_step("final", "done", "已回覆停用狀態與處理方式。" if zh else "Returned disabled-mode response."),
                 ],
                 "conversation_state": cls._clean_conversation(conversation_state or []) + [
                     {"role": "user", "content": message, "meta": {"source": "clean_state"}},
@@ -1084,17 +1090,41 @@ class ProjectAssistantService:
         retrieval = cls.retrieve(message, top_k=5, profile_id=profile_id, filters=filters)
         sources = retrieval["results"]
         steps = [
-            cls._agent_step("parse", "done", "Parsed user request."),
-            cls._agent_step("retrieve", "done" if sources else "failed", f"Retrieved {len(sources)} source chunk(s)."),
-            cls._agent_step("validate", "done" if sources else "failed", "Checked source availability."),
-            cls._agent_step("final", "done", "Generated grounded response." if sources else "Generated no-source response."),
+            cls._agent_step("parse", "done", "已解析使用者問題。" if zh else "Parsed user request."),
+            cls._agent_step(
+                "retrieve",
+                "done" if sources else "failed",
+                f"已找到 {len(sources)} 個專案來源片段。" if zh else f"Retrieved {len(sources)} source chunk(s).",
+            ),
+            cls._agent_step("validate", "done" if sources else "failed", "已檢查來源是否可引用。" if zh else "Checked source availability."),
+            cls._agent_step(
+                "final",
+                "done",
+                ("已依專案來源產生回答。" if sources else "目前沒有可引用的專案來源。")
+                if zh else
+                ("Generated grounded response." if sources else "Generated no-source response."),
+            ),
         ]
         if sources:
             source_lines = [f"- {item['source']} / {item['section']}: {item['content'][:220]}" for item in sources[:3]]
-            answer = "According to the active project knowledge base, the most relevant sources are:\n" + "\n".join(source_lines)
+            scope = str(filters.get("scope") or "").strip()
+            if zh:
+                scope_guidance = {
+                    "training": "建議下一步：先核對資料就緒度、模型設定與最近一次訓練紀錄，再決定是否啟動或調整訓練。",
+                    "evaluation": "建議下一步：以正式評估指標與診斷圖為準，優先檢查最佳 Epoch、過度擬合與錯誤樣本。",
+                    "model_compare": "建議下一步：使用相同資料切分與主要指標比較 Run，並同時確認模型大小與部署限制。",
+                    "export": "建議下一步：交付前核對模型、類別或 schema、前處理設定及推論合約是否齊全。",
+                }.get(scope, "建議下一步：先確認引用來源的時間與 Run 是否符合目前專案，再依頁面上的正式檢查結果操作。")
+                answer = "依目前專案知識庫，最相關的可引用來源如下：\n" + "\n".join(source_lines) + f"\n\n{scope_guidance}"
+            else:
+                answer = "According to the active project knowledge base, the most relevant sources are:\n" + "\n".join(source_lines)
             failure_type = ""
         else:
-            answer = "No citable source was found in the active project knowledge base. Import project reports, run records, or error logs before asking again."
+            answer = (
+                "目前專案知識庫沒有可引用的來源。請先按「同步專案產物」，匯入專案報告、訓練 Run、評估結果或錯誤日誌後再提問。"
+                if zh else
+                "No citable source was found in the active project knowledge base. Sync project artifacts or import project reports, run records, evaluation results, or error logs before asking again."
+            )
             failure_type = "no_sources"
 
         latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
@@ -1126,12 +1156,14 @@ class ProjectAssistantService:
         conversation_state: Optional[List[Dict[str, Any]]] = None,
         profile_id: str = "lexical_default",
         filters: Optional[Dict[str, Any]] = None,
+        locale: str = "en",
     ) -> List[Dict[str, Any]]:
         run = cls.chat(
             message=message,
             conversation_state=conversation_state or [],
             profile_id=profile_id,
             filters=filters or {},
+            locale=locale,
         )
         return [
             {"event": "plan", "data": {"steps": run["agent_trace"]}},

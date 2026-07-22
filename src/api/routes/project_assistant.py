@@ -38,6 +38,7 @@ class ProjectAssistantRetrievalMarkRequest(BaseModel):
 
 class ProjectAssistantChatRequest(BaseModel):
     message: str
+    locale: str = "en"
     conversation_state: Optional[List[Dict[str, Any]]] = None
     profile_id: str = "lexical_default"
     scope: str = ""
@@ -240,6 +241,7 @@ def project_assistant_chat(
         conversation_state=request.conversation_state or [],
         profile_id=request.profile_id,
         filters=filters,
+        locale=request.locale,
     )
 
 
@@ -256,6 +258,7 @@ def project_assistant_chat_stream(
         conversation_state=request.conversation_state or [],
         profile_id=request.profile_id,
         filters=filters,
+        locale=request.locale,
     )
 
     def iter_events():

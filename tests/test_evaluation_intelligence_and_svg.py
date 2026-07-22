@@ -88,6 +88,33 @@ class EvaluationIntelligenceAndSvgTests(unittest.TestCase):
             self.assertIn('filename="results.svg"', response.headers.get("content-disposition", ""))
             self.assertIn(b"<svg", response.content)
 
+    def test_evaluation_plot_is_saved_to_system_downloads_folder(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "project"
+            run_dir = root / "training" / "runs" / "run_done"
+            run_dir.mkdir(parents=True)
+            run_dir.joinpath("metrics.json").write_text("{}", encoding="utf-8")
+            run_dir.joinpath("results.svg").write_text("<svg></svg>", encoding="utf-8")
+            downloads = Path(temp_dir) / "Downloads"
+            project = {
+                "project_id": "proj_eval_save",
+                "dataset_path": str(root / "dataset"),
+                "layout": {"mode": "v3"},
+                "training_runs": [{"run_id": "run_done", "status": "completed", "completed_at": "2026-07-02T10:00:00"}],
+            }
+            with (
+                patch("src.api.routes.evaluation.ProjectManager.get_project", return_value=project),
+                patch("src.system_downloads.resolve_downloads_dir", return_value=downloads),
+            ):
+                response = TestClient(app).post(
+                    "/api/projects/proj_eval_save/evaluation/plot/results.svg/save-to-downloads?run_id=run_done"
+                )
+
+            self.assertEqual(response.status_code, 200)
+            saved_path = Path(response.json()["saved_path"])
+            self.assertEqual(saved_path.parent, downloads)
+            self.assertEqual(saved_path.read_text(encoding="utf-8"), "<svg></svg>")
+
     def test_evaluation_ui_replaces_static_checklist_and_prefers_svg(self):
         root = Path(__file__).resolve().parents[1]
         html = root.joinpath("static", "index.html").read_text(encoding="utf-8")
@@ -97,6 +124,8 @@ class EvaluationIntelligenceAndSvgTests(unittest.TestCase):
         self.assertIn("renderEvaluationAssessment(data.assessment)", script)
         self.assertIn("data.plot_exports || {}", script)
         self.assertIn('vectorFilename ? "SVG"', script)
+        self.assertIn("/save-to-downloads", script)
+        self.assertNotIn("URL.createObjectURL", script)
 
 
 if __name__ == "__main__":

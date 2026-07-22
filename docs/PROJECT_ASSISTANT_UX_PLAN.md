@@ -109,6 +109,11 @@ These legacy names are compatibility shims only. User-facing copy should say Pro
 - Scoped requests only retrieve documents matching the active project id.
 - Assistant mode defaults to local search only.
 - Optional GGUF / cloud modes are settings, not core workflow dependencies.
+- Enter sends a question and Shift+Enter inserts a new line; the send action exposes a searching state and rejects duplicate submissions.
+- Opening a project checks whether synchronized project knowledge exists and prompts once per session when synchronization is needed.
+- An empty project knowledge base presents a direct Sync Project Artifacts action instead of returning a silent empty result.
+- Traditional Chinese sessions receive localized no-source, disabled, trace, and next-step responses.
+- Grounded local-search answers include cited project sources plus a deterministic page-aware next action; they do not modify project or training settings.
 
 ## Validation Evidence
 
@@ -135,10 +140,9 @@ Recent validation on this branch:
 
 Recommended next slices:
 
-1. Add page-specific assistant prompts for RNN schema, sequence training, model comparison, export, and error history.
-2. Add project report summarization templates that do not require an LLM.
-3. Add optional LLM generation only behind explicit assistant mode settings.
-4. Extend DOM audit pages for Evaluation, Compare, Export, History, and Project Assistant after each UI copy change.
+1. Add project report summarization templates that do not require an LLM.
+2. Add optional LLM generation only behind explicit assistant mode settings.
+3. Extend DOM audit pages for Evaluation, Compare, Export, History, and Project Assistant after each UI copy change.
 
 ## Completion Criteria
 

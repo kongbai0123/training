@@ -1,7 +1,7 @@
 import { appState, t } from "../state.js";
 import { eventBus } from "../event_bus.js";
 import { setText, qs, escapeHtml } from "../utils.js";
-import { apiFetch, apiFetchBlob } from "../api.js";
+import { apiFetch } from "../api.js";
 
 let loadedEvaluationProjectId = "";
 let cachedEvaluation = null;
@@ -137,7 +137,7 @@ function renderEvaluationPlots(plots = [], runId = null, plotExports = {}) {
     const vectorFilename = plotExports[plot] || "";
     const downloadFilename = vectorFilename || plot;
     const downloadFormat = vectorFilename ? "SVG" : pathExtensionLabel(plot);
-    const downloadSrc = `/api/projects/${encodeURIComponent(appState.currentProjectId)}/evaluation/plot/${encodeURIComponent(downloadFilename)}?t=${Date.now()}${runParam}`;
+    const downloadSrc = `/api/projects/${encodeURIComponent(appState.currentProjectId)}/evaluation/plot/${encodeURIComponent(downloadFilename)}/save-to-downloads${runId ? `?run_id=${encodeURIComponent(runId)}` : ""}`;
     const downloadTitle = vectorFilename ? t("evaluation.plot.downloadSvg") : t("evaluation.plot.downloadLegacyRaster");
     return `
       <div class="evaluation-plot-card">
@@ -179,15 +179,11 @@ function pathExtensionLabel(filename) {
 async function downloadEvaluationPlot(url, filename) {
   if (!url) return;
   try {
-    const blob = await apiFetchBlob(url);
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    link.download = filename || "evaluation_plot.svg";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    const result = await apiFetch(url, { method: "POST" });
+    eventBus.emit("toast", t("evaluation.plot.savedToDownloads", {
+      filename: result.filename || filename || "evaluation_plot.svg",
+      path: result.saved_path || "",
+    }));
   } catch (err) {
     eventBus.emit("toast", t("evaluation.plot.downloadFailed", { message: err.message }));
   }

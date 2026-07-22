@@ -19,6 +19,7 @@ from src.api.routes.diagnostics import router as diagnostics_router
 from src.api.routes.dataset_split import router as dataset_split_router
 from src.api.routes.datasets import router as datasets_router
 from src.api.routes.evaluation import router as evaluation_router
+from src.api.routes.downloads import router as downloads_router
 from src.api.routes.annotation_labelme import router as annotation_labelme_router
 from src.api.routes.augmentation import router as augmentation_router
 from src.api.routes.auto_labeling import router as auto_labeling_router
@@ -55,6 +56,7 @@ app.include_router(inference_router)
 app.include_router(datasets_router)
 app.include_router(dataset_split_router)
 app.include_router(evaluation_router)
+app.include_router(downloads_router)
 app.include_router(annotation_labelme_router)
 app.include_router(auto_labeling_router)
 app.include_router(augmentation_router)

@@ -349,10 +349,12 @@
                 <span class="summary-badge" data-i18n="assistant.noRawThought">no raw thought</span>
               </div>
               <p class="section-help" data-i18n="assistant.chatHelp">Answers use clean conversation state and render sources separately from model history.</p>
+              <div id="rag-chat-empty-kb" class="assistant-empty-kb" hidden></div>
               <div class="assistant-query-row">
-                <input id="rag-chat-input" type="text" placeholder="Ask with knowledge base sources" data-i18n-placeholder="assistant.chatPlaceholder">
+                <textarea id="rag-chat-input" class="assistant-chat-input" rows="2" placeholder="Ask with knowledge base sources" data-i18n-placeholder="assistant.chatPlaceholder"></textarea>
                 <button class="btn btn-primary" id="btn-rag-chat"><i class="fa-solid fa-paper-plane"></i> <span data-i18n="assistant.ask">Ask</span></button>
               </div>
+              <div id="rag-chat-status" class="assistant-chat-status" role="status" aria-live="polite"></div>
               <article class="assistant-answer-card">
                 <h3 data-i18n="assistant.answer">Answer</h3>
                 <div id="rag-chat-answer" class="rag-answer-body" data-i18n="assistant.noAnswer">No assistant answer yet.</div>

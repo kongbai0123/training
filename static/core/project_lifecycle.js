@@ -89,6 +89,7 @@ export function createProjectLifecycle({ renderAll, navigate }) {
       }
       await loadPageRecommendedConfig();
       renderAll();
+      eventBus.emit("project-opened", { projectId, project: appState.currentProject });
       if (!options.stayOnPage) navigate(options.page || "dashboard");
     } catch (err) {
       showToastCore(`Failed to open project: ${err.message}`);

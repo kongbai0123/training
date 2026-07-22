@@ -21,6 +21,9 @@ const assistantState = {
   drawerOpen: false,
   activeScope: "",
   activeTab: "qa",
+  chatBusy: false,
+  lastProjectId: "",
+  checkedProjects: new Set(),
 };
 
 export function initProjectAssistantImpl() {
@@ -36,6 +39,14 @@ export function initProjectAssistantImpl() {
   qs("#btn-rag-clear-kb")?.addEventListener("click", clearKnowledgeBase);
   qs("#btn-rag-query")?.addEventListener("click", runRetrieval);
   qs("#btn-rag-chat")?.addEventListener("click", runProjectAssistantChat);
+  qs("#rag-chat-input")?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.shiftKey) return;
+    event.preventDefault();
+    void runProjectAssistantChat();
+  });
+  qs(".assistant-chat-panel")?.addEventListener("click", (event) => {
+    if (event.target.closest("#btn-rag-empty-sync")) void syncProjectArtifacts();
+  });
   qs("#btn-rag-save-file")?.addEventListener("click", saveSandboxFile);
   qs("#btn-rag-export-artifact")?.addEventListener("click", exportSandboxArtifact);
   qs("#btn-rag-eval-report")?.addEventListener("click", generateEvaluationReport);
@@ -59,6 +70,9 @@ export function initProjectAssistantImpl() {
     assistantState.activeScope = button.dataset.assistantScope || getActiveAssistantScope();
   });
   eventBus.on("open-project-assistant", openProjectAssistantDrawer);
+  eventBus.on("project-opened", (payload = {}) => {
+    void handleAssistantProjectOpened(payload);
+  });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && assistantState.drawerOpen) closeProjectAssistantDrawer();
   });
@@ -78,6 +92,7 @@ export function renderProjectAssistantImplPage() {
   renderSettings();
   renderRetrievalResults();
   renderChatResult();
+  renderChatKnowledgeState();
   renderAgentRuns();
   renderSandbox();
   renderEvaluation();
@@ -252,6 +267,45 @@ async function loadProjectAssistant({ force = false } = {}) {
   }
 }
 
+async function handleAssistantProjectOpened({ projectId } = {}) {
+  const normalizedProjectId = String(projectId || "").trim();
+  if (!normalizedProjectId) return;
+  if (assistantState.lastProjectId !== normalizedProjectId) {
+    assistantState.lastProjectId = normalizedProjectId;
+    assistantState.status = null;
+    assistantState.retrieval = null;
+    assistantState.lastRun = null;
+    assistantState.agentRuns = [];
+    assistantState.conversationState = [];
+  }
+  if (assistantState.drawerOpen) await loadProjectAssistant({ force: true });
+  await checkAssistantKnowledgeForProject(normalizedProjectId);
+}
+
+async function checkAssistantKnowledgeForProject(projectId) {
+  const normalizedProjectId = String(projectId || "").trim();
+  if (!normalizedProjectId || assistantState.checkedProjects.has(normalizedProjectId)) return;
+  assistantState.checkedProjects.add(normalizedProjectId);
+  try {
+    const kb = await apiFetch(`/api/project-assistant/knowledge-base?project_id=${encodeURIComponent(normalizedProjectId)}`, {
+      suppressToast: true,
+      responseCacheTtlMs: 1000,
+    });
+    if (appState.currentProjectId !== normalizedProjectId) return;
+    assistantState.kb = kb;
+    const documentCount = Number(kb?.documents?.length ?? kb?.document_count ?? 0);
+    const assistantButton = qs("#btn-project-assistant");
+    assistantButton?.classList.toggle("attention", documentCount === 0);
+    if (documentCount === 0) {
+      eventBus.emit("toast", t("assistant.toast.syncSuggested"));
+    }
+    if (assistantState.drawerOpen) renderProjectAssistantImplPage();
+  } catch (error) {
+    assistantState.checkedProjects.delete(normalizedProjectId);
+    console.warn("Project assistant knowledge check failed:", error.message);
+  }
+}
+
 async function ingestDocument() {
   if (!requireActiveProject()) return;
   const filename = qs("#rag-doc-filename")?.value?.trim() || "rag-note.md";
@@ -303,6 +357,7 @@ async function syncProjectArtifacts() {
   });
   assistantState.status = result.status;
   await loadProjectAssistant({ force: true });
+  qs("#btn-project-assistant")?.classList.remove("attention");
   eventBus.emit("toast", t("assistant.toast.syncedArtifacts", {
     count: result.document_count || 0,
     chunks: result.chunk_count || 0,
@@ -349,26 +404,66 @@ async function runRetrieval() {
 
 async function runProjectAssistantChat() {
   if (!requireActiveProject()) return;
+  if (assistantState.chatBusy) return;
   const message = qs("#rag-chat-input")?.value || "";
   if (!message.trim()) {
     eventBus.emit("toast", t("assistant.toast.emptyQuestion"));
     return;
   }
-  assistantState.lastRun = await apiFetch(assistantApi("/chat"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message,
-      conversation_state: assistantState.conversationState,
-      profile_id: qs("#rag-retrieval-profile")?.value || "lexical_default",
-      scope: getActiveAssistantScope(),
-      filters: getActiveAssistantFilters(),
-    }),
-  });
-  assistantState.conversationState = assistantState.lastRun.conversation_state || [];
-  await loadProjectAssistant({ force: true });
-  renderChatResult();
-  renderAgentRuns();
+  assistantState.chatBusy = true;
+  renderChatKnowledgeState();
+  try {
+    assistantState.lastRun = await apiFetch(assistantApi("/chat"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      suppressToast: true,
+      body: JSON.stringify({
+        message,
+        locale: appState.settings?.language || "en",
+        conversation_state: assistantState.conversationState,
+        profile_id: qs("#rag-retrieval-profile")?.value || "lexical_default",
+        scope: getActiveAssistantScope(),
+        filters: getActiveAssistantFilters(),
+      }),
+    });
+    assistantState.conversationState = assistantState.lastRun.conversation_state || [];
+    await loadProjectAssistant({ force: true });
+    renderChatResult();
+    renderAgentRuns();
+  } catch (error) {
+    eventBus.emit("toast", t("assistant.toast.chatFailed", { message: error.message }));
+  } finally {
+    assistantState.chatBusy = false;
+    renderChatKnowledgeState();
+  }
+}
+
+function renderChatKnowledgeState() {
+  const documents = assistantState.kb?.documents || [];
+  const emptyPanel = qs("#rag-chat-empty-kb");
+  if (emptyPanel) {
+    const shouldShow = Boolean(appState.currentProjectId) && documents.length === 0;
+    emptyPanel.hidden = !shouldShow;
+    emptyPanel.innerHTML = shouldShow ? `
+      <span><strong>${escapeHtml(t("assistant.emptyKbTitle"))}</strong><br>${escapeHtml(t("assistant.emptyKbHelp"))}</span>
+      <button type="button" class="btn btn-secondary" id="btn-rag-empty-sync"><i class="fa-solid fa-link"></i> ${escapeHtml(t("assistant.emptyKbAction"))}</button>
+    ` : "";
+  }
+  const button = qs("#btn-rag-chat");
+  if (button) {
+    button.disabled = assistantState.chatBusy;
+    button.setAttribute("aria-busy", assistantState.chatBusy ? "true" : "false");
+    button.innerHTML = assistantState.chatBusy
+      ? `<i class="fa-solid fa-spinner fa-spin"></i> <span>${escapeHtml(t("assistant.searching"))}</span>`
+      : `<i class="fa-solid fa-paper-plane"></i> <span>${escapeHtml(t("assistant.ask"))}</span>`;
+  }
+  const input = qs("#rag-chat-input");
+  if (input) input.readOnly = assistantState.chatBusy;
+  const status = qs("#rag-chat-status");
+  if (status) {
+    status.classList.toggle("is-searching", assistantState.chatBusy);
+    status.textContent = assistantState.chatBusy ? t("assistant.searchingHelp") : t("assistant.keyboardHelp");
+  }
 }
 
 async function saveSandboxFile() {

@@ -1,5 +1,5 @@
 #define MyAppName "Vision Training Studio"
-#define MyAppVersion "0.1.2"
+#define MyAppVersion "0.1.3"
 #define MyAppPublisher "Vision Training Studio"
 #define MyAppExeName "VisionTrainingStudio.exe"
 

@@ -74,6 +74,35 @@ class ProjectAssistantContractTests(unittest.TestCase):
         self.assertEqual(run["failure_type"], "assistant_disabled")
         self.assertFalse(run["sources"])
 
+    def test_project_assistant_localizes_empty_knowledge_response_and_trace(self):
+        run = ProjectAssistantService.chat(
+            "請解釋目前訓練結果",
+            filters={"project_id": "empty_project", "scope": "evaluation"},
+            locale="zh-TW",
+        )
+
+        self.assertEqual(run["failure_type"], "no_sources")
+        self.assertIn("同步專案產物", run["answer"])
+        self.assertIn("沒有可引用", run["answer"])
+        self.assertTrue(all("Parsed user request" not in step["message"] for step in run["agent_trace"]))
+
+    def test_project_assistant_adds_page_aware_next_step_to_grounded_chinese_answer(self):
+        ProjectAssistantService.ingest_document(
+            "evaluation.md",
+            "validation loss rose after epoch ten and the best checkpoint was retained at epoch ten.",
+            metadata={"project_id": "grounded_project", "source_type": "evaluation_report"},
+        )
+        run = ProjectAssistantService.chat(
+            "validation loss best checkpoint",
+            filters={"project_id": "grounded_project", "scope": "evaluation"},
+            locale="zh-TW",
+        )
+
+        self.assertFalse(run["failure_type"])
+        self.assertIn("可引用來源", run["answer"])
+        self.assertIn("建議下一步", run["answer"])
+        self.assertEqual(run["sources"][0]["source"], "evaluation.md")
+
     def test_retrieval_returns_structured_sources_and_mark_feedback(self):
         ProjectAssistantService.ingest_document(
             "source.txt",

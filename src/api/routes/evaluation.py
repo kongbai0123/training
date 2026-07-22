@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
 from src.trainer import YOLOTrainer
+from src.system_downloads import copy_file_to_downloads
 
 router = APIRouter()
 
@@ -72,6 +73,35 @@ def get_evaluation_plot(project_id: str, filename: str, run_id: Optional[str] = 
         raise HTTPException(status_code=404, detail=f"Plot file {filename} not found")
 
     return FileResponse(str(plot_path), filename=filename)
+
+
+@router.post("/api/projects/{project_id}/evaluation/plot/{filename}/save-to-downloads")
+def save_evaluation_plot_to_downloads(project_id: str, filename: str, run_id: Optional[str] = None):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    safe_filename = Path(filename).name
+    if safe_filename != filename:
+        raise HTTPException(status_code=400, detail="Invalid plot filename")
+    if Path(safe_filename).suffix.lower() not in {".svg", ".png", ".jpg", ".jpeg", ".webp"}:
+        raise HTTPException(status_code=400, detail="Unsupported evaluation plot type")
+
+    layout = ProjectLayout.from_project(project)
+    run_dir = layout.training_run_dir(run_id) if run_id else _latest_completed_training_run_dir(project, layout)
+    if not run_dir:
+        raise HTTPException(status_code=404, detail="No completed training run found")
+
+    plot_path = (run_dir / safe_filename).resolve()
+    try:
+        plot_path.relative_to(run_dir.resolve())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Access denied: invalid plot path")
+    if not plot_path.is_file():
+        raise HTTPException(status_code=404, detail=f"Plot file {filename} not found")
+
+    destination = copy_file_to_downloads(plot_path, safe_filename)
+    return {"success": True, "filename": destination.name, "saved_path": str(destination)}
 
 
 def _empty_evaluation_payload() -> Dict[str, Any]:

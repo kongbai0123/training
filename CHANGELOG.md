@@ -4,6 +4,22 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-07-22
+
+### Added
+- Added Enter-to-send, Shift+Enter line breaks, duplicate-submit protection, and a visible searching state to Project Assistant.
+- Added first-open knowledge checks plus an in-context synchronization action when the active project's knowledge base is empty.
+- Added page-aware, evidence-cited next-step guidance for training, evaluation, comparison, and export questions.
+- Added a shared system Downloads service with safe filenames and collision-preserving saves for evaluation artifacts.
+
+### Changed
+- Localized Project Assistant no-source, disabled-mode, execution-trace, and failure messages for Traditional Chinese sessions.
+- Save CNN and RNN evaluation charts directly to the Windows Downloads folder instead of relying on WebView temporary download behavior.
+
+### Fixed
+- Prevent Project Assistant from appearing unresponsive while a project search is running.
+- Prevent evaluation SVG downloads from being redirected into the application's AppData workspace.
+
 ## [0.1.2] - 2026-07-22
 
 ### Added

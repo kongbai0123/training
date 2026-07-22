@@ -117,7 +117,8 @@ def test_rnn_evaluation_has_smart_advice_and_true_svg_downloads():
     assert "buildRnnDiagnosticSvg" in helpers
     assert 'xmlns="http://www.w3.org/2000/svg"' in helpers
     assert "data:image/png" not in helpers
-    assert "new Blob([svg], { type: \"image/svg+xml;charset=utf-8\" })" in modes
+    assert 'apiFetch("/api/downloads/text"' in modes
+    assert "new Blob([svg]" not in modes
 
 
 def test_rnn_tooltip_translations_no_longer_fall_back_to_english():

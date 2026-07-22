@@ -1620,7 +1620,7 @@ function renderRnnSmartAssessment(assessment = {}) {
   }
 }
 
-function downloadRnnEvaluationChart(kind, metricIndex) {
+async function downloadRnnEvaluationChart(kind, metricIndex) {
   if (!currentRnnEvaluationDashboard) {
     eventBus.emit("toast", t("rnn.evaluation.downloadUnavailable"));
     return;
@@ -1650,16 +1650,19 @@ function downloadRnnEvaluationChart(kind, metricIndex) {
     eventBus.emit("toast", t("rnn.evaluation.downloadUnavailable"));
     return;
   }
-  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  eventBus.emit("toast", t("rnn.evaluation.downloadedSvg", { filename }));
+  try {
+    const result = await apiFetch("/api/downloads/text", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, content: svg }),
+    });
+    eventBus.emit("toast", t("rnn.evaluation.downloadedSvg", {
+      filename: result.filename || filename,
+      path: result.saved_path || "",
+    }));
+  } catch (error) {
+    eventBus.emit("toast", t("rnn.evaluation.downloadFailed", { message: error.message }));
+  }
 }
 
 function resolveRnnComparisonMetricKeys(metricSchema = {}) {
