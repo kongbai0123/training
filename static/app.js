@@ -1,5 +1,5 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js?v=20260721-model-selection-priority";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260722-cnn-epoch-monitor";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

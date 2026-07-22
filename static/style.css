@@ -13,7 +13,7 @@
 @import "./styles/pages/dataset.css";
 @import "./styles/pages/labelme.css?v=20260711-layout-export-precision";
 @import "./styles/pages/split.css?v=20260711-layout-export-precision";
-@import "./styles/pages/training.css?v=20260720-training-three-column";
+@import "./styles/pages/training.css?v=20260722-cnn-epoch-monitor";
 @import "./styles/pages/rnn_training.css";
 @import "./styles/pages/augmentation.css?v=20260711-augmentation-preview-focus";
 @import "./styles/pages/model_compare.css";

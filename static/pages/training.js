@@ -6,7 +6,6 @@ import { qs, qsa, setText, setHTML, escapeHtml } from "../utils.js";
 // Training UI helper
 let metricsCharts = [];
 let currentChartData = null; // Training UI helper
-let activeChartTab = "primary"; // Training UI helper
 const activeGlobalTrainingJobs = new Set();
 const trainingHudStartTimes = new Map();
 let lastRenderedMetricRunId = "";
@@ -172,31 +171,6 @@ export function initTraining() {
     } catch (err) {
       eventBus.emit("toast", t("training.toast.abortFailed", { message: err.message }));
     }
-  });
-
-  qs("#chart-show-raw")?.addEventListener("change", updateChartVisualization);
-  qs("#chart-show-smooth")?.addEventListener("change", updateChartVisualization);
-  qs("#chart-ema-alpha")?.addEventListener("input", (e) => {
-    setText("#chart-ema-alpha-val", e.target.value);
-    updateChartVisualization();
-  });
-
-  qsa("#metrics-chart-tabs .tab-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      qsa("#metrics-chart-tabs .tab-btn").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      activeChartTab = btn.dataset.chartTab;
-
-      if (activeChartTab === "report") {
-        qs("#chart-drawing-container")?.classList.add("hidden");
-        qs("#chart-report-container")?.classList.remove("hidden");
-        updateReportTabImage();
-      } else {
-        qs("#chart-drawing-container")?.classList.remove("hidden");
-        qs("#chart-report-container")?.classList.add("hidden");
-        updateChartVisualization();
-      }
-    });
   });
 
   qsa("#log-tabs-nav button").forEach((btn) => {
@@ -857,7 +831,6 @@ export function renderTrainingMonitor() {
     backend: appState.currentProject?.backend,
     task_type: appState.currentProject?.task_type
   });
-  const hasMetrics = Boolean(currentChartData?.epochs?.length);
 
   setText("#card-ds-total", status.hasProject ? t("training.card.imageCount", { count: status.imageCount }) : "--");
   setText("#card-ds-split", status.hasProject ? t("training.card.images", { count: status.imageCount }) : t("training.card.images", { count: "--" }));
@@ -951,6 +924,18 @@ export function renderTrainingMonitor() {
 
   setText("#train-status-label", trainingStatusLabel(trainState.status));
   setText("#train-progress-text", showMonitor ? `Epoch ${displayEpoch} / ${totalEpochs || "--"}` : "--");
+  setText("#train-elapsed-time", formatTrainingDuration(getTrainingElapsedSeconds(trainState)));
+  const stopReason = trainingStopReason(trainState, displayEpoch, totalEpochs);
+  setText("#train-stop-reason", stopReason);
+  const stopReasonNode = qs("#train-stop-reason");
+  if (stopReasonNode) stopReasonNode.title = stopReason === "--" ? "" : stopReason;
+  const progressBar = qs("#training-monitor-progress-bar");
+  if (progressBar) progressBar.style.width = `${progressPercent}%`;
+  const monitorBadge = qs("#training-monitor-badge");
+  if (monitorBadge) {
+    monitorBadge.textContent = trainingStatusLabel(trainState.status);
+    monitorBadge.className = `summary-badge ${trainingStatusBadgeClass(trainState.status)}`;
+  }
   renderTrainingMonitorOutcome(trainState, displayEpoch, totalEpochs);
 
   const lastMetrics = trainState.metrics && trainState.metrics.length ? trainState.metrics[trainState.metrics.length - 1] : {};
@@ -966,7 +951,7 @@ export function renderTrainingMonitor() {
     setText("#monitor-loss", lastMetrics.loss !== undefined ? Number(lastMetrics.loss).toFixed(4) : "--");
   }
 
-  if (isRunning) {
+  if (isRunning || isStopping) {
     const liveChartData = normalizeLiveTrainingMetrics(trainState);
     const liveEpochCount = liveChartData?.epochs?.length || 0;
     const liveRunId = trainState.run_id || "";
@@ -981,7 +966,7 @@ export function renderTrainingMonitor() {
     loadLatestRunMetricsOnce();
   }
 
-  setMetricsDashboardActive(hasMetrics);
+  setMetricsDashboardActive(Boolean(currentChartData?.epochs?.length));
 
   if (!isSequenceProject) {
     renderRunHistoryTable();
@@ -1058,6 +1043,43 @@ function trainingStatusLabel(status = "idle") {
     idle: "training.monitor.statusIdle"
   };
   return t(labels[status] || "training.monitor.statusIdle");
+}
+
+function trainingStatusBadgeClass(status = "idle") {
+  if (status === "completed") return "badge-success";
+  if (status === "failed") return "badge-danger";
+  if (["training", "stopping"].includes(status)) return "badge-warning";
+  if (status === "stopped") return "badge-neutral";
+  return "badge-neutral";
+}
+
+function getTrainingElapsedSeconds(trainState = {}) {
+  const startedAt = Date.parse(trainState.started_at || "");
+  if (!Number.isFinite(startedAt)) return 0;
+  const completedAt = Date.parse(trainState.completed_at || "");
+  const endAt = Number.isFinite(completedAt) ? completedAt : Date.now();
+  return Math.max(0, (endAt - startedAt) / 1000);
+}
+
+function formatTrainingDuration(seconds = 0) {
+  const total = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const remainingSeconds = total % 60;
+  return [hours, minutes, remainingSeconds].map((value) => String(value).padStart(2, "0")).join(":");
+}
+
+function trainingStopReason(trainState = {}, displayEpoch = 0, totalEpochs = 0) {
+  const status = trainState.status || "idle";
+  const terminationReason = String(trainState.termination_reason || "").toLowerCase();
+  if (status === "completed" && (terminationReason === "early_stopping" || (displayEpoch > 0 && totalEpochs > 0 && displayEpoch < totalEpochs))) {
+    return t("training.monitor.reasonEarlyStop");
+  }
+  if (status === "completed") return t("training.monitor.reasonCompleted");
+  if (status === "failed") return trainState.error || t("training.monitor.outcomeUnknownError");
+  if (status === "stopped") return trainState.error || t("training.monitor.reasonStopped");
+  if (status === "stopping") return t("training.monitor.reasonStopRequested");
+  return "--";
 }
 
 function renderTrainingMonitorOutcome(trainState, displayEpoch, totalEpochs) {
@@ -1379,6 +1401,7 @@ function normalizeLiveTrainingMetrics(trainState) {
   const wsMap50_95 = rows.map((m) => m.map50_95);
   const wsPrecision = rows.map((m) => m.precision);
   const wsRecall = rows.map((m) => m.recall);
+  const wsF1 = rows.map((m) => metricF1(m.precision, m.recall));
 
   return {
     architecture: "cnn",
@@ -1389,14 +1412,16 @@ function normalizeLiveTrainingMetrics(trainState) {
       "metrics/mAP50(M)": wsMap50,
       "metrics/mAP50-95(M)": wsMap50_95,
       "metrics/precision(M)": wsPrecision,
-      "metrics/recall(M)": wsRecall
+      "metrics/recall(M)": wsRecall,
+      "metrics/f1(M)": wsF1
     },
     smooth: {
       "train/box_loss": wsLoss,
       "metrics/mAP50(M)": wsMap50,
       "metrics/mAP50-95(M)": wsMap50_95,
       "metrics/precision(M)": wsPrecision,
-      "metrics/recall(M)": wsRecall
+      "metrics/recall(M)": wsRecall,
+      "metrics/f1(M)": wsF1
     }
   };
 }
@@ -1415,12 +1440,31 @@ function normalizeStoredTrainingMetrics(data) {
     });
   }
   if (data.epochs && data.raw) {
-    return {
+    return withDerivedCnnMetrics({
       ...data,
       architecture: data.architecture || "cnn"
-    };
+    });
   }
   return data;
+}
+
+function metricF1(precision, recall) {
+  const p = Number(precision);
+  const r = Number(recall);
+  return Number.isFinite(p) && Number.isFinite(r) && p + r > 0 ? (2 * p * r) / (p + r) : null;
+}
+
+function withDerivedCnnMetrics(data) {
+  if (!data || data.architecture === "rnn") return data;
+  const raw = { ...(data.raw || {}) };
+  const suffix = Object.keys(raw).some((key) => key.endsWith("(M)")) ? "M" : "B";
+  const precision = raw[`metrics/precision(${suffix})`] || [];
+  const recall = raw[`metrics/recall(${suffix})`] || [];
+  const f1Key = `metrics/f1(${suffix})`;
+  if (!(f1Key in raw) && (precision.length || recall.length)) {
+    raw[f1Key] = Array.from({ length: Math.max(precision.length, recall.length) }, (_, index) => metricF1(precision[index], recall[index]));
+  }
+  return { ...data, raw };
 }
 
 function normalizeMetricRows(rows, meta = {}) {
@@ -1627,104 +1671,10 @@ function updateChartVisualization() {
   const chartLabels = Array.from({ length: chartMaxEpoch }, (_, index) => index + 1);
   grid.dataset.chartMaxEpoch = String(chartMaxEpoch);
   grid.dataset.chartPointCount = String(epochs.length);
-  const showRaw = qs("#chart-show-raw")?.checked !== false;
-  const showSmooth = qs("#chart-show-smooth")?.checked !== false;
-  const alpha = Number(qs("#chart-ema-alpha")?.value || 0.25);
-
   const raw = currentChartData.raw || {};
-  
-  // Training UI helper
-  const computeEma = (arr) => {
-    if (!arr || arr.length === 0) return [];
-    const ema = [];
-    let curr = Number.isFinite(Number(arr[0])) ? Number(arr[0]) : 0;
-    for (const val of arr) {
-      const numeric = Number(val);
-      if (!Number.isFinite(numeric)) {
-        ema.push(null);
-        continue;
-      }
-      curr = alpha * numeric + (1 - alpha) * curr;
-      ema.append ? ema.push(curr) : ema.push(curr); // Training UI helper
-    }
-    return ema;
-  };
+  const keysToRender = buildCnnMetricChartDefinitions(raw);
 
-  // Training UI helper
-  let keysToRender = [];
-  let colors = {
-    primary1: { raw: "rgba(59, 130, 246, 0.4)", smooth: "#3b82f6" }, // mAP50-95
-    primary2: { raw: "rgba(16, 185, 129, 0.4)", smooth: "#10b981" }, // mAP50
-    loss1: { raw: "rgba(239, 68, 68, 0.4)", smooth: "#ef4444" }, // box loss
-    loss2: { raw: "rgba(245, 158, 11, 0.4)", smooth: "#f59e0b" }, // seg loss
-    loss3: { raw: "rgba(139, 92, 246, 0.4)", smooth: "#8b5cf6" }, // cls loss
-  };
-
-  if (activeChartTab === "primary") {
-    // Training UI helper
-    const map50_95_key = "metrics/mAP50-95(M)" in raw ? "metrics/mAP50-95(M)" : "metrics/mAP50-95(B)";
-    const map50_key = "metrics/mAP50(M)" in raw ? "metrics/mAP50(M)" : "metrics/mAP50(B)";
-    
-    keysToRender = [
-      { key: map50_95_key, label: "mAP50-95", color: colors.primary1 },
-      { key: map50_key, label: "mAP50", color: colors.primary2 },
-      { key: "metrics/precision(M)" in raw ? "metrics/precision(M)" : "metrics/precision(B)", label: "Precision", color: colors.loss2 },
-      { key: "metrics/recall(M)" in raw ? "metrics/recall(M)" : "metrics/recall(B)", label: "Recall", color: colors.loss3 }
-    ].filter(k => k.key in raw);
-  } else if (activeChartTab === "loss") {
-    // Training UI helper
-    const losses = [
-      { key: "train/box_loss", label: "Train Box Loss", color: colors.loss1 },
-      { key: "val/box_loss", label: "Val Box Loss", color: colors.primary1 },
-      { key: "train/seg_loss", label: "Train Seg Loss", color: colors.loss2 },
-      { key: "val/seg_loss", label: "Val Seg Loss", color: colors.primary2 },
-      { key: "train/cls_loss", label: "Train Cls Loss", color: colors.loss3 }
-    ];
-    keysToRender = losses.filter(l => l.key in raw);
-  } else if (activeChartTab === "box") {
-    keysToRender = [
-      { key: "metrics/mAP50-95(B)", label: "Box mAP50-95", color: colors.primary1 },
-      { key: "metrics/mAP50(B)", label: "Box mAP50", color: colors.primary2 },
-      { key: "metrics/precision(B)", label: "Box Precision", color: colors.loss2 },
-      { key: "metrics/recall(B)", label: "Box Recall", color: colors.loss3 }
-    ].filter(k => k.key in raw);
-  } else if (activeChartTab === "mask") {
-    keysToRender = [
-      { key: "metrics/mAP50-95(M)", label: "Mask mAP50-95", color: colors.primary1 },
-      { key: "metrics/mAP50(M)", label: "Mask mAP50", color: colors.primary2 },
-      { key: "metrics/precision(M)", label: "Mask Precision", color: colors.loss2 },
-      { key: "metrics/recall(M)", label: "Mask Recall", color: colors.loss3 }
-    ].filter(k => k.key in raw);
-  } else if (activeChartTab === "hardware") {
-    keysToRender = [
-      { key: "gpu_usage", label: "GPU Usage (%)", color: colors.primary1 },
-      { key: "vram_used_mb", label: "VRAM Used (MB)", color: colors.primary2 }
-    ].filter(k => k.key in raw);
-  }
-
-  if (currentChartData.architecture === "rnn") {
-    if (activeChartTab === "primary") {
-      const isRegression = isRnnRegressionMetrics(currentChartData);
-      keysToRender = (isRegression
-        ? [
-            { key: "val/mae", label: "MAE", color: colors.primary1 },
-            { key: "val/rmse", label: "RMSE", color: colors.primary2 }
-          ]
-        : [
-            { key: "val/macro_f1", label: "Macro-F1", color: colors.primary1 },
-            { key: "val/accuracy", label: "Accuracy", color: colors.primary2 }
-          ]).filter(k => k.key in raw);
-    } else if (activeChartTab === "loss") {
-      keysToRender = [
-        { key: "train/loss", label: "Train Loss", color: colors.loss1 },
-        { key: "val/loss", label: "Val Loss", color: colors.primary1 }
-      ].filter(k => k.key in raw);
-    } else if (["box", "mask", "hardware"].includes(activeChartTab)) {
-      keysToRender = [];
-    }
-  }
-
-  if (keysToRender.length === 0 || (!showRaw && !showSmooth)) {
+  if (keysToRender.length === 0) {
     grid.dataset.chartCount = "0";
     const empty = document.createElement("div");
     empty.className = "metrics-chart-empty";
@@ -1760,31 +1710,17 @@ function updateChartVisualization() {
     card.append(header, canvasWrap);
     grid.appendChild(card);
 
-    const datasets = [];
     const expandedRawData = expandSeriesToEpochRange(rawData, epochs, chartMaxEpoch);
-    if (showRaw) {
-      datasets.push({
-        label: t("training.metrics.raw"),
-        data: expandedRawData,
-        borderColor: item.color.raw,
-        backgroundColor: "transparent",
-        borderWidth: 1.5,
-        pointRadius: 1,
-        tension: 0.1
-      });
-    }
-    if (showSmooth) {
-      const smoothData = computeEma(rawData);
-      datasets.push({
-        label: "EMA",
-        data: expandSeriesToEpochRange(smoothData, epochs, chartMaxEpoch),
-        borderColor: item.color.smooth,
-        backgroundColor: "transparent",
-        borderWidth: 2.5,
-        pointRadius: 2,
-        tension: 0.2
-      });
-    }
+    const datasets = [{
+      label: item.label,
+      data: expandedRawData,
+      borderColor: item.color,
+      backgroundColor: `${item.color}1f`,
+      fill: true,
+      borderWidth: 2,
+      pointRadius: 2,
+      tension: 0.15
+    }];
 
     const chart = new Chart(canvas, {
       type: "line",
@@ -1817,6 +1753,43 @@ function updateChartVisualization() {
     metricsCharts.push(chart);
   });
   grid.dataset.chartCount = String(metricsCharts.length);
+}
+
+function buildCnnMetricChartDefinitions(raw = {}) {
+  const palette = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4", "#ef4444"];
+  const suffix = Object.keys(raw).some((key) => key.endsWith("(M)")) ? "M" : "B";
+  const candidates = [
+    [`metrics/mAP50-95(${suffix})`, "mAP50-95"],
+    [`metrics/mAP50(${suffix})`, "mAP50"],
+    [`metrics/precision(${suffix})`, "Precision"],
+    [`metrics/recall(${suffix})`, "Recall"],
+    [`metrics/f1(${suffix})`, "F1"],
+    ["val/accuracy", "Accuracy"],
+    ["val/macro_f1", "Macro-F1"],
+    ["val/precision", "Precision"],
+    ["val/recall", "Recall"],
+    ["val/mae", "MAE"],
+    ["val/rmse", "RMSE"],
+    ["train/box_loss", "Train Box Loss"],
+    ["val/box_loss", "Val Box Loss"],
+    ["train/seg_loss", "Train Seg Loss"],
+    ["val/seg_loss", "Val Seg Loss"],
+    ["train/cls_loss", "Train Class Loss"],
+    ["val/cls_loss", "Val Class Loss"],
+    ["train/loss", "Train Loss"],
+    ["val/loss", "Val Loss"],
+    ["loss", "Loss"]
+  ];
+  const seenLabels = new Set();
+  return candidates
+    .filter(([key]) => Array.isArray(raw[key]) && raw[key].some((value) => Number.isFinite(Number(value))))
+    .filter(([, label]) => {
+      if (seenLabels.has(label)) return false;
+      seenLabels.add(label);
+      return true;
+    })
+    .slice(0, 6)
+    .map(([key, label], index) => ({ key, label, color: palette[index % palette.length] }));
 }
 
 function getChartMaxEpoch(chartData, epochs = []) {
@@ -2066,6 +2039,10 @@ function applyTrainingStatusUpdate(data) {
   if (!data || typeof data !== "object") return;
   const previousStatus = appState.trainingStatus?.status || "idle";
   const previousEpoch = Number(appState.trainingStatus?.epoch ?? appState.trainingStatus?.current_epoch ?? 0);
+  if (TERMINAL_TRAINING_STATUSES.has(data.status) && previousStatus !== data.status) {
+    lastLoadedRunId = null;
+    metricLoadInFlightRunId = "";
+  }
   appState.trainingStatus = data;
   renderTrainingMonitor();
   const currentEpoch = Number(data.epoch ?? data.current_epoch ?? 0);

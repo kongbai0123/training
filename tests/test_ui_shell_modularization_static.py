@@ -79,7 +79,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/dataset.css";\n'
                 '@import "./styles/pages/labelme.css?v=20260711-layout-export-precision";\n'
                 '@import "./styles/pages/split.css?v=20260711-layout-export-precision";\n'
-                '@import "./styles/pages/training.css?v=20260720-training-three-column";\n'
+                '@import "./styles/pages/training.css?v=20260722-cnn-epoch-monitor";\n'
                 '@import "./styles/pages/rnn_training.css";\n'
                 '@import "./styles/pages/augmentation.css?v=20260711-augmentation-preview-focus";\n'
                 '@import "./styles/pages/model_compare.css";\n'
@@ -807,7 +807,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         tooltip_js = (ROOT / "static" / "core" / "tooltip.js").read_text(encoding="utf-8")
         project_lifecycle_js = (ROOT / "static" / "core" / "project_lifecycle.js").read_text(encoding="utf-8")
 
-        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260721-model-selection-priority";', app_js)
+        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260722-cnn-epoch-monitor";', app_js)
         self.assertIn("syncPageModeForProject(null, requestedPage);", bootstrap_js)
         self.assertIn("bootstrapApp().catch", app_js)
         self.assertNotIn("bindGlobalNavigation", app_js)
@@ -823,7 +823,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn('from "./right_panel.js?v=20260708-rnn-feature-wizard"', bootstrap_js)
         self.assertIn('from "./tooltip.js"', bootstrap_js)
         self.assertIn('from "./project_lifecycle.js"', bootstrap_js)
-        self.assertIn('from "./page_registry.js?v=20260721-model-selection-priority"', bootstrap_js)
+        self.assertIn('from "./page_registry.js?v=20260722-cnn-epoch-monitor"', bootstrap_js)
         self.assertIn("createProjectLifecycle({ renderAll, navigate });", bootstrap_js)
         self.assertIn("export async function bootstrapApp()", bootstrap_js)
         self.assertIn("initPageModules();", bootstrap_js)

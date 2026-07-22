@@ -1134,6 +1134,53 @@
 
           </div>
 
+          <section class="panel-section training-monitor-panel" id="cnn-training-monitor" aria-live="polite">
+            <div class="section-title training-monitor-title">
+              <div>
+                <h2 data-i18n="training.monitor.title">Live Training Monitor</h2>
+                <p class="section-subtitle" data-i18n="training.monitor.epochUpdateHelp">Status time updates continuously; metric charts update only after a new epoch completes.</p>
+              </div>
+              <span class="summary-badge badge-neutral" id="training-monitor-badge" data-i18n="training.monitor.statusIdle">Idle</span>
+            </div>
+            <div id="training-monitor-empty" class="training-empty-state">
+              <i class="fa-solid fa-chart-line"></i>
+              <strong data-i18n="training.monitor.emptyTitle">No active training run.</strong>
+              <span data-i18n="training.monitor.emptySubtitle">Start training after readiness checks pass.</span>
+            </div>
+            <div id="training-monitor-active" class="hidden">
+              <div class="training-status-grid training-status-grid-compact">
+                <div class="metric-card"><span data-i18n="training.monitor.status">Status</span><strong id="train-status-label">--</strong></div>
+                <div class="metric-card"><span data-i18n="training.monitor.currentEpoch">Current Epoch</span><strong id="train-progress-text">--</strong></div>
+                <div class="metric-card"><span data-i18n="training.monitor.elapsed">Elapsed Time</span><strong id="train-elapsed-time">00:00:00</strong></div>
+                <div class="metric-card"><span data-i18n="training.monitor.stopReason">Stop Reason</span><strong id="train-stop-reason">--</strong></div>
+              </div>
+              <div class="training-monitor-progress" aria-label="Training progress" data-i18n-aria-label="training.monitor.progress">
+                <span id="training-monitor-progress-bar"></span>
+              </div>
+              <div id="training-monitor-outcome" class="training-monitor-outcome hidden" role="status"></div>
+            </div>
+          </section>
+
+          <section class="panel-section training-chart-card">
+            <div class="section-title training-chart-title">
+              <div>
+                <h2 data-i18n="training.metrics.title">Metrics Dashboard</h2>
+                <p class="section-subtitle" data-i18n="training.metrics.nativeScaleHelp">Each metric uses its original values and its own axis scale.</p>
+              </div>
+              <span class="summary-badge badge-neutral" data-i18n="training.metrics.layout3x2">3 columns × 2 rows</span>
+            </div>
+            <div id="training-metrics-empty" class="training-empty-state">
+              <i class="fa-solid fa-chart-simple"></i>
+              <strong data-i18n="training.metrics.emptyTitle">No training metrics yet.</strong>
+              <span data-i18n="training.metrics.waitingFirstEpoch">Charts appear after the first epoch completes.</span>
+            </div>
+            <div id="training-metrics-active" class="hidden">
+              <div id="chart-drawing-container" class="chart-drawing-container">
+                <div id="metrics-chart-grid" class="metrics-chart-grid" data-scale-mode="native" aria-live="polite"></div>
+              </div>
+            </div>
+          </section>
+
           <div class="training-lower-grid">
             <section class="panel-section">
               <div class="section-title">
@@ -2822,7 +2869,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260721-model-selection-priority"></script>
+  <script type="module" src="/static/app.js?v=20260722-cnn-epoch-monitor"></script>
 </body>
 </html>
 

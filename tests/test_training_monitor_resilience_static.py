@@ -6,13 +6,23 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class TrainingMonitorResilienceStaticTests(unittest.TestCase):
-    def test_training_page_removes_duplicate_metric_monitor_but_keeps_global_progress(self):
+    def test_training_page_keeps_compact_monitor_and_global_progress(self):
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
         script = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
-        self.assertNotIn('class="training-status-grid"', html)
-        self.assertNotIn('id="training-monitor-outcome"', html)
-        self.assertNotIn('class="training-monitor-panel"', html)
+        self.assertIn('id="cnn-training-monitor"', html)
+        self.assertIn('id="training-monitor-outcome"', html)
+        self.assertIn('class="panel-section training-monitor-panel"', html)
+        for element_id in (
+            "train-status-label",
+            "train-progress-text",
+            "train-elapsed-time",
+            "train-stop-reason",
+            "training-monitor-progress-bar",
+        ):
+            self.assertIn(f'id="{element_id}"', html)
+        self.assertIn("formatTrainingDuration(getTrainingElapsedSeconds(trainState))", script)
         self.assertIn("updateGlobalTrainingProgress(trainState, progressPercent, showMonitor);", script)
+        self.assertIn("if (isRunning || isStopping) {\n    const liveChartData", script)
 
     def test_monitor_has_http_fallback_and_terminal_status_handling(self):
         script = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
@@ -32,13 +42,37 @@ class TrainingMonitorResilienceStaticTests(unittest.TestCase):
         self.assertIn("requestId !== metricLoadRequestId", script)
         self.assertIn("latestRun.run_id === metricLoadInFlightRunId", script)
 
-    def test_training_page_defers_metric_charts_to_evaluation(self):
+    def test_training_page_uses_native_scale_separate_charts_in_three_by_two_grid(self):
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
-        self.assertNotIn('id="metrics-chart-grid"', html)
-        self.assertNotIn('class="training-chart-card"', html)
+        script = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "styles" / "pages" / "training.css").read_text(encoding="utf-8")
+        self.assertIn('id="metrics-chart-grid"', html)
+        self.assertIn('data-scale-mode="native"', html)
+        self.assertIn('class="panel-section training-chart-card"', html)
         self.assertNotIn('id="metrics-chart-canvas"', html)
-        self.assertIn('id="rnn-evaluation-panel"', html)
-        self.assertIn('id="page-evaluation"', html)
+        self.assertNotIn('id="metrics-chart-tabs"', html)
+        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", css)
+        self.assertIn("buildCnnMetricChartDefinitions(raw)", script)
+        self.assertIn(".slice(0, 6)", script)
+        self.assertIn('beginAtZero: false', script)
+
+    def test_metric_charts_update_once_per_new_epoch_and_reload_final_run(self):
+        script = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
+        self.assertIn("liveRunId !== lastRenderedMetricRunId || liveEpochCount !== lastRenderedMetricEpochCount", script)
+        self.assertIn('lastRenderedMetricEpochCount = liveEpochCount', script)
+        self.assertIn('TERMINAL_TRAINING_STATUSES.has(data.status) && previousStatus !== data.status', script)
+        self.assertIn('lastLoadedRunId = null;', script)
+        self.assertIn('loadLatestRunMetricsOnce();', script)
+
+    def test_yolo_monitor_derives_f1_for_the_sixth_native_metric_chart(self):
+        script = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
+        self.assertIn('"metrics/f1(M)": wsF1', script)
+        self.assertIn('function metricF1(precision, recall)', script)
+        self.assertIn('[`metrics/f1(${suffix})`, "F1"]', script)
+        self.assertLess(
+            script.index('["train/box_loss", "Train Box Loss"]'),
+            script.index('["train/seg_loss", "Train Seg Loss"]'),
+        )
 
     def test_augmentation_actions_are_below_settings_summary(self):
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")

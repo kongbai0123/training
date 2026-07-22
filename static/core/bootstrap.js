@@ -27,7 +27,7 @@ import {
   renderPrimaryPageModules,
   renderSecondaryPageModules,
   syncPageModeForProject,
-} from "./page_registry.js?v=20260721-model-selection-priority";
+} from "./page_registry.js?v=20260722-cnn-epoch-monitor";
 
 const {
   bootstrapSession,

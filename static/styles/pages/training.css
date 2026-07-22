@@ -16,6 +16,43 @@
   gap: 10px;
 }
 
+.training-monitor-title > div,
+.training-chart-title > div {
+  min-width: 0;
+}
+
+.training-monitor-title .section-subtitle,
+.training-chart-title .section-subtitle {
+  margin: 3px 0 0;
+}
+
+.training-status-grid-compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.training-monitor-progress {
+  height: 7px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.training-monitor-progress > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), var(--success));
+  transition: width 180ms ease;
+}
+
+#train-stop-reason {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .training-status-grid .metric-card {
   min-height: 72px;
   padding: 11px 13px;
@@ -876,7 +913,7 @@
 }
 .metrics-chart-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 .metric-chart-card {
@@ -905,7 +942,7 @@
 }
 .metric-chart-canvas-wrap {
   position: relative;
-  height: 250px;
+  height: 220px;
 }
 .metrics-chart-empty {
   display: grid;
@@ -1118,6 +1155,21 @@
     grid-template-columns: repeat(2, 1fr);
   }
   .chart-control-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-chart-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .training-status-grid-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .metrics-chart-grid,
+  .training-status-grid-compact {
     grid-template-columns: 1fr;
   }
 }

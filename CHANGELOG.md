@@ -14,6 +14,7 @@ All notable changes to Vision Training Studio are tracked here.
 - Grouped the training model selector by image classification, object detection, instance segmentation, and semantic segmentation.
 - Kept unavailable optional weights visible with an installation prompt instead of hiding the model.
 - Added class-folder imports and stratified splitting for image-classification projects.
+- Restored the compact CNN training monitor with native-scale per-metric charts arranged in a Full HD 3-by-2 grid and updated once per completed epoch.
 
 ### Fixed
 - Pass the selected model backend from the training UI so non-YOLO models no longer fall back to the YOLO backend.
