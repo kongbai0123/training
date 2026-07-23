@@ -209,4 +209,10 @@ def main():
 
 
 if __name__ == "__main__":
+    # PyInstaller DataLoader workers start by re-entering this executable.
+    # Let multiprocessing consume its private spawn arguments before our
+    # application argument parser sees them.
+    import multiprocessing
+
+    multiprocessing.freeze_support()
     main()

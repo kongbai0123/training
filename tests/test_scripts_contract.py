@@ -50,6 +50,15 @@ class ScriptsContractTests(unittest.TestCase):
         self.assertIn("--port 18080", start_script)
         self.assertIn("%*", start_script)
 
+    def test_frozen_launcher_initializes_windows_multiprocessing_workers(self):
+        launcher = (ROOT / "launcher.py").read_text(encoding="utf-8")
+
+        self.assertIn("multiprocessing.freeze_support()", launcher)
+        self.assertLess(
+            launcher.index("multiprocessing.freeze_support()"),
+            launcher.index("    main()", launcher.index('if __name__ == "__main__":')),
+        )
+
     def test_pyinstaller_spec_filters_optional_warning_noise_during_collection(self):
         spec = (ROOT / "packaging" / "vision_training_studio.spec").read_text(encoding="utf-8")
 
