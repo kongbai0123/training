@@ -190,5 +190,6 @@ class UpdateFoundationTests(unittest.TestCase):
     def test_repository_version_has_dual_version_fields(self):
         root = Path(__file__).resolve().parents[1]
         info = load_version_info(root / "version.json")
-        self.assertEqual(str(info.app_version), "0.1.3")
+        expected = (root / "VERSION").read_text(encoding="utf-8").strip()
+        self.assertEqual(str(info.app_version), expected)
         self.assertEqual(info.runtime_version, "r1")

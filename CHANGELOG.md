@@ -4,6 +4,8 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-07-23
+
 ### Added
 - Added the signed incremental-update foundation with separate application and runtime versions.
 - Added Ed25519-signed `.vtsupdate` packages, SHA-256 verification, runtime change guards, and user-data path protection.

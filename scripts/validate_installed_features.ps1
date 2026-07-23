@@ -34,7 +34,9 @@ try {
     }
     $headers = @{ "X-VTS-Token" = [string]$bootstrap.token }
 
-    $projectId = "installed_acceptance_013_$(Get-Date -Format 'yyyyMMddHHmmss')"
+    $versionLabel = [string]$version.version
+    $versionToken = $versionLabel -replace '[^0-9A-Za-z]', ''
+    $projectId = "installed_acceptance_$($versionToken)_$(Get-Date -Format 'yyyyMMddHHmmss')"
     $chatBody = @{
         message = "Explain the current project status"
         locale = "zh-TW"
@@ -47,8 +49,8 @@ try {
         -Headers $headers `
         -Body $chatBody
 
-    $filename = "VTS_0.1.3_installed_download_acceptance_$(Get-Date -Format 'yyyyMMdd_HHmmss').svg"
-    $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="40"><text x="4" y="24">VTS 0.1.3</text></svg>'
+    $filename = "VTS_$($versionLabel)_installed_download_acceptance_$(Get-Date -Format 'yyyyMMdd_HHmmss').svg"
+    $svg = "<svg xmlns=`"http://www.w3.org/2000/svg`" width=`"120`" height=`"40`"><text x=`"4`" y=`"24`">VTS $versionLabel</text></svg>"
     $downloadBody = @{
         filename = $filename
         content = $svg
