@@ -1,0 +1,44 @@
+name: Incremental Update Validation
+
+on:
+  pull_request:
+    paths:
+      - "src/update/**"
+      - "src/api/routes/updates.py"
+      - "updater/**"
+      - "updates/**"
+      - "scripts/*update*"
+      - "packaging/*updater*"
+      - ".github/workflows/update-validation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/update/**"
+      - "src/api/routes/updates.py"
+      - "updater/**"
+      - "updates/**"
+      - "scripts/*update*"
+      - "packaging/*updater*"
+      - ".github/workflows/update-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: requirements-test.txt
+      - name: Install focused test dependencies
+        run: python -m pip install cryptography==46.0.5 pydantic==2.13.4 fastapi==0.133.1 python-multipart==0.0.27
+      - name: Validate update unit and integration contracts
+        run: python -m unittest discover -s tests -p "test_update_*.py" -v
+      - name: Validate update scripts compile
+        run: python -m compileall -q src/update updater scripts
+      - name: Validate manifest schema JSON
+        run: python -m json.tool updates/schemas/update-manifest.schema.json > $null

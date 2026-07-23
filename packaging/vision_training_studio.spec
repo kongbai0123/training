@@ -13,6 +13,7 @@ datas = [
     (str(ROOT / "docs" / "UI_DESIGN_SYSTEM.md"), "docs"),
     (str(ROOT / "version.json"), "."),
     (str(ROOT / "requirements.txt"), "."),
+    (str(ROOT / "updates" / "keys"), "updates/keys"),
 ]
 
 EXCLUDED_MODULE_PREFIXES = (

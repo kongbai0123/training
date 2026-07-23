@@ -2506,7 +2506,37 @@ export const zhTW = {
   "rnn.training.classificationSummary": "適合序列分類。",
   "rnn.training.estimatePending": "啟動後估算",
   "rnn.monitor.perEpoch": "每個 Epoch 更新",
+  "updates.title": "軟體更新",
+  "updates.help": "檢查已簽章的 GitHub Release，或匯入離線更新包。",
+  "updates.currentVersion": "目前版本",
+  "updates.runtimeVersion": "執行環境",
+  "updates.latestVersion": "最新版本",
+  "updates.packageSize": "更新大小",
+  "updates.noCandidate": "尚未載入更新資訊。",
+  "updates.readyDescription": "更新包已完成簽章與內容驗證，可以安全安裝。",
+  "updates.check": "檢查更新",
+  "updates.checking": "正在檢查軟體更新",
+  "updates.download": "下載更新",
+  "updates.downloading": "正在下載軟體更新",
+  "updates.import": "匯入離線更新包",
+  "updates.verifying": "正在驗證更新包",
+  "updates.restartApply": "重新啟動並更新",
+  "updates.preparingRestart": "正在準備重新啟動更新",
+  "updates.restarting": "軟體即將重新啟動並套用更新。",
+  "updates.applyConfirm": "現在重新啟動並更新至 {version}？",
+  "updates.lastChecked": "上次檢查：{time}",
+  "updates.lastError": "上次檢查失敗：{message}",
+  "updates.blockedTitle": "請先完成下列工作，再套用更新",
+  "updates.status.notChecked": "尚未檢查",
+  "updates.status.current": "已是最新版本",
+  "updates.status.available": "有可用更新",
+  "updates.status.ready": "可以安裝",
+  "task.phase.checking": "正在檢查已簽章的版本。",
+  "task.phase.checked": "更新檢查完成。",
+  "task.phase.downloading": "正在下載更新包。",
+  "task.phase.verifying": "正在驗證簽章與更新內容。"
 };
+
 for (const key of Object.keys(zhTW)) {
   if (!key.startsWith("rag.")) continue;
   const assistantKey = `assistant.${key.slice(4)}`;

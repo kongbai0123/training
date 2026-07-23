@@ -33,6 +33,16 @@ class ScriptsContractTests(unittest.TestCase):
             with self.subTest(script=script):
                 self.assertTrue((ROOT / "scripts" / script).exists())
 
+    def test_packaging_includes_standalone_signed_updater(self):
+        package_script = (ROOT / "scripts" / "package.bat").read_text(encoding="utf-8")
+        app_spec = (ROOT / "packaging" / "vision_training_studio.spec").read_text(encoding="utf-8")
+        updater_spec = ROOT / "packaging" / "vision_training_studio_updater.spec"
+
+        self.assertTrue(updater_spec.is_file())
+        self.assertIn("VisionTrainingStudioUpdater.exe", package_script)
+        self.assertIn("vision_training_studio_updater.spec", package_script)
+        self.assertIn('"updates" / "keys"', app_spec)
+
     def test_test_dependencies_are_separate_from_runtime_requirements(self):
         runtime = (ROOT / "requirements.txt").read_text(encoding="utf-8")
         test = (ROOT / "requirements-test.txt").read_text(encoding="utf-8")

@@ -145,6 +145,14 @@ class ModelInstallManager:
                 self._update(job_id, status="cancelled")
         return self.get(job_id)
 
+    def active_snapshot(self) -> list[Dict[str, Any]]:
+        with self._lock:
+            return [
+                dict(job)
+                for job in self._jobs.values()
+                if job.get("status") in {"queued", "downloading", "cancelling"}
+            ]
+
     def retry(self, job_id: str, *, background: bool = True) -> Dict[str, Any]:
         previous = self.get(job_id)
         if previous["status"] not in {"failed", "cancelled"}:

@@ -4,6 +4,13 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+### Added
+- Added the signed incremental-update foundation with separate application and runtime versions.
+- Added Ed25519-signed `.vtsupdate` packages, SHA-256 verification, runtime change guards, and user-data path protection.
+- Added a standalone Windows updater with staging, transaction journals, atomic replacement, backup, rollback, and interrupted-update recovery.
+- Added GitHub Release discovery, resumable update downloads, offline update import, active-work blocking, and bilingual update controls in Settings.
+- Added Windows-focused GitHub workflows for update contracts and release-tag validation.
+
 ## [0.1.3] - 2026-07-22
 
 ### Added

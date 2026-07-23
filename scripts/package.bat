@@ -18,4 +18,18 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo [Vision Training Studio] Package created: dist\VisionTrainingStudio\VisionTrainingStudio.exe
+
+echo [Vision Training Studio] Building standalone updater...
+"%PYTHON_EXE%" -m PyInstaller --noconfirm --clean --distpath build\updater-dist --workpath build\updater packaging\vision_training_studio_updater.spec
+if %ERRORLEVEL% NEQ 0 (
+  echo [ERROR] Updater package failed.
+  exit /b %ERRORLEVEL%
+)
+copy /y "build\updater-dist\VisionTrainingStudioUpdater.exe" "dist\VisionTrainingStudio\VisionTrainingStudioUpdater.exe" >nul
+if %ERRORLEVEL% NEQ 0 (
+  echo [ERROR] Could not add the updater to the packaged application.
+  exit /b %ERRORLEVEL%
+)
+
+echo [Vision Training Studio] Updater created: dist\VisionTrainingStudio\VisionTrainingStudioUpdater.exe
 exit /b 0

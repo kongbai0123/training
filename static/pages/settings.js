@@ -3,8 +3,10 @@ import { appState, applyTheme, applyLanguage, t } from "../state.js";
 import { apiFetch } from "../api.js";
 import { qs, qsa, setHTML, escapeHtml } from "../utils.js";
 import { renderModelSetupSettings } from "../core/model_setup.js?v=20260710-model-preparation";
+import { followServerTask } from "../core/task_progress.js";
 
 let migrationScan = null;
+let softwareUpdateState = null;
 
 export function initSettings() {
   qs("#btn-theme-toggle")?.addEventListener("click", () => {
@@ -24,6 +26,11 @@ export function initSettings() {
   });
   qs("#btn-scan-data-migration")?.addEventListener("click", scanProjectDataMigration);
   qs("#btn-apply-data-migration")?.addEventListener("click", applyProjectDataMigration);
+  qs("#btn-check-updates")?.addEventListener("click", checkSoftwareUpdates);
+  qs("#btn-download-update")?.addEventListener("click", downloadSoftwareUpdate);
+  qs("#btn-import-update")?.addEventListener("click", () => qs("#input-update-package")?.click());
+  qs("#input-update-package")?.addEventListener("change", importSoftwareUpdate);
+  qs("#btn-apply-update")?.addEventListener("click", applySoftwareUpdate);
 }
 
 export function renderSettingsPage() {
@@ -34,6 +41,129 @@ export function renderSettingsPage() {
   if (themeSelect) themeSelect.value = appState.settings.theme;
   renderProjectDataMigration();
   void renderModelSetupSettings();
+  void loadSoftwareUpdateStatus();
+}
+
+async function loadSoftwareUpdateStatus() {
+  try {
+    softwareUpdateState = await apiFetch("/api/updates/status", {
+      suppressProgress: true,
+      suppressToast: true,
+      responseCacheTtlMs: 1000,
+    });
+    renderSoftwareUpdate();
+  } catch (error) {
+    softwareUpdateState = { last_error: error.message };
+    renderSoftwareUpdate();
+  }
+}
+
+async function checkSoftwareUpdates() {
+  const task = await apiFetch("/api/updates/check", { method: "POST" });
+  try {
+    softwareUpdateState = await followServerTask(task.job_id, {
+      kind: "software-update",
+      title: t("updates.checking"),
+      button: qs("#btn-check-updates"),
+      inlineHost: qs(".software-update-settings"),
+    });
+  } finally {
+    await loadSoftwareUpdateStatus();
+  }
+}
+
+async function downloadSoftwareUpdate() {
+  const task = await apiFetch("/api/updates/download", { method: "POST" });
+  try {
+    await followServerTask(task.job_id, {
+      kind: "software-update",
+      title: t("updates.downloading"),
+      button: qs("#btn-download-update"),
+      inlineHost: qs(".software-update-settings"),
+    });
+  } finally {
+    await loadSoftwareUpdateStatus();
+  }
+}
+
+async function importSoftwareUpdate(event) {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file) return;
+  const form = new FormData();
+  form.append("file", file);
+  await apiFetch("/api/updates/import", {
+    method: "POST",
+    body: form,
+    taskProgress: {
+      kind: "software-update",
+      title: t("updates.verifying"),
+      inlineHost: qs(".software-update-settings"),
+    },
+  });
+  await loadSoftwareUpdateStatus();
+}
+
+async function applySoftwareUpdate() {
+  if (!softwareUpdateState?.can_apply) return;
+  const confirmed = window.confirm(t("updates.applyConfirm", {
+    version: softwareUpdateState.ready_package?.app_version || "",
+  }));
+  if (!confirmed) return;
+  await apiFetch("/api/updates/apply", {
+    method: "POST",
+    taskProgress: {
+      kind: "software-update",
+      title: t("updates.preparingRestart"),
+      inlineHost: qs(".software-update-settings"),
+    },
+  });
+  eventBus.emit("toast", t("updates.restarting"));
+}
+
+function renderSoftwareUpdate() {
+  const state = softwareUpdateState || {};
+  const candidate = state.candidate;
+  const ready = state.ready_package;
+  const blockers = state.blockers || [];
+  const currentVersion = qs("#update-current-version");
+  const runtimeVersion = qs("#update-runtime-version");
+  const latestVersion = qs("#update-latest-version");
+  const packageSize = qs("#update-package-size");
+  if (currentVersion) currentVersion.textContent = state.current?.app_version || "--";
+  if (runtimeVersion) runtimeVersion.textContent = state.current?.runtime_version || "--";
+  if (latestVersion) latestVersion.textContent = candidate?.version || ready?.app_version || "--";
+  if (packageSize) packageSize.textContent = formatBytes(candidate?.asset?.size || ready?.archive_bytes || 0);
+
+  const notes = qs("#update-release-notes");
+  if (notes) {
+    notes.textContent = candidate?.notes || (ready ? t("updates.readyDescription") : t("updates.noCandidate"));
+  }
+  const badge = qs("#update-status-badge");
+  if (badge) {
+    const key = ready ? "updates.status.ready" : candidate ? "updates.status.available" : "updates.status.current";
+    badge.textContent = t(key);
+    badge.className = `badge ${ready ? "badge-success" : candidate ? "badge-info" : "badge-muted"}`;
+  }
+  const checked = qs("#update-last-checked");
+  if (checked) {
+    checked.textContent = state.last_error
+      ? t("updates.lastError", { message: state.last_error })
+      : state.last_checked_at
+        ? t("updates.lastChecked", { time: state.last_checked_at })
+        : "";
+  }
+  const blockerBox = qs("#update-blockers");
+  if (blockerBox) {
+    blockerBox.classList.toggle("hidden", blockers.length === 0);
+    blockerBox.innerHTML = blockers.length
+      ? `<div class="guard-title">${escapeHtml(t("updates.blockedTitle"))}</div><ul>${blockers.map((item) => `<li>${escapeHtml(item.title)}</li>`).join("")}</ul>`
+      : "";
+  }
+  qs("#btn-download-update")?.classList.toggle("hidden", !candidate || Boolean(ready));
+  const apply = qs("#btn-apply-update");
+  apply?.classList.toggle("hidden", !ready);
+  if (apply) apply.disabled = !state.can_apply;
 }
 
 async function scanProjectDataMigration() {

@@ -26,6 +26,12 @@ def build_update_package(
     dist = dist.resolve()
     baseline = load_runtime_baseline(baseline_path)
     target_version = load_version_info(version_file)
+    packaged_version_file = dist / "_internal" / "version.json"
+    if not packaged_version_file.is_file():
+        raise ValueError("Target distribution is missing _internal/version.json.")
+    packaged_version = load_version_info(packaged_version_file)
+    if packaged_version != target_version:
+        raise ValueError("Target distribution version.json does not match the requested release version.")
     if target_version.runtime_version != baseline.get("runtime_version"):
         raise ValueError("Target runtime differs from the baseline; build a full installer.")
     if target_version.package_format_version != baseline.get("package_format_version"):
@@ -59,6 +65,8 @@ def build_update_package(
         raise ValueError(f"Runtime changed and requires a full installer: {preview}")
     if not changed_app_files and not removals:
         raise ValueError("No application changes were found for the update package.")
+    if "_internal/version.json" not in changed_app_files:
+        raise ValueError("Target distribution does not contain a changed application version.")
 
     private_key = load_private_key(private_key_path)
     entries = [

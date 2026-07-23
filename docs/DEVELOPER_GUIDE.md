@@ -63,6 +63,25 @@ version.json
 VERSION
 ```
 
+## Incremental updates
+
+Application and runtime versions are intentionally separate. See
+`docs/UPDATE_ARCHITECTURE.md` and `docs/UPDATE_PACKAGE_SPEC.md` before changing
+packaged files.
+
+Release preparation uses:
+
+```bat
+scripts\generate_runtime_baseline.bat
+scripts\build_update_package.bat
+python scripts\verify_update_package.py release_artifacts\<package>.vtsupdate
+```
+
+The Ed25519 private key defaults to the per-user release-key directory and must
+never be committed. Generate it once with
+`python scripts/generate_update_signing_key.py`, back it up securely, and package
+only the public key.
+
 不應提交：
 
 ```text

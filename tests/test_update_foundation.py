@@ -121,11 +121,13 @@ class UpdateFoundationTests(unittest.TestCase):
             target_version = root / "target-version.json"
             write_version(base_version, "0.1.3")
             write_version(target_version, "0.1.4")
+            write_version(dist / "_internal" / "version.json", "0.1.3")
             baseline = root / "runtime-r1.json"
             build_runtime_baseline(dist, base_version, baseline)
 
             (dist / "VisionTrainingStudio.exe").write_bytes(b"app-v2")
             (dist / "_internal" / "static" / "app.js").write_text("v2", encoding="utf-8")
+            write_version(dist / "_internal" / "version.json", "0.1.4")
             private_key = root / "private.pem"
             public_key = root / "public.pem"
             create_key_pair(private_key, public_key)
@@ -138,7 +140,7 @@ class UpdateFoundationTests(unittest.TestCase):
                 package,
                 release_notes_zh="更新",
             )
-            self.assertEqual(result["changed_file_count"], 2)
+            self.assertEqual(result["changed_file_count"], 3)
             verified = verify_update_archive(package, public_key)
             self.assertEqual(verified.manifest["target_app_version"], "0.1.4")
             self.assertEqual(verified.manifest["runtime_version"], "r1")
@@ -164,9 +166,11 @@ class UpdateFoundationTests(unittest.TestCase):
             target_version = root / "target.json"
             write_version(base_version, "0.1.3")
             write_version(target_version, "0.1.4")
+            write_version(dist / "_internal" / "version.json", "0.1.3")
             baseline = root / "baseline.json"
             build_runtime_baseline(dist, base_version, baseline)
             (dist / "VisionTrainingStudio.exe").write_bytes(b"v2")
+            write_version(dist / "_internal" / "version.json", "0.1.4")
             private_key = root / "private.pem"
             public_key = root / "public.pem"
             create_key_pair(private_key, public_key)

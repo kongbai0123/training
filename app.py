@@ -36,6 +36,7 @@ from src.api.routes.training_orchestration import router as training_orchestrati
 from src.api.routes.training_recommendation import router as training_recommendation_router
 from src.api.routes.tasks import router as tasks_router
 from src.api.routes.training_runs import router as training_runs_router
+from src.api.routes.updates import router as updates_router
 
 APP_IS_PRODUCTION = APP_ENV in {"production", "prod"}
 app = FastAPI(title="Vision Training Studio API")
@@ -60,6 +61,7 @@ app.include_router(downloads_router)
 app.include_router(annotation_labelme_router)
 app.include_router(auto_labeling_router)
 app.include_router(augmentation_router)
+app.include_router(updates_router)
 
 if APP_IS_PRODUCTION:
     app.add_middleware(

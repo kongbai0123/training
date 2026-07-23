@@ -191,6 +191,13 @@ class TaskJobManager:
             )
             return self.get(job_id)
 
+    def snapshot(self, *, active_only: bool = False) -> list[Dict[str, Any]]:
+        with self._lock:
+            values = list(self._jobs.values())
+            if active_only:
+                values = [job for job in values if job.get("status") not in TERMINAL_STATUSES]
+            return deepcopy(values)
+
     def _prune_locked(self) -> None:
         while len(self._jobs) > self._max_jobs:
             removable = next((key for key, value in self._jobs.items() if value.get("status") in TERMINAL_STATUSES), None)
