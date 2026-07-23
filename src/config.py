@@ -11,9 +11,15 @@ BASE_DIR = APP_HOME
 PROJECTS_DIR = _PROJECTS_DIR
 STATIC_DIR = _STATIC_DIR
 APP_VERSION = "0.0.0"
+RUNTIME_VERSION = "unknown"
+UPDATE_PACKAGE_FORMAT_VERSION = 1
 VERSION_INFO = {
     "product": "Vision Training Studio",
     "version": APP_VERSION,
+    "app_version": APP_VERSION,
+    "runtime_version": RUNTIME_VERSION,
+    "package_format_version": UPDATE_PACKAGE_FORMAT_VERSION,
+    "update_channel": "stable",
     "edition": "Local",
     "build": "unknown",
     "channel": "commercial-mvp",
@@ -26,11 +32,17 @@ if _version_file.exists():
             payload = json.load(f)
             if isinstance(payload, dict):
                 VERSION_INFO.update(payload)
-                APP_VERSION = str(VERSION_INFO.get("version", APP_VERSION))
+                APP_VERSION = str(VERSION_INFO.get("app_version", VERSION_INFO.get("version", APP_VERSION)))
                 VERSION_INFO["version"] = APP_VERSION
+                VERSION_INFO["app_version"] = APP_VERSION
+                RUNTIME_VERSION = str(VERSION_INFO.get("runtime_version", RUNTIME_VERSION))
+                UPDATE_PACKAGE_FORMAT_VERSION = int(
+                    VERSION_INFO.get("package_format_version", UPDATE_PACKAGE_FORMAT_VERSION)
+                )
     except Exception:
         APP_VERSION = "0.0.0"
         VERSION_INFO["version"] = APP_VERSION
+        VERSION_INFO["app_version"] = APP_VERSION
 
 # Device Configuration
 HAS_GPU = False

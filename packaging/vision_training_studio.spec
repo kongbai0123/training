@@ -144,6 +144,7 @@ for package_name in [
     "huggingface_hub",
     "safetensors",
     "timm",
+    "cryptography",
 ]:
     try:
         package_datas, package_binaries, package_hiddenimports = collect_all(
