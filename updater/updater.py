@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import os
 from pathlib import Path
 import subprocess
@@ -14,14 +15,49 @@ if str(ROOT) not in sys.path:
 from src.update.transaction import apply_update, prepare_update
 
 
+def process_is_running(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        synchronize = 0x00100000
+        wait_object_0 = 0x00000000
+        wait_timeout = 0x00000102
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.OpenProcess.argtypes = [ctypes.c_uint32, ctypes.c_int, ctypes.c_uint32]
+        kernel32.OpenProcess.restype = ctypes.c_void_p
+        kernel32.WaitForSingleObject.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+        kernel32.WaitForSingleObject.restype = ctypes.c_uint32
+        kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+        handle = kernel32.OpenProcess(synchronize, False, pid)
+        if not handle:
+            error = ctypes.get_last_error()
+            if error == 5:
+                return True
+            return False
+        try:
+            result = kernel32.WaitForSingleObject(handle, 0)
+            if result == wait_timeout:
+                return True
+            if result == wait_object_0:
+                return False
+            raise OSError(ctypes.get_last_error(), "Could not query application process state.")
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
 def wait_for_process_exit(pid: int, timeout_seconds: float = 60.0) -> None:
     if pid <= 0:
         return
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
-        try:
-            os.kill(pid, 0)
-        except OSError:
+        if not process_is_running(pid):
             return
         time.sleep(0.25)
     raise TimeoutError("The application did not close in time. The update was not applied.")
