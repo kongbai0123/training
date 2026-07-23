@@ -81,6 +81,12 @@ class TrainingMonitorResilienceStaticTests(unittest.TestCase):
             script.index('["train/seg_loss", "Train Seg Loss"]'),
         )
 
+    def test_torchvision_segmentation_metrics_are_available_to_the_training_dashboard(self):
+        script = (ROOT / "static" / "pages" / "training.js").read_text(encoding="utf-8")
+        self.assertIn('["val/mean_iou", "Mean IoU"]', script)
+        self.assertIn('["val/dice", "Dice"]', script)
+        self.assertIn('["val/pixel_accuracy", "Pixel Accuracy"]', script)
+
     def test_augmentation_actions_are_below_settings_summary(self):
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
         css = (ROOT / "static" / "styles" / "pages" / "augmentation.css").read_text(encoding="utf-8")

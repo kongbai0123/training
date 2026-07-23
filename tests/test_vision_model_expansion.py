@@ -1,4 +1,5 @@
 import json
+import pickle
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,7 +14,7 @@ from src.training.dispatcher import TrainerDispatcher
 from src.training.backends import torchvision_backend as torchvision_backend_module
 from src.training.backends.torchvision_backend import TorchVisionBackend
 from src.training.state_store import TrainingStateStore
-from src.training.vision.torchvision_trainer import train_torchvision_model
+from src.training.vision.torchvision_trainer import ProjectVisionDataset, train_torchvision_model
 
 
 class VisionModelExpansionTests(unittest.TestCase):
@@ -102,6 +103,8 @@ class VisionModelExpansionTests(unittest.TestCase):
                 "class_names": ["part"],
                 "images": images,
             }
+            dataset = ProjectVisionDataset(project, "train", "semantic_segmentation", 64, __import__("torch"))
+            pickle.dumps(dataset)
             run_dir = root / "training" / "runs" / "smoke"
             result = train_torchvision_model(project, run_dir, {
                 "model": "unet",

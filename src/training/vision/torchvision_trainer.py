@@ -150,11 +150,20 @@ class ProjectVisionDataset:
         self.split = split
         self.task = task
         self.image_size = image_size
-        self.torch = torch_module
+        # Do not retain the imported torch module on the dataset instance.
+        # Windows DataLoader workers use spawn and must pickle the dataset;
+        # module objects are not pickleable.
+        _ = torch_module
         self.class_names = list(project.get("class_names") or [])
         self.class_to_index = {name: index for index, name in enumerate(self.class_names)}
         self.layout = ProjectLayout.from_project(project)
         self.items = [item for item in project.get("images") or [] if item.get("split") == split and self._image_path(item).exists()]
+
+    @property
+    def torch(self):
+        import torch
+
+        return torch
 
     def __len__(self) -> int:
         return len(self.items)
