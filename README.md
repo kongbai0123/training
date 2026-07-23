@@ -140,6 +140,7 @@ docs/                使用、架構、部署與疑難排解文件
 - [測試規範](docs/TESTING_GUIDELINES.md)
 - [乾淨 Windows 驗證](docs/CLEAN_MACHINE_VALIDATION.md)
 - [0.1.3 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-22_0.1.3.md)
+- [0.1.4 更新系統與安裝驗證紀錄](docs/RELEASE_VALIDATION_2026-07-23_0.1.4.md)
 - [0.1.2 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-22.md)
 - [已知限制](docs/KNOWN_ISSUES.md)
 - [疑難排解](docs/TROUBLESHOOTING.md)

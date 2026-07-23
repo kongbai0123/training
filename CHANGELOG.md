@@ -13,6 +13,9 @@ All notable changes to Vision Training Studio are tracked here.
 - Added GitHub Release discovery, resumable update downloads, offline update import, active-work blocking, and bilingual update controls in Settings.
 - Added Windows-focused GitHub workflows for update contracts and release-tag validation.
 
+### Fixed
+- Fixed Windows updater process-exit detection so a staged update proceeds after the desktop process closes.
+
 ## [0.1.3] - 2026-07-22
 
 ### Added

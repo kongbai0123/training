@@ -70,6 +70,9 @@ class UpdateReleaseContractTests(unittest.TestCase):
         self.assertIn('"v*.*.*"', release_workflow)
         self.assertIn("Working tree must be clean", release_script)
         self.assertIn(".vtsupdate", release_script)
+        self.assertIn("UpdaterBootstrapVersion", release_script)
+        self.assertIn("updater bootstrap releases must include the full installer".lower(), release_script.lower())
+        self.assertIn("SHA256SUMS", release_script)
         self.assertIn("--draft", release_script)
 
 
