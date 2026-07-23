@@ -59,6 +59,25 @@ class ScriptsContractTests(unittest.TestCase):
             launcher.index("    main()", launcher.index('if __name__ == "__main__":')),
         )
 
+    def test_desktop_launcher_shows_staged_startup_feedback(self):
+        launcher = (ROOT / "launcher.py").read_text(encoding="utf-8")
+        splash = (ROOT / "src" / "startup_splash.py").read_text(encoding="utf-8")
+
+        self.assertIn("StartupSplash(enabled=should_show_startup_splash(shell))", launcher)
+        self.assertIn("on_wait=report_backend_wait", launcher)
+        self.assertIn("splash.show_error(", launcher)
+        self.assertIn("multiprocessing.freeze_support()", launcher)
+        for phase in (
+            "啟動應用程式",
+            "準備本機 AI 服務",
+            "檢查硬體與專案資料",
+            "開啟工作區",
+        ):
+            self.assertIn(phase, splash)
+        self.assertIn('shell or "").strip().lower() == "none"', splash)
+        self.assertIn("VTS_DISABLE_SPLASH", splash)
+        self.assertIn("已等待 {seconds} 秒", splash)
+
     def test_pyinstaller_spec_filters_optional_warning_noise_during_collection(self):
         spec = (ROOT / "packaging" / "vision_training_studio.spec").read_text(encoding="utf-8")
 
