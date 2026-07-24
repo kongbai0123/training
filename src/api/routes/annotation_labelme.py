@@ -498,6 +498,30 @@ def delete_failed_annotation_import_source(project_id: str, import_id: str, file
         raise HTTPException(status_code=500, detail=f"Failed to delete failed annotation source: {e}")
 
 
+class ClearFailedAnnotationSourcesRequest(BaseModel):
+    files: List[str]
+
+
+@router.post("/api/projects/{project_id}/annotations/import/{import_id}/failed-sources/clear")
+def clear_failed_annotation_import_sources(
+    project_id: str,
+    import_id: str,
+    req: ClearFailedAnnotationSourcesRequest,
+):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        result = AnnotationImporter.delete_failed_source_files(project, import_id, req.files)
+        project["last_annotation_import"] = result["report"]
+        ProjectManager.save_project(project_id, project)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear failed annotation sources: {e}")
+
+
 class UpdateClassesRequest(BaseModel):
     class_names: List[str]
 

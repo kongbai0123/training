@@ -5,6 +5,7 @@ import { followServerTask } from "../core/task_progress.js";
 import { qs, qsa, setText, setHTML, escapeHtml, copyText, collectDroppedFiles, colorForLabel } from "../utils.js";
 
 let pendingAnnotationFiles = [];
+let selectedImportReviewFiles = new Set();
 
 export function initLabelMe() {
   eventBus.on("language-changed", () => renderLabelMeManager(getProjectStatus(appState.currentProject)));
@@ -54,6 +55,20 @@ export function initLabelMe() {
 
   qs("#chk-show-issues-only")?.addEventListener("change", () => {
     eventBus.emit("state-changed");
+  });
+  qs("#chk-select-all-review")?.addEventListener("change", (event) => {
+    const checked = !!event.target.checked;
+    qsa("#labelme-check-table [data-clear-import-file]").forEach((checkbox) => {
+      checkbox.checked = checked;
+      const fileName = checkbox.dataset.clearImportFile || "";
+      if (!fileName) return;
+      if (checked) selectedImportReviewFiles.add(fileName);
+      else selectedImportReviewFiles.delete(fileName);
+    });
+    updateReviewSelectionControls();
+  });
+  qs("#btn-clear-selected-review")?.addEventListener("click", () => {
+    clearFailedAnnotationSources([...selectedImportReviewFiles]);
   });
 
   const annoDropZone = qs("#annotations-drop-zone");
@@ -304,38 +319,43 @@ function bindDeleteFailedTxtButtons(root = document) {
 }
 
 async function deleteFailedAnnotationTxt(fileName, button) {
+  await clearFailedAnnotationSources([fileName], button);
+}
+
+async function clearFailedAnnotationSources(files, button = null) {
   const report = appState.latestAnnotationImport || appState.currentProject?.last_annotation_import;
-  if (!appState.currentProjectId || !report?.import_id || !fileName) {
-    eventBus.emit("toast", "No failed TXT import item is available to delete.");
+  const selectedFiles = [...new Set((files || []).filter(Boolean))];
+  if (!appState.currentProjectId || !report?.import_id || selectedFiles.length === 0) {
+    eventBus.emit("toast", t("labelme.review.noneSelected"));
     return;
   }
-
-  const confirmed = window.confirm([
-    "Delete this failed TXT from the import draft?",
-    "",
-    fileName,
-    "",
-    "This only deletes the staged copy inside the current import batch.",
-    "It will not delete your original external source file."
-  ].join("\n"));
+  const confirmed = window.confirm(t("labelme.review.clearConfirm", { count: selectedFiles.length }));
   if (!confirmed) return;
 
   if (button) button.disabled = true;
+  const bulkButton = qs("#btn-clear-selected-review");
+  if (bulkButton) bulkButton.disabled = true;
   try {
-    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/annotations/import/${report.import_id}/failed-source?file=${encodeURIComponent(fileName)}`, {
-      method: "DELETE"
+    const result = await apiFetch(`/api/projects/${appState.currentProjectId}/annotations/import/${report.import_id}/failed-sources/clear`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ files: selectedFiles })
     });
     if (result?.report) {
       appState.latestAnnotationImport = result.report;
       if (appState.currentProject) appState.currentProject.last_annotation_import = result.report;
+      selectedFiles.forEach((fileName) => selectedImportReviewFiles.delete(fileName));
       renderAnnotationImportReport();
+      renderLabelMeManager(getProjectStatus(appState.currentProject));
       if (!qs("#annotation-import-report-modal")?.hidden) openImportReportModal();
     }
-    eventBus.emit("toast", `Deleted failed TXT from import draft: ${fileName}`);
+    eventBus.emit("toast", t("labelme.review.cleared", { count: result?.deleted_count || selectedFiles.length }));
+    eventBus.emit("refresh-project");
   } catch (err) {
-    eventBus.emit("toast", `Delete failed TXT failed: ${err.message}`);
+    eventBus.emit("toast", t("labelme.review.clearFailed", { message: err.message }));
   } finally {
     if (button) button.disabled = false;
+    updateReviewSelectionControls();
   }
 }
 
@@ -474,12 +494,35 @@ export function renderLabelMeManager(status) {
   const report = appState.latestAnnotationImport || appState.currentProject?.last_annotation_import;
   const draftByJson = draftImportMap();
   const showDraftDiff = !!report?.import_id && !report?.applied_at;
-  if (rawImages.length === 0) {
-    setHTML("#labelme-check-table", `
-      <tr><td colspan="5" style="text-align:center;">${escapeHtml(t("labelme.empty.noImages"))}</td></tr>
-    `);
-    return;
-  }
+  const importIssues = [...(report?.errors || []), ...(report?.warnings || [])];
+  const clearableFiles = new Set(
+    importIssues.filter(canDeleteFailedTxtIssue).map((item) => String(item.file || ""))
+  );
+  selectedImportReviewFiles = new Set(
+    [...selectedImportReviewFiles].filter((fileName) => clearableFiles.has(fileName))
+  );
+  const importIssueRows = importIssues.map((item) => {
+    const fileName = String(item.file || "--");
+    const canClear = canDeleteFailedTxtIssue(item);
+    const checked = canClear && selectedImportReviewFiles.has(fileName);
+    return `
+      <tr class="row-warning labelme-import-review-row">
+        <td class="labelme-review-select-column">
+          ${canClear ? `<input type="checkbox" data-clear-import-file="${escapeHtml(fileName)}" ${checked ? "checked" : ""} aria-label="${escapeHtml(t("labelme.review.selectFile", { file: fileName }))}">` : ""}
+        </td>
+        <td><code>${escapeHtml(fileName)}</code></td>
+        <td>${escapeHtml(t("labelme.review.stagedSource"))}</td>
+        <td><span class="badge badge-warning">${escapeHtml(t("labelme.review.importIssue"))}</span></td>
+        <td>${escapeHtml(item.message || "")}</td>
+        <td>${escapeHtml(canClear ? t("labelme.review.safeClearHint") : t("labelme.review.manualReview"))}</td>
+        <td>${canClear ? `
+          <button type="button" class="btn btn-danger btn-xs" data-clear-one-file="${escapeHtml(fileName)}">
+            ${escapeHtml(t("labelme.review.clearOne"))}
+          </button>
+        ` : "--"}</td>
+      </tr>
+    `;
+  });
 
   const isSegmentationTask = String(status.taskType || "").toLowerCase().includes("segmentation");
   const hasSegmentationBbox = (img) => isSegmentationTask && (img.annotations || []).some((ann) => ann.type === "bbox");
@@ -498,18 +541,22 @@ export function renderLabelMeManager(status) {
     : rawImages;
 
   if (filteredImages.length === 0) {
-    setHTML("#labelme-check-table", `
-      <tr>
-        <td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">
-          <i class="fa-solid fa-circle-check" style="color: var(--success); margin-right: 6px; font-size: 1.1rem;"></i>
-          ${escapeHtml(t("labelme.empty.allPass"))}
-        </td>
-      </tr>
-    `);
-    return;
+    if (importIssueRows.length === 0) {
+      setHTML("#labelme-check-table", `
+        <tr>
+          <td colspan="7" style="text-align:center; padding: 24px; color: var(--text-muted);">
+            <i class="fa-solid fa-circle-check" style="color: var(--success); margin-right: 6px; font-size: 1.1rem;"></i>
+            ${escapeHtml(rawImages.length === 0 ? t("labelme.empty.noImages") : t("labelme.empty.allPass"))}
+          </td>
+        </tr>
+      `);
+      setText("#labelme-review-count", "0");
+      updateReviewSelectionControls();
+      return;
+    }
   }
 
-  const rows = filteredImages.map((img) => {
+  const imageRows = filteredImages.map((img) => {
     const jsonFilename = img.filename.replace(/\.[^/.]+$/, ".json");
     let statusText = "Unannotated";
     let issueText = "Missing JSON";
@@ -576,15 +623,19 @@ export function renderLabelMeManager(status) {
 
     return `
       <tr class="${rowClass}" data-preview-img="${escapeHtml(img.filename)}" style="cursor:pointer;">
+        <td class="labelme-review-select-column"></td>
         <td><code>${escapeHtml(jsonFilename)}</code></td>
         <td>${escapeHtml(img.filename)}</td>
         <td><span class="badge ${needsPolygon || isCorrupted || isEmpty || unknownLabels.length > 0 ? "badge-warning" : badgeClassForStatus(img.status)}">${escapeHtml(statusText)}</span></td>
         <td>${escapeHtml(issueText)}</td>
         <td>${escapeHtml(fixText)}</td>
+        <td>--</td>
       </tr>
     `;
   });
+  const rows = [...importIssueRows, ...imageRows];
   setHTML("#labelme-check-table", rows.join(""));
+  setText("#labelme-review-count", String(rows.length));
 
   qsa("#labelme-check-table tr").forEach((row) => {
     row.addEventListener("click", () => {
@@ -592,6 +643,43 @@ export function renderLabelMeManager(status) {
       if (filename) previewLabelMeImage(filename);
     });
   });
+  qsa("#labelme-check-table [data-clear-import-file]").forEach((checkbox) => {
+    checkbox.addEventListener("click", (event) => event.stopPropagation());
+    checkbox.addEventListener("change", () => {
+      const fileName = checkbox.dataset.clearImportFile || "";
+      if (checkbox.checked) selectedImportReviewFiles.add(fileName);
+      else selectedImportReviewFiles.delete(fileName);
+      updateReviewSelectionControls();
+    });
+  });
+  qsa("#labelme-check-table [data-clear-one-file]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      clearFailedAnnotationSources([button.dataset.clearOneFile || ""], button);
+    });
+  });
+  updateReviewSelectionControls();
+}
+
+function updateReviewSelectionControls() {
+  const checkboxes = qsa("#labelme-check-table [data-clear-import-file]");
+  const selectedVisible = checkboxes.filter((checkbox) => checkbox.checked).length;
+  const selectAll = qs("#chk-select-all-review");
+  if (selectAll) {
+    selectAll.disabled = checkboxes.length === 0;
+    selectAll.checked = checkboxes.length > 0 && selectedVisible === checkboxes.length;
+    selectAll.indeterminate = selectedVisible > 0 && selectedVisible < checkboxes.length;
+  }
+  const clearButton = qs("#btn-clear-selected-review");
+  if (clearButton) {
+    clearButton.disabled = selectedImportReviewFiles.size === 0;
+    const label = clearButton.querySelector("span");
+    if (label) {
+      label.textContent = selectedImportReviewFiles.size > 0
+        ? t("labelme.clearSelectedCount", { count: selectedImportReviewFiles.size })
+        : t("labelme.clearSelected");
+    }
+  }
 }
 
 function renderAnnotationImportReport() {

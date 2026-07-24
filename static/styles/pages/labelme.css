@@ -243,7 +243,7 @@ body[data-theme="light"] .labelme-step-card {
 }
 
 .labelme-review-table .data-table {
-  min-width: 720px;
+  min-width: 920px;
 }
 
 .labelme-review-table th {
@@ -266,6 +266,35 @@ body[data-theme="light"] .labelme-step-card {
   width: 15px;
   height: 15px;
   accent-color: var(--primary);
+}
+
+.labelme-review-panel > .section-title {
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.labelme-review-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.labelme-review-select-column {
+  width: 42px;
+  min-width: 42px;
+  text-align: center !important;
+}
+
+.labelme-review-select-column input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.labelme-import-review-row td {
+  background: color-mix(in srgb, var(--warning) 5%, transparent);
 }
 
 .labelme-preview-card .preview-panel {

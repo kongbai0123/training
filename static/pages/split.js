@@ -84,6 +84,7 @@ function renderSplitPreview() {
     <div class="split-readiness-item"><span>${escapeHtml(t("split.excluded"))}</span><strong>${excluded}</strong></div>
     <div class="split-readiness-item"><span>${escapeHtml(t("split.leakageControl"))}</span><strong>${escapeHtml(t(`split.risk.${method}`))}</strong></div>
   `);
+  renderSplitClassDistribution(project.split_report || null, images, eligible);
 }
 
 function renderSplitReportUI(report) {
@@ -94,6 +95,107 @@ function renderSplitReportUI(report) {
       <ul>${(report.warnings || [t("split.report.noWarnings")]).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
     </div>
   `);
+  const project = appState.currentProject || {};
+  const images = Array.isArray(project.images) ? project.images : [];
+  renderSplitClassDistribution(report, images, images.length);
+}
+
+function renderSplitClassDistribution(report, images, eligible) {
+  const project = appState.currentProject || {};
+  const classNames = Array.isArray(project.class_names) ? project.class_names : [];
+  const splitNames = ["train", "val", "test"];
+  const ratios = Object.fromEntries(splitNames.map((key) => [
+    key,
+    (Number(qs(`#input-ratio-${key}`)?.value) || 0) / 100
+  ]));
+  const isActual = !!report?.class_distribution && !!report?.split_counts;
+  const splitCounts = isActual
+    ? Object.fromEntries(splitNames.map((key) => [key, Number(report.split_counts?.[key] || 0)]))
+    : allocateIntegerCounts(eligible, ratios);
+  const classDistribution = isActual
+    ? report.class_distribution
+    : estimateClassDistribution(images, classNames, ratios);
+
+  const mode = qs("#split-distribution-mode");
+  if (mode) {
+    mode.className = `badge ${isActual ? "badge-success" : "badge-muted"}`;
+    mode.textContent = t(isActual ? "split.distribution.actual" : "split.distribution.estimated");
+  }
+
+  setHTML("#split-set-counts", splitNames.map((key) => `
+    <article class="split-set-count split-set-count-${key}">
+      <span>${escapeHtml(t(`split.${key}`))}</span>
+      <strong>${escapeHtml(splitCounts[key] || 0)}</strong>
+      <small>${escapeHtml(t("split.imagesUnit"))}</small>
+    </article>
+  `).join(""));
+
+  if (classNames.length === 0) {
+    setHTML("#split-class-distribution", `
+      <tr><td colspan="5" class="split-class-empty">${escapeHtml(t("split.classDistributionEmpty"))}</td></tr>
+    `);
+    return;
+  }
+
+  const rows = classNames.map((className) => {
+    const counts = Object.fromEntries(splitNames.map((key) => [
+      key,
+      Number(classDistribution?.[key]?.[className] || 0)
+    ]));
+    const total = splitNames.reduce((sum, key) => sum + counts[key], 0);
+    return `
+      <tr>
+        <th scope="row"><span class="split-class-name">${escapeHtml(className)}</span></th>
+        ${splitNames.map((key) => `
+          <td>
+            <div class="split-class-count-cell">
+              <strong>${escapeHtml(counts[key])}</strong>
+              <span><i style="width:${total > 0 ? Math.min(100, counts[key] / total * 100) : 0}%"></i></span>
+            </div>
+          </td>
+        `).join("")}
+        <td><strong>${escapeHtml(total)}</strong></td>
+      </tr>
+    `;
+  });
+  setHTML("#split-class-distribution", rows.join(""));
+}
+
+function estimateClassDistribution(images, classNames, ratios) {
+  const totals = Object.fromEntries(classNames.map((className) => [className, 0]));
+  images.forEach((image) => {
+    (image?.annotations || []).forEach((annotation) => {
+      const className = annotation?.category;
+      if (className in totals) totals[className] += 1;
+    });
+    const imageClass = image?.class_name || image?.category;
+    if (imageClass in totals) totals[imageClass] += 1;
+  });
+  const distribution = { train: {}, val: {}, test: {} };
+  classNames.forEach((className) => {
+    const allocated = allocateIntegerCounts(totals[className], ratios);
+    ["train", "val", "test"].forEach((key) => {
+      distribution[key][className] = allocated[key];
+    });
+  });
+  return distribution;
+}
+
+function allocateIntegerCounts(total, ratios) {
+  const keys = ["train", "val", "test"];
+  const safeTotal = Math.max(0, Math.floor(Number(total) || 0));
+  const exact = Object.fromEntries(keys.map((key) => [key, safeTotal * Math.max(0, Number(ratios[key]) || 0)]));
+  const result = Object.fromEntries(keys.map((key) => [key, Math.floor(exact[key])]));
+  let remaining = safeTotal - keys.reduce((sum, key) => sum + result[key], 0);
+  keys
+    .slice()
+    .sort((a, b) => (exact[b] - result[b]) - (exact[a] - result[a]))
+    .forEach((key) => {
+      if (remaining <= 0) return;
+      result[key] += 1;
+      remaining -= 1;
+    });
+  return result;
 }
 
 function rebalanceSplitRatios(changedKey) {

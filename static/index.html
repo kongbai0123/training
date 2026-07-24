@@ -661,20 +661,34 @@
 
             <section class="panel-section labelme-review-panel">
               <div class="section-title">
-                <h2 data-i18n="labelme.reviewQueue">Review Queue</h2>
-                <label class="checkbox-row labelme-issue-toggle">
-                  <input type="checkbox" id="chk-show-issues-only" checked> <span data-i18n="labelme.showIssuesOnly">Show issues only</span>
-                </label>
+                <div>
+                  <h2 data-i18n="labelme.reviewQueue">Review Queue</h2>
+                  <p class="section-help" data-i18n="labelme.reviewQueueHelp">Review current annotations and misplaced import files in one place.</p>
+                </div>
+                <div class="labelme-review-actions">
+                  <span class="badge badge-muted" id="labelme-review-count">0</span>
+                  <label class="checkbox-row labelme-issue-toggle">
+                    <input type="checkbox" id="chk-show-issues-only" checked> <span data-i18n="labelme.showIssuesOnly">Show issues only</span>
+                  </label>
+                  <button type="button" class="btn btn-danger btn-sm" id="btn-clear-selected-review" disabled>
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span data-i18n="labelme.clearSelected">Clear selected</span>
+                  </button>
+                </div>
               </div>
               <div class="table-wrap labelme-review-table">
                 <table class="data-table">
                   <thead>
                     <tr>
+                      <th class="labelme-review-select-column">
+                        <input type="checkbox" id="chk-select-all-review" aria-label="Select all clearable import issues" data-i18n-aria-label="labelme.selectAllClearable">
+                      </th>
                       <th data-i18n="labelme.table.file">File</th>
                       <th data-i18n="labelme.table.image">Image</th>
                       <th data-i18n="labelme.table.status">Status</th>
                       <th data-i18n="labelme.table.issue">Issue</th>
                       <th data-i18n="labelme.table.fix">Suggested Fix</th>
+                      <th data-i18n="labelme.table.action">Action</th>
                     </tr>
                   </thead>
                   <tbody id="labelme-check-table"></tbody>
@@ -717,33 +731,59 @@
             </div>
           </div>
           <div class="split-workspace">
-          <section class="panel-section split-config-panel">
-            <div class="section-title"><h2 data-i18n="split.formTitle">Train / Val / Test Settings</h2></div>
-            <form id="form-split-dataset" class="form-stack">
-              <label>
-                <span><span data-i18n="split.method">Split method</span> <span class="info-icon" data-tooltip="Stratified Split keeps class balance where possible. Group Split keeps source groups together to reduce dataset leakage." data-i18n-tooltip="split.methodTooltip">i</span></span>
-                <select id="split-method">
-                  <option value="stratified" data-i18n="split.method.stratified">Class-balanced Stratified Split</option>
-                  <option value="group" data-i18n="split.method.group">Group Split</option>
-                  <option value="scene" data-i18n="split.method.scene">Scene-aware Split</option>
-                  <option value="basic" data-i18n="split.method.basic">Basic Random</option>
-                </select>
-              </label>
-              <div class="ratio-grid">
-                <label><span data-i18n="split.train">Train</span><input type="number" id="input-ratio-train" value="70" min="10" max="90"></label>
-                <label><span data-i18n="split.val">Val</span><input type="number" id="input-ratio-val" value="20" min="5" max="45"></label>
-                <label><span data-i18n="split.test">Test</span><input type="number" id="input-ratio-test" value="10" min="5" max="45"></label>
+            <section class="panel-section split-config-panel">
+              <div class="section-title"><h2 data-i18n="split.formTitle">Train / Val / Test Settings</h2></div>
+              <form id="form-split-dataset" class="form-stack">
+                <label>
+                  <span><span data-i18n="split.method">Split method</span> <span class="info-icon" data-tooltip="Stratified Split keeps class balance where possible. Group Split keeps source groups together to reduce dataset leakage." data-i18n-tooltip="split.methodTooltip">i</span></span>
+                  <select id="split-method">
+                    <option value="stratified" data-i18n="split.method.stratified">Class-balanced Stratified Split</option>
+                    <option value="group" data-i18n="split.method.group">Group Split</option>
+                    <option value="scene" data-i18n="split.method.scene">Scene-aware Split</option>
+                    <option value="basic" data-i18n="split.method.basic">Basic Random</option>
+                  </select>
+                </label>
+                <div class="ratio-grid">
+                  <label><span data-i18n="split.train">Train</span><input type="number" id="input-ratio-train" value="70" min="10" max="90"></label>
+                  <label><span data-i18n="split.val">Val</span><input type="number" id="input-ratio-val" value="20" min="5" max="45"></label>
+                  <label><span data-i18n="split.test">Test</span><input type="number" id="input-ratio-test" value="10" min="5" max="45"></label>
+                </div>
+                <div class="split-ratio-total"><span data-i18n="split.total">Total</span> <strong id="split-ratio-total">100%</strong></div>
+                <button type="submit" class="btn btn-primary guarded" data-requires="dataset" id="btn-run-split"><i class="fa-solid fa-code-branch"></i> <span data-i18n="split.run">Run Split</span></button>
+              </form>
+              <div id="split-report-card" class="report-box"></div>
+            </section>
+
+            <section class="panel-section split-preview-panel">
+              <div class="section-title"><div><h2 data-i18n="split.previewTitle">Distribution Preview</h2><p class="section-subtitle" data-i18n="split.previewHelp">Estimated allocation before files are written.</p></div></div>
+              <div id="split-distribution-preview" class="split-distribution-preview"></div>
+              <div id="split-readiness-summary" class="split-readiness-summary"></div>
+            </section>
+
+            <section class="panel-section split-class-panel">
+              <div class="section-title">
+                <div>
+                  <h2 data-i18n="split.classDistributionTitle">Dataset and class distribution</h2>
+                  <p class="section-subtitle" data-i18n="split.classDistributionHelp">Image totals and annotation counts for Train, Validation, and Test.</p>
+                </div>
+                <span class="badge badge-muted" id="split-distribution-mode">Estimated</span>
               </div>
-              <div class="split-ratio-total"><span data-i18n="split.total">Total</span> <strong id="split-ratio-total">100%</strong></div>
-              <button type="submit" class="btn btn-primary guarded" data-requires="dataset" id="btn-run-split"><i class="fa-solid fa-code-branch"></i> <span data-i18n="split.run">Run Split</span></button>
-            </form>
-            <div id="split-report-card" class="report-box"></div>
-          </section>
-          <section class="panel-section split-preview-panel">
-            <div class="section-title"><div><h2 data-i18n="split.previewTitle">Distribution Preview</h2><p class="section-subtitle" data-i18n="split.previewHelp">Estimated allocation before files are written.</p></div></div>
-            <div id="split-distribution-preview" class="split-distribution-preview"></div>
-            <div id="split-readiness-summary" class="split-readiness-summary"></div>
-          </section>
+              <div id="split-set-counts" class="split-set-counts"></div>
+              <div class="table-wrap split-class-table-wrap">
+                <table class="data-table split-class-table">
+                  <thead>
+                    <tr>
+                      <th data-i18n="split.className">Class</th>
+                      <th data-i18n="split.train">Train</th>
+                      <th data-i18n="split.val">Validation</th>
+                      <th data-i18n="split.test">Test</th>
+                      <th data-i18n="split.total">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody id="split-class-distribution"></tbody>
+                </table>
+              </div>
+            </section>
           </div>
         </section>
 

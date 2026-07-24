@@ -172,6 +172,16 @@ class AnnotationImporter:
 
     @staticmethod
     def delete_failed_source_file(project: Dict[str, Any], import_id: str, filename: str) -> Dict[str, Any]:
+        result = AnnotationImporter.delete_failed_source_files(project, import_id, [filename])
+        return {
+            "deleted": result["deleted_count"] == 1,
+            "import_id": import_id,
+            "file": result["files"][0],
+            "report": result["report"],
+        }
+
+    @staticmethod
+    def delete_failed_source_files(project: Dict[str, Any], import_id: str, filenames: List[str]) -> Dict[str, Any]:
         layout = ProjectLayout.from_project(project)
         root = AnnotationImporter.draft_root(layout, import_id)
         report_path = root / "import_report.json"
@@ -179,45 +189,61 @@ class AnnotationImporter:
         if not report_path.exists() or not source_dir.exists():
             raise ValueError(f"Import draft not found: {import_id}")
 
-        cleaned_name = safe_filename(filename)
-        if not cleaned_name.lower().endswith(".txt"):
-            raise ValueError("Only failed YOLO TXT source files can be deleted from an import draft.")
-
         report = json.loads(report_path.read_text(encoding="utf-8"))
         errors = report.get("errors") or []
-        matching_error = next(
-            (
-                item for item in errors
-                if item.get("file") == cleaned_name
-                and "Image file not found" in str(item.get("message", ""))
-            ),
-            None,
+        requested = list(dict.fromkeys(safe_filename(name) for name in filenames if str(name).strip()))
+        if not requested:
+            raise ValueError("Select at least one failed TXT source file to clear.")
+
+        validated: List[Tuple[str, Path, Dict[str, Any]]] = []
+        resolved_source_dir = source_dir.resolve()
+        for cleaned_name in requested:
+            if not cleaned_name.lower().endswith(".txt"):
+                raise ValueError("Only failed YOLO TXT source files can be cleared from an import review.")
+            matching_error = next(
+                (
+                    item for item in errors
+                    if item.get("file") == cleaned_name
+                    and "Image file not found" in str(item.get("message", ""))
+                ),
+                None,
+            )
+            if not matching_error:
+                raise ValueError(f"Clearable failed TXT entry not found in import report: {cleaned_name}")
+            source_path = (source_dir / cleaned_name).resolve()
+            if source_path.parent != resolved_source_dir:
+                raise ValueError("Unsafe import source path.")
+            if not source_path.exists() or not source_path.is_file():
+                raise ValueError(f"Import source file not found: {cleaned_name}")
+            validated.append((cleaned_name, source_path, matching_error))
+
+        cleared_at = datetime.now().isoformat()
+        cleared_names = {item[0] for item in validated}
+        for _, source_path, _ in validated:
+            source_path.unlink()
+
+        report["errors"] = [item for item in errors if item.get("file") not in cleared_names]
+        report["warnings"] = [item for item in (report.get("warnings") or []) if item.get("file") not in cleared_names]
+        cleared_count = len(validated)
+        report["failed"] = max(0, int(report.get("failed", 0) or 0) - cleared_count)
+        report["total_files"] = max(0, int(report.get("total_files", 0) or 0) - cleared_count)
+        report["yolo_txt"] = max(0, int(report.get("yolo_txt", 0) or 0) - cleared_count)
+        deleted_log = report.setdefault("deleted_source_files", [])
+        deleted_log.extend(
+            {
+                "file": cleaned_name,
+                "reason": matching_error.get("message", ""),
+                "deleted_at": cleared_at,
+            }
+            for cleaned_name, _, matching_error in validated
         )
-        if not matching_error:
-            raise ValueError(f"Failed TXT entry not found in import report: {cleaned_name}")
-
-        source_path = (source_dir / cleaned_name).resolve()
-        if source_path.parent != source_dir.resolve():
-            raise ValueError("Unsafe import source path.")
-        if not source_path.exists():
-            raise ValueError(f"Import source file not found: {cleaned_name}")
-
-        source_path.unlink()
-        report["errors"] = [item for item in errors if item.get("file") != cleaned_name]
-        report["failed"] = max(0, int(report.get("failed", 0) or 0) - 1)
-        report["total_files"] = max(0, int(report.get("total_files", 0) or 0) - 1)
-        report["yolo_txt"] = max(0, int(report.get("yolo_txt", 0) or 0) - 1)
-        report.setdefault("deleted_source_files", []).append({
-            "file": cleaned_name,
-            "reason": matching_error.get("message", ""),
-            "deleted_at": datetime.now().isoformat(),
-        })
         report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
 
         return {
-            "deleted": True,
+            "deleted": cleared_count > 0,
+            "deleted_count": cleared_count,
             "import_id": import_id,
-            "file": cleaned_name,
+            "files": [item[0] for item in validated],
             "report": report,
         }
 
