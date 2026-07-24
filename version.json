@@ -1,7 +1,11 @@
 {
   "product": "Vision Training Studio",
-  "version": "0.1.3",
+  "version": "0.1.4",
+  "app_version": "0.1.4",
+  "runtime_version": "r1",
+  "package_format_version": 1,
+  "update_channel": "stable",
   "edition": "Local",
-  "build": "2026.07.22",
+  "build": "2026.07.23",
   "channel": "commercial-mvp"
 }

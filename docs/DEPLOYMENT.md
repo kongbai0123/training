@@ -158,3 +158,22 @@ dist\VisionTrainingStudio\VisionTrainingStudio.exe
 ```
 
 對使用者交付時，可以再建立外層捷徑、installer shortcut 或 portable zip 根目錄 launcher。建議不要把 exe 直接搬離 onedir 目錄，除非同時調整 PyInstaller spec 與 runtime asset resolution，否則 `_internal`、`static`、依賴 DLL 與 resource path 可能失效。
+# Incremental update releases
+
+Use a temporary `release/vX.Y.Z` stabilization branch, merge the validated
+source to `main`, tag the exact release commit, and publish binary assets through
+a GitHub Release draft. Branches are not update download channels.
+
+Version 0.1.4 is the full-installer bootstrap for the updater. Compatible
+`runtime-r1` releases after that may ship the signed `.vtsupdate` asset without
+repacking the multi-gigabyte AI runtime. Runtime changes still require a full
+installer.
+
+The local release helper creates a draft only:
+
+```powershell
+scripts\publish_update_release.ps1 -Tag v0.1.5 -Assets <signed update>,<checksums>
+```
+
+Review every uploaded asset before publishing. Enable immutable releases in the
+GitHub repository when available.

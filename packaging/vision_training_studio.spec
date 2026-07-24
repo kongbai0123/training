@@ -13,6 +13,7 @@ datas = [
     (str(ROOT / "docs" / "UI_DESIGN_SYSTEM.md"), "docs"),
     (str(ROOT / "version.json"), "."),
     (str(ROOT / "requirements.txt"), "."),
+    (str(ROOT / "updates" / "keys"), "updates/keys"),
 ]
 
 EXCLUDED_MODULE_PREFIXES = (
@@ -144,6 +145,7 @@ for package_name in [
     "huggingface_hub",
     "safetensors",
     "timm",
+    "cryptography",
 ]:
     try:
         package_datas, package_binaries, package_hiddenimports = collect_all(

@@ -1,0 +1,46 @@
+.update-version-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.update-version-grid > div {
+  display: grid;
+  gap: 5px;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-panel-soft);
+}
+
+.update-version-grid span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.update-version-grid strong {
+  font-size: 18px;
+}
+
+.update-release-notes {
+  max-height: 132px;
+  padding: 12px;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-panel-soft);
+}
+
+.software-update-actions {
+  margin-top: 12px;
+}
+
+@media (max-width: 1100px) {
+  .update-version-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

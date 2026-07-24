@@ -27,7 +27,7 @@ def run_backend_child(host: str, port: int, env_mode: str) -> None:
     uvicorn.run(fastapi_app, host=host, port=port, log_level="info")
 
 
-def open_desktop_window(url: str, backend_process: subprocess.Popen) -> None:
+def open_desktop_window(url: str, backend_process: subprocess.Popen, splash=None) -> None:
     try:
         import webview
 
@@ -45,9 +45,13 @@ def open_desktop_window(url: str, backend_process: subprocess.Popen) -> None:
             confirm_close=True,
         )
         window.events.closed += on_closed
+        if splash:
+            splash.complete()
         webview.start(gui="edgechromium", debug=False)
     except Exception as exc:
         print(f"[launcher] Desktop shell failed, falling back to browser: {exc}")
+        if splash:
+            splash.complete()
         webbrowser.open(url)
         while True:
             if backend_process.poll() is not None:
@@ -72,10 +76,14 @@ def next_available_port(host: str, preferred: int, max_delta: int = 30) -> int:
     raise RuntimeError(f"No available ports in range {preferred}-{preferred + max_delta}")
 
 
-def wait_ready(url: str, timeout_sec: int = 20) -> bool:
+def wait_ready(url: str, timeout_sec: int = 20, on_wait=None) -> bool:
+    started_at = time.time()
     deadline = time.time() + timeout_sec
     last_error: Optional[str] = None
     while time.time() < deadline:
+        elapsed = max(0.0, time.time() - started_at)
+        if on_wait:
+            on_wait(elapsed, last_error)
         try:
             with urlopen(url, timeout=1) as rsp:
                 if 200 <= getattr(rsp, "status", 0) < 300:
@@ -148,36 +156,83 @@ def main():
         run_backend_child(args.host, args.port, args.env)
         return
 
+    from src.startup_splash import StartupSplash, should_show_startup_splash
+
     cwd = Path(__file__).resolve().parent
     shell = "browser" if args.open_browser else args.shell
     if args.no_open_browser:
         shell = "none"
-    port = next_available_port(args.host, args.port)
-    base_url = f"http://{args.host}:{port}"
-
-    log_dir = LOGS_DIR
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / "launcher.log"
-
-    print(f"[launcher] Starting Vision Training Studio at {base_url}")
-    print(f"[launcher] Logs: {log_path}")
-    print(f"[launcher] Working dir: {cwd}")
+    splash = StartupSplash(enabled=should_show_startup_splash(shell))
+    splash.update_status(
+        0,
+        "正在啟動 Vision Training Studio",
+        "正在建立安全的本機工作環境。",
+        0.08,
+    )
     proc = None
     backend_log = None
-    proc, backend_log = run_backend(args.host, port, args.env, cwd, log_path)
+    log_path = LOGS_DIR / "launcher.log"
     try:
-        if not wait_ready(f"{base_url}/api/health", timeout_sec=25):
+        port = next_available_port(args.host, args.port)
+        base_url = f"http://{args.host}:{port}"
+
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        print(f"[launcher] Starting Vision Training Studio at {base_url}")
+        print(f"[launcher] Logs: {log_path}")
+        print(f"[launcher] Working dir: {cwd}")
+        splash.update_status(
+            1,
+            "正在準備本機 AI 服務",
+            "載入訓練、模型與資料處理元件。",
+            0.28,
+        )
+        proc, backend_log = run_backend(args.host, port, args.env, cwd, log_path)
+
+        def report_backend_wait(elapsed: float, _last_error: Optional[str]) -> None:
+            detail = (
+                "正在啟動訓練與模型服務。"
+                if elapsed < 6
+                else "服務仍在正常準備中；首次載入 AI 元件可能需要較長時間。"
+            )
+            splash.update_status(
+                1,
+                "正在準備本機 AI 服務",
+                detail,
+                min(0.78, 0.34 + (elapsed / 25.0) * 0.44),
+                elapsed_seconds=elapsed,
+            )
+
+        if not wait_ready(f"{base_url}/api/health", timeout_sec=25, on_wait=report_backend_wait):
             raise RuntimeError("Backend did not become healthy in time.")
 
+        splash.update_status(
+            2,
+            "正在檢查硬體與專案資料",
+            "本機服務已連線，正在確認 GPU、記憶體與工作區狀態。",
+            0.86,
+        )
         if backend_log:
             backend_log.write(f"Backend started at {base_url}\\n")
             backend_log.flush()
 
         if shell == "webview":
-            open_desktop_window(base_url, proc)
+            splash.update_status(
+                3,
+                "正在開啟工作區",
+                "建立桌面視窗並載入操作介面。",
+                0.96,
+            )
+            open_desktop_window(base_url, proc, splash=splash)
             return_code = 0
             return
         elif shell == "browser":
+            splash.update_status(
+                3,
+                "正在開啟工作區",
+                "本機服務已就緒，正在開啟瀏覽器。",
+                0.96,
+            )
+            splash.complete()
             webbrowser.open(base_url)
             print(f"[launcher] Browser opened: {base_url}")
         else:
@@ -191,10 +246,20 @@ def main():
         print("[launcher] Keyboard interrupt, shutting down.")
     except Exception as exc:
         print(f"[launcher] {exc}")
-        with log_path.open("a", encoding="utf-8") as log_file:
-            log_file.write(f"[launcher] {exc}\\n")
+        try:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            with log_path.open("a", encoding="utf-8") as log_file:
+                log_file.write(f"[launcher] {exc}\\n")
+        except Exception:
+            pass
+        splash.show_error(
+            "本機服務未能在預期時間內完成準備。",
+            log_path=log_path,
+        )
+        splash.wait_for_dismiss(timeout_seconds=12)
         return_code = 1
     finally:
+        splash.close()
         if proc and proc.poll() is None:
             proc.terminate()
             try:

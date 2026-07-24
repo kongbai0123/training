@@ -38,6 +38,8 @@ runs/
 build/
 dist/
 installer/output/
+updates/private_keys/
+*.vtsupdate
 
 # skill
 AGENTS.md

@@ -154,3 +154,29 @@ model weights
 ## 11. 評估圖表找不到下載檔
 
 評估下載固定寫入 Windows 使用者的「下載」資料夾，而不是 AppData。下載成功通知會顯示完整路徑；同名檔案會另存為 `名稱 (1).svg`。若失敗，確認下載資料夾可建立與可寫入。
+# Software update problems
+
+## Update check cannot connect
+
+The application remains usable offline. Confirm network access to
+`api.github.com` and `github.com`, then use **Settings → Software Update → Check
+for updates** again. An offline `.vtsupdate` package can be imported instead.
+
+## Update package is rejected
+
+Do not bypass verification. Re-download the package from the matching GitHub
+Release. A modified signature, mismatched SHA-256, unsupported source version,
+different runtime version, or unsafe path causes a deliberate rejection.
+
+## Restart and update is unavailable
+
+Finish active training, model installation, data import, augmentation, inference,
+or export jobs. The update may be downloaded while work is running, but it is not
+applied until the work is complete.
+
+## Update fails after restart
+
+The updater records a transaction journal and restores the backed-up application
+files. User projects, models, datasets, settings, and run artifacts are outside
+the update boundary. Inspect the update journal and application logs under the
+per-user Vision Training Studio data directory.

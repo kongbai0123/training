@@ -33,6 +33,16 @@ class ScriptsContractTests(unittest.TestCase):
             with self.subTest(script=script):
                 self.assertTrue((ROOT / "scripts" / script).exists())
 
+    def test_packaging_includes_standalone_signed_updater(self):
+        package_script = (ROOT / "scripts" / "package.bat").read_text(encoding="utf-8")
+        app_spec = (ROOT / "packaging" / "vision_training_studio.spec").read_text(encoding="utf-8")
+        updater_spec = ROOT / "packaging" / "vision_training_studio_updater.spec"
+
+        self.assertTrue(updater_spec.is_file())
+        self.assertIn("VisionTrainingStudioUpdater.exe", package_script)
+        self.assertIn("vision_training_studio_updater.spec", package_script)
+        self.assertIn('"updates" / "keys"', app_spec)
+
     def test_test_dependencies_are_separate_from_runtime_requirements(self):
         runtime = (ROOT / "requirements.txt").read_text(encoding="utf-8")
         test = (ROOT / "requirements-test.txt").read_text(encoding="utf-8")
@@ -58,6 +68,25 @@ class ScriptsContractTests(unittest.TestCase):
             launcher.index("multiprocessing.freeze_support()"),
             launcher.index("    main()", launcher.index('if __name__ == "__main__":')),
         )
+
+    def test_desktop_launcher_shows_staged_startup_feedback(self):
+        launcher = (ROOT / "launcher.py").read_text(encoding="utf-8")
+        splash = (ROOT / "src" / "startup_splash.py").read_text(encoding="utf-8")
+
+        self.assertIn("StartupSplash(enabled=should_show_startup_splash(shell))", launcher)
+        self.assertIn("on_wait=report_backend_wait", launcher)
+        self.assertIn("splash.show_error(", launcher)
+        self.assertIn("multiprocessing.freeze_support()", launcher)
+        for phase in (
+            "啟動應用程式",
+            "準備本機 AI 服務",
+            "檢查硬體與專案資料",
+            "開啟工作區",
+        ):
+            self.assertIn(phase, splash)
+        self.assertIn('shell or "").strip().lower() == "none"', splash)
+        self.assertIn("VTS_DISABLE_SPLASH", splash)
+        self.assertIn("已等待 {seconds} 秒", splash)
 
     def test_pyinstaller_spec_filters_optional_warning_noise_during_collection(self):
         spec = (ROOT / "packaging" / "vision_training_studio.spec").read_text(encoding="utf-8")
