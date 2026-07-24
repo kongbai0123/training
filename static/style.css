@@ -10,8 +10,8 @@
 @import "./styles/components/model_selection_center.css";
 @import "./styles/pages/dashboard.css";
 @import "./styles/pages/history.css";
-@import "./styles/pages/dataset.css";
-@import "./styles/pages/labelme.css?v=20260711-layout-export-precision";
+@import "./styles/pages/dataset.css?v=20260724-integrated-side-rail";
+@import "./styles/pages/labelme.css?v=20260724-side-rail";
 @import "./styles/pages/split.css?v=20260711-layout-export-precision";
 @import "./styles/pages/training.css?v=20260722-cnn-epoch-monitor";
 @import "./styles/pages/rnn_training.css";

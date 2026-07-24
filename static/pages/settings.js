@@ -27,10 +27,13 @@ export function initSettings() {
   qs("#btn-scan-data-migration")?.addEventListener("click", scanProjectDataMigration);
   qs("#btn-apply-data-migration")?.addEventListener("click", applyProjectDataMigration);
   qs("#btn-check-updates")?.addEventListener("click", checkSoftwareUpdates);
+  qs("#btn-download-latest-update")?.addEventListener("click", downloadLatestSoftwareUpdate);
   qs("#btn-download-update")?.addEventListener("click", downloadSoftwareUpdate);
   qs("#btn-import-update")?.addEventListener("click", () => qs("#input-update-package")?.click());
   qs("#input-update-package")?.addEventListener("change", importSoftwareUpdate);
   qs("#btn-apply-update")?.addEventListener("click", applySoftwareUpdate);
+  qs("#btn-clean-update-cache")?.addEventListener("click", cleanUpdateCache);
+  qs("#btn-delete-update-backup")?.addEventListener("click", deleteUpdateBackup);
 }
 
 export function renderSettingsPage() {
@@ -86,6 +89,20 @@ async function downloadSoftwareUpdate() {
   }
 }
 
+async function downloadLatestSoftwareUpdate() {
+  const task = await apiFetch("/api/updates/download-latest", { method: "POST" });
+  try {
+    await followServerTask(task.job_id, {
+      kind: "software-update",
+      title: t("updates.checkDownload"),
+      button: qs("#btn-download-latest-update"),
+      inlineHost: qs(".software-update-settings"),
+    });
+  } finally {
+    await loadSoftwareUpdateStatus();
+  }
+}
+
 async function importSoftwareUpdate(event) {
   const file = event.target.files?.[0];
   event.target.value = "";
@@ -121,11 +138,35 @@ async function applySoftwareUpdate() {
   eventBus.emit("toast", t("updates.restarting"));
 }
 
+async function cleanUpdateCache() {
+  const discardReady = Boolean(softwareUpdateState?.ready_package);
+  if (discardReady && !window.confirm(t("updates.cleanReadyConfirm"))) return;
+  await apiFetch("/api/updates/cleanup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ discard_ready: discardReady, remove_backup: false }),
+  });
+  eventBus.emit("toast", t("updates.cleaned"));
+  await loadSoftwareUpdateStatus();
+}
+
+async function deleteUpdateBackup() {
+  if (!window.confirm(t("updates.deleteBackupConfirm"))) return;
+  await apiFetch("/api/updates/cleanup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ discard_ready: false, remove_backup: true }),
+  });
+  eventBus.emit("toast", t("updates.backupDeleted"));
+  await loadSoftwareUpdateStatus();
+}
+
 function renderSoftwareUpdate() {
   const state = softwareUpdateState || {};
   const candidate = state.candidate;
   const ready = state.ready_package;
   const blockers = state.blockers || [];
+  const storage = state.storage || {};
   const currentVersion = qs("#update-current-version");
   const runtimeVersion = qs("#update-runtime-version");
   const latestVersion = qs("#update-latest-version");
@@ -153,6 +194,12 @@ function renderSoftwareUpdate() {
         ? t("updates.lastChecked", { time: state.last_checked_at })
         : "";
   }
+  const releaseLink = qs("#update-release-link");
+  if (releaseLink) {
+    const releaseUrl = candidate?.release_url || "";
+    releaseLink.classList.toggle("hidden", !releaseUrl);
+    releaseLink.href = releaseUrl || "#";
+  }
   const blockerBox = qs("#update-blockers");
   if (blockerBox) {
     blockerBox.classList.toggle("hidden", blockers.length === 0);
@@ -161,9 +208,35 @@ function renderSoftwareUpdate() {
       : "";
   }
   qs("#btn-download-update")?.classList.toggle("hidden", !candidate || Boolean(ready));
+  const latestDownload = qs("#btn-download-latest-update");
+  if (latestDownload) {
+    latestDownload.classList.toggle("hidden", Boolean(ready));
+    latestDownload.disabled = Boolean(ready);
+  }
   const apply = qs("#btn-apply-update");
   apply?.classList.toggle("hidden", !ready);
   if (apply) apply.disabled = !state.can_apply;
+
+  const cacheUsage = qs("#update-cache-usage");
+  const backupUsage = qs("#update-backup-usage");
+  const cacheLimit = qs("#update-cache-limit");
+  if (cacheUsage) cacheUsage.textContent = formatBytes(storage.cache_bytes || 0);
+  if (backupUsage) {
+    backupUsage.textContent = `${formatBytes(storage.backups_bytes || 0)} · ${Number(storage.backup_count || 0)}`;
+  }
+  if (cacheLimit) cacheLimit.textContent = formatBytes(storage.cache_limit_bytes || 0);
+  const meter = qs("#update-storage-meter-fill");
+  if (meter) meter.style.width = `${Math.min(100, Math.max(0, Number(storage.cache_percent || 0)))}%`;
+  const cleanCache = qs("#btn-clean-update-cache");
+  if (cleanCache) cleanCache.disabled = !ready && Number(storage.cache_bytes || 0) === 0;
+  const deleteBackup = qs("#btn-delete-update-backup");
+  if (deleteBackup) deleteBackup.disabled = Number(storage.backup_count || 0) === 0;
+  const cleaned = qs("#update-storage-cleaned");
+  if (cleaned) {
+    cleaned.textContent = state.last_cleanup_at
+      ? t("updates.lastCleaned", { time: state.last_cleanup_at })
+      : "";
+  }
 }
 
 async function scanProjectDataMigration() {

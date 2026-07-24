@@ -19,8 +19,10 @@ class UpdateReleaseContractTests(unittest.TestCase):
             '"/api/updates/status"',
             '"/api/updates/check"',
             '"/api/updates/download"',
+            '"/api/updates/download-latest"',
             '"/api/updates/import"',
             '"/api/updates/apply"',
+            '"/api/updates/cleanup"',
         ):
             self.assertIn(route, route_source)
         self.assertIn('endswith(".vtsupdate")', route_source)
@@ -38,10 +40,13 @@ class UpdateReleaseContractTests(unittest.TestCase):
         )
 
         for element_id in (
-            "btn-check-updates",
             "btn-download-update",
+            "btn-download-latest-update",
             "btn-import-update",
             "btn-apply-update",
+            "btn-clean-update-cache",
+            "btn-delete-update-backup",
+            "update-release-link",
             "input-update-package",
             "update-blockers",
         ):
@@ -49,7 +54,16 @@ class UpdateReleaseContractTests(unittest.TestCase):
         self.assertIn("followServerTask(task.job_id", script)
         self.assertIn('"/api/updates/import"', script)
         self.assertIn('"/api/updates/apply"', script)
-        for key in ("updates.title", "updates.check", "updates.restartApply"):
+        self.assertIn('"/api/updates/download-latest"', script)
+        self.assertIn('"/api/updates/cleanup"', script)
+        self.assertIn("settings-center-grid", html)
+        for key in (
+            "updates.title",
+            "updates.check",
+            "updates.restartApply",
+            "updates.downloadLatest",
+            "updates.storageTitle",
+        ):
             self.assertIn(f'"{key}"', english)
             self.assertIn(f'"{key}"', chinese)
 
@@ -74,6 +88,15 @@ class UpdateReleaseContractTests(unittest.TestCase):
         self.assertIn("updater bootstrap releases must include the full installer".lower(), release_script.lower())
         self.assertIn("SHA256SUMS", release_script)
         self.assertIn("--draft", release_script)
+
+    def test_completed_updater_cleans_downloads_and_keeps_rollback_policy(self):
+        updater_source = (ROOT / "updater" / "updater.py").read_text(encoding="utf-8")
+        storage_source = (
+            ROOT / "src" / "update" / "storage.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("cleanup_update_storage(args.update_root)", updater_source)
+        self.assertIn("ROLLBACK_BACKUP_KEEP_COUNT = 1", storage_source)
+        self.assertIn("UPDATE_CACHE_LIMIT_BYTES = 2 * 1024 * 1024 * 1024", storage_source)
 
 
 if __name__ == "__main__":

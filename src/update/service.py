@@ -19,7 +19,14 @@ from src.update.blockers import active_update_blockers
 from src.update.downloader import download_release_asset
 from src.update.github_client import GitHubReleaseClient, ReleaseAsset, UpdateCandidate
 from src.update.manifest import verify_update_archive
-from src.update.versioning import VersionInfo, ensure_update_compatible
+from src.update.storage import (
+    UPDATE_CACHE_LIMIT_BYTES,
+    cleanup_expired_parts,
+    cleanup_update_storage,
+    projected_cache_bytes,
+    update_storage_report,
+)
+from src.update.versioning import ProductVersion, VersionInfo, ensure_update_compatible
 
 
 def _utc_now() -> str:
@@ -35,9 +42,12 @@ class UpdateService:
         public_key_path: Path | None = None,
         release_client: GitHubReleaseClient | None = None,
         current_version: VersionInfo | None = None,
+        update_root: Path | None = None,
     ):
         self.downloads_dir = downloads_dir.resolve()
         self.downloads_dir.mkdir(parents=True, exist_ok=True)
+        self.update_root = (update_root or self.downloads_dir.parent).resolve()
+        self.update_root.mkdir(parents=True, exist_ok=True)
         self.state_file = (state_file or CONFIG_DIR / "software_update_state.json").resolve()
         self.public_key_path = (
             public_key_path or BASE_DIR / "updates" / "keys" / "update_public_key.pem"
@@ -46,6 +56,7 @@ class UpdateService:
         self.current_version = current_version or VersionInfo.from_mapping(VERSION_INFO)
         self._lock = threading.RLock()
         self._state = self._load_state()
+        cleanup_expired_parts(self.update_root)
 
     def _load_state(self) -> dict[str, Any]:
         try:
@@ -79,6 +90,40 @@ class UpdateService:
                 ready = None
                 self._state["ready_package"] = None
                 self._save_state()
+            changed = False
+            if ready:
+                try:
+                    if VersionInfo.from_mapping(
+                        {
+                            "product": self.current_version.product,
+                            "app_version": str(ready.get("app_version") or ""),
+                            "runtime_version": str(ready.get("runtime_version") or ""),
+                            "package_format_version": self.current_version.package_format_version,
+                            "update_channel": self.current_version.update_channel,
+                        }
+                    ).app_version <= self.current_version.app_version:
+                        ready = None
+                        self._state["ready_package"] = None
+                        changed = True
+                except ValueError:
+                    ready = None
+                    self._state["ready_package"] = None
+                    changed = True
+            candidate = deepcopy(self._state.get("candidate"))
+            if candidate:
+                try:
+                    if ProductVersion.parse(str(candidate.get("version") or "")) <= self.current_version.app_version:
+                        candidate = None
+                        self._state["candidate"] = None
+                        changed = True
+                except ValueError:
+                    candidate = None
+                    self._state["candidate"] = None
+                    changed = True
+            if changed:
+                cleanup_update_storage(self.update_root)
+                self._state["last_cleanup_at"] = _utc_now()
+                self._save_state()
             blockers = active_update_blockers()
             return {
                 "current": {
@@ -88,9 +133,11 @@ class UpdateService:
                     "channel": self.current_version.update_channel,
                 },
                 "last_checked_at": self._state.get("last_checked_at") or "",
-                "candidate": deepcopy(self._state.get("candidate")),
+                "candidate": candidate,
                 "ready_package": ready,
                 "last_error": self._state.get("last_error") or "",
+                "last_cleanup_at": self._state.get("last_cleanup_at") or "",
+                "storage": update_storage_report(self.update_root),
                 "blockers": blockers,
                 "can_apply": bool(ready and not blockers),
             }
@@ -151,7 +198,14 @@ class UpdateService:
     def start_download(self) -> dict[str, Any]:
         with self._lock:
             asset = self._candidate_asset()
+            candidate = deepcopy(self._state.get("candidate"))
+            ready = deepcopy(self._state.get("ready_package"))
+        if ready and ready.get("app_version") == (candidate or {}).get("version"):
+            raise ValueError("This update package is already downloaded and verified.")
         destination = self.downloads_dir / Path(asset.name).name
+        projected = projected_cache_bytes(self.update_root, destination, asset.size)
+        if projected > UPDATE_CACHE_LIMIT_BYTES:
+            raise ValueError("The 2 GiB update cache limit would be exceeded; clean update storage first.")
 
         def handler(reporter: TaskReporter):
             def progress(values: dict[str, Any]) -> None:
@@ -209,7 +263,98 @@ class UpdateService:
             message="Update download queued",
         )
 
-    def register_imported_package(self, archive: Path) -> dict[str, Any]:
+    def start_latest_download(self) -> dict[str, Any]:
+        def handler(reporter: TaskReporter):
+            reporter.update(
+                phase="checking",
+                message="Checking the latest signed GitHub release",
+                progress=5,
+                indeterminate=False,
+            )
+            try:
+                candidate = self.release_client.latest_stable(self.current_version)
+            except Exception as exc:
+                with self._lock:
+                    self._state["last_checked_at"] = _utc_now()
+                    self._state["last_error"] = str(exc)
+                    self._save_state()
+                raise
+            with self._lock:
+                self._state["last_checked_at"] = _utc_now()
+                self._state["candidate"] = candidate.as_dict() if candidate else None
+                self._state["last_error"] = ""
+                self._save_state()
+            if not candidate:
+                reporter.update(
+                    phase="checked",
+                    message="The installed version is up to date",
+                    progress=100,
+                    indeterminate=False,
+                )
+                return self.status()
+            with self._lock:
+                existing_ready = deepcopy(self._state.get("ready_package"))
+            if (
+                existing_ready
+                and existing_ready.get("app_version") == str(candidate.version)
+                and Path(str(existing_ready.get("path") or "")).is_file()
+            ):
+                raise ValueError("This update package is already downloaded and verified.")
+
+            destination = self.downloads_dir / Path(candidate.asset.name).name
+            projected = projected_cache_bytes(self.update_root, destination, candidate.asset.size)
+            if projected > UPDATE_CACHE_LIMIT_BYTES:
+                raise ValueError(
+                    "The 2 GiB update cache limit would be exceeded; clean update storage first."
+                )
+
+            def progress(values: dict[str, Any]) -> None:
+                reporter.update(
+                    phase="downloading",
+                    message="Downloading signed application update",
+                    progress=5 + float(values["progress"]) * 0.9,
+                    indeterminate=False,
+                    current=int(values["downloaded_bytes"]),
+                    total=int(values["total_bytes"]),
+                )
+                if reporter.is_cancelled():
+                    raise InterruptedError("Update download was cancelled.")
+
+            try:
+                path = download_release_asset(candidate.asset, destination, progress=progress)
+                reporter.update(
+                    phase="verifying",
+                    message="Verifying signature and package contents",
+                    progress=97,
+                    indeterminate=False,
+                )
+                ready = self.register_imported_package(path, source="github_release")
+            except Exception as exc:
+                with self._lock:
+                    self._state["last_error"] = str(exc)
+                    self._save_state()
+                raise
+            reporter.update(
+                phase="verified",
+                message="Update verified and ready to install",
+                progress=100,
+                indeterminate=False,
+            )
+            return ready
+
+        return task_job_manager.submit(
+            kind="software_update_download",
+            title="Check and download the latest software update",
+            handler=handler,
+            message="Waiting to check GitHub Releases",
+        )
+
+    def register_imported_package(
+        self,
+        archive: Path,
+        *,
+        source: str = "offline_import",
+    ) -> dict[str, Any]:
         verified = verify_update_archive(archive, self.public_key_path)
         target = VersionInfo.from_mapping(
             {
@@ -228,13 +373,43 @@ class UpdateService:
             "archive_sha256": verified.archive_sha256,
             "archive_bytes": verified.archive_bytes,
             "verified_at": _utc_now(),
-            "source": "offline_import",
+            "source": source,
         }
         with self._lock:
             self._state["ready_package"] = ready
             self._state["last_error"] = ""
             self._save_state()
         return ready
+
+    def import_budget(self, filename: str) -> int:
+        current = int(update_storage_report(self.update_root)["cache_bytes"])
+        return max(0, UPDATE_CACHE_LIMIT_BYTES - current)
+
+    def cleanup_storage(
+        self,
+        *,
+        discard_ready: bool = False,
+        remove_backup: bool = False,
+    ) -> dict[str, Any]:
+        with self._lock:
+            ready = deepcopy(self._state.get("ready_package"))
+            preserved: list[Path] = []
+            if ready and not discard_ready:
+                ready_path = Path(str(ready.get("path") or ""))
+                if ready_path.is_file():
+                    preserved.append(ready_path)
+            report = cleanup_update_storage(
+                self.update_root,
+                preserve_downloads=preserved,
+                remove_all_backups=remove_backup,
+            )
+            if discard_ready:
+                self._state["ready_package"] = None
+            self._state["last_cleanup_at"] = _utc_now()
+            self._save_state()
+        result = self.status()
+        result["cleanup"] = report
+        return result
 
     def launch_ready_update(self) -> dict[str, Any]:
         blockers = active_update_blockers()

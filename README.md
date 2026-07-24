@@ -7,7 +7,7 @@
 整合 CNN 影像任務、RNN 序列任務、資料標註、資料增強、模型訓練、評估、比較與匯出。
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](docs/INSTALL.md)
-[![Version](https://img.shields.io/badge/version-0.1.4-2563EB)](VERSION)
+[![Version](https://img.shields.io/badge/version-0.1.6-2563EB)](VERSION)
 [![Release](https://img.shields.io/badge/release-Installer%20EXE-16A34A)](https://github.com/kongbai0123/training/releases/latest)
 [![Runtime](https://img.shields.io/badge/end--user%20runtime-No%20Python%20required-0F766E)](docs/INSTALL.md)
 
