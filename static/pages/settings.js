@@ -170,11 +170,37 @@ function renderSoftwareUpdate() {
   const currentVersion = qs("#update-current-version");
   const runtimeVersion = qs("#update-runtime-version");
   const latestVersion = qs("#update-latest-version");
+  const deliveryType = qs("#update-delivery-type");
   const packageSize = qs("#update-package-size");
+  const incrementalAsset = candidate?.asset;
+  const installerAsset = candidate?.full_installer;
+  const requiresInstaller = Boolean(candidate && !incrementalAsset && installerAsset);
   if (currentVersion) currentVersion.textContent = state.current?.app_version || "--";
   if (runtimeVersion) runtimeVersion.textContent = state.current?.runtime_version || "--";
   if (latestVersion) latestVersion.textContent = candidate?.version || ready?.app_version || "--";
-  if (packageSize) packageSize.textContent = formatBytes(candidate?.asset?.size || ready?.archive_bytes || 0);
+  if (deliveryType) {
+    deliveryType.textContent = ready
+      ? t("updates.delivery.incremental")
+      : requiresInstaller
+        ? t("updates.delivery.fullInstaller")
+        : candidate
+          ? t("updates.delivery.incremental")
+          : "--";
+  }
+  if (packageSize) {
+    packageSize.textContent = formatBytes(
+      incrementalAsset?.size || installerAsset?.size || ready?.archive_bytes || 0,
+    );
+  }
+
+  const deliveryGuidance = qs("#update-delivery-guidance");
+  if (deliveryGuidance) {
+    deliveryGuidance.classList.toggle("hidden", !candidate);
+    deliveryGuidance.className = `status-guard ${requiresInstaller ? "warning" : "info"}${candidate ? "" : " hidden"}`;
+    deliveryGuidance.textContent = candidate
+      ? t(requiresInstaller ? "updates.fullInstallerRequired" : "updates.incrementalAvailable")
+      : "";
+  }
 
   const notes = qs("#update-release-notes");
   if (notes) {
@@ -200,6 +226,12 @@ function renderSoftwareUpdate() {
     releaseLink.classList.toggle("hidden", !releaseUrl);
     releaseLink.href = releaseUrl || "#";
   }
+  const installerLink = qs("#update-installer-link");
+  if (installerLink) {
+    const installerUrl = requiresInstaller ? installerAsset?.url || "" : "";
+    installerLink.classList.toggle("hidden", !installerUrl);
+    installerLink.href = installerUrl || "#";
+  }
   const blockerBox = qs("#update-blockers");
   if (blockerBox) {
     blockerBox.classList.toggle("hidden", blockers.length === 0);
@@ -207,11 +239,14 @@ function renderSoftwareUpdate() {
       ? `<div class="guard-title">${escapeHtml(t("updates.blockedTitle"))}</div><ul>${blockers.map((item) => `<li>${escapeHtml(item.title)}</li>`).join("")}</ul>`
       : "";
   }
-  qs("#btn-download-update")?.classList.toggle("hidden", !candidate || Boolean(ready));
+  qs("#btn-download-update")?.classList.toggle(
+    "hidden",
+    !candidate || !incrementalAsset || Boolean(ready),
+  );
   const latestDownload = qs("#btn-download-latest-update");
   if (latestDownload) {
-    latestDownload.classList.toggle("hidden", Boolean(ready));
-    latestDownload.disabled = Boolean(ready);
+    latestDownload.classList.toggle("hidden", Boolean(ready) || requiresInstaller);
+    latestDownload.disabled = Boolean(ready) || requiresInstaller;
   }
   const apply = qs("#btn-apply-update");
   apply?.classList.toggle("hidden", !ready);

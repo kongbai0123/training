@@ -56,6 +56,27 @@ class FakeReleaseClient:
         )
 
 
+class FullInstallerReleaseClient:
+    def latest_stable(self, _current):
+        return UpdateCandidate(
+            version=ProductVersion.parse("0.1.4"),
+            runtime_version="r1",
+            tag="v0.1.4",
+            release_url="https://github.com/kongbai0123/training/releases/tag/v0.1.4",
+            published_at="2026-07-23T00:00:00Z",
+            notes="Full installer required",
+            immutable=True,
+            asset=None,
+            full_installer=ReleaseAsset(
+                2,
+                "VisionTrainingStudio_Setup_0.1.4.exe",
+                "https://github.com/kongbai0123/training/releases/download/v0.1.4/setup.exe",
+                1024,
+                "",
+            ),
+        )
+
+
 class UpdateServiceTests(unittest.TestCase):
     def setUp(self):
         self.current = VersionInfo.from_mapping(
@@ -274,3 +295,34 @@ class UpdateServiceTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "already downloaded"):
                     service.start_latest_download()
                 self.assertEqual(download.call_count, 1)
+
+    def test_one_click_check_returns_full_installer_guidance_without_downloading(self):
+        class Reporter:
+            def update(self, **_values):
+                return None
+
+        def submit_now(*, handler, **_values):
+            return handler(Reporter())
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            service = UpdateService(
+                downloads_dir=root / "updates" / "downloads",
+                state_file=root / "state.json",
+                public_key_path=root / "public.pem",
+                release_client=FullInstallerReleaseClient(),
+                current_version=self.current,
+            )
+            with (
+                patch("src.update.service.task_job_manager.submit", side_effect=submit_now),
+                patch("src.update.service.download_release_asset") as download,
+            ):
+                result = service.start_latest_download()
+                self.assertEqual(result["candidate"]["delivery"], "full_installer")
+                self.assertFalse(result["candidate"]["can_incremental_update"])
+                self.assertIsNone(result["candidate"]["asset"])
+                self.assertEqual(
+                    result["candidate"]["full_installer"]["name"],
+                    "VisionTrainingStudio_Setup_0.1.4.exe",
+                )
+                download.assert_not_called()

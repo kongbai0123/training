@@ -47,6 +47,9 @@ class UpdateReleaseContractTests(unittest.TestCase):
             "btn-clean-update-cache",
             "btn-delete-update-backup",
             "update-release-link",
+            "update-installer-link",
+            "update-delivery-type",
+            "update-delivery-guidance",
             "input-update-package",
             "update-blockers",
         ):
@@ -63,6 +66,9 @@ class UpdateReleaseContractTests(unittest.TestCase):
             "updates.restartApply",
             "updates.downloadLatest",
             "updates.storageTitle",
+            "updates.deliveryType",
+            "updates.downloadInstaller",
+            "updates.fullInstallerRequired",
         ):
             self.assertIn(f'"{key}"', english)
             self.assertIn(f'"{key}"', chinese)

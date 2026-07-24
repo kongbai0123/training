@@ -35,10 +35,11 @@ class UpdateCandidate:
     published_at: str
     notes: str
     immutable: bool
-    asset: ReleaseAsset
+    asset: ReleaseAsset | None
     full_installer: ReleaseAsset | None
 
     def as_dict(self) -> dict[str, Any]:
+        delivery = "incremental" if self.asset else "full_installer"
         return {
             "version": str(self.version),
             "runtime_version": self.runtime_version,
@@ -47,7 +48,9 @@ class UpdateCandidate:
             "published_at": self.published_at,
             "notes": self.notes,
             "immutable": self.immutable,
-            "asset": self.asset.__dict__,
+            "delivery": delivery,
+            "can_incremental_update": bool(self.asset),
+            "asset": self.asset.__dict__ if self.asset else None,
             "full_installer": self.full_installer.__dict__ if self.full_installer else None,
         }
 
@@ -102,7 +105,7 @@ class GitHubReleaseClient:
                     update_asset = asset
             elif asset.name == f"VisionTrainingStudio_Setup_{tag_version}.exe":
                 installer = asset
-        if not update_asset:
+        if not update_asset and not installer:
             return None
         return UpdateCandidate(
             version=tag_version,
