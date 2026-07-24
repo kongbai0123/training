@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "product": "Vision Training Studio",
-  "app_version": "0.1.7",
+  "app_version": "0.1.8",
   "runtime_version": "r1",
   "package_format_version": 1,
-  "created_at": "2026-07-24T04:07:46.616646+00:00",
+  "created_at": "2026-07-24T06:48:06.189355+00:00",
   "file_count": 11494,
   "runtime_file_count": 11374,
   "app_file_count": 120,
@@ -29055,8 +29055,8 @@
       "category": "app"
     },
     "_internal/static/index.html": {
-      "size": 248091,
-      "sha256": "c119027549fe2598857a67a1038ce83aa5418e385932de85922965a6f6e772c3",
+      "size": 248280,
+      "sha256": "ed3e65b0ff0e8854c691c840e1ae007f55c18b224b002b36945f27f30bece647",
       "category": "app"
     },
     "_internal/static/pages/augmentation.js": {
@@ -29200,8 +29200,8 @@
       "category": "app"
     },
     "_internal/static/pages/settings.js": {
-      "size": 16791,
-      "sha256": "699637006bc482fc4d8a59ec526e9aa2a9101b2b183f0e3557f2ab7174d2aec4",
+      "size": 17021,
+      "sha256": "358afaa538a17ac2056959faf8e5130b0cb22ccfc58bd439844b89ea3dabc04a",
       "category": "app"
     },
     "_internal/static/pages/split.js": {
@@ -29225,13 +29225,13 @@
       "category": "app"
     },
     "_internal/static/state/i18n/en.js": {
-      "size": 191649,
-      "sha256": "840ae916855177e7c006378c8f254d2dbb9972fa04e98eaeb4edc9e46fc1cac7",
+      "size": 191897,
+      "sha256": "f8b08d165071cb1743054cf2738163bd0f0344d2b37a5bae26804cb3a090a729",
       "category": "app"
     },
     "_internal/static/state/i18n/zh-TW.js": {
-      "size": 168730,
-      "sha256": "6f6b57ac77c7e258887bb2f0e580cbd0167137334463fd5ffd0538df8ade12bf",
+      "size": 168947,
+      "sha256": "14817d74067ae0bfd725c5725deff952a90d4ecabd6af2387c712b2b8107f1eb",
       "category": "app"
     },
     "_internal/static/state/i18n.js": {
@@ -29360,8 +29360,8 @@
       "category": "app"
     },
     "_internal/static/styles/pages/settings.css": {
-      "size": 3022,
-      "sha256": "f62e5536cf2125206332f75d1a60814526c7a3a321db27d5946f10f782f832ba",
+      "size": 3790,
+      "sha256": "0e42c3ea61d5c156d0c321cb296f5ebcb7f89079933a18887a4cda1613f9823a",
       "category": "app"
     },
     "_internal/static/styles/pages/split.css": {
@@ -56716,7 +56716,7 @@
     },
     "_internal/version.json": {
       "size": 265,
-      "sha256": "3a3fc1f4ea93ce73fc45b8fc25f647fdab6378e4cda167188a6bf29b120c8113",
+      "sha256": "99e51402df7f97acc23fd389368cf78735ca15d8d733da39390dd30db875a47e",
       "category": "app"
     },
     "_internal/wcwidth/py.typed": {
@@ -57470,8 +57470,8 @@
       "category": "runtime"
     },
     "VisionTrainingStudio.exe": {
-      "size": 88588309,
-      "sha256": "d52f5c7679485d2bd390a86dc669e127d55f4c2096d78ec6ee53a54fc3b3b196",
+      "size": 88588574,
+      "sha256": "2f78a040ab5cd4abf14fa42d955bfbb693906e185109c71177147e6c3a41715c",
       "category": "app"
     },
     "VisionTrainingStudioUpdater.exe": {

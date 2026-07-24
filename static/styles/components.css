@@ -632,7 +632,7 @@ body[data-theme="light"] .progress-track {
 
 .progress-ring__caption {
   color: var(--text-muted);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
   line-height: 1.1;
   max-width: 86px;
@@ -648,7 +648,7 @@ body[data-theme="light"] .progress-track {
 }
 
 .circular-progress.compact .progress-ring__caption {
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   max-width: 64px;
 }
 
@@ -725,7 +725,7 @@ body[data-theme="light"] .global-progress-hud {
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   color: var(--info);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
 }
 
 .global-progress-message {
@@ -825,7 +825,7 @@ body[data-theme="light"] .global-progress-bar-bg {
 
 .task-progress-inline__message {
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
 }
 
 .task-progress-inline__track {

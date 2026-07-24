@@ -222,7 +222,7 @@ body[data-theme="light"] .labelme-step-card {
 .annotation-import-metric span {
   display: block;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
@@ -330,7 +330,7 @@ body[data-theme="light"] .labelme-step-card {
 
 .annotation-import-meta.compact {
   gap: 8px;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
 }
 
 .annotation-import-status-line {

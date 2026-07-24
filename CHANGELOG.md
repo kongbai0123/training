@@ -4,6 +4,19 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-07-24
+
+### Changed
+- Rebuilt Model Guide as a six-cell workspace with a full-width hardware and project context row.
+- Separated search and filters, model results, and selected-model details into independently scrollable columns.
+- Weighted the Model Guide columns for faster scanning and reordered model details from recommendation and compatibility through evidence and secondary report content.
+- Raised first-party interface and chart text to a minimum of 12 px.
+
+### Fixed
+- Increased radar-chart grid and label contrast for both light and dark themes.
+- Re-rendered Model Guide charts immediately after a theme change so chart colors never retain the previous theme.
+- Kept Model Guide controls aligned and actions compact across Full HD and narrower desktop layouts.
+
 ## [0.1.8] - 2026-07-24
 
 ### Changed

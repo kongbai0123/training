@@ -320,7 +320,7 @@
   text-overflow: ellipsis;
 }
 .training-overview-grid .metric-card small {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--text-soft);
   white-space: nowrap;
   overflow: hidden;
@@ -545,7 +545,7 @@
 .training-auto-custom-field small,
 .training-early-stop-control small {
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   line-height: 1.45;
 }
 
@@ -575,7 +575,7 @@
   gap: 6px;
   flex: 0 0 auto;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 
 .training-inline-toggle input {
@@ -1084,7 +1084,7 @@
 }
 .artifact-row .art-info small {
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 .training-scroll-table {
   max-height: 300px;

@@ -115,7 +115,7 @@
   border-radius: 999px;
   background: rgba(59, 130, 246, 0.16);
   color: var(--primary);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 800;
 }
 
@@ -136,7 +136,7 @@
 
 .auto-label-page-guide-step small {
   color: var(--text-muted);
-  font-size: 0.69rem;
+  font-size: 0.75rem;
   line-height: 1.3;
 }
 
@@ -144,7 +144,7 @@
   align-self: center;
   justify-self: center;
   color: var(--text-muted);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
 }
 
 .auto-label-workbench {
@@ -356,7 +356,7 @@
 
 .auto-class-filter-help {
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   line-height: 1.35;
 }
 

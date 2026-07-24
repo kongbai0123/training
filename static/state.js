@@ -255,6 +255,7 @@ export function applyTheme(theme) {
     icon.className = nextTheme === "dark" ? "fa-solid fa-sun" : "fa-solid fa-moon";
   }
   applyLanguage(appState.settings.language);
+  eventBus.emit("theme-changed", nextTheme);
 }
 
 export function applyLanguage(language, options = {}) {

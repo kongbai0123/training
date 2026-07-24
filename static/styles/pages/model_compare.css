@@ -433,7 +433,7 @@
 .compare-output-stats span {
   display: block;
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
 }
 
 .compare-output-stats strong {

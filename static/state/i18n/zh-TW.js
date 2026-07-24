@@ -1931,6 +1931,7 @@ export const zhTWOverrides = {
   "modelGuide.title": "模型指南與決策報告",
   "modelGuide.subtitle": "比較模型特性、硬體需求與實際訓練結果，建立可追溯的選型報告。",
   "modelGuide.filtersAria": "模型指南篩選條件",
+  "modelGuide.filters": "搜尋與篩選",
   "modelGuide.architecture": "架構",
   "modelGuide.task": "任務類型",
   "modelGuide.family": "模型家族",

@@ -2496,6 +2496,7 @@
     "modelGuide.title": "Model Guide and Decision Report",
     "modelGuide.subtitle": "Compare model characteristics, hardware requirements, and local training results to create a traceable selection report.",
     "modelGuide.filtersAria": "Model guide filters",
+    "modelGuide.filters": "Search and filters",
     "modelGuide.architecture": "Architecture",
     "modelGuide.task": "Task type",
     "modelGuide.family": "Model family",

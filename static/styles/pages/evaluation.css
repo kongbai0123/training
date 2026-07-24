@@ -131,7 +131,7 @@
 }
 
 .evaluation-metric-grid .metric-card span {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
 }
 
 .evaluation-metric-grid .metric-card strong {
@@ -180,7 +180,7 @@
 
 .evaluation-plot-download span {
   margin-left: 5px;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 

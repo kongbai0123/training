@@ -35,7 +35,7 @@
   border-radius: 6px;
   background: rgba(245, 158, 11, 0.14);
   color: var(--warning);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-style: normal;
   font-weight: 700;
   padding: 3px 7px;
@@ -151,7 +151,7 @@
   border: 1px solid var(--border);
   padding: 4px 8px;
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 .rnn-schema-step-strip span.ok {
@@ -219,7 +219,7 @@
 .rnn-training-context-strip > span:last-child { border-right: 0; }
 .rnn-training-context-strip i { color: var(--text-muted); }
 .rnn-training-context-strip small { color: var(--text-muted); }
-.rnn-training-context-strip .rnn-gpu-dot { color: var(--success); font-size: 10px; }
+.rnn-training-context-strip .rnn-gpu-dot { color: var(--success); font-size: 12px; }
 .rnn-parameter-column {
   min-width: 0;
   min-height: 100%;
@@ -1202,7 +1202,7 @@
   padding: 2px 6px;
   background: rgba(75, 85, 99, 0.16);
   color: var(--text-muted);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-style: normal;
   font-weight: 800;
 }
@@ -1528,7 +1528,7 @@
 }
 .rnn-readiness-compact-item span {
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   line-height: 1.2;
 }
 .rnn-readiness-compact-item strong {
@@ -1701,7 +1701,7 @@
 }
 .rnn-inference-eyebrow {
   color: var(--accent);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -1718,7 +1718,7 @@
 }
 .rnn-inference-meta span {
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -1761,7 +1761,7 @@
 }
 .rnn-inference-summary-grid span {
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 .rnn-inference-summary-grid code,
@@ -1835,7 +1835,7 @@
   z-index: 1;
   color: var(--text-muted);
   background: var(--bg-panel);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
 }
 .rnn-inference-table td strong {
@@ -1847,7 +1847,7 @@
   min-height: 22px;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 800;
 }
 .rnn-inference-status.success {

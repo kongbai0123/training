@@ -47,10 +47,23 @@ class ModelGuidePageStaticTests(unittest.TestCase):
 
     def test_model_guide_has_dedicated_responsive_styles(self):
         css = (ROOT / "static" / "styles" / "pages" / "model_guide.css").read_text(encoding="utf-8")
-        self.assertIn(".model-guide-workspace", css)
-        self.assertIn("grid-template-columns: minmax(270px, 28%) minmax(0, 1fr)", css)
+        self.assertIn(".model-guide-matrix", css)
+        self.assertIn("grid-template-columns: var(--guide-filter-width) var(--guide-list-width) var(--guide-detail-width)", css)
+        self.assertIn("--guide-detail-width: minmax(620px, 2.2fr)", css)
+        self.assertIn(".model-guide-filter-panel", css)
+        self.assertIn("scrollbar-gutter: stable", css)
         self.assertIn(".model-guide-detail-workspace", css)
         self.assertIn("@media (max-width: 800px)", css)
+
+    def test_radar_chart_has_theme_aware_visible_grid(self):
+        module = (ROOT / "static" / "pages" / "model_guide.js").read_text(encoding="utf-8")
+        state = (ROOT / "static" / "state.js").read_text(encoding="utf-8")
+        self.assertIn("function chartTheme()", module)
+        self.assertIn("grid: { color: theme.gridColor", module)
+        self.assertIn("angleLines: { color: theme.angleColor", module)
+        self.assertIn('size: 12, weight: "500"', module)
+        self.assertIn('eventBus.on("theme-changed"', module)
+        self.assertIn('eventBus.emit("theme-changed", nextTheme)', state)
 
     def test_task_selector_explains_classifier_and_regressor_outputs(self):
         html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")

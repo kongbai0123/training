@@ -88,7 +88,7 @@ body[data-theme="light"] .brand-mark {
 .header-health span {
   display: block;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   line-height: 1.15;
 }
 

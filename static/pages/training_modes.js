@@ -1805,7 +1805,7 @@ function buildRnnChartOptions(yTitle, { compact = false } = {}) {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { display: !compact, labels: { color: textColor, font: { family: "Inter", size: 11 } } },
+      legend: { display: !compact, labels: { color: textColor, font: { family: "Inter", size: 12 } } },
       tooltip: { mode: "index", intersect: false }
     },
     scales: {

@@ -136,7 +136,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/evaluation.css";\n'
                 '@import "./styles/pages/project_assistant.css";\n'
                 '@import "./styles/pages/model_setup.css";\n'
-                '@import "./styles/pages/model_guide.css?v=20260713-model-guide-evidence";\n'
+                '@import "./styles/pages/model_guide.css?v=20260724-model-guide-matrix";\n'
                 '@import "./styles/shared.css";'
             )
         )
@@ -516,7 +516,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertRegex(model_setup_css, r"(?m)^\.model-setup-list \{")
         self.assertIn("@media (max-width: 760px) {", model_setup_css)
 
-        self.assertRegex(model_guide_css, r"(?m)^\.model-guide-workspace \{")
+        self.assertRegex(model_guide_css, r"(?m)^\.model-guide-matrix \{")
         self.assertRegex(model_guide_css, r"(?m)^\.model-guide-report-panel \{")
         self.assertIn("@media (max-width: 800px) {", model_guide_css)
 

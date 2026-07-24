@@ -1752,7 +1752,7 @@ function updateChartVisualization() {
         maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
         plugins: {
-          legend: { labels: { color: textColor, font: { family: "Inter", size: 11 } } },
+          legend: { labels: { color: textColor, font: { family: "Inter", size: 12 } } },
           tooltip: { mode: "index", intersect: false }
         },
         scales: {

@@ -48,6 +48,9 @@ export function initModelGuide() {
   eventBus.on("language-changed", () => {
     if (appState.currentPage === "model-guide") renderGuide();
   });
+  eventBus.on("theme-changed", () => {
+    if (appState.currentPage === "model-guide") renderCharts(selectedModel());
+  });
 }
 
 export function renderModelGuidePage() {
@@ -259,13 +262,13 @@ function renderDecision(model) {
   const fit = model.hardware_fit || (model.trainable ? "unknown" : "unavailable");
   const recommendation = localized(model.decision_profile?.summary) || t("modelGuide.defaultRecommendation", { model: model.display_name || model.model_id });
   host.innerHTML = `
+    <section class="model-guide-recommendation"><strong>${escapeHtml(t("modelGuide.recommendation"))}</strong><p>${escapeHtml(recommendation)}</p></section>
     <dl class="model-guide-decision-list">
       <div><dt>${escapeHtml(t("modelGuide.hardwareFit"))}</dt><dd><span class="model-fit-badge ${escapeHtml(fit)}">${escapeHtml(t(`modelSelection.fit.${fit}`))}</span></dd></div>
       <div><dt>${escapeHtml(t("modelGuide.trainingStatus"))}</dt><dd>${escapeHtml(model.trainable ? t("modelGuide.trainable") : t("modelGuide.referenceOnly"))}</dd></div>
       <div><dt>${escapeHtml(t("modelGuide.localRunCount"))}</dt><dd>${runs.length}</dd></div>
       <div><dt>${escapeHtml(t("modelSelection.license"))}</dt><dd class="no-i18n">${escapeHtml(model.license || "--")}</dd></div>
     </dl>
-    <section class="model-guide-recommendation"><strong>${escapeHtml(t("modelGuide.recommendation"))}</strong><p>${escapeHtml(recommendation)}</p></section>
     ${model.source === "research" ? `<section class="model-guide-risk-note"><i class="fa-solid fa-flask"></i><span>${escapeHtml(t("modelGuide.researchWarning"))}</span></section>` : ""}`;
 }
 
@@ -275,13 +278,31 @@ function renderCharts(model) {
   const profileCanvas = qs("#model-guide-profile-chart");
   const benchmarkCanvas = qs("#model-guide-benchmark-chart");
   if (profileCanvas) {
+    const theme = chartTheme();
     profileChart = new window.Chart(profileCanvas, {
       type: "radar",
       data: {
         labels: [t("modelGuide.accuracy"), t("modelGuide.speed"), t("modelGuide.efficiency"), t("modelGuide.deploymentEase"), t("modelGuide.hardwareFit")],
         datasets: [{ label: model.display_name, data: profileScores(model), borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,.18)", pointBackgroundColor: "#3b82f6" }],
       },
-      options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, max: 100, ticks: { display: false } } }, plugins: { legend: { display: false } } },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          r: {
+            beginAtZero: true,
+            max: 100,
+            grid: { color: theme.gridColor, lineWidth: 1 },
+            angleLines: { color: theme.angleColor, lineWidth: 1 },
+            pointLabels: {
+              color: theme.labelColor,
+              font: { family: "Inter, Microsoft JhengHei, sans-serif", size: 12, weight: "500" },
+            },
+            ticks: { display: false },
+          },
+        },
+        plugins: { legend: { display: false } },
+      },
     });
   }
   if (!benchmarkCanvas) return;
@@ -315,6 +336,16 @@ function renderCharts(model) {
     data: { labels, datasets: [{ label: metricLabel(official || compatibleRuns[0]?.primary_metric), data: values, backgroundColor: colors, borderRadius: 3 }] },
     options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, suggestedMax: isPercentMetric(comparisonMetric) ? 100 : undefined, title: { display: true, text: metricLabel(official || compatibleRuns[0]?.primary_metric) } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${metricLabel(official || compatibleRuns[0]?.primary_metric)}: ${formatNumber(context.raw)}${isPercentMetric(comparisonMetric) ? "%" : ""}` } } } },
   });
+}
+
+function chartTheme() {
+  const styles = getComputedStyle(document.body);
+  const isLight = document.body.dataset.theme === "light";
+  return {
+    labelColor: styles.getPropertyValue("--text-muted").trim() || (isLight ? "#5d6b7d" : "#95a1b1"),
+    gridColor: isLight ? "rgba(71, 85, 105, 0.28)" : "rgba(148, 163, 184, 0.30)",
+    angleColor: isLight ? "rgba(71, 85, 105, 0.34)" : "rgba(148, 163, 184, 0.38)",
+  };
 }
 
 function renderEvidenceSource(host, model, official, runs) {

@@ -66,7 +66,7 @@ body[data-theme="light"] .thumb-image-frame {
 }
 
 .thumb-card strong {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -74,7 +74,7 @@ body[data-theme="light"] .thumb-image-frame {
 
 .thumb-card .badge {
   width: fit-content;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   padding: 3px 6px;
 }
 

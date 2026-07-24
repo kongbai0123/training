@@ -366,7 +366,7 @@
   display: block;
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -386,7 +386,7 @@ body[data-density="compact"] .onboarding-policy {
   border-radius: var(--radius);
   background: var(--bg-elevated);
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 

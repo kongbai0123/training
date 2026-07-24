@@ -175,7 +175,7 @@
   width: 26px;
   height: 26px;
   flex: 0 0 26px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 
 .dataset-drop-zone {
@@ -200,7 +200,7 @@
 }
 
 .dataset-side-rail .dataset-storage-status {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 
 .dataset-side-rail .dataset-drop-zone {

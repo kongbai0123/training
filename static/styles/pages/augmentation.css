@@ -145,7 +145,7 @@
   background: rgba(59, 130, 246, 0.1);
   border-radius: 4px;
   font-family: var(--font-mono, monospace);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -163,7 +163,7 @@
   padding-top: 8px;
   border-top: 1px solid var(--border);
   color: var(--text-soft);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   line-height: 1.45;
 }
 
@@ -626,7 +626,7 @@ body[data-theme="light"] .aug-preview-container {
 .aug-job-main span:not(.summary-badge),
 .aug-job-stats small {
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
 }
 
 .aug-job-stats {
