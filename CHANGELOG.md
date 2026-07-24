@@ -4,6 +4,20 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-07-24
+
+### Added
+- Added a LabelMe review queue for failed annotation imports with per-file selection, select-all, and atomic batch cleanup.
+- Added Train, Validation, and Test image totals plus per-class distribution details to the split workspace.
+
+### Changed
+- Reorganized the split workspace into a compact aligned two-column matrix.
+- Removed the inner scrollbar from the class distribution table; the page now scrolls only when the complete workspace exceeds the viewport.
+
+### Fixed
+- Kept failed-import reports, counters, project state, and review controls synchronized after clearing misplaced TXT files.
+- Validated every selected failed source before deleting any file so a mixed invalid batch cannot partially mutate the import draft.
+
 ## [0.1.10] - 2026-07-24
 
 ### Changed

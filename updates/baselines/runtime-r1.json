@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "product": "Vision Training Studio",
-  "app_version": "0.1.9",
+  "app_version": "0.1.10",
   "runtime_version": "r1",
   "package_format_version": 1,
-  "created_at": "2026-07-24T07:29:08.268759+00:00",
-  "file_count": 11496,
-  "runtime_file_count": 11376,
+  "created_at": "2026-07-24T09:22:52.223518+00:00",
+  "file_count": 11494,
+  "runtime_file_count": 11374,
   "app_file_count": 120,
   "files": {
     "_internal/81d243bd2c585b0f4821__mypyc.cp311-win_amd64.pyd": {
@@ -28990,8 +28990,8 @@
       "category": "app"
     },
     "_internal/static/core/page_registry.js": {
-      "size": 3432,
-      "sha256": "52b478804ce48fa3f7647dd00420c10de7ec56dd0f428c799d59a004cdfd22c3",
+      "size": 3435,
+      "sha256": "25c5abe8748e08eed63e63be8aa6d8a79e92dfc3d47de7b3e683169fad240702",
       "category": "app"
     },
     "_internal/static/core/project_lifecycle.js": {
@@ -29055,8 +29055,8 @@
       "category": "app"
     },
     "_internal/static/index.html": {
-      "size": 248474,
-      "sha256": "03018629f0dd420a5b09281700a5498680180aa0c59ddc42d67ccc81174e11c3",
+      "size": 248606,
+      "sha256": "c3bda6ed58def433314677f78ac6523fe8a3d3fcd8e6edcce7d829271801f430",
       "category": "app"
     },
     "_internal/static/pages/augmentation.js": {
@@ -29105,8 +29105,8 @@
       "category": "app"
     },
     "_internal/static/pages/model_guide.js": {
-      "size": 32781,
-      "sha256": "68e9ff99f71bf51717069a5b4d1c188d7a091918f0765adba854bf1cb0bd8936",
+      "size": 36363,
+      "sha256": "58d5d507e4fcabb1fa967080e4ffd5c532581243921780f6aa2dfc3f83de3e60",
       "category": "app"
     },
     "_internal/static/pages/project_assistant.js": {
@@ -29225,13 +29225,13 @@
       "category": "app"
     },
     "_internal/static/state/i18n/en.js": {
-      "size": 191953,
-      "sha256": "d85302f322efcfe506741cea6f617120e2da95b586ea43aade41fbc3ac63cec5",
+      "size": 192209,
+      "sha256": "e2a171c35d658036c16327d6e8ea5c4e4606a1f6462bc2297cd6bc2b161ea17d",
       "category": "app"
     },
     "_internal/static/state/i18n/zh-TW.js": {
-      "size": 168998,
-      "sha256": "0315a2b9a8d34d42288e559621897832e5294c30fdfde10f7e1a3a7a5647e950",
+      "size": 169211,
+      "sha256": "65c52f729cf7ae31b5643cbb232deb2cf15302bf8cb1d6a285a6102a283a72f6",
       "category": "app"
     },
     "_internal/static/state/i18n.js": {
@@ -29245,8 +29245,8 @@
       "category": "app"
     },
     "_internal/static/style.css": {
-      "size": 1319,
-      "sha256": "c4140efb46cdb37fb895de42ae95a396d7b53eafc6340f5eccd68e9f89fb7f5d",
+      "size": 1322,
+      "sha256": "f29158610c7d734dbda91b05d13a486887e27dd737b445f15d804eb18f8b52e9",
       "category": "app"
     },
     "_internal/static/styles/base.css": {
@@ -29340,8 +29340,8 @@
       "category": "app"
     },
     "_internal/static/styles/pages/model_guide.css": {
-      "size": 12325,
-      "sha256": "e245096d1a19213602375c4e11669995a767e7c6f6b2b22aa64c2c4de7fefbf8",
+      "size": 14756,
+      "sha256": "cf5dac7c8f2dfeed33635be0231a9692bd99039787e7e68aea82e24fbe956229",
       "category": "app"
     },
     "_internal/static/styles/pages/model_setup.css": {
@@ -56715,8 +56715,8 @@
       "category": "runtime"
     },
     "_internal/version.json": {
-      "size": 265,
-      "sha256": "8a8623de34a59e8104605bb41328de9b3f0e2c7923468a81705a3aeac16b6683",
+      "size": 267,
+      "sha256": "348f578977009a0121da7aeefa91dc0d107fb3854f33b7768b833e5715cc6d1d",
       "category": "app"
     },
     "_internal/wcwidth/py.typed": {
@@ -57467,16 +57467,6 @@
     "_internal/yarl/_quoting_c.cp311-win_amd64.pyd": {
       "size": 81408,
       "sha256": "e76fbdd98dbaed77baaccd32299c7b86394a6caf6255505d468421803e31faa2",
-      "category": "runtime"
-    },
-    "unins000.dat": {
-      "size": 4298735,
-      "sha256": "0ee7a39f23d0d2bdb3546ddda6217227bf5d4d977fd21d4b451a6acbdb174770",
-      "category": "runtime"
-    },
-    "unins000.exe": {
-      "size": 4452610,
-      "sha256": "76eaec3bf3158fc6e785fb733822b70e42322fd3a77fb72a85eb3387421b0fb8",
       "category": "runtime"
     },
     "VisionTrainingStudio.exe": {
