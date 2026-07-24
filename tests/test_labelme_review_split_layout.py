@@ -27,8 +27,15 @@ class LabelMeReviewAndSplitLayoutTests(unittest.TestCase):
         self.assertIn('class="panel-section split-preview-panel"', self.html)
         self.assertIn('class="panel-section split-class-panel"', self.html)
         self.assertIn("grid-row: 1 / span 2", self.split_css)
+        self.assertIn("grid-template-rows: auto auto", self.split_css)
         self.assertIn('id="split-set-counts"', self.html)
         self.assertIn('id="split-class-distribution"', self.html)
+
+    def test_split_class_distribution_does_not_create_an_inner_scrollbar(self):
+        self.assertIn(".split-class-table-wrap", self.split_css)
+        self.assertIn("max-height: none", self.split_css)
+        self.assertIn("overflow: visible", self.split_css)
+        self.assertNotIn("max-height: calc(100vh - 340px)", self.split_css)
 
     def test_split_distribution_supports_actual_and_estimated_counts(self):
         self.assertIn("report?.class_distribution", self.split_js)
