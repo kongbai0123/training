@@ -4,6 +4,14 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-07-24
+
+### Changed
+- Reworked Model Guide filters as inline, column-contained controls that no longer overlap adjacent panels.
+- Moved training and report actions below the search and filter area with a fixed, always-visible action region.
+- Reordered model evidence, relative characteristics, compatibility findings, and recommendations so objective evidence appears first.
+- Added concise bilingual task labels and independent scrolling for filters, model results, and model details.
+
 ## [0.1.9] - 2026-07-24
 
 ### Changed
