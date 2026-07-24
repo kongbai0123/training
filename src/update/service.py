@@ -292,6 +292,14 @@ class UpdateService:
                     indeterminate=False,
                 )
                 return self.status()
+            if not candidate.asset:
+                reporter.update(
+                    phase="checked",
+                    message="A new version is available and requires the full installer",
+                    progress=100,
+                    indeterminate=False,
+                )
+                return self.status()
             with self._lock:
                 existing_ready = deepcopy(self._state.get("ready_package"))
             if (

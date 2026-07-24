@@ -75,6 +75,31 @@ class UpdateDeliveryTests(unittest.TestCase):
         self.assertEqual(candidate.asset.asset_id, 2)
         self.assertEqual(candidate.runtime_version, "r1")
         self.assertEqual(candidate.full_installer.asset_id, 3)
+        self.assertEqual(candidate.as_dict()["delivery"], "incremental")
+
+    def test_release_client_surfaces_full_installer_when_incremental_update_is_unavailable(self):
+        payload = {
+            "tag_name": "v0.1.5",
+            "draft": False,
+            "prerelease": False,
+            "html_url": "https://github.com/kongbai0123/training/releases/tag/v0.1.5",
+            "assets": [
+                {
+                    "id": 3,
+                    "name": "VisionTrainingStudio_Setup_0.1.5.exe",
+                    "browser_download_url": "https://github.com/kongbai0123/training/releases/download/v0.1.5/setup.exe",
+                    "size": 100,
+                    "digest": "",
+                },
+            ],
+        }
+        candidate = GitHubReleaseClient()._candidate_from_release(payload, current_version())
+        self.assertIsNotNone(candidate)
+        assert candidate is not None
+        self.assertIsNone(candidate.asset)
+        self.assertEqual(candidate.full_installer.asset_id, 3)
+        self.assertEqual(candidate.as_dict()["delivery"], "full_installer")
+        self.assertFalse(candidate.as_dict()["can_incremental_update"])
 
     def test_release_client_ignores_old_release(self):
         old = {"tag_name": "v0.1.4", "draft": False, "prerelease": False, "assets": []}

@@ -2400,12 +2400,15 @@
                   <div><span data-i18n="updates.currentVersion">Current version</span><strong id="update-current-version">--</strong></div>
                   <div><span data-i18n="updates.runtimeVersion">Runtime</span><strong id="update-runtime-version">--</strong></div>
                   <div><span data-i18n="updates.latestVersion">Latest version</span><strong id="update-latest-version">--</strong></div>
-                  <div><span data-i18n="updates.packageSize">Update size</span><strong id="update-package-size">--</strong></div>
+                  <div><span data-i18n="updates.deliveryType">Delivery type</span><strong id="update-delivery-type">--</strong></div>
+                  <div><span data-i18n="updates.packageSize">Package size</span><strong id="update-package-size">--</strong></div>
                 </div>
+                <div id="update-delivery-guidance" class="status-guard info hidden"></div>
                 <div id="update-release-notes" class="update-release-notes" data-i18n="updates.noCandidate">No update information loaded.</div>
                 <div id="update-blockers" class="status-guard warning hidden"></div>
                 <div class="button-row software-update-actions">
                   <button class="btn btn-primary" id="btn-download-latest-update" type="button"><i class="fa-brands fa-github"></i> <span data-i18n="updates.downloadLatest">Check and download</span></button>
+                  <a class="btn btn-primary hidden" id="update-installer-link" href="#" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-download"></i> <span data-i18n="updates.downloadInstaller">Download full installer</span></a>
                   <a class="btn btn-secondary hidden" id="update-release-link" href="#" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square"></i> <span data-i18n="updates.viewRelease">View release</span></a>
                   <button class="btn btn-secondary" id="btn-import-update" type="button"><i class="fa-solid fa-file-import"></i> <span data-i18n="updates.import">Import offline package</span></button>
                   <button class="btn btn-secondary hidden" id="btn-download-update" type="button"><i class="fa-solid fa-download"></i> <span data-i18n="updates.download">Download update</span></button>

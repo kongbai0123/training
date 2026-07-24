@@ -4,6 +4,15 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-07-24
+
+### Changed
+- Distinguished incremental update packages from full installers in Settings, including the package type and size.
+- Added a direct full-installer download action when the latest GitHub Release cannot be applied incrementally.
+
+### Fixed
+- Prevented installer-only releases from being reported as if the installed application were already current.
+
 ## [0.1.6] - 2026-07-24
 
 ### Added
