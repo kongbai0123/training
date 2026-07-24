@@ -1,3 +1,33 @@
+.settings-center-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.84fr) minmax(560px, 1.16fr);
+  gap: 14px;
+  width: min(100%, 1440px);
+  align-items: start;
+}
+
+.settings-center-column {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.settings-card,
+.settings-wide-section {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.settings-wide-section {
+  width: min(100%, 1440px);
+  margin-top: 14px;
+}
+
+.settings-preferences-panel .settings-controls {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .update-version-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -39,8 +69,94 @@
   margin-top: 12px;
 }
 
-@media (max-width: 1100px) {
+.update-storage-panel {
+  display: grid;
+  gap: 11px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.update-storage-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.update-storage-heading h3,
+.update-storage-heading p {
+  margin: 0;
+}
+
+.update-storage-heading p {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.update-storage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.update-storage-grid > div {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel-soft);
+}
+
+.update-storage-grid span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.update-storage-grid strong {
+  font-size: 0.95rem;
+}
+
+.update-storage-meter {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.update-storage-meter span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--success));
+  transition: width 180ms ease;
+}
+
+.update-storage-actions {
+  justify-content: flex-start;
+}
+
+@media (max-width: 1180px) {
+  .settings-center-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-wide-section {
+    width: 100%;
+  }
+
   .update-version-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .settings-preferences-panel .settings-controls,
+  .update-storage-grid {
+    grid-template-columns: 1fr;
   }
 }

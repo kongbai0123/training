@@ -1,7 +1,7 @@
 {
   "product": "Vision Training Studio",
-  "version": "0.1.5",
-  "app_version": "0.1.5",
+  "version": "0.1.6",
+  "app_version": "0.1.6",
   "runtime_version": "r1",
   "package_format_version": 1,
   "update_channel": "stable",

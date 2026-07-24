@@ -2345,71 +2345,101 @@
               <p data-i18n="settingsSubtitle">第一階段只顯示系統設定狀態。後續可加入 LabelMe、YOLO、輸出格式設定。</p>
             </div>
           </div>
-          <section class="panel-section narrow-form">
-            <div class="section-title"><h2 data-i18n="preferencesTitle">Preferences</h2></div>
-            <div class="form-stack settings-controls">
-              <label>
-                <span data-i18n="languageLabel">Language</span>
-                <select id="settings-language">
-                  <option value="zh-TW">繁體中文</option>
-                  <option value="en">English</option>
-                </select>
-              </label>
-              <label>
-                <span data-i18n="themeLabel">Background brightness</span>
-                <select id="settings-theme">
-                  <option value="dark">Dark</option>
-                  <option value="light">Light</option>
-                </select>
-              </label>
+          <div class="settings-center-grid">
+            <div class="settings-center-column">
+              <section class="panel-section settings-card settings-preferences-panel">
+                <div class="section-title"><h2 data-i18n="preferencesTitle">Preferences</h2></div>
+                <div class="form-stack settings-controls">
+                  <label>
+                    <span data-i18n="languageLabel">Language</span>
+                    <select id="settings-language">
+                      <option value="zh-TW">繁體中文</option>
+                      <option value="en">English</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span data-i18n="themeLabel">Background brightness</span>
+                    <select id="settings-theme">
+                      <option value="dark">Dark</option>
+                      <option value="light">Light</option>
+                    </select>
+                  </label>
+                </div>
+              </section>
+              <section class="panel-section settings-card settings-system-panel">
+                <div class="section-title"><h2 data-i18n="systemTitle">System</h2></div>
+                <div class="path-list">
+                  <div class="path-row"><span data-i18n="settings.frontendPhase">Frontend phase</span><code data-i18n="settings.phase1Ui">Phase 1 UI Redesign</code></div>
+                  <div class="path-row"><span data-i18n="settings.labelmeBackend">LabelMe backend</span><code data-i18n="common.connected">Connected</code></div>
+                  <div class="path-row"><span data-i18n="settings.conversionBackend">Conversion backend</span><code data-i18n="common.connected">Connected</code></div>
+                </div>
+              </section>
+              <section class="panel-section settings-card settings-system-panel model-components-settings">
+                <div class="section-title">
+                  <div>
+                    <h2 data-i18n="modelSetup.settingsTitle">Hardware &amp; Model Components</h2>
+                    <p class="section-help" id="settings-model-setup-summary" data-i18n="modelSetup.statusLoading">Reading local model status...</p>
+                  </div>
+                  <button class="btn btn-secondary" id="btn-open-model-setup" type="button">
+                    <i class="fa-solid fa-cubes"></i>
+                    <span data-i18n="modelSetup.manage">Manage Models</span>
+                  </button>
+                </div>
+              </section>
             </div>
-          </section>
-          <section class="panel-section narrow-form settings-system-panel">
-            <div class="section-title"><h2 data-i18n="systemTitle">System</h2></div>
-            <div class="path-list">
-              <div class="path-row"><span data-i18n="settings.frontendPhase">Frontend phase</span><code data-i18n="settings.phase1Ui">Phase 1 UI Redesign</code></div>
-              <div class="path-row"><span data-i18n="settings.labelmeBackend">LabelMe backend</span><code data-i18n="common.connected">Connected</code></div>
-              <div class="path-row"><span data-i18n="settings.conversionBackend">Conversion backend</span><code data-i18n="common.connected">Connected</code></div>
+            <div class="settings-center-column">
+              <section class="panel-section settings-card settings-system-panel software-update-settings">
+                <div class="section-title">
+                  <div>
+                    <h2 data-i18n="updates.title">Software Update</h2>
+                    <p class="section-help" data-i18n="updates.help">Download a signed GitHub Release or import an offline update package.</p>
+                  </div>
+                  <span class="badge badge-muted" id="update-status-badge" data-i18n="updates.status.notChecked">Not checked</span>
+                </div>
+                <div class="update-version-grid">
+                  <div><span data-i18n="updates.currentVersion">Current version</span><strong id="update-current-version">--</strong></div>
+                  <div><span data-i18n="updates.runtimeVersion">Runtime</span><strong id="update-runtime-version">--</strong></div>
+                  <div><span data-i18n="updates.latestVersion">Latest version</span><strong id="update-latest-version">--</strong></div>
+                  <div><span data-i18n="updates.packageSize">Update size</span><strong id="update-package-size">--</strong></div>
+                </div>
+                <div id="update-release-notes" class="update-release-notes" data-i18n="updates.noCandidate">No update information loaded.</div>
+                <div id="update-blockers" class="status-guard warning hidden"></div>
+                <div class="button-row software-update-actions">
+                  <button class="btn btn-primary" id="btn-download-latest-update" type="button"><i class="fa-brands fa-github"></i> <span data-i18n="updates.downloadLatest">Check and download</span></button>
+                  <a class="btn btn-secondary hidden" id="update-release-link" href="#" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square"></i> <span data-i18n="updates.viewRelease">View release</span></a>
+                  <button class="btn btn-secondary" id="btn-import-update" type="button"><i class="fa-solid fa-file-import"></i> <span data-i18n="updates.import">Import offline package</span></button>
+                  <button class="btn btn-secondary hidden" id="btn-download-update" type="button"><i class="fa-solid fa-download"></i> <span data-i18n="updates.download">Download update</span></button>
+                  <button class="btn btn-primary hidden" id="btn-apply-update" type="button"><i class="fa-solid fa-power-off"></i> <span data-i18n="updates.restartApply">Restart and update</span></button>
+                  <input id="input-update-package" type="file" accept=".vtsupdate" hidden>
+                </div>
+                <p class="form-hint" id="update-last-checked"></p>
+
+                <div class="update-storage-panel">
+                  <div class="update-storage-heading">
+                    <div>
+                      <h3 data-i18n="updates.storageTitle">Update storage</h3>
+                      <p data-i18n="updates.storageHelp">Successful updates automatically remove downloads and keep only one rollback backup.</p>
+                    </div>
+                    <span class="badge badge-success" data-i18n="updates.autoCleanupOn">Auto cleanup on</span>
+                  </div>
+                  <div class="update-storage-grid">
+                    <div><span data-i18n="updates.cacheUsage">Temporary cache</span><strong id="update-cache-usage">--</strong></div>
+                    <div><span data-i18n="updates.backupUsage">Rollback backup</span><strong id="update-backup-usage">--</strong></div>
+                    <div><span data-i18n="updates.cacheLimit">Cache limit</span><strong id="update-cache-limit">2.00 GB</strong></div>
+                  </div>
+                  <div class="update-storage-meter" aria-label="Update cache usage" data-i18n-aria-label="updates.cacheUsageAria">
+                    <span id="update-storage-meter-fill"></span>
+                  </div>
+                  <div class="button-row update-storage-actions">
+                    <button class="btn btn-secondary btn-sm" id="btn-clean-update-cache" type="button"><i class="fa-solid fa-broom"></i> <span data-i18n="updates.cleanCache">Clean temporary files</span></button>
+                    <button class="btn btn-secondary btn-sm" id="btn-delete-update-backup" type="button"><i class="fa-solid fa-clock-rotate-left"></i> <span data-i18n="updates.deleteBackup">Delete rollback backup</span></button>
+                  </div>
+                  <p class="form-hint" id="update-storage-cleaned"></p>
+                </div>
+              </section>
             </div>
-          </section>
-          <section class="panel-section narrow-form settings-system-panel model-components-settings">
-            <div class="section-title">
-              <div>
-                <h2 data-i18n="modelSetup.settingsTitle">Hardware &amp; Model Components</h2>
-                <p class="section-help" id="settings-model-setup-summary" data-i18n="modelSetup.statusLoading">Reading local model status...</p>
-              </div>
-              <button class="btn btn-secondary" id="btn-open-model-setup" type="button">
-                <i class="fa-solid fa-cubes"></i>
-                <span data-i18n="modelSetup.manage">Manage Models</span>
-              </button>
-            </div>
-          </section>
-          <section class="panel-section narrow-form settings-system-panel software-update-settings">
-            <div class="section-title">
-              <div>
-                <h2 data-i18n="updates.title">Software Update</h2>
-                <p class="section-help" data-i18n="updates.help">Check signed GitHub Releases or import an offline update package.</p>
-              </div>
-              <span class="badge badge-muted" id="update-status-badge" data-i18n="updates.status.notChecked">Not checked</span>
-            </div>
-            <div class="update-version-grid">
-              <div><span data-i18n="updates.currentVersion">Current version</span><strong id="update-current-version">--</strong></div>
-              <div><span data-i18n="updates.runtimeVersion">Runtime</span><strong id="update-runtime-version">--</strong></div>
-              <div><span data-i18n="updates.latestVersion">Latest version</span><strong id="update-latest-version">--</strong></div>
-              <div><span data-i18n="updates.packageSize">Update size</span><strong id="update-package-size">--</strong></div>
-            </div>
-            <div id="update-release-notes" class="update-release-notes" data-i18n="updates.noCandidate">No update information loaded.</div>
-            <div id="update-blockers" class="status-guard warning hidden"></div>
-            <div class="button-row software-update-actions">
-              <button class="btn btn-secondary" id="btn-check-updates" type="button"><i class="fa-solid fa-rotate"></i> <span data-i18n="updates.check">Check for updates</span></button>
-              <button class="btn btn-secondary" id="btn-import-update" type="button"><i class="fa-solid fa-file-import"></i> <span data-i18n="updates.import">Import offline package</span></button>
-              <button class="btn btn-secondary hidden" id="btn-download-update" type="button"><i class="fa-solid fa-download"></i> <span data-i18n="updates.download">Download update</span></button>
-              <button class="btn btn-primary hidden" id="btn-apply-update" type="button"><i class="fa-solid fa-power-off"></i> <span data-i18n="updates.restartApply">Restart and update</span></button>
-              <input id="input-update-package" type="file" accept=".vtsupdate" hidden>
-            </div>
-            <p class="form-hint" id="update-last-checked"></p>
-          </section>
-          <section class="panel-section narrow-form settings-system-panel">
+          </div>
+          <section class="panel-section settings-wide-section settings-system-panel">
             <div class="section-title">
               <h2 data-i18n="settings.dataMigration">Project Data Migration</h2>
               <button class="btn btn-secondary btn-sm" id="btn-scan-data-migration" type="button" data-i18n="settings.scanCDrive">Scan C Drive</button>

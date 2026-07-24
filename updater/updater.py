@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.update.transaction import apply_update, prepare_update
+from src.update.storage import cleanup_update_storage
 
 
 def process_is_running(pid: int) -> bool:
@@ -85,6 +86,7 @@ def main() -> int:
     result = apply_update(journal)
     if result["state"] != "completed":
         return 2
+    cleanup_update_storage(args.update_root)
     executable = args.install_dir / "VisionTrainingStudio.exe"
     if not args.no_relaunch and executable.is_file():
         subprocess.Popen([str(executable)], cwd=str(args.install_dir))
