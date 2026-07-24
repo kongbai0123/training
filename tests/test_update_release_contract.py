@@ -60,6 +60,11 @@ class UpdateReleaseContractTests(unittest.TestCase):
         self.assertIn('"/api/updates/download-latest"', script)
         self.assertIn('"/api/updates/cleanup"', script)
         self.assertIn("settings-center-grid", html)
+        self.assertIn("settings-dashboard", html)
+        self.assertIn("settings-overview-column", html)
+        self.assertIn("settings-update-column", html)
+        self.assertIn("updates.backupCount", script)
+        self.assertIn('candidate.delivery === "full_installer"', script)
         for key in (
             "updates.title",
             "updates.check",
@@ -69,6 +74,10 @@ class UpdateReleaseContractTests(unittest.TestCase):
             "updates.deliveryType",
             "updates.downloadInstaller",
             "updates.fullInstallerRequired",
+            "updates.backupCount",
+            "updates.summaryAria",
+            "settings.interfaceMode",
+            "settings.unifiedSettings",
         ):
             self.assertIn(f'"{key}"', english)
             self.assertIn(f'"{key}"', chinese)

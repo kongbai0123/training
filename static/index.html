@@ -2345,8 +2345,8 @@
               <p data-i18n="settingsSubtitle">第一階段只顯示系統設定狀態。後續可加入 LabelMe、YOLO、輸出格式設定。</p>
             </div>
           </div>
-          <div class="settings-center-grid">
-            <div class="settings-center-column">
+          <div class="settings-center-grid settings-dashboard">
+            <div class="settings-center-column settings-overview-column">
               <section class="panel-section settings-card settings-preferences-panel">
                 <div class="section-title"><h2 data-i18n="preferencesTitle">Preferences</h2></div>
                 <div class="form-stack settings-controls">
@@ -2369,7 +2369,7 @@
               <section class="panel-section settings-card settings-system-panel">
                 <div class="section-title"><h2 data-i18n="systemTitle">System</h2></div>
                 <div class="path-list">
-                  <div class="path-row"><span data-i18n="settings.frontendPhase">Frontend phase</span><code data-i18n="settings.phase1Ui">Phase 1 UI Redesign</code></div>
+                  <div class="path-row"><span data-i18n="settings.interfaceMode">Interface</span><code data-i18n="settings.unifiedSettings">Unified settings center</code></div>
                   <div class="path-row"><span data-i18n="settings.labelmeBackend">LabelMe backend</span><code data-i18n="common.connected">Connected</code></div>
                   <div class="path-row"><span data-i18n="settings.conversionBackend">Conversion backend</span><code data-i18n="common.connected">Connected</code></div>
                 </div>
@@ -2387,7 +2387,7 @@
                 </div>
               </section>
             </div>
-            <div class="settings-center-column">
+            <div class="settings-center-column settings-update-column">
               <section class="panel-section settings-card settings-system-panel software-update-settings">
                 <div class="section-title">
                   <div>
@@ -2396,7 +2396,7 @@
                   </div>
                   <span class="badge badge-muted" id="update-status-badge" data-i18n="updates.status.notChecked">Not checked</span>
                 </div>
-                <div class="update-version-grid">
+                <div class="update-version-grid" aria-label="Version and delivery summary" data-i18n-aria-label="updates.summaryAria">
                   <div><span data-i18n="updates.currentVersion">Current version</span><strong id="update-current-version">--</strong></div>
                   <div><span data-i18n="updates.runtimeVersion">Runtime</span><strong id="update-runtime-version">--</strong></div>
                   <div><span data-i18n="updates.latestVersion">Latest version</span><strong id="update-latest-version">--</strong></div>
@@ -2442,7 +2442,7 @@
               </section>
             </div>
           </div>
-          <section class="panel-section settings-wide-section settings-system-panel">
+          <section class="panel-section settings-wide-section settings-system-panel settings-migration-panel">
             <div class="section-title">
               <h2 data-i18n="settings.dataMigration">Project Data Migration</h2>
               <button class="btn btn-secondary btn-sm" id="btn-scan-data-migration" type="button" data-i18n="settings.scanCDrive">Scan C Drive</button>

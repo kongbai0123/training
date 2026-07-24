@@ -125,6 +125,16 @@ class UpdateService:
                 self._state["last_cleanup_at"] = _utc_now()
                 self._save_state()
             blockers = active_update_blockers()
+            if ready:
+                recommended_action = "finish_active_tasks" if blockers else "restart_to_apply"
+            elif candidate and candidate.get("can_incremental_update"):
+                recommended_action = "download_incremental"
+            elif candidate and candidate.get("requires_full_installer"):
+                recommended_action = "download_full_installer"
+            elif candidate:
+                recommended_action = "view_release"
+            else:
+                recommended_action = "check"
             return {
                 "current": {
                     "app_version": str(self.current_version.app_version),
@@ -140,6 +150,7 @@ class UpdateService:
                 "storage": update_storage_report(self.update_root),
                 "blockers": blockers,
                 "can_apply": bool(ready and not blockers),
+                "recommended_action": recommended_action,
             }
 
     def check_for_updates(self) -> dict[str, Any]:

@@ -4,6 +4,18 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-07-24
+
+### Changed
+- Expanded Settings to use the full operation width with a compact overview rail and a flexible update workspace.
+- Aligned version, delivery, storage, action, and project-migration sections across Full HD and narrower layouts.
+- Replaced the obsolete phase label with a bilingual unified-settings description.
+- Added backend-recommended update actions so the interface can distinguish incremental, full-installer, blocked, and ready states consistently.
+
+### Fixed
+- Localized the rollback-backup size and count instead of composing a language-specific separator in JavaScript.
+- Kept installer-only releases on the full-installer path without exposing incremental download controls.
+
 ## [0.1.7] - 2026-07-24
 
 ### Changed

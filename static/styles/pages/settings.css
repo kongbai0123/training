@@ -1,15 +1,24 @@
 .settings-center-grid {
   display: grid;
-  grid-template-columns: minmax(360px, 0.84fr) minmax(560px, 1.16fr);
-  gap: 14px;
-  width: min(100%, 1440px);
+  grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
+  gap: 16px;
+  width: 100%;
   align-items: start;
 }
 
 .settings-center-column {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
+}
+
+.settings-overview-column {
+  align-content: start;
+}
+
+.settings-update-column,
+.software-update-settings {
+  min-height: 100%;
 }
 
 .settings-card,
@@ -20,17 +29,34 @@
 }
 
 .settings-wide-section {
-  width: min(100%, 1440px);
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 .settings-preferences-panel .settings-controls {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.settings-card > .section-title {
+  min-height: 48px;
+  align-items: flex-start;
+}
+
+.settings-card .path-row {
+  min-height: 42px;
+}
+
+.model-components-settings .section-title {
+  align-items: center;
+}
+
+.software-update-settings {
+  display: flex;
+  flex-direction: column;
+}
+
 .update-version-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin: 12px 0;
 }
@@ -52,6 +78,7 @@
 
 .update-version-grid strong {
   font-size: 18px;
+  overflow-wrap: anywhere;
 }
 
 .update-release-notes {
@@ -66,15 +93,20 @@
 }
 
 .software-update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   margin-top: 12px;
 }
 
 .update-storage-panel {
   display: grid;
   gap: 11px;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
+  margin-top: auto;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-panel-soft) 72%, transparent);
 }
 
 .update-storage-heading {
@@ -140,13 +172,23 @@
   justify-content: flex-start;
 }
 
-@media (max-width: 1180px) {
+.settings-migration-panel {
+  overflow: hidden;
+}
+
+@media (max-width: 1320px) {
+  .update-version-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
   .settings-center-grid {
     grid-template-columns: 1fr;
   }
 
-  .settings-wide-section {
-    width: 100%;
+  .software-update-settings {
+    min-height: auto;
   }
 
   .update-version-grid {
@@ -156,7 +198,13 @@
 
 @media (max-width: 720px) {
   .settings-preferences-panel .settings-controls,
-  .update-storage-grid {
+  .update-storage-grid,
+  .update-version-grid {
     grid-template-columns: 1fr;
+  }
+
+  .update-storage-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
