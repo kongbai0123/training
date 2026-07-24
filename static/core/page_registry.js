@@ -18,7 +18,7 @@ import { initInference, renderInferencePage } from "../pages/inference.js?v=2026
 import { initAutoLabeling, renderAutoLabelingPage } from "../pages/auto_labeling.js?v=20260709-review-gate";
 import { initExport, renderExportPage } from "../pages/export.js?v=20260711-layout-export-precision";
 import { initSettings, renderSettingsPage } from "../pages/settings.js";
-import { initModelGuide, renderModelGuidePage } from "../pages/model_guide.js?v=20260724-model-guide-matrix";
+import { initModelGuide, renderModelGuidePage } from "../pages/model_guide.js?v=20260724-model-guide-controls2";
 import { appState } from "../state.js";
 
 export function initPageModules() {

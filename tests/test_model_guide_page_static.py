@@ -47,12 +47,16 @@ class ModelGuidePageStaticTests(unittest.TestCase):
 
     def test_model_guide_has_dedicated_responsive_styles(self):
         css = (ROOT / "static" / "styles" / "pages" / "model_guide.css").read_text(encoding="utf-8")
+        module = (ROOT / "static" / "pages" / "model_guide.js").read_text(encoding="utf-8")
         self.assertIn(".model-guide-matrix", css)
         self.assertIn("grid-template-columns: var(--guide-filter-width) var(--guide-list-width) var(--guide-detail-width)", css)
         self.assertIn("--guide-detail-width: minmax(620px, 2.2fr)", css)
         self.assertIn(".model-guide-filter-panel", css)
         self.assertIn("scrollbar-gutter: stable", css)
         self.assertIn(".model-guide-detail-workspace", css)
+        self.assertIn(".model-guide-select-menu", css)
+        self.assertIn("function initGuideSelects()", module)
+        self.assertIn("function syncGuideSelects()", module)
         self.assertIn("@media (max-width: 800px)", css)
 
     def test_radar_chart_has_theme_aware_visible_grid(self):
@@ -70,11 +74,24 @@ class ModelGuidePageStaticTests(unittest.TestCase):
         module = (ROOT / "static" / "pages" / "model_guide.js").read_text(encoding="utf-8")
         zh_tw = (ROOT / "static" / "state" / "i18n" / "zh-TW.js").read_text(encoding="utf-8")
         self.assertIn('id="model-guide-task-explainer"', html)
-        self.assertIn('data-i18n="modelGuide.classificationChoice"', html)
-        self.assertIn('data-i18n="modelGuide.regressionChoice"', html)
+        self.assertIn('data-i18n="modelGuide.classificationShort"', html)
+        self.assertIn('data-i18n="modelGuide.regressionShort"', html)
         self.assertIn("function renderTaskExplainer()", module)
         self.assertIn('"modelGuide.classificationDescription"', zh_tw)
         self.assertIn('"modelGuide.regressionDescription"', zh_tw)
+
+    def test_actions_and_evidence_follow_the_approved_information_order(self):
+        html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        module = (ROOT / "static" / "pages" / "model_guide.js").read_text(encoding="utf-8")
+        filter_start = html.index('<aside class="model-guide-filter-panel">')
+        filter_end = html.index("</aside>", filter_start)
+        self.assertLess(filter_start, html.index('id="btn-model-guide-apply"'))
+        self.assertLess(html.index('id="btn-model-guide-build-report"'), filter_end)
+        self.assertLess(html.index('id="model-guide-detail"'), html.index('id="model-guide-decision"'))
+        decision_start = module.index("function renderDecision(model)")
+        decision_end = module.index("function initGuideSelects()", decision_start)
+        decision_block = module[decision_start:decision_end]
+        self.assertLess(decision_block.index("model-guide-decision-list"), decision_block.index("model-guide-recommendation"))
 
     def test_i18n_audit_distinguishes_technical_identifiers(self):
         audit = (ROOT / "scripts" / "i18n_dom_audit.mjs").read_text(encoding="utf-8")

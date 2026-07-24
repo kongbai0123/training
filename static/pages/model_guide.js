@@ -19,6 +19,7 @@ let profileChart = null;
 let benchmarkChart = null;
 
 export function initModelGuide() {
+  initGuideSelects();
   qs("#btn-model-guide-refresh")?.addEventListener("click", () => loadGuide({ force: true }));
   ["#model-guide-architecture", "#model-guide-objective"].forEach((selector) => {
     qs(selector)?.addEventListener("change", () => loadGuide({ force: true }));
@@ -160,6 +161,7 @@ function filteredModels() {
 
 function renderGuide() {
   if (!guideState.payload) return;
+  syncGuideSelects();
   const models = filteredModels();
   if (!models.some((model) => model.model_id === guideState.selectedId)) guideState.selectedId = models[0]?.model_id || "";
   const selected = selectedModel();
@@ -262,14 +264,93 @@ function renderDecision(model) {
   const fit = model.hardware_fit || (model.trainable ? "unknown" : "unavailable");
   const recommendation = localized(model.decision_profile?.summary) || t("modelGuide.defaultRecommendation", { model: model.display_name || model.model_id });
   host.innerHTML = `
-    <section class="model-guide-recommendation"><strong>${escapeHtml(t("modelGuide.recommendation"))}</strong><p>${escapeHtml(recommendation)}</p></section>
     <dl class="model-guide-decision-list">
       <div><dt>${escapeHtml(t("modelGuide.hardwareFit"))}</dt><dd><span class="model-fit-badge ${escapeHtml(fit)}">${escapeHtml(t(`modelSelection.fit.${fit}`))}</span></dd></div>
       <div><dt>${escapeHtml(t("modelGuide.trainingStatus"))}</dt><dd>${escapeHtml(model.trainable ? t("modelGuide.trainable") : t("modelGuide.referenceOnly"))}</dd></div>
       <div><dt>${escapeHtml(t("modelGuide.localRunCount"))}</dt><dd>${runs.length}</dd></div>
       <div><dt>${escapeHtml(t("modelSelection.license"))}</dt><dd class="no-i18n">${escapeHtml(model.license || "--")}</dd></div>
     </dl>
-    ${model.source === "research" ? `<section class="model-guide-risk-note"><i class="fa-solid fa-flask"></i><span>${escapeHtml(t("modelGuide.researchWarning"))}</span></section>` : ""}`;
+    ${model.source === "research" ? `<section class="model-guide-risk-note"><i class="fa-solid fa-flask"></i><span>${escapeHtml(t("modelGuide.researchWarning"))}</span></section>` : ""}
+    <section class="model-guide-recommendation"><strong>${escapeHtml(t("modelGuide.recommendation"))}</strong><p>${escapeHtml(recommendation)}</p></section>`;
+}
+
+function initGuideSelects() {
+  qsa(".model-guide-toolbar select").forEach((select) => {
+    if (select.dataset.guideSelectReady === "true") return;
+    select.dataset.guideSelectReady = "true";
+    select.classList.add("model-guide-native-select");
+    select.hidden = true;
+    select.tabIndex = -1;
+    select.setAttribute("aria-hidden", "true");
+
+    const shell = document.createElement("div");
+    shell.className = "model-guide-custom-select";
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "model-guide-select-trigger";
+    trigger.setAttribute("aria-haspopup", "listbox");
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.innerHTML = `<span></span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>`;
+    const menu = document.createElement("div");
+    menu.className = "model-guide-select-menu";
+    menu.setAttribute("role", "listbox");
+
+    select.parentNode.insertBefore(shell, select);
+    shell.append(select, trigger, menu);
+    trigger.addEventListener("click", () => {
+      const shouldOpen = !shell.classList.contains("open");
+      closeGuideSelects(shell);
+      shell.classList.toggle("open", shouldOpen);
+      trigger.setAttribute("aria-expanded", String(shouldOpen));
+      if (shouldOpen) menu.querySelector('[aria-selected="true"]')?.focus();
+    });
+    menu.addEventListener("click", (event) => {
+      const optionButton = event.target.closest("[data-guide-select-value]");
+      if (!optionButton) return;
+      select.value = optionButton.dataset.guideSelectValue;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      shell.classList.remove("open");
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.focus();
+    });
+    trigger.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      shell.classList.remove("open");
+      trigger.setAttribute("aria-expanded", "false");
+    });
+    select.addEventListener("change", () => syncGuideSelect(select));
+  });
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".model-guide-custom-select")) closeGuideSelects();
+  });
+  syncGuideSelects();
+}
+
+function syncGuideSelects() {
+  qsa(".model-guide-toolbar select").forEach(syncGuideSelect);
+}
+
+function syncGuideSelect(select) {
+  const shell = select.closest(".model-guide-custom-select");
+  if (!shell) return;
+  const trigger = shell.querySelector(".model-guide-select-trigger");
+  const menu = shell.querySelector(".model-guide-select-menu");
+  const selected = select.options[select.selectedIndex] || select.options[0];
+  trigger.querySelector("span").textContent = selected?.textContent?.trim() || "--";
+  trigger.setAttribute("aria-label", `${select.parentElement?.previousElementSibling?.textContent?.trim() || ""}: ${selected?.textContent?.trim() || ""}`.replace(/^:\s*/, ""));
+  menu.innerHTML = Array.from(select.options).map((option) => `
+    <button type="button" role="option" aria-selected="${option.selected}" data-guide-select-value="${escapeHtml(option.value)}">
+      <span>${escapeHtml(option.textContent.trim())}</span>
+      ${option.selected ? '<i class="fa-solid fa-check" aria-hidden="true"></i>' : ""}
+    </button>`).join("");
+}
+
+function closeGuideSelects(except = null) {
+  qsa(".model-guide-custom-select.open").forEach((shell) => {
+    if (shell === except) return;
+    shell.classList.remove("open");
+    shell.querySelector(".model-guide-select-trigger")?.setAttribute("aria-expanded", "false");
+  });
 }
 
 function renderCharts(model) {
