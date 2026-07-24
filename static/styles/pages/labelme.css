@@ -25,24 +25,36 @@
 
 .labelme-clean-layout {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(320px, 0.36fr) minmax(0, 1fr);
   gap: 14px;
-  align-items: stretch;
+  align-items: start;
 }
 
-.labelme-step-strip,
-.labelme-overview-panel,
-.labelme-review-panel,
-.labelme-preview-card,
-.labelme-export-card {
-  grid-column: 1 / -1;
+.labelme-side-rail,
+.labelme-operation-area {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.labelme-side-rail {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: calc(100vh - 108px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+.labelme-side-rail > *,
+.labelme-operation-area > * {
   min-width: 0;
 }
 
 .labelme-import-panel,
 .labelme-workspace-panel {
   min-width: 0;
-  height: 100%;
 }
 
 .labelme-import-panel {
@@ -140,7 +152,7 @@ body[data-theme="light"] .labelme-step-card {
 
 .labelme-overview-grid {
   display: grid;
-  grid-template-columns: minmax(180px, 0.42fr) minmax(0, 2.58fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   align-items: stretch;
 }
@@ -156,7 +168,7 @@ body[data-theme="light"] .labelme-step-card {
   display: grid;
   align-content: center;
   gap: 8px;
-  min-height: 168px;
+  min-height: 126px;
   padding: 16px;
   background: linear-gradient(180deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.04));
 }
@@ -179,6 +191,12 @@ body[data-theme="light"] .labelme-step-card {
   gap: 10px;
   min-width: 0;
   padding: 12px;
+}
+
+.labelme-status-panel > .section-title {
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 12px;
 }
 
 .labelme-overview-group-heading {
@@ -255,8 +273,7 @@ body[data-theme="light"] .labelme-step-card {
   min-height: 320px;
 }
 
-#page-labelme .labelme-clean-layout > .labelme-preview-card {
-  grid-column: 1 / -1 !important;
+#page-labelme .labelme-operation-area > .labelme-preview-card {
   width: 100%;
   max-width: none;
 }
@@ -448,11 +465,11 @@ body[data-theme="light"] .labelme-step-card {
 
 @media (max-width: 1500px) {
   .labelme-clean-layout {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
   }
 
   .labelme-overview-grid {
-    grid-template-columns: minmax(180px, 0.42fr) minmax(0, 2.58fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .labelme-step-strip {
@@ -470,6 +487,13 @@ body[data-theme="light"] .labelme-step-card {
   .labelme-overview-grid,
   .labelme-conversion-grid {
     grid-template-columns: 1fr;
+  }
+
+  .labelme-side-rail {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 }
 

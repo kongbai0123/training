@@ -4,6 +4,18 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-07-24
+
+### Changed
+- Redesigned the CNN dataset workspace with an integrated, sticky import rail for image and video-frame intake.
+- Kept import controls fully expanded without nested scrolling, while class management and the image browser remain in the right operation area.
+- Redesigned LabelMe into a fixed three-part side rail for completion, annotation import, and workspace configuration.
+- Shortened and repositioned the class-save action to match the surrounding controls.
+
+### Fixed
+- Completed the visible Traditional Chinese labels and placeholders used by the redesigned CNN dataset and LabelMe workspaces.
+- Added static regression coverage for the fixed side rails, panel order, responsive fallback, and class-save button sizing.
+
 ## [0.1.4] - 2026-07-23
 
 ### Added

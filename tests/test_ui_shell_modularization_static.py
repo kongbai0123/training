@@ -21,18 +21,66 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn('type: "scatter"', selection_js)
         self.assertIn('type: "bar"', selection_js)
 
-    def test_labelme_overview_combines_progress_and_latest_import(self):
+    def test_labelme_uses_fixed_three_panel_rail_and_separate_operation_area(self):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
         labelme_js = (ROOT / "static" / "pages" / "labelme.js").read_text(encoding="utf-8")
         labelme_css = (ROOT / "static" / "styles" / "pages" / "labelme.css").read_text(encoding="utf-8")
 
+        self.assertIn('class="labelme-side-rail"', index_html)
+        self.assertIn('class="labelme-operation-area"', index_html)
         self.assertIn('class="labelme-overview-completion"', index_html)
         self.assertIn('class="labelme-overview-summary"', index_html)
         self.assertNotIn('class="labelme-overview-health"', index_html)
+        rail_start = index_html.index('class="labelme-side-rail"')
+        operation_start = index_html.index('class="labelme-operation-area"')
+        self.assertLess(rail_start, index_html.index('class="panel-section labelme-overview-panel"', rail_start))
+        self.assertLess(
+            index_html.index('class="panel-section labelme-overview-panel"', rail_start),
+            index_html.index('class="panel-section labelme-import-panel"', rail_start),
+        )
+        self.assertLess(
+            index_html.index('class="panel-section labelme-import-panel"', rail_start),
+            index_html.index('class="panel-section labelme-workspace-panel"', rail_start),
+        )
+        self.assertLess(index_html.index('class="panel-section labelme-workspace-panel"', rail_start), operation_start)
+        self.assertIn("position: sticky;", labelme_css)
+        self.assertIn("max-height: calc(100vh - 108px);", labelme_css)
         self.assertIn('class="annotation-overview-metric-grid"', labelme_js)
         self.assertIn("grid-template-columns: repeat(5, minmax(0, 1fr));", labelme_css)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", labelme_css)
         self.assertNotIn(".labelme-step-strip,\n.labelme-import-panel,", labelme_css)
+
+    def test_dataset_uses_fixed_two_panel_side_rail_and_stacked_operation_area(self):
+        index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        dataset_css = (ROOT / "static" / "styles" / "pages" / "dataset.css").read_text(encoding="utf-8")
+
+        side_rail_start = index_html.index('class="dataset-side-rail"')
+        import_start = index_html.index('class="panel-section dataset-import-card"', side_rail_start)
+        video_start = index_html.index('class="panel-section dataset-import-card"', import_start + 1)
+        operation_start = index_html.index('class="dataset-operation-area"', video_start)
+        classes_start = index_html.index('class="panel-section dataset-classes-card"', operation_start)
+        browser_start = index_html.index('class="panel-section dataset-browser-card"', classes_start)
+        self.assertLess(side_rail_start, import_start)
+        self.assertLess(import_start, video_start)
+        self.assertLess(video_start, operation_start)
+        self.assertLess(operation_start, classes_start)
+        self.assertLess(classes_start, browser_start)
+        self.assertIn('class="btn btn-primary guarded dataset-save-classes-button"', index_html)
+        self.assertNotIn('id="btn-save-dataset-classes" class="btn btn-primary btn-block', index_html)
+        self.assertIn("grid-template-columns: minmax(400px, 0.46fr) minmax(0, 1fr);", dataset_css)
+        self.assertIn(".dataset-side-rail {", dataset_css)
+        self.assertIn("position: sticky;", dataset_css)
+        self.assertIn("gap: 0;", dataset_css)
+        self.assertIn("background: var(--bg-panel);", dataset_css)
+        self.assertIn(".dataset-side-rail > .panel-section + .panel-section {", dataset_css)
+        self.assertIn("border-top: 1px solid var(--border);", dataset_css)
+        self.assertIn(".dataset-side-rail .dataset-drop-zone {", dataset_css)
+        self.assertIn("min-height: 68px;", dataset_css)
+        self.assertNotIn(".dataset-import-card .dataset-card-body {\n  overflow-y: auto;", dataset_css)
+        self.assertIn(".dataset-operation-area {", dataset_css)
+        self.assertIn("grid-template-rows: clamp(310px, 38vh, 390px) minmax(430px, 1fr);", dataset_css)
+        self.assertIn("overscroll-behavior: contain;", dataset_css)
+        self.assertIn("max-width: 180px;", dataset_css)
 
     def test_style_shell_delegates_design_tokens_to_styles_module(self):
         style_css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
@@ -76,8 +124,8 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/components/model_selection_center.css";\n'
                 '@import "./styles/pages/dashboard.css";\n'
                 '@import "./styles/pages/history.css";\n'
-                '@import "./styles/pages/dataset.css";\n'
-                '@import "./styles/pages/labelme.css?v=20260711-layout-export-precision";\n'
+                '@import "./styles/pages/dataset.css?v=20260724-integrated-side-rail";\n'
+                '@import "./styles/pages/labelme.css?v=20260724-side-rail";\n'
                 '@import "./styles/pages/split.css?v=20260711-layout-export-precision";\n'
                 '@import "./styles/pages/training.css?v=20260722-cnn-epoch-monitor";\n'
                 '@import "./styles/pages/rnn_training.css";\n'
@@ -343,8 +391,10 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("@media (max-width: 760px) {", history_css)
 
         self.assertRegex(dataset_css, r"(?m)^\.dataset-manager-layout \{")
-        self.assertRegex(dataset_css, r"(?m)^\.dataset-manager-layout > \* \{")
-        self.assertRegex(dataset_css, r"(?m)^\.dataset-classes-card,")
+        self.assertRegex(dataset_css, r"(?m)^\.dataset-manager-layout > \*,")
+        self.assertRegex(dataset_css, r"(?m)^\.dataset-side-rail,")
+        self.assertRegex(dataset_css, r"(?m)^\.dataset-operation-area \{")
+        self.assertRegex(dataset_css, r"(?m)^\.dataset-classes-card \{")
         self.assertRegex(dataset_css, r"(?m)^\.dataset-video-fields \{")
         self.assertRegex(dataset_css, r"(?m)^\.dataset-browser-header \{")
         self.assertRegex(dataset_css, r"(?m)^\.dataset-browser-tools \{")

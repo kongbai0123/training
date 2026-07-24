@@ -427,6 +427,7 @@
             </div>
           </div>
           <div class="dataset-manager-layout">
+            <aside class="dataset-side-rail">
             <section class="panel-section dataset-import-card">
               <div class="section-title"><h2 data-i18n="dataset.importTitle">Dataset Import Center</h2></div>
               <p class="section-help" data-i18n="dataset.importHelp">Drop a folder or ZIP. The system filters image files and keeps packages separate from training data.</p>
@@ -502,6 +503,9 @@
               </div>
             </section>
 
+            </aside>
+
+            <div class="dataset-operation-area">
             <section class="panel-section dataset-classes-card">
               <div class="section-title"><h2 data-i18n="dataset.classesTitle">Class Name Management</h2></div>
               <p class="section-help" data-i18n="dataset.classesHelp">Add or remove project classes used by LabelMe, conversion, split, and training.</p>
@@ -511,7 +515,7 @@
                   <button class="btn btn-secondary dataset-action-button" id="btn-dataset-add-class"><i class="fa-solid fa-plus"></i> <span data-i18n="dataset.addClass">Add</span></button>
                 </div>
                 <div class="class-list-box dataset-class-list" id="dataset-classes-list-box"></div>
-                <button class="btn btn-primary btn-block guarded" data-requires="project" id="btn-save-dataset-classes">
+                <button class="btn btn-primary guarded dataset-save-classes-button" data-requires="project" id="btn-save-dataset-classes">
                   <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="dataset.saveClasses">Save classes</span>
                 </button>
               </div>
@@ -541,6 +545,7 @@
               </div>
               <div id="dataset-thumbnails" class="thumbnail-grid"></div>
             </section>
+            </div>
           </div>
         </section>
 
@@ -562,6 +567,24 @@
           </div>
 
           <div class="labelme-clean-layout">
+            <aside class="labelme-side-rail">
+            <section class="panel-section labelme-overview-panel">
+              <div class="section-title">
+                <div>
+                  <h2 data-i18n="labelme.overviewTitle">Annotation Overview</h2>
+                  <p class="section-help" data-i18n="labelme.overviewHelp">Review current coverage, annotation health, and the latest import outcome together.</p>
+                </div>
+              </div>
+              <div class="labelme-overview-grid">
+                <div class="labelme-overview-completion">
+                  <span class="labelme-overview-kicker" data-i18n="labelme.completionRate">Completion rate</span>
+                  <strong id="labelme-completion-text">0%</strong>
+                  <span id="labelme-completion-count" class="labelme-completion-count">0 / 0</span>
+                  <div class="progress-track"><div class="progress-fill" id="labelme-completion-bar"></div></div>
+                </div>
+              </div>
+            </section>
+
             <section class="panel-section labelme-import-panel" id="annotations-drop-card">
               <div class="section-title">
                 <h2 data-i18n="labelme.importTitle">Import Label Files</h2>
@@ -606,11 +629,13 @@
                 <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-labelme"><i class="fa-solid fa-rotate"></i> <span data-i18n="labelme.refreshStatus">Refresh Status</span></button>
               </div>
             </section>
+            </aside>
 
-            <section class="panel-section labelme-overview-panel">
+            <div class="labelme-operation-area">
+            <section class="panel-section labelme-status-panel">
               <div class="section-title">
                 <div>
-                  <h2 data-i18n="labelme.overviewTitle">Annotation Overview</h2>
+                  <h2 data-i18n="labelme.annotationAndImport">Annotation and latest import</h2>
                   <p class="section-help" data-i18n="labelme.overviewHelp">Review current coverage, annotation health, and the latest import outcome together.</p>
                 </div>
                 <div class="button-row labelme-overview-actions">
@@ -624,21 +649,13 @@
                   </button>
                 </div>
               </div>
-              <div class="labelme-overview-grid">
-                <div class="labelme-overview-completion">
-                  <span class="labelme-overview-kicker" data-i18n="labelme.completionRate">Completion rate</span>
-                  <strong id="labelme-completion-text">0%</strong>
-                  <span id="labelme-completion-count" class="labelme-completion-count">0 / 0</span>
-                  <div class="progress-track"><div class="progress-fill" id="labelme-completion-bar"></div></div>
-                </div>
-                <div class="labelme-overview-summary">
+              <div class="labelme-overview-summary">
                   <div class="labelme-overview-group-heading">
                     <strong data-i18n="labelme.annotationAndImport">Annotation and latest import</strong>
                     <span class="badge badge-muted" id="labelme-import-status">--</span>
                   </div>
                   <div id="annotation-import-report" class="annotation-import-report"></div>
                   <div class="labelme-health-summary" id="labelme-health-summary"></div>
-                </div>
               </div>
             </section>
 
@@ -689,6 +706,7 @@
                 </div>
               </details>
             </section>
+            </div>
           </div>
         </section>
         <section class="page" id="page-split">
