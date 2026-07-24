@@ -50,6 +50,7 @@ class UpdateCandidate:
             "immutable": self.immutable,
             "delivery": delivery,
             "can_incremental_update": bool(self.asset),
+            "requires_full_installer": bool(not self.asset and self.full_installer),
             "asset": self.asset.__dict__ if self.asset else None,
             "full_installer": self.full_installer.__dict__ if self.full_installer else None,
         }

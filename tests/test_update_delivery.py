@@ -76,6 +76,7 @@ class UpdateDeliveryTests(unittest.TestCase):
         self.assertEqual(candidate.runtime_version, "r1")
         self.assertEqual(candidate.full_installer.asset_id, 3)
         self.assertEqual(candidate.as_dict()["delivery"], "incremental")
+        self.assertFalse(candidate.as_dict()["requires_full_installer"])
 
     def test_release_client_surfaces_full_installer_when_incremental_update_is_unavailable(self):
         payload = {
@@ -100,6 +101,7 @@ class UpdateDeliveryTests(unittest.TestCase):
         self.assertEqual(candidate.full_installer.asset_id, 3)
         self.assertEqual(candidate.as_dict()["delivery"], "full_installer")
         self.assertFalse(candidate.as_dict()["can_incremental_update"])
+        self.assertTrue(candidate.as_dict()["requires_full_installer"])
 
     def test_release_client_ignores_old_release(self):
         old = {"tag_name": "v0.1.4", "draft": False, "prerelease": False, "assets": []}

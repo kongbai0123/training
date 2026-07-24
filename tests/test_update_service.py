@@ -320,6 +320,8 @@ class UpdateServiceTests(unittest.TestCase):
                 result = service.start_latest_download()
                 self.assertEqual(result["candidate"]["delivery"], "full_installer")
                 self.assertFalse(result["candidate"]["can_incremental_update"])
+                self.assertTrue(result["candidate"]["requires_full_installer"])
+                self.assertEqual(result["recommended_action"], "download_full_installer")
                 self.assertIsNone(result["candidate"]["asset"])
                 self.assertEqual(
                     result["candidate"]["full_installer"]["name"],

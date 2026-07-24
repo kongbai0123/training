@@ -174,7 +174,15 @@ function renderSoftwareUpdate() {
   const packageSize = qs("#update-package-size");
   const incrementalAsset = candidate?.asset;
   const installerAsset = candidate?.full_installer;
-  const requiresInstaller = Boolean(candidate && !incrementalAsset && installerAsset);
+  const requiresInstaller = Boolean(
+    candidate
+      && installerAsset
+      && (
+        candidate.delivery === "full_installer"
+        || candidate.requires_full_installer
+        || !incrementalAsset
+      )
+  );
   if (currentVersion) currentVersion.textContent = state.current?.app_version || "--";
   if (runtimeVersion) runtimeVersion.textContent = state.current?.runtime_version || "--";
   if (latestVersion) latestVersion.textContent = candidate?.version || ready?.app_version || "--";
@@ -257,7 +265,10 @@ function renderSoftwareUpdate() {
   const cacheLimit = qs("#update-cache-limit");
   if (cacheUsage) cacheUsage.textContent = formatBytes(storage.cache_bytes || 0);
   if (backupUsage) {
-    backupUsage.textContent = `${formatBytes(storage.backups_bytes || 0)} · ${Number(storage.backup_count || 0)}`;
+    backupUsage.textContent = t("updates.backupCount", {
+      size: formatBytes(storage.backups_bytes || 0),
+      count: Number(storage.backup_count || 0),
+    });
   }
   if (cacheLimit) cacheLimit.textContent = formatBytes(storage.cache_limit_bytes || 0);
   const meter = qs("#update-storage-meter-fill");
