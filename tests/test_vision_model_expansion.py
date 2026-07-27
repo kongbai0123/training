@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from PIL import Image
 
 from src.model_system.catalog import ModelCatalog
@@ -17,6 +18,7 @@ from src.training.state_store import TrainingStateStore
 from src.training.vision.torchvision_trainer import ProjectVisionDataset, train_torchvision_model
 
 
+@pytest.mark.heavy
 class VisionModelExpansionTests(unittest.TestCase):
     def setUp(self):
         TrainingStateStore._states.clear()

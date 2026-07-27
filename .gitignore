@@ -37,6 +37,7 @@ runs/
 # Packaging output
 build/
 dist/
+requirements-ci.txt
 installer/output/
 updates/private_keys/
 *.vtsupdate

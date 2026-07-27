@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import cv2
 import numpy as np
+import pytest
 from fastapi.testclient import TestClient
 
 import app
@@ -14,6 +15,7 @@ from src.config import PROJECTS_DIR
 from src.project_manager import ProjectManager
 
 
+@pytest.mark.heavy
 class AutoLabelingE2ETests(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app.app)

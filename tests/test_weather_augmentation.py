@@ -4,6 +4,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import pytest
 
 from src.augmenter import ImageAugmenter
 from src.api.routes.augmentation import (
@@ -13,6 +14,7 @@ from src.api.routes.augmentation import (
 )
 
 
+@pytest.mark.heavy
 class WeatherAugmentationTests(unittest.TestCase):
     def test_route_normalization_and_sample_seed_are_stable(self):
         config = normalize_augmentation_config({

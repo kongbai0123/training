@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: windows-latest
@@ -22,8 +26,17 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             requirements-test.txt
+      # CI runners have no CUDA device. Derive a CPU-only variant of the shipping
+      # requirements instead of maintaining a second pin list that can drift:
+      # requirements.txt stays the single source of truth for dependency versions.
+      - name: Derive CPU-only requirement set
+        shell: bash
+        run: |
+          sed -e 's#/whl/cu121#/whl/cpu#' -e 's#+cu121##' requirements.txt > requirements-ci.txt
+          echo "--- requirements-ci.txt ---"
+          cat requirements-ci.txt
       - name: Install test and runtime dependencies
-        run: python -m pip install -r requirements-test.txt -r requirements.txt
+        run: python -m pip install -r requirements-test.txt -r requirements-ci.txt
       - name: Run non-GPU test suite
         run: python -m pytest tests -q -m "not gpu" --junitxml=report.xml
       - name: Compile Python entry points and packages
