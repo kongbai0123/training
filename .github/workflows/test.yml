@@ -1,0 +1,37 @@
+name: Test Suite
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-test.txt
+      - name: Install test and runtime dependencies
+        run: python -m pip install -r requirements-test.txt -r requirements.txt
+      - name: Run non-GPU test suite
+        run: python -m pytest tests -q -m "not gpu" --junitxml=report.xml
+      - name: Compile Python entry points and packages
+        run: python -m compileall -q src app.py launcher.py
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: report.xml
+          if-no-files-found: ignore
