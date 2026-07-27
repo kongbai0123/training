@@ -156,7 +156,13 @@ class ModelPreparationApiTests(unittest.TestCase):
         })
 
     def test_catalog_exposes_current_official_model_families(self):
-        response = self.client.get("/api/models/catalog?architecture=cnn&usage=train")
+        capabilities = {
+            "gpu": {"cuda_available": True, "devices": [{"vram_total_mb": 24576}]},
+            "memory": {"total_gb": 32},
+            "disk": {"available_gb": 100},
+        }
+        with patch("src.api.routes.models.get_system_capabilities", return_value=capabilities):
+            response = self.client.get("/api/models/catalog?architecture=cnn&usage=train")
         self.assertEqual(response.status_code, 200)
         models = response.json()["models"]
         families = {model.get("model_family") for model in models}

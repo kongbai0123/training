@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 import zipfile
@@ -132,7 +133,7 @@ class ModelCatalogPhase4Tests(unittest.TestCase):
             with patch("src.model_store.PROJECTS_DIR", projects_root):
                 resolved = ModelStore.resolve_training_model(weight.as_posix())
 
-            self.assertEqual(Path(resolved), weight)
+            self.assertTrue(os.path.samefile(resolved, weight))
 
     def test_import_yolo_yaml_accepts_model_architecture_yaml(self):
         with tempfile.TemporaryDirectory() as tmp:

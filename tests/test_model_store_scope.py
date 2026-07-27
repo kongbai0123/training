@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -166,7 +167,7 @@ class ModelStoreScopeTests(unittest.TestCase):
             with patch("src.model_store.MODELS_DIR", models_dir):
                 resolved = ModelStore.resolve_training_model("custom.pt")
 
-            self.assertEqual(Path(resolved), models_dir / "custom.pt")
+            self.assertTrue(os.path.samefile(resolved, models_dir / "custom.pt"))
 
     def test_builtin_yolo_name_is_not_treated_as_unsafe_local_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:

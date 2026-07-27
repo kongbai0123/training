@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -38,7 +39,7 @@ class ExportServiceTests(unittest.TestCase):
     def test_resolve_exportable_weight_prefers_explicit_run(self):
         resolved = ExportService.resolve_exportable_weight(self.project, run_id="run_a")
 
-        self.assertEqual(resolved, self.best_pt)
+        self.assertTrue(os.path.samefile(resolved, self.best_pt))
 
     def test_export_project_model_writes_export_summary_and_updates_current(self):
         with patch("src.training.export_service.YOLO", FakeYOLO), \
