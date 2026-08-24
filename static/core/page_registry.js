@@ -1,6 +1,6 @@
-import { initDashboard, renderDashboard } from "../pages/dashboard.js?v=20260710-training-i18n-ux";
+import { initDashboard, renderDashboard } from "../pages/dashboard.js?v=20260824-unified-overview";
 import { initProjectAssistant, renderProjectAssistantPage } from "../pages/project_assistant.js?v=20260712-task-aware-assistant";
-import { initProjects, renderProjectsPage } from "../pages/projects.js?v=20260721-project-task-edit";
+import { initProjects, renderProjectsPage } from "../pages/projects.js?v=20260824-unified-overview";
 import { initDataset, renderDatasetPage } from "../pages/dataset.js?v=20260630-progress-hud";
 import { initLabelMe, renderLabelMeManager } from "../pages/labelme.js?v=20260711-layout-export-precision";
 import { initSplit, renderSplitPage } from "../pages/split.js";
@@ -11,7 +11,7 @@ import {
   renderTrainingModeSidebar,
   renderTrainingWorkspace,
   syncTrainingModeForProject,
-} from "../pages/training_modes.js?v=20260721-rnn-evaluation-sync";
+} from "../pages/training_modes.js?v=20260824-unified-overview";
 import { initEvaluation, renderEvaluationPage } from "../pages/evaluation.js?v=20260702-cnn-eval-polish2";
 import { initModelCompare, renderModelComparePage } from "../pages/model_compare.js?v=20260708-compare-scope-artifacts";
 import { initInference, renderInferencePage } from "../pages/inference.js?v=20260702-model-scroll-bounds";

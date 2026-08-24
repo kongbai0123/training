@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260722-augmentation-compare2">
+  <link rel="stylesheet" href="/static/style.css?v=20260824-unified-overview">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -71,10 +71,6 @@
 
     <div class="app-body">
       <aside class="sidebar">
-        <div class="training-mode-toggle">
-          <button type="button" id="training-mode-rnn" data-training-mode="rnn">RNN</button>
-          <button type="button" id="training-mode-cnn" data-training-mode="cnn" class="active">CNN</button>
-        </div>
         <nav class="sidebar-nav" aria-label="Main navigation" data-i18n-aria-label="shell.mainNavigation">
           <div class="training-shared-nav">
             <button class="sidebar-item active" data-mode-nav="overview"><i class="fa-solid fa-grid-2"></i><span data-i18n="shell.nav.overview">總覽</span></button>
@@ -83,9 +79,9 @@
             <button class="sidebar-item" data-page="model-guide"><i class="fa-solid fa-book-open"></i><span data-i18n="modelGuide.nav">模型指南</span></button>
           </div>
 
-          <div class="training-sidebar-divider"></div>
+          <div class="training-sidebar-divider hidden" id="training-module-divider"></div>
 
-          <div id="cnn-mode-nav" class="training-mode-nav">
+          <div id="cnn-mode-nav" class="training-mode-nav hidden">
             <button class="sidebar-item" data-page="dataset" data-cnn-nav="dataset"><i class="fa-solid fa-images"></i><span data-i18n="shell.nav.dataset">資料集</span></button>
             <button class="sidebar-item" data-page="labelme" data-cnn-nav="labelme"><i class="fa-solid fa-pen-nib"></i><span data-i18n="shell.nav.labelme">LabelMe</span></button>
             <button class="sidebar-item" data-page="split" data-cnn-nav="split"><i class="fa-solid fa-code-branch"></i><span data-i18n="shell.nav.split">資料分割</span></button>
@@ -192,28 +188,37 @@
         <section class="page active" id="page-dashboard">
           <div class="page-header">
             <div>
-              <h1>Dashboard Control Center</h1>
-              <p>Control the active project workflow and jump to the next operation.</p>
+              <h1 data-i18n="dashboard.title">功能總覽</h1>
+              <p data-i18n="dashboard.subtitle">從統一窗口進入各項訓練功能；每個功能都使用獨立的後台工作區。</p>
             </div>
             <div class="page-actions">
-              <button class="btn btn-primary" data-nav="projects"><i class="fa-solid fa-plus"></i> New Project</button>
-              <button class="btn btn-secondary" id="btn-dashboard-refresh"><i class="fa-solid fa-rotate"></i> Refresh</button>
+              <button class="btn btn-primary" data-nav="projects"><i class="fa-solid fa-plus"></i> <span data-i18n="common.createProject">建立專案</span></button>
+              <button class="btn btn-secondary" id="btn-dashboard-refresh"><i class="fa-solid fa-rotate"></i> <span data-i18n="common.refresh">重新整理</span></button>
             </div>
           </div>
 
           <div id="dashboard-alerts" class="guard-stack"></div>
-          <div class="control-card-grid" id="control-cards"></div>
+          <section class="overview-module-section" aria-labelledby="overview-module-heading">
+            <div class="section-title overview-module-heading">
+              <div>
+                <h2 id="overview-module-heading" data-i18n="dashboard.modules.title">功能窗口</h2>
+                <p class="section-help" data-i18n="dashboard.modules.help">選擇功能後，進入該功能完整且獨立的工作區。</p>
+              </div>
+              <span class="summary-badge badge-neutral" data-i18n="dashboard.modules.availableCount">2 項功能</span>
+            </div>
+            <div class="overview-module-grid" id="overview-module-grid" data-ui-smoke="overview-module-grid"></div>
+          </section>
           <div class="dashboard-lower-grid">
             <section class="panel-section">
               <div class="section-title">
-                <h2>Recent Projects</h2>
-                <button class="btn btn-secondary btn-sm" data-nav="history">Browse History</button>
+                <h2 data-i18n="dashboard.recentProjects">最近專案</h2>
+                <button class="btn btn-secondary btn-sm" data-nav="history" data-i18n="dashboard.projectHistory">專案歷史</button>
               </div>
               <div id="recent-projects-list" class="list-stack"></div>
             </section>
             <section class="panel-section">
               <div class="section-title">
-                <h2>Recent Activity</h2>
+                <h2 data-i18n="dashboard.recentActivity">目前狀態</h2>
               </div>
               <div id="recent-activity-list" class="activity-list"></div>
             </section>
@@ -942,8 +947,8 @@
         <section class="page" id="page-training">
           <div class="page-header">
             <div>
-              <h1 data-i18n="training.title">Training Control Console</h1>
-              <p data-i18n="training.subtitle">Check training readiness first, fix blockers, then configure and start a controlled training run.</p>
+              <h1 id="training-workspace-title">功能工作區</h1>
+              <p id="training-workspace-subtitle">選擇功能後使用其完整操作流程。</p>
             </div>
             <div class="page-actions training-rnn-header-actions hidden" id="rnn-header-actions">
               <button type="button" class="btn btn-primary" id="rnn-create-project">
@@ -972,7 +977,7 @@
                       <div class="section-title"><h2>影像資料集摘要</h2><span class="summary-badge badge-neutral">Image dataset</span></div>
                       <div class="summary-row"><span>資料型態</span><code>Images / LabelMe JSON</code></div>
                       <div class="summary-row"><span>訓練格式</span><code>YOLO Detection / Segmentation</code></div>
-                      <div class="summary-row"><span>資料來源</span><code>D:/software/yolo/projects</code></div>
+                      <div class="summary-row"><span>資料來源</span><code>%LOCALAPPDATA%/VisionTrainingStudio/projects</code></div>
                     </section>
                     <section class="rnn-preview-card">
                       <div class="section-title"><h2>標註與切分狀態</h2><span class="summary-badge badge-warning">Readiness gated</span></div>
@@ -3023,7 +3028,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260722-cnn-epoch-monitor"></script>
+  <script type="module" src="/static/app.js?v=20260824-unified-overview"></script>
 </body>
 </html>
 

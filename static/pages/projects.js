@@ -802,7 +802,7 @@ async function saveProjectTaskEdit(event) {
     closeProjectTaskEditModal();
     eventBus.emit("toast", t("project.taskEditSuccess"));
     eventBus.emit("reload-projects", isCurrentProject
-      ? { openProjectId: projectId, page: isSequenceProjectType(taskType) ? "training" : "dashboard" }
+      ? { openProjectId: projectId, page: "training", moduleOverview: true }
       : {});
   } catch (err) {
     eventBus.emit("toast", t("project.taskEditFailed", { error: err.message }));
@@ -835,7 +835,8 @@ async function createProject(event) {
 
     eventBus.emit("reload-projects", {
       openProjectId: project.project_id,
-      page: isSequence ? "training" : "dashboard"
+      page: "training",
+      moduleOverview: true
     });
     eventBus.emit("toast", "專案已建立");
   } catch (err) {

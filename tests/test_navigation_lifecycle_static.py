@@ -6,6 +6,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class NavigationLifecycleStaticTests(unittest.TestCase):
+    def test_unified_overview_opens_modules_without_a_mode_toggle(self):
+        index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        dashboard = (ROOT / "static" / "pages" / "dashboard.js").read_text(encoding="utf-8")
+        modes = (ROOT / "static" / "pages" / "training_modes.js").read_text(encoding="utf-8")
+        bootstrap = (ROOT / "static" / "core" / "bootstrap.js").read_text(encoding="utf-8")
+
+        self.assertNotIn("data-training-mode", index_html)
+        self.assertIn('data-overview-module="${module.mode}"', dashboard)
+        self.assertIn('eventBus.on("open-training-module", openTrainingModule)', modes)
+        self.assertIn('eventBus.emit("navigate", "training")', modes)
+        self.assertIn('eventBus.emit("navigate", "dashboard")', modes)
+        self.assertIn('openProject(projectId, { page: "training", moduleOverview: true })', bootstrap)
+        self.assertIn('targetPage === "module-overview"', modes)
+
     def test_only_the_active_secondary_page_is_rendered(self):
         registry = (ROOT / "static" / "core" / "page_registry.js").read_text(encoding="utf-8")
 

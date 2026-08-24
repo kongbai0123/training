@@ -140,32 +140,6 @@
 .training-mode-layout {
   display: block;
 }
-.training-mode-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  margin-bottom: 16px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: var(--bg);
-}
-.training-mode-toggle button {
-  min-height: 42px;
-  color: var(--text-soft);
-  background: var(--bg);
-  border-right: 1px solid var(--border);
-  font-weight: 800;
-  cursor: pointer;
-}
-.training-mode-toggle button:last-child {
-  border-right: 0;
-}
-.training-mode-toggle button.active {
-  color: #fff;
-  background: var(--primary);
-  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.28);
-}
 .training-shared-nav,
 .training-mode-nav {
   display: flex;

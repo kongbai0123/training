@@ -4,6 +4,17 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-08-24
+
+### Added
+- Added a unified, extensible feature overview with compact RNN and CNN module windows.
+- Added bilingual module context, project counts, and direct workspace entry actions.
+
+### Changed
+- Removed the global RNN/CNN mode toggle from the sidebar.
+- Routed both training modes through dedicated workspaces while keeping the overview as a platform-level entry point.
+- Opened existing and newly created projects in their matching module overview without changing backend APIs or project data.
+
 ## [0.1.11] - 2026-07-24
 
 ### Added

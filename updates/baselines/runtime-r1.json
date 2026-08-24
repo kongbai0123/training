@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "product": "Vision Training Studio",
-  "app_version": "0.1.10",
+  "app_version": "0.1.11",
   "runtime_version": "r1",
   "package_format_version": 1,
-  "created_at": "2026-07-24T09:22:52.223518+00:00",
+  "created_at": "2026-08-24T08:49:13.058582+00:00",
   "file_count": 11494,
   "runtime_file_count": 11374,
   "app_file_count": 120,
@@ -29055,8 +29055,8 @@
       "category": "app"
     },
     "_internal/static/index.html": {
-      "size": 248606,
-      "sha256": "c3bda6ed58def433314677f78ac6523fe8a3d3fcd8e6edcce7d829271801f430",
+      "size": 250856,
+      "sha256": "e1690e5e7c91463c6e4e177482636be986e3d1142bc7dc252ef74c2ef7ad05ac",
       "category": "app"
     },
     "_internal/static/pages/augmentation.js": {
@@ -29095,8 +29095,8 @@
       "category": "app"
     },
     "_internal/static/pages/labelme.js": {
-      "size": 33622,
-      "sha256": "51b3ea51c32d532d7503b70e66f2760129a987813b21459511774680c19fed99",
+      "size": 38090,
+      "sha256": "b927f86c2f266303b4d471f4c42bc25fbc83b8a7c6888aa37744fe6ab2022a25",
       "category": "app"
     },
     "_internal/static/pages/model_compare.js": {
@@ -29200,13 +29200,13 @@
       "category": "app"
     },
     "_internal/static/pages/settings.js": {
-      "size": 17021,
-      "sha256": "358afaa538a17ac2056959faf8e5130b0cb22ccfc58bd439844b89ea3dabc04a",
+      "size": 17036,
+      "sha256": "0c44ec62ecd424bc21446d47604e82da3c5d9c325209b2d652b63f332ea92314",
       "category": "app"
     },
     "_internal/static/pages/split.js": {
-      "size": 6468,
-      "sha256": "774834e79f7e06844e4048bf0ef528dd1c1b1a33d2a02c983a5d09b4d20fc693",
+      "size": 10519,
+      "sha256": "ae61849c231fae7dc1ad304bf8577a5fa217b24e6b1f5447355e4b7f3298ecf8",
       "category": "app"
     },
     "_internal/static/pages/training.js": {
@@ -29225,13 +29225,13 @@
       "category": "app"
     },
     "_internal/static/state/i18n/en.js": {
-      "size": 192209,
-      "sha256": "e2a171c35d658036c16327d6e8ea5c4e4606a1f6462bc2297cd6bc2b161ea17d",
+      "size": 193852,
+      "sha256": "e6752bc0a188ff5cc2f3c5b23c315c199fc707c86be028ad22d6489c829328ca",
       "category": "app"
     },
     "_internal/static/state/i18n/zh-TW.js": {
-      "size": 169211,
-      "sha256": "65c52f729cf7ae31b5643cbb232deb2cf15302bf8cb1d6a285a6102a283a72f6",
+      "size": 170869,
+      "sha256": "d63c44d4fbe64b4b5a43d9f64a3c06d74650b0ff7b19a921699b10485a4c58fa",
       "category": "app"
     },
     "_internal/static/state/i18n.js": {
@@ -29330,8 +29330,8 @@
       "category": "app"
     },
     "_internal/static/styles/pages/labelme.css": {
-      "size": 9421,
-      "sha256": "a4437d7215a62cb9a55edd230b09aa490b9358a6fad3d60b87bbfe0eca953c46",
+      "size": 9933,
+      "sha256": "f104b779aabe7bc18d91db5d4f85f4c9f6e6f09d2558674aabf9173c4213dc11",
       "category": "app"
     },
     "_internal/static/styles/pages/model_compare.css": {
@@ -29360,13 +29360,13 @@
       "category": "app"
     },
     "_internal/static/styles/pages/settings.css": {
-      "size": 3790,
-      "sha256": "0e42c3ea61d5c156d0c321cb296f5ebcb7f89079933a18887a4cda1613f9823a",
+      "size": 3892,
+      "sha256": "da4cf46a3494f9d945325ab4f98e81fb4907a791ea3a854ceba1009ec2820df8",
       "category": "app"
     },
     "_internal/static/styles/pages/split.css": {
-      "size": 2444,
-      "sha256": "24c14b4fe22f52337af469877f44ed3f42f4e33337a4f65051b1683ca9e55aad",
+      "size": 5467,
+      "sha256": "bd0697dae4440ebb1be11d8b5dc87ac27d2864fc7411a831618a1aa99fffb170",
       "category": "app"
     },
     "_internal/static/styles/pages/training.css": {
@@ -29400,8 +29400,8 @@
       "category": "app"
     },
     "_internal/static/vendor/chartjs/chart.umd.min.js": {
-      "size": 206944,
-      "sha256": "bce154080959c574be0bb6b1a924ff32f08ebc6ff460c159171f51c53802c844",
+      "size": 206964,
+      "sha256": "867b34a1b9c481d820952ec602ffdf885b95eb4028bebb363a20925b74b21494",
       "category": "app"
     },
     "_internal/static/vendor/dropzone/dropzone.min.js": {
@@ -56716,7 +56716,7 @@
     },
     "_internal/version.json": {
       "size": 267,
-      "sha256": "348f578977009a0121da7aeefa91dc0d107fb3854f33b7768b833e5715cc6d1d",
+      "sha256": "e34e5951f21ed0fbf7b1cf3f6bcd39e871de4bbbdc55f4d698310bb2dec130ca",
       "category": "app"
     },
     "_internal/wcwidth/py.typed": {
@@ -57470,8 +57470,8 @@
       "category": "runtime"
     },
     "VisionTrainingStudio.exe": {
-      "size": 88588574,
-      "sha256": "2f78a040ab5cd4abf14fa42d955bfbb693906e185109c71177147e6c3a41715c",
+      "size": 88589807,
+      "sha256": "f21af3a10ae6a4461586f6c867de52cc431d4962319dc863ddf04f669b14bcd6",
       "category": "app"
     },
     "VisionTrainingStudioUpdater.exe": {

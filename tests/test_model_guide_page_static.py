@@ -18,7 +18,7 @@ class ModelGuidePageStaticTests(unittest.TestCase):
         self.assertIn('id="model-guide-decision"', html)
         self.assertIn('id="model-guide-report-preview"', html)
         self.assertLess(html.index('data-page="settings"'), html.index('data-page="model-guide"'))
-        self.assertLess(html.index('data-page="model-guide"'), html.index('class="training-sidebar-divider"'))
+        self.assertLess(html.index('data-page="model-guide"'), html.index('id="training-module-divider"'))
 
     def test_model_guide_reuses_catalog_and_local_run_contracts(self):
         module = (ROOT / "static" / "pages" / "model_guide.js").read_text(encoding="utf-8")

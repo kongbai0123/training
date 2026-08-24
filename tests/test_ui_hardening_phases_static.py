@@ -33,7 +33,7 @@ class UIHardeningPhasesStaticTests(unittest.TestCase):
         self.assertIn('data-ui-smoke="dirty-form-alert"', dashboard_js)
         self.assertIn('data-ui-smoke="stale-resource-alert"', dashboard_js)
 
-    def test_phase4_informational_training_flow_is_connected_to_both_overviews(self):
+    def test_phase4_informational_training_flow_remains_in_rnn_workspace(self):
         guide_js = self.read("static", "core", "training_flow_guide.js")
         dashboard_js = self.read("static", "pages", "dashboard.js")
         training_modes_js = self.read("static", "pages", "training_modes.js")
@@ -50,8 +50,8 @@ class UIHardeningPhasesStaticTests(unittest.TestCase):
         self.assertNotIn("is-complete", guide_js)
         self.assertNotIn("is-current", guide_js)
         self.assertNotIn("progress", guide_js.lower())
-        self.assertIn("resolveDashboardProjectMode(project)", dashboard_js)
-        self.assertIn("renderTrainingFlowGuide({ mode })", dashboard_js)
+        self.assertNotIn("renderTrainingFlowGuide", dashboard_js)
+        self.assertIn("OVERVIEW_MODULES", dashboard_js)
         self.assertIn('id="rnn-training-flow-guide"', index_html)
         self.assertIn('renderTrainingFlowGuide({ mode: appState.currentProject ? "rnn" : null })', training_modes_js)
         self.assertIn(".training-flow-phases", dashboard_css)

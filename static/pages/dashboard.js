@@ -3,31 +3,25 @@ import { appState, t } from "../state.js";
 import { qs, setHTML, escapeHtml } from "../utils.js";
 import { getDirtyFormSummaries } from "../core/dirty_forms.js";
 import { getStaleResources } from "../core/resource_freshness.js";
-import { renderTrainingFlowGuide } from "../core/training_flow_guide.js";
-import { trainingModeState } from "./training_mode_state.js";
-import {
-  buildProjectStatusView,
-  renderProjectStatusStrip,
-  resolveDashboardProjectMode,
-} from "../core/project_status_strip.js";
+
+export const OVERVIEW_MODULES = Object.freeze([
+  Object.freeze({ mode: "rnn", icon: "fa-chart-line", titleKey: "dashboard.module.rnn.title", descriptionKey: "dashboard.module.rnn.description", capabilityKey: "dashboard.module.rnn.capabilities" }),
+  Object.freeze({ mode: "cnn", icon: "fa-images", titleKey: "dashboard.module.cnn.title", descriptionKey: "dashboard.module.cnn.description", capabilityKey: "dashboard.module.cnn.capabilities" }),
+]);
 
 export function initDashboard() {
-  qs("#btn-dashboard-refresh")?.addEventListener("click", () => {
-    eventBus.emit("refresh-project");
-  });
-  qs("#control-cards")?.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-rnn-target]");
+  qs("#btn-dashboard-refresh")?.addEventListener("click", () => eventBus.emit("refresh-project"));
+  qs("#overview-module-grid")?.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-overview-module]");
     if (!target) return;
     event.preventDefault();
-    const panel = target.dataset.rnnTarget;
-    qs(`#rnn-mode-nav [data-rnn-nav="${panel}"]`)?.click();
+    eventBus.emit("open-training-module", target.dataset.overviewModule);
   });
 }
 
 export function renderDashboard(status) {
-  setHTML("#dashboard-kpis", "");
   renderDashboardAlerts();
-  renderTrainingFlow(status);
+  renderOverviewModules();
   renderRecentProjects(appState.projects);
   renderActivity(status);
 }
@@ -39,7 +33,7 @@ function renderDashboardAlerts() {
   if (dirtyForms.length) {
     alerts.push(`
       <div class="status-guard warning dashboard-operational-alert" data-ui-smoke="dirty-form-alert">
-        <strong>Unsaved changes</strong>
+        <strong>${escapeHtml(t("dashboard.alert.unsaved"))}</strong>
         <span>${escapeHtml(dirtyForms.map((item) => item.label).join(", "))}</span>
       </div>
     `);
@@ -59,19 +53,48 @@ function renderDashboardAlerts() {
   });
 }
 
-function renderTrainingFlow(status) {
-  const project = appState.currentProject;
-  const mode = resolveDashboardProjectMode(project);
-  const statusView = buildProjectStatusView({
-    status,
-    project,
-    models: appState.models,
-    rnnState: trainingModeState.rnn,
+function renderOverviewModules() {
+  const activeProject = appState.currentProject;
+  const activeMode = resolveProjectMode(activeProject);
+  const counts = countProjectsByMode(appState.projects || []);
+  const cards = OVERVIEW_MODULES.map((module) => {
+    const isActiveProject = Boolean(activeProject && activeMode === module.mode);
+    const context = isActiveProject
+      ? t("dashboard.module.activeProject", { name: activeProject.project_name || activeProject.project_id || "--" })
+      : t("dashboard.module.projectCount", { count: counts[module.mode] || 0 });
+    return `
+      <article class="overview-module-card overview-module-${module.mode}" data-module-card="${module.mode}">
+        <header>
+          <span class="overview-module-icon" aria-hidden="true"><i class="fa-solid ${module.icon}"></i></span>
+          <div>
+            <h3>${escapeHtml(t(module.titleKey))}</h3>
+            <span class="overview-module-context${isActiveProject ? " is-active" : ""}">${escapeHtml(context)}</span>
+          </div>
+        </header>
+        <p>${escapeHtml(t(module.descriptionKey))}</p>
+        <div class="overview-module-capabilities">${escapeHtml(t(module.capabilityKey))}</div>
+        <button type="button" class="btn btn-primary" data-overview-module="${module.mode}" aria-label="${escapeHtml(t("dashboard.module.openAria", { module: t(module.titleKey) }))}">
+          <span>${escapeHtml(t("dashboard.module.open"))}</span>
+          <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+        </button>
+      </article>
+    `;
   });
-  setHTML("#control-cards", `
-    ${renderTrainingFlowGuide({ mode })}
-    ${renderProjectStatusStrip(statusView)}
-  `);
+  setHTML("#overview-module-grid", cards.join(""));
+}
+
+function countProjectsByMode(projects) {
+  return projects.reduce((counts, project) => {
+    counts[resolveProjectMode(project)] += 1;
+    return counts;
+  }, { cnn: 0, rnn: 0 });
+}
+
+function resolveProjectMode(project) {
+  const explicit = String(project?.architecture || project?.training_mode || project?.training_config?.architecture || "").toLowerCase();
+  if (explicit === "rnn") return "rnn";
+  const taskType = String(project?.task_type || project?.task || "").toLowerCase();
+  return ["sequence", "time_series", "timeseries", "rnn"].some((token) => taskType.includes(token)) ? "rnn" : "cnn";
 }
 
 function renderRecentProjects(projects) {
@@ -79,18 +102,14 @@ function renderRecentProjects(projects) {
 }
 
 function renderActivity(status) {
-  const items = [];
-  if (!status.hasProject) {
-    items.push("No active project. Create a new project or open one from Browse History.");
-  } else if (!status.hasDataset) {
-    items.push("Project is open, but no dataset has been imported yet. Start from Dataset.");
-  } else if (!status.splitComplete) {
-    items.push("Dataset exists. Sync annotations and create a Train / Val / Test split before training.");
-  } else if (!status.trainReady) {
-    items.push("Split exists, but training readiness still has blockers. Review Training status.");
-  } else {
-    items.push("Project is ready for training. Open Training to review config and start a run.");
-  }
-
-  setHTML("#recent-activity-list", items.map((item) => `<div class="activity-item">${escapeHtml(item)}</div>`).join(""));
+  const key = !status.hasProject
+    ? "dashboard.activity.noProject"
+    : !status.hasDataset
+      ? "dashboard.activity.noDataset"
+      : !status.splitComplete
+        ? "dashboard.activity.noSplit"
+        : !status.trainReady
+          ? "dashboard.activity.notReady"
+          : "dashboard.activity.ready";
+  setHTML("#recent-activity-list", `<div class="activity-item">${escapeHtml(t(key))}</div>`);
 }

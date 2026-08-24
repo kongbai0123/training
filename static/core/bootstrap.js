@@ -27,7 +27,7 @@ import {
   renderPrimaryPageModules,
   renderSecondaryPageModules,
   syncPageModeForProject,
-} from "./page_registry.js?v=20260722-cnn-epoch-monitor";
+} from "./page_registry.js?v=20260824-unified-overview";
 
 const {
   bootstrapSession,
@@ -131,13 +131,16 @@ function bindGlobalNavigation() {
   });
 
   eventBus.on("open-project", async (projectId) => {
-    await openProject(projectId, { stayOnPage: true });
+    await openProject(projectId, { page: "training", moduleOverview: true });
   });
 
   eventBus.on("reload-projects", async (options = {}) => {
     await loadProjects({ autoOpenLatest: false });
     if (options.openProjectId) {
-      await openProject(options.openProjectId, { page: options.page || "dashboard" });
+      await openProject(options.openProjectId, {
+        page: options.page || "dashboard",
+        moduleOverview: Boolean(options.moduleOverview),
+      });
     }
   });
 

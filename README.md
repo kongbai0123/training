@@ -7,12 +7,12 @@
 整合 CNN 影像任務、RNN 序列任務、資料標註、資料增強、模型訓練、評估、比較與匯出。
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](docs/INSTALL.md)
-[![Version](https://img.shields.io/badge/version-0.1.11-2563EB)](VERSION)
-[![Release](https://img.shields.io/badge/release-v0.1.11%20Update-16A34A)](https://github.com/kongbai0123/training/releases/tag/v0.1.11)
+[![Version](https://img.shields.io/badge/version-0.1.12-2563EB)](VERSION)
+[![Release](https://img.shields.io/badge/release-v0.1.12%20Update-16A34A)](https://github.com/kongbai0123/training/releases/tag/v0.1.12)
 [![Runtime](https://img.shields.io/badge/end--user%20runtime-No%20Python%20required-0F766E)](docs/INSTALL.md)
 
 [下載完整安裝版](https://github.com/kongbai0123/training/releases/tag/v0.1.6) ·
-[取得最新更新](https://github.com/kongbai0123/training/releases/tag/v0.1.11) ·
+[取得最新更新](https://github.com/kongbai0123/training/releases/tag/v0.1.12) ·
 [安裝說明](docs/INSTALL.md) ·
 [使用指南](docs/USER_GUIDE.md) ·
 [模型支援](docs/MODEL_SUPPORT.md) ·
@@ -129,18 +129,19 @@ RNN 專案可指定特徵欄位、目標欄位、時間欄位與序列 ID，並�
 
 ### 目前版本
 
-- **最新穩定版：v0.1.11**
+- **最新穩定版：v0.1.12**
 - **最新完整安裝基準：v0.1.6**
 - [下載 v0.1.6 完整安裝程式](https://github.com/kongbai0123/training/releases/tag/v0.1.6)
-- [下載 v0.1.11 增量更新包與 SHA-256 checksum](https://github.com/kongbai0123/training/releases/tag/v0.1.11)
+- [下載 v0.1.12 增量更新包與 SHA-256 checksum](https://github.com/kongbai0123/training/releases/tag/v0.1.12)
 - [完整版本變更紀錄](CHANGELOG.md)
 
-新安裝或尚未具備目前更新執行環境的使用者，請先安裝 v0.1.6 完整安裝程式。v0.1.11 為 `runtime-r1` 增量更新，只接受 v0.1.10；較舊版本須依序套用相容更新，不能直接跳版。設定頁會檢查版本與 runtime，相容時才提供下載與套用，不相容時會引導使用完整安裝程式。
+新安裝或尚未具備目前更新執行環境的使用者，請先安裝 v0.1.6 完整安裝程式。v0.1.12 為 `runtime-r1` 增量更新，只接受 v0.1.11；較舊版本須依序套用相容更新，不能直接跳版。設定頁會檢查版本與 runtime，相容時才提供下載與套用，不相容時會引導使用完整安裝程式。
 
 ### 增量更新（由新到舊）
 
 | 目標版本 | 來源版本 | 發布內容 |
 |---|---|---|
+| v0.1.12 | v0.1.11 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.12) |
 | v0.1.11 | v0.1.10 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.11) |
 | v0.1.10 | v0.1.9 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.10) |
 | v0.1.9 | v0.1.8 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.9) |
@@ -153,12 +154,13 @@ RNN 專案可指定特徵欄位、目標欄位、時間欄位與序列 ID，並�
 
 以下依版本由新到舊排列：
 
-1. [v0.1.11 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-07-24_0.1.11.md)
-2. [v0.1.10 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-07-24_0.1.10.md)
-3. [v0.1.4 更新系統與安裝驗證紀錄](docs/RELEASE_VALIDATION_2026-07-23_0.1.4.md)
-4. [v0.1.3 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-22_0.1.3.md)
-5. [v0.1.2 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-22.md)
-6. [v0.1.1 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-16.md)
+1. [v0.1.12 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-08-24_0.1.12.md)
+2. [v0.1.11 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-07-24_0.1.11.md)
+3. [v0.1.10 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-07-24_0.1.10.md)
+4. [v0.1.4 更新系統與安裝驗證紀錄](docs/RELEASE_VALIDATION_2026-07-23_0.1.4.md)
+5. [v0.1.3 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-22_0.1.3.md)
+6. [v0.1.2 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-22.md)
+7. [v0.1.1 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-16.md)
 
 ### 更新系統文件
 

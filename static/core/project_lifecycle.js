@@ -77,7 +77,8 @@ export function createProjectLifecycle({ renderAll, navigate }) {
       appState.currentProject = await apiFetch(`/api/projects/${projectId}`);
       appState.currentProjectId = projectId;
       appState.currentProjectClasses = [...(appState.currentProject?.class_names || [])];
-      syncPageModeForProject(appState.currentProject, options.page || appState.currentPage);
+      const destinationPage = options.page || appState.currentPage;
+      syncPageModeForProject(appState.currentProject, options.moduleOverview ? "module-overview" : destinationPage);
       updateLabelMeState();
       await checkCurrentTrainStatus();
       try {
@@ -90,7 +91,7 @@ export function createProjectLifecycle({ renderAll, navigate }) {
       await loadPageRecommendedConfig();
       renderAll();
       eventBus.emit("project-opened", { projectId, project: appState.currentProject });
-      if (!options.stayOnPage) navigate(options.page || "dashboard");
+      if (!options.stayOnPage) navigate(destinationPage || "dashboard");
     } catch (err) {
       showToastCore(`Failed to open project: ${err.message}`);
     }

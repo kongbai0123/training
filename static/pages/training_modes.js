@@ -111,9 +111,7 @@ let trainingModeSidebarInitialized = false;
 export function initTrainingModeSidebar() {
   if (trainingModeSidebarInitialized) return;
   trainingModeSidebarInitialized = true;
-  qsa("[data-training-mode]").forEach((button) => {
-    button.addEventListener("click", () => setTrainingMode(button.dataset.trainingMode));
-  });
+  eventBus.on("open-training-module", openTrainingModule);
 
   qsa("[data-rnn-nav]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -164,10 +162,9 @@ export function initTrainingModeSidebar() {
       if (button.dataset.modeNav === "overview") {
         trainingModeState.activeCnnPanel = "overview";
         trainingModeState.activeRnnPanel = "overview";
-        eventBus.emit("navigate", trainingModeState.activeMode === "cnn" ? "dashboard" : "training");
+        eventBus.emit("navigate", "dashboard");
         renderTrainingModeSidebar();
         renderTrainingWorkspace();
-        if (trainingModeState.activeMode === "rnn") loadRnnConfig();
         return;
       }
       if (button.dataset.modeNav === "history" || button.dataset.modeNav === "settings") {
@@ -229,12 +226,16 @@ function isHiddenModeNavButton(button) {
 }
 
 export function setTrainingMode(mode) {
-  if (!["cnn", "rnn"].includes(mode) || trainingModeState.activeMode === mode) return;
+  openTrainingModule(mode);
+}
+
+export function openTrainingModule(mode) {
+  if (!["cnn", "rnn"].includes(mode)) return;
   trainingModeState.activeMode = mode;
   if (mode === "cnn") trainingModeState.activeCnnPanel = "overview";
   if (mode === "rnn") trainingModeState.activeRnnPanel = "overview";
-  eventBus.emit("navigate", mode === "cnn" ? "dashboard" : "training");
-  if (mode === "rnn") ensureTrainingPageActive();
+  eventBus.emit("navigate", "training");
+  ensureTrainingPageActive();
   renderTrainingModeSidebar();
   renderTrainingWorkspace();
   if (mode === "rnn") loadRnnConfig();
@@ -254,23 +255,25 @@ export function syncTrainingModeForProject(project, targetPage = "dashboard") {
 
   if (isRnnProject) {
     trainingModeState.activeMode = "rnn";
-    trainingModeState.activeRnnPanel = targetPage === "training" && previousRnnPanel
+    trainingModeState.activeRnnPanel = targetPage === "module-overview"
+      ? "overview"
+      : targetPage === "training" && previousRnnPanel
       ? previousRnnPanel
       : "overview";
     return;
   }
 
   trainingModeState.activeMode = "cnn";
-  trainingModeState.activeCnnPanel = targetPage === "training" ? "training" : "overview";
+  trainingModeState.activeCnnPanel = targetPage === "module-overview"
+    ? "overview"
+    : targetPage === "training" ? "training" : "overview";
 }
 
 export function renderTrainingModeSidebar() {
-  qsa("[data-training-mode]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.trainingMode === trainingModeState.activeMode);
-  });
-
-  qs("#cnn-mode-nav")?.classList.toggle("hidden", trainingModeState.activeMode !== "cnn");
-  qs("#rnn-mode-nav")?.classList.toggle("hidden", trainingModeState.activeMode !== "rnn");
+  const isPlatformOverview = appState.currentPage === "dashboard";
+  qs("#training-module-divider")?.classList.toggle("hidden", isPlatformOverview);
+  qs("#cnn-mode-nav")?.classList.toggle("hidden", isPlatformOverview || trainingModeState.activeMode !== "cnn");
+  qs("#rnn-mode-nav")?.classList.toggle("hidden", isPlatformOverview || trainingModeState.activeMode !== "rnn");
 
   qsa("[data-rnn-nav]").forEach((button) => {
     button.classList.toggle("active", button.dataset.rnnNav === trainingModeState.activeRnnPanel);
@@ -292,11 +295,7 @@ export function renderTrainingModeSidebar() {
     button.classList.toggle(
       "active",
       button.dataset.modeNav === "overview"
-        ? (
-          trainingModeState.activeMode === "cnn"
-            ? appState.currentPage === "dashboard"
-            : appState.currentPage === "training" && trainingModeState.activeRnnPanel === "overview"
-        )
+        ? appState.currentPage === "dashboard"
         : button.dataset.modeNav === appState.currentPage
     );
   });
@@ -310,6 +309,8 @@ export function renderTrainingWorkspace() {
   qs("#rnn-workspace")?.classList.toggle("hidden", isCnn);
   qs("#rnn-workspace")?.classList.toggle("active", !isCnn);
   qs("#rnn-header-actions")?.classList.toggle("hidden", isCnn);
+  setText("#training-workspace-title", t(isCnn ? "dashboard.module.cnn.workspaceTitle" : "dashboard.module.rnn.workspaceTitle"));
+  setText("#training-workspace-subtitle", t(isCnn ? "dashboard.module.cnn.workspaceSubtitle" : "dashboard.module.rnn.workspaceSubtitle"));
 
   qsa("[data-rnn-panel]").forEach((panel) => {
     const isActive = panel.dataset.rnnPanel === trainingModeState.activeRnnPanel;
