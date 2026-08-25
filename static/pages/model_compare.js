@@ -79,7 +79,7 @@ export function renderModelComparePage() {
 
 function setCompareArchitecture(architecture) {
   const forced = getProjectCompareArchitecture();
-  const next = architecture === "rnn" ? "rnn" : "cnn";
+  const next = ["cnn", "rnn", "tabular"].includes(architecture) ? architecture : "cnn";
   if (forced && forced !== next) {
     eventBus.emit("toast", t("compare.toast.projectScopeLocked", { architecture: architectureLabel(forced) }));
     renderModelComparePage();
@@ -113,8 +113,11 @@ function setCompareViewMode(viewMode) {
 function getProjectCompareArchitecture() {
   if (!appState.currentProjectId) return null;
   const project = appState.currentProject || {};
-  const architecture = String(project.architecture || project.mode || "").toLowerCase();
+  const architecture = String(project.architecture || project.mode || project.training_config?.architecture || "").toLowerCase();
   const taskType = String(project.task_type || "").toLowerCase();
+  if (architecture === "tabular" || taskType.includes("tabular")) {
+    return "tabular";
+  }
   if (architecture === "rnn" || taskType.includes("sequence") || taskType.includes("time_series") || taskType.includes("timeseries") || taskType.includes("rnn")) {
     return "rnn";
   }
@@ -140,6 +143,7 @@ function syncCompareArchitectureWithProject() {
 }
 
 function architectureLabel(architecture = compareState.architecture) {
+  if (architecture === "tabular") return t("compare.scope.tabular");
   return architecture === "rnn" ? t("compare.scope.rnn") : t("compare.scope.cnn");
 }
 
@@ -300,7 +304,7 @@ async function exportCompareReport() {
 async function runOutputComparison() {
   if (!appState.currentProjectId || compareState.selectedRuns.length < 2 || compareState.selectedRuns.length > 4) return;
   if (compareState.architecture !== "cnn") {
-    eventBus.emit("toast", t("compare.toast.rnnOutputDisabled"));
+    eventBus.emit("toast", t(compareState.architecture === "tabular" ? "compare.toast.tabularOutputDisabled" : "compare.toast.rnnOutputDisabled"));
     return;
   }
   const file = qs("#compare-output-image-file")?.files?.[0];
@@ -403,7 +407,9 @@ function renderModeControls() {
       ? t("compare.modeNoteLocked", { architecture: architectureLabel() })
       : compareState.architecture === "cnn"
         ? t("compare.modeNoteCnn")
-        : t("compare.modeNoteRnn")
+        : compareState.architecture === "tabular"
+          ? t("compare.modeNoteTabular")
+          : t("compare.modeNoteRnn")
   );
   qsa(".compare-performance-panel").forEach((panel) => panel.classList.toggle("hidden", compareState.viewMode !== "performance"));
   qs("#compare-page-artifacts")?.classList.toggle("hidden", compareState.viewMode !== "artifacts");
@@ -416,6 +422,7 @@ function renderCompareAlert() {
   const messages = [];
   if (!appState.currentProjectId) messages.push(t("compare.openProject"));
   if (compareState.architecture === "rnn") messages.push(t("compare.rnnMetricOnly"));
+  if (compareState.architecture === "tabular") messages.push(t("compare.tabularMetricOnly"));
   if (warnings.length) messages.push(...warnings.slice(0, 3));
   alert.classList.toggle("hidden", messages.length === 0);
   alert.innerHTML = messages.map((message) => `<div>${escapeHtml(message)}</div>`).join("");
@@ -581,7 +588,9 @@ function renderTrendChart() {
     empty?.classList.remove("hidden");
     if (empty) empty.textContent = compareState.architecture === "rnn"
       ? t("compare.chartEmptyRnn")
-      : t("compare.chartEmptyCnn");
+      : compareState.architecture === "tabular"
+        ? t("compare.chartEmptyTabular")
+        : t("compare.chartEmptyCnn");
     if (trendChart) {
       trendChart.destroy();
       trendChart = null;
@@ -632,16 +641,18 @@ function renderOutputComparison() {
   const empty = qs("#compare-output-empty");
   const host = qs("#compare-output-results");
   if (!empty || !host) return;
-  if (compareState.architecture === "rnn") {
+  if (compareState.architecture !== "cnn") {
     empty.classList.remove("hidden");
-    empty.textContent = t("compare.rnnOutputDisabled");
-    host.innerHTML = `
-      <div class="rnn-compare-skeleton-grid">
-        ${renderRnnMetricPlaceholder(t("compare.placeholder.groundTruth"), t("compare.placeholder.groundTruthBody"))}
-        ${renderRnnMetricPlaceholder(t("compare.placeholder.prediction"), t("compare.placeholder.predictionBody"))}
-        ${renderRnnMetricPlaceholder(t("compare.placeholder.diagnostics"), t("compare.placeholder.diagnosticsBody"))}
-      </div>
-    `;
+    empty.textContent = t(compareState.architecture === "tabular" ? "compare.tabularOutputDisabled" : "compare.rnnOutputDisabled");
+    host.innerHTML = compareState.architecture === "rnn"
+      ? `
+        <div class="rnn-compare-skeleton-grid">
+          ${renderRnnMetricPlaceholder(t("compare.placeholder.groundTruth"), t("compare.placeholder.groundTruthBody"))}
+          ${renderRnnMetricPlaceholder(t("compare.placeholder.prediction"), t("compare.placeholder.predictionBody"))}
+          ${renderRnnMetricPlaceholder(t("compare.placeholder.diagnostics"), t("compare.placeholder.diagnosticsBody"))}
+        </div>
+      `
+      : "";
     return;
   }
 
@@ -898,7 +909,7 @@ function updateCompareActions() {
   const button = qs("#btn-run-compare");
   const outputButton = qs("#btn-run-output-compare");
   const reportButton = qs("#btn-export-compare-report");
-  const isRnn = compareState.architecture === "rnn";
+  const supportsImageOutput = compareState.architecture === "cnn";
   const enabled = appState.currentProjectId
     && compareState.selectedRuns.length >= 2
     && compareState.selectedRuns.length <= 4
@@ -912,7 +923,7 @@ function updateCompareActions() {
 
   if (outputButton) {
     const hasFile = Boolean(qs("#compare-output-image-file")?.files?.[0]);
-    const outputEnabled = enabled && !isRnn && hasFile && !compareState.outputComparing;
+    const outputEnabled = enabled && supportsImageOutput && hasFile && !compareState.outputComparing;
     outputButton.disabled = !outputEnabled;
     outputButton.innerHTML = compareState.outputComparing
       ? `<i class="fa-solid fa-spinner fa-spin"></i> ${escapeHtml(t("common.loading"))}`
@@ -926,7 +937,7 @@ function updateCompareActions() {
       : `<i class="fa-solid fa-file-arrow-down"></i> ${escapeHtml(t("compare.exportReport"))}`;
   }
   qsa("#compare-output-image-file, #compare-output-conf, #compare-output-iou, #compare-output-imgsz, #compare-output-device").forEach((control) => {
-    control.disabled = isRnn;
+    control.disabled = !supportsImageOutput;
   });
 }
 

@@ -1,0 +1,1107 @@
+/* Independent Tabular model-production workspace */
+
+.tabular-workspace-root,
+#tabular-workspace-root,
+#tabular-workspace {
+  min-width: 0;
+}
+
+.tabular-workspace {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.tabular-workspace-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 96% 12%, rgba(16, 185, 129, 0.12), transparent 34%),
+    var(--bg-panel);
+}
+
+.tabular-workspace-header h2 {
+  margin: 3px 0 5px;
+  color: var(--text);
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+}
+
+.tabular-workspace-header p,
+.tabular-card-copy {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.tabular-eyebrow,
+.tabular-card-head > div > span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.tabular-eyebrow {
+  color: #10b981;
+}
+
+.tabular-header-status,
+.tabular-actions,
+.tabular-file-control,
+.tabular-feature-chips,
+.tabular-lifecycle-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tabular-header-status {
+  justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
+.tabular-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 26px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-panel-soft);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.tabular-status.success {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.tabular-status.active {
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--primary);
+}
+
+.tabular-status.warning {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.tabular-status.error {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.tabular-workspace-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  scrollbar-width: thin;
+}
+
+.tabular-workspace-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tabular-workspace-tabs button:last-child {
+  border-right: 0;
+}
+
+.tabular-workspace-tabs button:hover {
+  color: var(--text);
+  background: var(--bg-panel-soft);
+}
+
+.tabular-workspace-tabs button.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.tabular-panel {
+  display: none;
+  gap: 14px;
+  min-width: 0;
+}
+
+.tabular-panel.active {
+  display: grid;
+}
+
+.tabular-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tabular-summary-card,
+.tabular-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.tabular-summary-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 11px;
+  align-items: center;
+  min-width: 0;
+  padding: 14px;
+}
+
+.tabular-summary-card > i {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.tabular-summary-card > div {
+  display: grid;
+  min-width: 0;
+}
+
+.tabular-summary-card span,
+.tabular-summary-card small,
+.tabular-contract-list dt,
+.tabular-version-metric span,
+.tabular-prediction-result > span,
+.tabular-batch-result span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.tabular-summary-card strong {
+  color: var(--text);
+  font-size: 1.35rem;
+}
+
+.tabular-summary-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabular-card {
+  min-width: 0;
+  padding: 16px;
+}
+
+.tabular-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.tabular-card-head > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.tabular-card-head strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.tabular-card-head code,
+.tabular-card-head > span {
+  max-width: 48%;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabular-overview-grid,
+.tabular-two-column,
+.tabular-training-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.tabular-workflow-card {
+  display: grid;
+  align-content: start;
+}
+
+.tabular-workflow-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 4px 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.tabular-workflow-steps li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  min-width: 0;
+  text-align: center;
+}
+
+.tabular-workflow-steps li::after {
+  position: absolute;
+  z-index: 0;
+  top: 15px;
+  left: calc(50% + 15px);
+  width: calc(100% - 30px);
+  height: 2px;
+  background: var(--border);
+  content: "";
+}
+
+.tabular-workflow-steps li:last-child::after {
+  display: none;
+}
+
+.tabular-workflow-steps li > span {
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--bg-panel-soft);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.tabular-workflow-steps li.complete > span {
+  border-color: rgba(16, 185, 129, 0.5);
+  background: #10b981;
+  color: #fff;
+}
+
+.tabular-workflow-steps li.complete::after {
+  background: rgba(16, 185, 129, 0.5);
+}
+
+.tabular-workflow-steps strong {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.tabular-workflow-steps li.complete strong {
+  color: var(--text);
+}
+
+.tabular-contract-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.tabular-contract-list > div {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.35fr) minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabular-contract-list > div:last-child {
+  border-bottom: 0;
+}
+
+.tabular-contract-list dd {
+  margin: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.tabular-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+  color: var(--text);
+}
+
+.tabular-alert.error {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger);
+}
+
+.tabular-alert.warning {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.08);
+  color: var(--warning);
+}
+
+.tabular-alert strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.tabular-alert ul {
+  margin: 3px 0 0;
+  padding-left: 18px;
+  color: inherit;
+  font-size: 0.82rem;
+}
+
+.tabular-file-control {
+  margin-top: 14px;
+}
+
+.tabular-file-control.vertical {
+  display: grid;
+  align-items: stretch;
+}
+
+.tabular-file-control input[type="file"] {
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+  color: var(--text-muted);
+}
+
+.tabular-dataset-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tabular-dataset-facts span {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.tabular-dataset-facts strong {
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.tabular-form-stack {
+  display: grid;
+  gap: 13px;
+}
+
+.tabular-form-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.tabular-form-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tabular-form-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tabular-form-grid.four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tabular-card label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.tabular-card input:not([type="checkbox"]),
+.tabular-card select,
+.tabular-card textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.tabular-card input:not([type="checkbox"]),
+.tabular-card select {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.tabular-card textarea {
+  padding: 10px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  line-height: 1.5;
+}
+
+.tabular-card input:focus,
+.tabular-card select:focus,
+.tabular-card textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.tabular-feature-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.tabular-feature-fieldset legend {
+  padding: 0 6px;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.tabular-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+
+.tabular-feature-option {
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  align-items: center;
+  gap: 8px !important;
+  min-height: 48px;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel);
+  cursor: pointer;
+}
+
+.tabular-feature-option > span {
+  display: grid;
+  min-width: 0;
+}
+
+.tabular-feature-option strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabular-feature-option small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.tabular-feature-option.disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.tabular-form-note {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.tabular-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+
+.tabular-profile-grid > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel-soft);
+}
+
+.tabular-profile-grid strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabular-profile-grid span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.tabular-table-scroll {
+  max-height: 390px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.tabular-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.tabular-table th,
+.tabular-table td {
+  max-width: 260px;
+  padding: 8px 10px;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabular-table th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  background: var(--bg-panel-soft);
+  color: var(--text);
+}
+
+.tabular-engine-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 13px;
+  padding: 10px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: var(--radius);
+  background: rgba(16, 185, 129, 0.07);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.tabular-engine-note i {
+  margin-top: 2px;
+  color: #10b981;
+}
+
+.tabular-training-progress {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 13px;
+}
+
+.tabular-training-progress > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.tabular-training-progress strong {
+  color: var(--text);
+}
+
+.tabular-training-progress small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.tabular-progress-track,
+.tabular-importance-track {
+  display: block;
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg);
+}
+
+.tabular-progress-track > span,
+.tabular-importance-track > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), #10b981);
+  transition: width 180ms ease;
+}
+
+.tabular-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.tabular-metric-grid > div {
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel-soft);
+}
+
+.tabular-metric-grid span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.tabular-metric-grid strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.tabular-importance-list {
+  display: grid;
+  gap: 8px;
+}
+
+.tabular-importance-list > div {
+  display: grid;
+  grid-template-columns: 26px minmax(100px, 0.42fr) minmax(120px, 1fr) 70px;
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+}
+
+.tabular-importance-list b {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.tabular-importance-list strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabular-importance-list small {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.tabular-json-field {
+  margin-top: 12px;
+}
+
+.tabular-prediction-result,
+.tabular-export-result {
+  display: grid;
+  gap: 6px;
+  margin-top: 13px;
+  padding: 12px;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: var(--radius);
+  background: rgba(16, 185, 129, 0.07);
+}
+
+.tabular-prediction-result > strong {
+  color: var(--text);
+  font-size: 1.55rem;
+}
+
+.tabular-prediction-result > b {
+  color: var(--success);
+  font-size: 0.8rem;
+}
+
+.tabular-prediction-result > small,
+.tabular-export-result small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.tabular-prediction-result pre {
+  max-height: 180px;
+  overflow: auto;
+  margin: 4px 0 0;
+  padding: 9px;
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.tabular-batch-result {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.tabular-batch-result > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel-soft);
+}
+
+.tabular-batch-result strong {
+  color: var(--text);
+}
+
+.tabular-batch-result button {
+  grid-column: 1 / -1;
+}
+
+.tabular-feature-chips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 9px 4px 5px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-panel-soft);
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.tabular-feature-chips b {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--primary);
+  font-size: 0.75rem;
+}
+
+.tabular-lifecycle-flow {
+  margin-bottom: 13px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.tabular-lifecycle-flow span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.tabular-lifecycle-flow i {
+  color: var(--border-strong);
+  font-size: 0.75rem;
+}
+
+.tabular-version-list,
+.tabular-export-history {
+  display: grid;
+  gap: 8px;
+}
+
+.tabular-version-card {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(100px, 0.25fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+}
+
+.tabular-version-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.tabular-version-main > div,
+.tabular-version-metric {
+  display: grid;
+  min-width: 0;
+}
+
+.tabular-version-main strong {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabular-version-main small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabular-version-metric strong {
+  color: var(--text);
+}
+
+.tabular-actions.compact {
+  justify-content: flex-end;
+}
+
+.tabular-export-result strong,
+.tabular-export-result code {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.tabular-export-history > div:not(.tabular-empty-inline) {
+  display: grid;
+  grid-template-columns: auto minmax(140px, 0.45fr) minmax(200px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel-soft);
+}
+
+.tabular-export-history code {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabular-export-history small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.tabular-empty-inline,
+.tabular-empty-state {
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.tabular-empty-inline {
+  padding: 18px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-panel-soft);
+  font-size: 0.8rem;
+}
+
+.tabular-empty-inline.compact {
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.tabular-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-height: 330px;
+  align-content: center;
+  padding: 32px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.tabular-empty-state > i {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  font-size: 1.35rem;
+}
+
+.tabular-empty-state strong {
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.tabular-empty-state p {
+  max-width: 560px;
+  margin: 0 0 8px;
+  line-height: 1.55;
+}
+
+@media (max-width: 1180px) {
+  .tabular-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tabular-workspace-tabs {
+    grid-template-columns: repeat(6, minmax(135px, 1fr));
+  }
+
+  .tabular-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tabular-form-grid.four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tabular-version-card {
+    grid-template-columns: minmax(220px, 1fr) minmax(100px, 0.25fr);
+  }
+
+  .tabular-version-card .tabular-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 820px) {
+  .tabular-workspace-header,
+  .tabular-card-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tabular-header-status {
+    justify-content: flex-start;
+  }
+
+  .tabular-card-head code,
+  .tabular-card-head > span {
+    max-width: 100%;
+  }
+
+  .tabular-overview-grid,
+  .tabular-two-column,
+  .tabular-training-layout,
+  .tabular-form-grid.three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tabular-workflow-steps {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .tabular-workflow-steps li {
+    grid-template-columns: 30px minmax(0, 1fr);
+    justify-items: start;
+    align-items: center;
+    text-align: left;
+  }
+
+  .tabular-workflow-steps li::after {
+    top: 30px;
+    left: 14px;
+    width: 2px;
+    height: 8px;
+  }
+
+  .tabular-version-card,
+  .tabular-export-history > div:not(.tabular-empty-inline) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tabular-version-card .tabular-actions {
+    grid-column: auto;
+  }
+
+  .tabular-export-history code {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 560px) {
+  .tabular-workspace-header,
+  .tabular-card {
+    padding: 13px;
+  }
+
+  .tabular-summary-grid,
+  .tabular-form-grid.two,
+  .tabular-form-grid.four,
+  .tabular-feature-grid,
+  .tabular-metric-grid,
+  .tabular-dataset-facts,
+  .tabular-batch-result {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tabular-importance-list > div {
+    grid-template-columns: 24px minmax(95px, 0.45fr) minmax(80px, 1fr);
+  }
+
+  .tabular-importance-list small {
+    grid-column: 2 / -1;
+    text-align: left;
+  }
+
+  .tabular-actions > .btn,
+  .tabular-file-control > .btn {
+    flex: 1 1 auto;
+  }
+}

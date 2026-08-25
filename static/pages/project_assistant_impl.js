@@ -2,8 +2,8 @@ import { apiFetch, apiUpload } from "../api.js";
 import { followServerTask } from "../core/task_progress.js";
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
-import { buildProjectAssistantContext } from "../core/right_panel.js?v=20260708-rnn-feature-wizard";
-import { trainingModeState } from "./training_modes.js?v=20260824-unified-overview";
+import { buildProjectAssistantContext } from "../core/right_panel.js?v=20260825-tabular-mvp";
+import { trainingModeState } from "./training_modes.js?v=20260825-tabular-mvp";
 import { escapeHtml, qs, setHTML, setText } from "../utils.js";
 
 const assistantState = {
@@ -156,12 +156,19 @@ function buildAssistantStatusSnapshot() {
   const project = appState.currentProject || {};
   const images = Array.isArray(project.images) ? project.images : [];
   const annotatedCount = images.filter((image) => image.annotated || image.annotation_status === "annotated").length;
+  const fileSummary = project.file_summary || {};
   return {
     hasProject: Boolean(appState.currentProjectId),
     projectName: project.project_name || project.name || appState.currentProjectId || "",
     taskType: project.task_type || project.task || "",
     architecture: resolveAssistantArchitecture(project),
-    hasDataset: images.length > 0 || Boolean(project.dataset_manifest || project.sequence_manifest),
+    hasDataset: images.length > 0 || Boolean(
+      project.dataset_manifest
+      || project.sequence_manifest
+      || project.tabular_manifest
+      || fileSummary.tabular_manifest
+      || Number(fileSummary.tabular_csv_files || 0) > 0
+    ),
     imageCount: images.length,
     annotatedCount,
     trainReady: Boolean(project.train_ready || project.training_ready),
@@ -183,6 +190,7 @@ function getPageContextBadge(pageId) {
     features_labels: t("rnn.training.featureConfig"),
     windowing: t("rnn.training.windowing"),
     sequence_test: t("rnn.training.openSequenceTest"),
+    tabular: t("dashboard.module.tabular.title"),
     "model-compare": t("compare.title"),
     model_compare: t("compare.title"),
     export: t("navExport"),
@@ -195,7 +203,8 @@ function getPageContextBadge(pageId) {
 function resolveAssistantArchitecture(project = {}) {
   const taskType = String(project.task_type || project.task || "").toLowerCase();
   const explicit = String(project.architecture || project.training_mode || project.training_config?.architecture || "").toLowerCase();
-  if (["cnn", "rnn"].includes(explicit)) return explicit;
+  if (["cnn", "rnn", "tabular"].includes(explicit)) return explicit;
+  if (taskType.includes("tabular")) return "tabular";
   return ["sequence", "time_series", "timeseries", "rnn"].some((token) => taskType.includes(token)) ? "rnn" : "cnn";
 }
 
@@ -525,7 +534,7 @@ function renderProjectMode() {
   const hasProject = Boolean(appState.currentProjectId);
   const architecture = resolveAssistantArchitecture(project);
   const mode = !hasProject ? "general" : architecture;
-  const icons = { general: "fa-compass", cnn: "fa-images", rnn: "fa-wave-square" };
+  const icons = { general: "fa-compass", cnn: "fa-images", rnn: "fa-wave-square", tabular: "fa-table-columns" };
   const icon = qs("#assistant-project-mode .assistant-project-mode-icon i");
   if (icon) icon.className = `fa-solid ${icons[mode]}`;
   setText("#assistant-project-mode-title", t(`assistant.projectMode.${mode}.title`));

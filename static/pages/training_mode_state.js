@@ -2,6 +2,7 @@ export const trainingModeState = {
   activeMode: "cnn",
   activeCnnPanel: "overview",
   activeRnnPanel: "overview",
+  activeTabularPanel: "overview",
   cnn: {
     backend: "ultralytics_yolo",
     trainingEnabled: true
@@ -57,5 +58,9 @@ export const trainingModeState = {
     evaluationRunId: "",
     evaluationRunMetrics: {},
     comparisonMetric: "macro_f1"
+  },
+  tabular: {
+    backend: "xgboost_tabular",
+    trainingEnabled: true
   }
 };

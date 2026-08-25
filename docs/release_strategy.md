@@ -81,13 +81,12 @@ Use clear version semantics:
 
 | Version | Meaning |
 | --- | --- |
-| `0.1.0-dev` | FastAPI + Web UI development baseline |
-| `0.1.1-dev` | Dashboard / right panel UI redesign |
-| `0.1.2-dev` | Auto-Labeling UI redesign |
-| `0.2.0-alpha` | PyInstaller onedir internal QA |
-| `0.2.1-alpha` | License, diagnostics, launcher hardening |
-| `0.3.0-beta` | Windows installer + clean Windows smoke test |
-| `1.0.0` | Commercial Local Edition release |
+| `0.1.x` | Stable pre-1.0 CNN/RNN and platform increments |
+| `0.2.0` | Stable Tabular production-workflow milestone |
+| `0.x.y` | Later backward-compatible pre-1.0 feature or fix releases |
+| `1.0.0` | Commercial Local Edition compatibility commitment |
+
+The current updater accepts numeric stable versions only. Do not publish a prerelease suffix such as `-alpha` or `-beta` through the stable update channel.
 
 ## Dashboard Change Policy
 
@@ -169,3 +168,17 @@ For commercial delivery:
 ```text
 stable source -> PyInstaller onedir -> installer -> clean Windows smoke test -> release.
 ```
+
+## Runtime-r1 Incremental Build Parity
+
+An application-only update must build its frozen executable with the same pure-Python package versions that produced the already published runtime binaries. The runtime manifest blocks changed files, but a newer pure-Python package embedded inside the executable can still be incompatible with an older compiled extension in `runtime-r1`.
+
+For `runtime-r1`, create an isolated environment, install the normal runtime and build requirements, then apply the verified overrides before PyInstaller:
+
+```powershell
+python -m pip install -r requirements.txt -r requirements-build.txt
+python -m pip install --force-reinstall --no-deps -r updates/baselines/runtime-r1-build-overrides.txt
+python -m pip check
+```
+
+Before signing, compare the build environment with the public baseline, run installed and portable packaged smoke tests, and let `build_update_package.py` reject every runtime-category change. If parity cannot be established, create a full installer and a new runtime baseline instead of forcing an incremental package.

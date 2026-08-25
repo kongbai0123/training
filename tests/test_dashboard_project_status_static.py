@@ -16,7 +16,9 @@ class UnifiedOverviewStaticTests(unittest.TestCase):
         self.assertIn("export const OVERVIEW_MODULES", dashboard)
         self.assertIn('mode: "rnn"', dashboard)
         self.assertIn('mode: "cnn"', dashboard)
+        self.assertIn('mode: "tabular"', dashboard)
         self.assertIn('eventBus.emit("open-training-module"', dashboard)
+        self.assertIn("overview-module-context no-i18n", dashboard)
         self.assertIn('id="overview-module-grid"', index_html)
         self.assertNotIn('class="training-mode-toggle"', index_html)
         self.assertNotIn("renderProjectStatusStrip", dashboard)
@@ -25,7 +27,8 @@ class UnifiedOverviewStaticTests(unittest.TestCase):
         dashboard_css = self.read("static", "styles", "pages", "dashboard.css")
 
         self.assertIn(".overview-module-grid {", dashboard_css)
-        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", dashboard_css)
+        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", dashboard_css)
+        self.assertIn(".overview-module-tabular {", dashboard_css)
         self.assertIn(".overview-module-icon {", dashboard_css)
         self.assertIn("width: 38px;", dashboard_css)
         self.assertIn("@media (max-width: 1180px) {", dashboard_css)
@@ -37,6 +40,7 @@ class UnifiedOverviewStaticTests(unittest.TestCase):
             "dashboard.modules.title",
             "dashboard.module.cnn.title",
             "dashboard.module.rnn.title",
+            "dashboard.module.tabular.title",
             "dashboard.module.open",
             "dashboard.activity.noProject",
         ):

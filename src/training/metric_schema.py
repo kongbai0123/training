@@ -47,7 +47,7 @@ def build_rnn_metric_schema(task_type: str = "sequence_classification") -> Dict[
             "display_name": "MAE",
             "goal": "minimize",
         }
-        quality = ["val/mae", "val/rmse"]
+        quality = ["val/mae", "val/rmse", "val/r2"]
     else:
         primary_metric = {
             "key": "val/macro_f1",
@@ -64,3 +64,9 @@ def build_rnn_metric_schema(task_type: str = "sequence_classification") -> Dict[
             "quality": quality,
         },
     }
+
+
+def build_tabular_metric_schema(task_type: str = "tabular_classification") -> Dict[str, Any]:
+    schema = build_rnn_metric_schema(task_type)
+    schema["architecture"] = "tabular"
+    return schema

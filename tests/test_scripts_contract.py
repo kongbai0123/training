@@ -69,6 +69,11 @@ class ScriptsContractTests(unittest.TestCase):
             launcher.index("    main()", launcher.index('if __name__ == "__main__":')),
         )
 
+    def test_frozen_backend_uses_runtime_r1_h11_transport(self):
+        launcher = (ROOT / "launcher.py").read_text(encoding="utf-8")
+
+        self.assertIn('uvicorn.run(fastapi_app, host=host, port=port, log_level="info", http="h11")', launcher)
+
     def test_desktop_launcher_shows_staged_startup_feedback(self):
         launcher = (ROOT / "launcher.py").read_text(encoding="utf-8")
         splash = (ROOT / "src" / "startup_splash.py").read_text(encoding="utf-8")

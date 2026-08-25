@@ -24,6 +24,10 @@ class I18nAuditScriptStaticTests(unittest.TestCase):
         self.assertIn("data-nav", script)
         self.assertIn("data-rnn-nav", script)
         self.assertIn("data-cnn-nav", script)
+        self.assertIn("data-tabular-nav", script)
+        self.assertIn('data-overview-module="${target.mode}"', script)
+        self.assertIn('["cnn", "rnn", "tabular"]', script)
+        self.assertIn("GitHub(?: Release)?", script)
 
     def test_dom_audit_runtime_manifest_is_isolated(self):
         manifest = (ROOT / "tools" / "i18n-audit" / "package.json").read_text(encoding="utf-8")

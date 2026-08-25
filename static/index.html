@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260824-unified-overview">
+  <link rel="stylesheet" href="/static/style.css?v=20260825-tabular-mvp">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -104,6 +104,16 @@
             <button class="sidebar-item" data-rnn-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span data-i18n="shell.nav.compare">模型比較</span></button>
             <button class="sidebar-item" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i><span data-i18n="shell.nav.export">匯出</span></button>
           </div>
+
+          <div id="tabular-mode-nav" class="training-mode-nav hidden">
+            <button class="sidebar-item active" data-tabular-nav="overview"><i class="fa-solid fa-table-columns"></i><span data-i18n="shell.nav.tabularOverview">表格總覽</span></button>
+            <button class="sidebar-item" data-tabular-nav="data"><i class="fa-solid fa-file-csv"></i><span data-i18n="shell.nav.tabularData">資料與欄位</span></button>
+            <button class="sidebar-item" data-tabular-nav="training"><i class="fa-solid fa-gears"></i><span data-i18n="shell.nav.training">模型訓練</span></button>
+            <button class="sidebar-item" data-tabular-nav="inference"><i class="fa-solid fa-vial-circle-check"></i><span data-i18n="shell.nav.inference">模型測試</span></button>
+            <button class="sidebar-item" data-tabular-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span data-i18n="shell.nav.compare">模型比較</span></button>
+            <button class="sidebar-item" data-tabular-nav="registry"><i class="fa-solid fa-box-archive"></i><span data-i18n="shell.nav.modelRegistry">模型版本</span></button>
+            <button class="sidebar-item" data-tabular-nav="export"><i class="fa-solid fa-file-export"></i><span data-i18n="shell.nav.export">匯出</span></button>
+          </div>
         </nav>
       </aside>
 
@@ -114,7 +124,7 @@
               <i class="fa-solid fa-chevron-down"></i>
               <span data-i18n="workspace.statusTitle">工作區狀態</span>
             </button>
-            <div class="workspace-context-summary" id="workspace-context-summary" data-i18n="common.noProjectActive">No active project.</div>
+            <div class="workspace-context-summary" id="workspace-context-summary">No active project.</div>
           </div>
           <div class="workspace-context-strip" id="workspace-context-strip" hidden>
             <section class="workspace-context-card" id="section-page-guards" style="display: none;">
@@ -204,7 +214,7 @@
                 <h2 id="overview-module-heading" data-i18n="dashboard.modules.title">功能窗口</h2>
                 <p class="section-help" data-i18n="dashboard.modules.help">選擇功能後，進入該功能完整且獨立的工作區。</p>
               </div>
-              <span class="summary-badge badge-neutral" data-i18n="dashboard.modules.availableCount">2 項功能</span>
+              <span class="summary-badge badge-neutral" data-i18n="dashboard.modules.availableCount">3 項功能</span>
             </div>
             <div class="overview-module-grid" id="overview-module-grid" data-ui-smoke="overview-module-grid"></div>
           </section>
@@ -1748,6 +1758,16 @@
           </div>
         </section>
 
+        <section class="page" id="page-tabular">
+          <div class="page-header">
+            <div>
+              <h1 data-i18n="tabular.page.title">Tabular 表格模型工作區</h1>
+              <p data-i18n="tabular.page.subtitle">以獨立 CSV 列資料完成設定、XGBoost 訓練、推論、比較、版本管理與匯出。</p>
+            </div>
+          </div>
+          <div id="tabular-workspace-root" class="tabular-workspace-root" data-ui-smoke="tabular-workspace"></div>
+        </section>
+
         <section class="page" id="page-evaluation">
           <div class="page-header">
             <div>
@@ -1821,6 +1841,7 @@
               <div class="compare-mode-toggle" id="compare-architecture-toggle" role="group" aria-label="Compare architecture" data-i18n-aria-label="compare.architectureAria">
                 <button type="button" id="compare-mode-cnn" class="active" data-compare-architecture="cnn">CNN / YOLO</button>
                 <button type="button" id="compare-mode-rnn" data-compare-architecture="rnn">RNN / Sequence</button>
+                <button type="button" id="compare-mode-tabular" data-compare-architecture="tabular">Tabular / XGBoost</button>
               </div>
               <div class="compare-scope-summary hidden" id="compare-scope-summary">
                 <span data-i18n="compare.projectScope">Project scope</span>
@@ -2310,6 +2331,7 @@
               <button type="button" class="active" data-history-filter="all" data-i18n="common.all">全部</button>
               <button type="button" data-history-filter="cnn">CNN</button>
               <button type="button" data-history-filter="rnn">RNN</button>
+              <button type="button" data-history-filter="tabular">Tabular</button>
             </div>
             <span id="history-page-result-count" class="history-result-count">0 projects</span>
           </div>
@@ -2727,6 +2749,7 @@
           <div class="project-type-mode-toggle" role="group" aria-label="Training mode" data-i18n-aria-label="project.trainingModeAria">
             <button type="button" class="active" id="new-project-mode-rnn" data-project-mode="rnn">RNN</button>
             <button type="button" id="new-project-mode-cnn" data-project-mode="cnn">CNN</button>
+            <button type="button" id="new-project-mode-tabular" data-project-mode="tabular">Tabular</button>
           </div>
         </div>
         <label>
@@ -2738,6 +2761,8 @@
             <option value="semantic_segmentation" data-i18n="project.task.semanticSegmentation">畫面區域分割｜標示道路、背景等區域</option>
             <option value="sequence_classification" data-i18n="project.task.sequenceClassification">序列分類｜根據一段資料判斷類別</option>
             <option value="sequence_regression" data-i18n="project.task.sequenceRegression">數值預測｜根據一段資料預測數值</option>
+            <option value="tabular_classification" data-i18n="project.task.tabularClassification">表格分類｜每列資料判斷一個類別</option>
+            <option value="tabular_regression" data-i18n="project.task.tabularRegression">表格預測｜每列資料預測連續數值</option>
           </select>
           <small class="form-hint" id="new-project-task-hint" data-i18n="project.taskHelp.object_detection">標註方式：方框（Box）。輸出每個物件的位置與類別。</small>
         </label>
@@ -2780,6 +2805,7 @@
           <div class="project-type-mode-toggle" role="group" aria-label="Edit training mode" data-i18n-aria-label="project.taskEditModeAria">
             <button type="button" data-edit-project-mode="cnn">CNN</button>
             <button type="button" data-edit-project-mode="rnn">RNN</button>
+            <button type="button" data-edit-project-mode="tabular">Tabular</button>
           </div>
         </div>
         <label>
@@ -2791,6 +2817,8 @@
             <option value="semantic_segmentation" data-i18n="project.task.semanticSegmentation">畫面區域分割｜標示道路、背景等區域</option>
             <option value="sequence_classification" data-i18n="project.task.sequenceClassification">序列分類｜根據一段資料判斷類別</option>
             <option value="sequence_regression" data-i18n="project.task.sequenceRegression">數值預測｜根據一段資料預測數值</option>
+            <option value="tabular_classification" data-i18n="project.task.tabularClassification">表格分類｜每列資料判斷一個類別</option>
+            <option value="tabular_regression" data-i18n="project.task.tabularRegression">表格預測｜每列資料預測連續數值</option>
           </select>
           <small class="form-hint" id="project-task-edit-hint"></small>
         </label>
@@ -2822,6 +2850,7 @@
           <button type="button" class="active" data-history-filter="all" data-i18n="common.all">全部</button>
           <button type="button" data-history-filter="cnn">CNN</button>
           <button type="button" data-history-filter="rnn">RNN</button>
+          <button type="button" data-history-filter="tabular">Tabular</button>
         </div>
         <button class="btn btn-secondary btn-sm" id="btn-clear-history-search" type="button" data-i18n="common.clear">Clear</button>
         <span id="project-history-result-count" class="history-result-count">0 projects</span>
@@ -3028,7 +3057,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260824-unified-overview"></script>
+  <script type="module" src="/static/app.js?v=20260825-tabular-mvp"></script>
 </body>
 </html>
 

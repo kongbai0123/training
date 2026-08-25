@@ -51,10 +51,13 @@ def resolve_assistant_project_context(project: Optional[Dict[str, Any]] = None) 
         or training_config.get("architecture")
         or ""
     ).strip().lower()
-    if explicit_architecture not in {"cnn", "rnn"}:
-        explicit_architecture = "rnn" if any(
-            token in task_type for token in ("sequence", "time_series", "timeseries", "rnn")
-        ) else "cnn"
+    if explicit_architecture not in {"cnn", "rnn", "tabular"}:
+        if "tabular" in task_type:
+            explicit_architecture = "tabular"
+        elif any(token in task_type for token in ("sequence", "time_series", "timeseries", "rnn")):
+            explicit_architecture = "rnn"
+        else:
+            explicit_architecture = "cnn"
     return {"architecture": explicit_architecture, "task_type": task_type}
 
 
@@ -513,8 +516,10 @@ class ProjectAssistantService:
     @classmethod
     def _dataset_schema_markdown(cls, project: Dict[str, Any], layout: ProjectLayout) -> str:
         sequence_manifest = _read_json(layout.sequence_manifest_path(), {})
+        tabular_manifest = _read_json(layout.tabular_manifest_path(), {})
         split_manifest = _read_json(layout.current_split_path, {})
         rnn_config = project.get("rnn_config") if isinstance(project.get("rnn_config"), dict) else {}
+        tabular_config = project.get("tabular_config") if isinstance(project.get("tabular_config"), dict) else {}
         training_config = project.get("training_config") if isinstance(project.get("training_config"), dict) else {}
         split_config = project.get("split_config") if isinstance(project.get("split_config"), dict) else {}
         lines = [
@@ -523,10 +528,14 @@ class ProjectAssistantService:
             f"- Task type: {project.get('task_type') or ''}",
             f"- Dataset path: {project.get('dataset_path') or ''}",
             f"- Sequence manifest exists: {layout.sequence_manifest_path().exists()}",
+            f"- Tabular manifest exists: {layout.tabular_manifest_path().exists()}",
             f"- Current split exists: {layout.current_split_path.exists()}",
             "",
             "## RNN Schema Config",
             cls._compact_json(rnn_config),
+            "",
+            "## Tabular Schema Config",
+            cls._compact_json(tabular_config),
             "",
             "## Training Config",
             cls._compact_json(training_config),
@@ -536,6 +545,9 @@ class ProjectAssistantService:
             "",
             "## Sequence Manifest",
             cls._compact_json(sequence_manifest),
+            "",
+            "## Tabular Manifest",
+            cls._compact_json(tabular_manifest),
             "",
             "## Current Split Manifest",
             cls._compact_json(split_manifest),
@@ -935,7 +947,7 @@ class ProjectAssistantService:
         else:
             normalized.pop("source_types", None)
         architecture = str(normalized.get("architecture") or "").strip().lower()
-        if architecture in {"cnn", "rnn"}:
+        if architecture in {"cnn", "rnn", "tabular"}:
             normalized["architecture"] = architecture
         else:
             normalized.pop("architecture", None)

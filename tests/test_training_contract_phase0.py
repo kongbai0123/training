@@ -1,4 +1,5 @@
 import json
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -69,11 +70,17 @@ class TrainingContractPhase0Tests(unittest.TestCase):
             manifest = build_artifact_manifest(run_dir, run_dir.name)
             artifacts = {item["path"]: item for item in manifest["artifacts"]}
 
-            self.assertEqual(manifest["contract_version"], "1.0")
+            self.assertEqual(manifest["contract_version"], "2.0")
             self.assertTrue(manifest["generated_at"])
+            self.assertEqual(manifest["producer"]["contract_version"], "2.0")
             self.assertIn("weights/best.pt", artifacts)
             self.assertEqual(artifacts["weights/best.pt"]["size_bytes"], len(b"fake-weight"))
-            self.assertNotIn("sha256", artifacts["weights/best.pt"])
+            self.assertEqual(
+                artifacts["weights/best.pt"]["sha256"],
+                hashlib.sha256(b"fake-weight").hexdigest(),
+            )
+            self.assertEqual(artifacts["weights/best.pt"]["content_type"], "application/octet-stream")
+            self.assertEqual(artifacts["results.csv"]["content_type"], "text/csv")
             self.assertFalse(Path(artifacts["weights/best.pt"]["path"]).is_absolute())
             self.assertNotIn("weights/last.pt", artifacts)
 

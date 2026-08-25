@@ -2,7 +2,7 @@ import { apiFetch } from "../api.js";
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { qs, setHTML, escapeHtml } from "../utils.js";
-import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260824-unified-overview";
+import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260825-tabular-mvp";
 import { followServerTask } from "./task_progress.js";
 
 function contextCardFor(selector) {
@@ -64,6 +64,12 @@ async function syncProjectAssistantContextArtifacts() {
 }
 
 function updateWorkspaceContextSummary(pageId, status, config = {}) {
+  const summary = qs("#workspace-context-summary");
+  if (!summary) return;
+  // This container is owned by the dynamic project/page status renderer. An
+  // old declarative data-i18n marker would make applyLanguage() replace the
+  // freshly rendered badges with the initial "No active project" text.
+  summary.removeAttribute("data-i18n");
   const projectLabel = status.hasProject ? status.projectName : t("common.noProject");
   const pageLabel = config.title || getPageTitle(pageId);
   const actionsCount = config.suppressActions ? 0 : (config.actions || []).length;
@@ -72,14 +78,14 @@ function updateWorkspaceContextSummary(pageId, status, config = {}) {
   const readiness = status.hasProject
     ? (status.trainReady ? t("workspace.trainingReady") : status.hasDataset ? t("workspace.datasetActive") : t("workspace.projectOpen"))
     : t("workspace.idle");
-  setHTML("#workspace-context-summary", `
+  summary.innerHTML = `
     <span class="summary-badge badge-neutral">${escapeHtml(projectLabel)}</span>
     <span class="summary-badge badge-info">${escapeHtml(pageLabel)}</span>
     <span class="summary-badge badge-${status.trainReady ? "success" : "neutral"}">${escapeHtml(readiness)}</span>
     <span class="summary-badge badge-neutral">${escapeHtml(t("workspace.actionsCount", { count: actionsCount }))}</span>
     <span class="summary-badge badge-${warningCount > 0 ? "warning" : "neutral"}">${escapeHtml(t("workspace.warningsCount", { count: warningCount }))}</span>
     ${notesCount > 0 ? `<span class="summary-badge badge-info">${escapeHtml(t("workspace.notesCount", { count: notesCount }))}</span>` : ""}
-  `);
+  `;
 }
 
 function renderProjectSummary(status, pageId = appState.currentPage) {
@@ -93,6 +99,34 @@ function renderProjectSummary(status, pageId = appState.currentPage) {
     setHTML("#project-summary", `
       <div class="summary-empty compact">
         <p>No active project.</p>
+      </div>
+    `);
+    return;
+  }
+
+  const architecture = resolveAssistantArchitecture(appState.currentProject);
+  if (architecture === "tabular") {
+    const summary = getTabularProjectSummary();
+    if (pageId === "dashboard") {
+      setHTML("#project-summary", `
+        <div class="path-list project-context-full">
+          <div class="path-row"><span>Name</span><code>${escapeHtml(status.projectName)}</code></div>
+          <div class="path-row"><span>Architecture</span><code>Tabular</code></div>
+          <div class="path-row"><span>Task</span><code>${escapeHtml(taskLabel)}</code></div>
+          <div class="path-row"><span>CSV files</span><code>${summary.csvCount}</code></div>
+          <div class="path-row"><span>Target</span><code>${escapeHtml(summary.target)}</code></div>
+          <div class="path-row"><span>Runs</span><code>${summary.runs.length}</code></div>
+        </div>
+      `);
+      return;
+    }
+    setHTML("#project-summary", `
+      <div class="project-context-compact">
+        <div>
+          <strong>${escapeHtml(status.projectName)}</strong>
+          <span>Tabular · ${escapeHtml(taskLabel)}</span>
+        </div>
+        <span class="summary-badge badge-${summary.csvCount > 0 ? "success" : "neutral"}">${summary.csvCount > 0 ? `${summary.csvCount} CSV` : "No CSV"}</span>
       </div>
     `);
     return;
@@ -131,6 +165,7 @@ const RIGHT_PANEL_CONFIG = {
   split: buildSplitRightPanel,
   augmentation: buildAugmentationRightPanel,
   training: buildTrainingRightPanel,
+  tabular: buildTabularRightPanel,
   evaluation: buildEvaluationRightPanel,
   inference: buildInferenceRightPanel,
   "auto-labeling": buildAutoLabelingRightPanel,
@@ -284,7 +319,9 @@ function renderProjectAssistantContext(pageId, status) {
 
 export function buildProjectAssistantContext(pageId, status) {
   if (!status.hasProject && pageId !== "history") return null;
-  const runs = Array.isArray(appState.currentProject?.training_runs) ? appState.currentProject.training_runs : [];
+  const resolvedArchitecture = resolveAssistantArchitecture(appState.currentProject);
+  const allRuns = Array.isArray(appState.currentProject?.training_runs) ? appState.currentProject.training_runs : [];
+  const runs = resolvedArchitecture === "tabular" ? allRuns.filter(isTabularTrainingRun) : allRuns;
   const latestRun = runs.length ? runs[runs.length - 1] : null;
   const completedRuns = runs.filter((run) => String(run.status || "").toLowerCase() === "completed");
   const models = Array.isArray(appState.models) ? appState.models : [];
@@ -292,16 +329,18 @@ export function buildProjectAssistantContext(pageId, status) {
   const exportItems = Array.isArray(appState.currentProject?.exports) ? appState.currentProject.exports : [];
   const imports = Array.isArray(appState.currentProject?.imports_history) ? appState.currentProject.imports_history : [];
   const projectType = normalizeTaskLabel(status.taskType || appState.currentProject?.task_type || "--");
-  const architecture = String(status.architecture || resolveAssistantArchitecture(appState.currentProject)).toLowerCase();
+  const architecture = String(status.architecture || resolvedArchitecture).toLowerCase();
   const assistantPageId = resolveAssistantContextPage(pageId, architecture);
-  const architectureLabel = architecture === "rnn" ? "RNN" : "CNN";
+  const architectureLabel = assistantArchitectureLabel(architecture);
   const latestRunId = latestRun?.run_id || bestModel?.run_id || "--";
   const latestRunStatus = latestRun?.status || "--";
 
   const pageConfigs = {
     dashboard: {
       scope: "dashboard",
-      help: t(architecture === "rnn" ? "projectAssistant.context.rnnDashboardHelp" : "projectAssistant.context.cnnDashboardHelp"),
+      help: architecture === "tabular"
+        ? t("projectAssistant.context.dashboardHelp")
+        : t(architecture === "rnn" ? "projectAssistant.context.rnnDashboardHelp" : "projectAssistant.context.cnnDashboardHelp"),
       facts: [
         { label: t("projectAssistant.context.fact.project"), value: status.projectName || "--" },
         { label: t("projectAssistant.context.fact.architecture"), value: architectureLabel },
@@ -309,8 +348,8 @@ export function buildProjectAssistantContext(pageId, status) {
         { label: t("projectAssistant.context.fact.latestRun"), value: `${latestRunId} / ${latestRunStatus}` },
       ],
       prompts: [
-        { label: t("projectAssistant.context.prompt.summary"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnDashboardSummaryPrompt" : "projectAssistant.context.cnnDashboardSummaryPrompt", { task: projectType }) },
-        { label: t("projectAssistant.context.prompt.nextStep"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnDashboardNextPrompt" : "projectAssistant.context.cnnDashboardNextPrompt") },
+        { label: t("projectAssistant.context.prompt.summary"), text: t(architecture === "tabular" ? "projectAssistant.context.dashboardSummaryPrompt" : architecture === "rnn" ? "projectAssistant.context.rnnDashboardSummaryPrompt" : "projectAssistant.context.cnnDashboardSummaryPrompt", { task: projectType }) },
+        { label: t("projectAssistant.context.prompt.nextStep"), text: t(architecture === "tabular" ? "projectAssistant.context.dashboardNextPrompt" : architecture === "rnn" ? "projectAssistant.context.rnnDashboardNextPrompt" : "projectAssistant.context.cnnDashboardNextPrompt") },
       ],
     },
     dataset: buildDataAssistantConfig("dataset", architecture, projectType),
@@ -318,6 +357,7 @@ export function buildProjectAssistantContext(pageId, status) {
     split: buildDataAssistantConfig("split", architecture, projectType),
     augmentation: buildDataAssistantConfig("augmentation", architecture, projectType),
     training: buildTrainingAssistantConfig(architecture, projectType, latestRunId, latestRunStatus),
+    tabular: buildTabularAssistantConfig(projectType, latestRunId, latestRunStatus, completedRuns.length),
     evaluation: {
       scope: "evaluation",
       help: t("projectAssistant.context.evaluationHelp"),
@@ -328,8 +368,8 @@ export function buildProjectAssistantContext(pageId, status) {
         { label: t("projectAssistant.context.fact.completedRuns"), value: String(completedRuns.length) },
       ],
       prompts: [
-        { label: t("projectAssistant.context.prompt.metric"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnEvaluationMetricPrompt" : "projectAssistant.context.cnnEvaluationMetricPrompt", { task: projectType, run: latestRunId }) },
-        { label: t("projectAssistant.context.prompt.risk"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnEvaluationRiskPrompt" : "projectAssistant.context.cnnEvaluationRiskPrompt") },
+        { label: t("projectAssistant.context.prompt.metric"), text: t(architecture === "tabular" ? "projectAssistant.context.evaluationMetricPrompt" : architecture === "rnn" ? "projectAssistant.context.rnnEvaluationMetricPrompt" : "projectAssistant.context.cnnEvaluationMetricPrompt", { task: projectType, run: latestRunId }) },
+        { label: t("projectAssistant.context.prompt.risk"), text: t(architecture === "tabular" ? "projectAssistant.context.evaluationRiskPrompt" : architecture === "rnn" ? "projectAssistant.context.rnnEvaluationRiskPrompt" : "projectAssistant.context.cnnEvaluationRiskPrompt") },
       ],
     },
     inference: buildInferenceAssistantConfig(architecture, projectType, latestRunId),
@@ -362,8 +402,8 @@ export function buildProjectAssistantContext(pageId, status) {
         { label: t("projectAssistant.context.fact.bestModel"), value: bestModel ? `${bestModel.weight_type || "model"} / ${bestModel.run_id || "--"}` : t("projectAssistant.context.value.noModel") },
       ],
       prompts: [
-        { label: t("projectAssistant.context.prompt.package"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnExportPackagePrompt" : "projectAssistant.context.cnnExportPackagePrompt", { task: projectType }) },
-        { label: t("projectAssistant.context.prompt.verify"), text: t(architecture === "rnn" ? "projectAssistant.context.rnnExportVerifyPrompt" : "projectAssistant.context.cnnExportVerifyPrompt") },
+        { label: t("projectAssistant.context.prompt.package"), text: t(architecture === "tabular" ? "projectAssistant.context.exportPackagePrompt" : architecture === "rnn" ? "projectAssistant.context.rnnExportPackagePrompt" : "projectAssistant.context.cnnExportPackagePrompt", { task: projectType }) },
+        { label: t("projectAssistant.context.prompt.verify"), text: t(architecture === "tabular" ? "projectAssistant.context.exportVerifyPrompt" : architecture === "rnn" ? "projectAssistant.context.rnnExportVerifyPrompt" : "projectAssistant.context.cnnExportVerifyPrompt") },
       ],
     },
     history: {
@@ -386,8 +426,14 @@ export function buildProjectAssistantContext(pageId, status) {
 function resolveAssistantArchitecture(project = {}) {
   const taskType = String(project?.task_type || project?.task || "").toLowerCase();
   const explicit = String(project?.architecture || project?.training_mode || project?.training_config?.architecture || "").toLowerCase();
-  if (["cnn", "rnn"].includes(explicit)) return explicit;
+  if (["cnn", "rnn", "tabular"].includes(explicit)) return explicit;
+  if (taskType.includes("tabular")) return "tabular";
   return ["sequence", "time_series", "timeseries", "rnn"].some((token) => taskType.includes(token)) ? "rnn" : "cnn";
+}
+
+function assistantArchitectureLabel(architecture) {
+  if (architecture === "tabular") return "Tabular";
+  return architecture === "rnn" ? "RNN" : "CNN";
 }
 
 function resolveAssistantContextPage(pageId, architecture) {
@@ -398,6 +444,9 @@ function resolveAssistantContextPage(pageId, architecture) {
 }
 
 function buildDataAssistantConfig(scope, architecture, projectType) {
+  if (architecture === "tabular") {
+    return buildGeneralTabularAssistantConfig(scope, projectType);
+  }
   const isRnn = architecture === "rnn";
   return {
     scope,
@@ -414,6 +463,9 @@ function buildDataAssistantConfig(scope, architecture, projectType) {
 }
 
 function buildTrainingAssistantConfig(architecture, projectType, latestRunId, latestRunStatus) {
+  if (architecture === "tabular") {
+    return buildTabularAssistantConfig(projectType, latestRunId, latestRunStatus);
+  }
   const isRnn = architecture === "rnn";
   return {
     scope: "training",
@@ -431,6 +483,18 @@ function buildTrainingAssistantConfig(architecture, projectType, latestRunId, la
 }
 
 function buildInferenceAssistantConfig(architecture, projectType, latestRunId) {
+  if (architecture === "tabular") {
+    return {
+      scope: "inference",
+      help: t("projectAssistant.context.inferenceHelp"),
+      facts: [
+        { label: t("projectAssistant.context.fact.architecture"), value: "Tabular" },
+        { label: t("projectAssistant.context.fact.task"), value: projectType },
+        { label: t("projectAssistant.context.fact.latestRun"), value: latestRunId },
+      ],
+      prompts: [{ label: t("projectAssistant.context.prompt.verify"), text: t("projectAssistant.context.dashboardNextPrompt") }],
+    };
+  }
   return {
     scope: "inference",
     help: t("projectAssistant.context.inferenceHelp"),
@@ -444,7 +508,7 @@ function buildInferenceAssistantConfig(architecture, projectType, latestRunId) {
 }
 
 function buildAutoLabelAssistantConfig(architecture, projectType) {
-  if (architecture === "rnn") return buildDataAssistantConfig("dataset", architecture, projectType);
+  if (architecture !== "cnn") return buildDataAssistantConfig("dataset", architecture, projectType);
   return {
     scope: "auto_labeling",
     help: t("projectAssistant.context.autoLabelHelp"),
@@ -457,6 +521,36 @@ function buildAutoLabelAssistantConfig(architecture, projectType) {
       { label: t("projectAssistant.context.prompt.risk"), text: t("projectAssistant.context.autoLabelReviewPrompt") },
     ],
   };
+}
+
+function buildGeneralTabularAssistantConfig(scope, projectType) {
+  return {
+    scope,
+    help: t("projectAssistant.context.dashboardHelp"),
+    facts: [
+      { label: t("projectAssistant.context.fact.architecture"), value: "Tabular" },
+      { label: t("projectAssistant.context.fact.task"), value: projectType },
+    ],
+    prompts: [
+      { label: t("projectAssistant.context.prompt.summary"), text: t("projectAssistant.context.dashboardSummaryPrompt", { task: projectType }) },
+      { label: t("projectAssistant.context.prompt.nextStep"), text: t("projectAssistant.context.dashboardNextPrompt") },
+    ],
+  };
+}
+
+function buildTabularAssistantConfig(projectType, latestRunId, latestRunStatus, completedRunCount = null) {
+  const config = buildGeneralTabularAssistantConfig("tabular", projectType);
+  config.facts.push({
+    label: t("projectAssistant.context.fact.latestRun"),
+    value: `${latestRunId || "--"} / ${latestRunStatus || "--"}`,
+  });
+  if (completedRunCount !== null) {
+    config.facts.push({
+      label: t("projectAssistant.context.fact.completedRuns"),
+      value: String(completedRunCount),
+    });
+  }
+  return config;
 }
 
 function buildRnnWorkflowAssistantConfig(scope, projectType) {
@@ -483,6 +577,7 @@ function getPageTitle(pageId) {
     split: "Split Status",
     augmentation: "Augmentation Status",
     training: "Training Status",
+    tabular: "Tabular Status",
     evaluation: "Evaluation Status",
     inference: "Inference Status",
     "auto-labeling": "Auto-Labeling Status",
@@ -493,6 +588,9 @@ function getPageTitle(pageId) {
 }
 
 function buildDashboardRightPanel(status) {
+  if (resolveAssistantArchitecture(appState.currentProject) === "tabular") {
+    return buildTabularRightPanel(status, "Tabular Project Readiness");
+  }
   const healthScore = status.hasDataset
     ? Math.round((status.annotatedCount / Math.max(status.imageCount, 1)) * 50 + (status.splitComplete ? 30 : 0) + (status.bestModelExists ? 20 : 0))
     : 0;
@@ -526,6 +624,57 @@ function buildDashboardRightPanel(status) {
       actionLabel: "Browse History",
       actionNav: "history"
     } : null
+  };
+}
+
+function getTabularProjectSummary() {
+  const project = appState.currentProject || {};
+  const config = project.tabular_config || {};
+  const files = project.file_summary || {};
+  const runs = (Array.isArray(project.training_runs) ? project.training_runs : []).filter(isTabularTrainingRun);
+  const csvCount = Number(files.tabular_csv_files || 0);
+  return {
+    config,
+    runs,
+    csvCount,
+    target: String(config.target_column || "--"),
+    featureCount: Array.isArray(config.feature_columns) ? config.feature_columns.length : 0,
+    latestRun: runs.length ? runs[runs.length - 1] : null,
+  };
+}
+
+function isTabularTrainingRun(run) {
+  const architecture = String(run?.architecture || "").toLowerCase();
+  const backend = String(run?.backend || "").toLowerCase();
+  const taskType = String(run?.task_type || "").toLowerCase();
+  return architecture === "tabular" || backend === "xgboost_tabular" || taskType.includes("tabular");
+}
+
+function buildTabularRightPanel(status, title = "Tabular Context") {
+  const summary = getTabularProjectSummary();
+  const latestStatus = String(summary.latestRun?.status || "--");
+  const statusBadge = latestStatus === "completed"
+    ? "success"
+    : latestStatus === "failed"
+      ? "danger"
+      : ["training", "stopping"].includes(latestStatus)
+        ? "warning"
+        : "neutral";
+  return {
+    title,
+    rows: status.hasProject ? [
+      { label: "Architecture", value: "Tabular", badgeType: "info" },
+      { label: "Task", value: normalizeTaskLabel(status.taskType || appState.currentProject?.task_type || "--") },
+      { label: "CSV files", value: String(summary.csvCount), badgeType: summary.csvCount > 0 ? "success" : "neutral" },
+      { label: "Target", value: summary.target, isCode: true },
+      { label: "Features", value: summary.featureCount ? String(summary.featureCount) : "--" },
+      { label: "Latest run", value: summary.latestRun?.run_id || "--", isCode: true },
+      { label: "Run status", value: latestStatus, badgeType: statusBadge },
+    ] : [],
+    actions: [],
+    warnings: [],
+    suppressActions: true,
+    suppressWarnings: true,
   };
 }
 

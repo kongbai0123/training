@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from src.project_layout import ProjectLayout
 from src.run_filters import is_test_run
-from src.training.metric_schema import build_rnn_metric_schema, build_yolo_metric_schema
+from src.training.metric_schema import build_rnn_metric_schema, build_tabular_metric_schema, build_yolo_metric_schema
 
 
 class CompareServiceError(ValueError):
@@ -47,8 +47,9 @@ class CompareService:
                 runs.append(cls._run_card(bundle, project, warnings))
 
         message = None
-        if architecture == "rnn" and not runs:
-            message = "No completed RNN runs are available for comparison."
+        if architecture in {"rnn", "tabular"} and not runs:
+            label = "RNN" if architecture == "rnn" else "Tabular"
+            message = f"No completed {label} runs are available for comparison."
 
         payload: Dict[str, Any] = {
             "architecture": architecture,
@@ -312,10 +313,12 @@ class CompareService:
         ]
         for value in candidates:
             normalized = str(value or "").lower()
-            if normalized in {"cnn", "rnn"}:
+            if normalized in {"cnn", "rnn", "tabular"}:
                 return normalized
 
         backend = str(bundle.get("backend_contract", {}).get("backend") or bundle.get("config", {}).get("backend") or "").lower()
+        if "tabular" in backend:
+            return "tabular"
         if "lstm" in backend or "rnn" in backend:
             return "rnn"
         return "cnn"
@@ -332,7 +335,7 @@ class CompareService:
         )
         normalized = str(task_type or "").lower()
         model = str(bundle.get("config", {}).get("model") or "").lower()
-        if "sequence" in normalized or "rnn" in normalized:
+        if "sequence" in normalized or "rnn" in normalized or "tabular" in normalized:
             return "regression" if "regression" in normalized else "classification"
         if "segmentation" in normalized or "seg" in normalized or "-seg" in model or "_seg" in model:
             return "segmentation"
@@ -392,8 +395,17 @@ class CompareService:
         project = project or bundle.get("project") or {}
         architecture = CompareService.infer_architecture(bundle, project)
         task_family = CompareService.infer_task_family(bundle, project)
-        task_type = "sequence_regression" if architecture == "rnn" and task_family == "regression" else "sequence_classification" if architecture == "rnn" else task_family
-        fallback_schema = build_rnn_metric_schema(task_type) if architecture == "rnn" else build_yolo_metric_schema(task_type)
+        task_type = (
+            f"tabular_{task_family}" if architecture == "tabular"
+            else "sequence_regression" if architecture == "rnn" and task_family == "regression"
+            else "sequence_classification" if architecture == "rnn"
+            else task_family
+        )
+        fallback_schema = (
+            build_tabular_metric_schema(task_type) if architecture == "tabular"
+            else build_rnn_metric_schema(task_type) if architecture == "rnn"
+            else build_yolo_metric_schema(task_type)
+        )
         primary = fallback_schema.get("primary_metric", {}).get("key")
         quality = list(fallback_schema.get("groups", {}).get("quality", []))
         loss = list(fallback_schema.get("groups", {}).get("loss", []))
@@ -441,8 +453,8 @@ class CompareService:
     @staticmethod
     def _normalize_architecture(architecture: str) -> str:
         normalized = str(architecture or "").lower()
-        if normalized not in {"cnn", "rnn"}:
-            raise CompareServiceError("architecture must be cnn or rnn.")
+        if normalized not in {"cnn", "rnn", "tabular"}:
+            raise CompareServiceError("architecture must be cnn, rnn, or tabular.")
         return normalized
 
     @staticmethod
@@ -744,16 +756,20 @@ class CompareService:
             path = str(artifact.get("path") or "")
             role = str(artifact.get("role") or "")
             artifact_type = str(artifact.get("type") or "")
-            if role == "best_model" or path.endswith("weights/best.pt"):
+            if role == "best_model" or path.endswith("weights/best.pt") or path.endswith("weights/best.json"):
                 has_best_model = True
                 model_size_bytes = int(artifact.get("size_bytes") or model_size_bytes or 0)
             if artifact_type == "onnx_model" or path.endswith(".onnx"):
                 has_onnx = True
         if not has_best_model:
-            best = bundle["run_dir"] / "weights" / "best.pt"
-            if best.exists():
-                has_best_model = True
-                model_size_bytes = best.stat().st_size
+            for best in (
+                bundle["run_dir"] / "weights" / "best.pt",
+                bundle["run_dir"] / "weights" / "best.json",
+            ):
+                if best.exists():
+                    has_best_model = True
+                    model_size_bytes = best.stat().st_size
+                    break
         return {"has_best_model": has_best_model, "has_onnx": has_onnx, "model_size_bytes": model_size_bytes}
 
     @classmethod
@@ -838,6 +854,14 @@ def _config_diff(selected_runs: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any
         "hidden_size",
         "num_layers",
         "dropout",
+        "learning_rate",
+        "max_depth",
+        "subsample",
+        "colsample_bytree",
+        "seed",
+        "feature_columns",
+        "target_column",
+        "feature_config_hash",
     ]
     diff: Dict[str, Dict[str, Any]] = {}
     for key in keys:

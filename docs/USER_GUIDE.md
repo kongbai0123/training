@@ -64,7 +64,22 @@ projects/{project_id}/
 
 RNN deep learning backend 仍屬 beta；XGBoost baseline 適合作為 tabular / sequence baseline。
 
-## 4. Feature Columns 格式
+## 4. Tabular / 表格 XGBoost 流程
+
+典型流程：
+
+1. 從功能總覽建立或開啟 Tabular 分類／回歸專案。
+2. 匯入 UTF-8 CSV；每列代表一個獨立樣本。
+3. 選擇數值 feature columns、target column，以及選用的 split／ID column。
+4. 確認 Train／Val／Test 比例與 seed；若 CSV 自帶 split 欄位，可使用 `train`、`val`、`test`。
+5. 就緒檢查通過後，以 CPU 執行獨立 `xgboost_tabular` backend。
+6. 查看驗證指標與 feature importance。
+7. 使用單筆 JSON 或批次 CSV 推論。
+8. 在模型版本中心依序標記「待驗證 → 已驗證 → 正式模型 → 已淘汰」，或比較 Run 並匯出模型套件。
+
+首版只接受數值特徵，缺失特徵會以 Train split 擬合出的中位數補值；target 不會補值。匯出套件包含 `best.json`、feature schema、imputation、label encoder（分類）、指標、feature importance、artifact manifest 與 inference contract，不需要把 RNN 專案轉換成 Tabular。
+
+## 5. Feature Columns 格式
 
 feature columns 可使用逗號或分號分隔，例如：
 
@@ -74,7 +89,7 @@ speed,acceleration,temperature
 
 請確認 CSV header 內存在所有 feature columns 與 target column。若欄位不存在，readiness check 會阻止訓練。
 
-## 5. Model Catalog
+## 6. Model Catalog
 
 模型來源分為：
 
@@ -92,7 +107,7 @@ Registered != Enabled
 
 custom package 需要通過 manifest validation、dry-run policy 與 enablement 狀態檢查。
 
-## 6. Run History 與 Artifacts
+## 7. Run History 與 Artifacts
 
 每次訓練會產生 run folder，常見內容包括：
 
@@ -108,7 +123,7 @@ weights/
 
 請透過 UI 或 API 管理 run history，不要手動刪除仍在使用中的 run 資料。
 
-## 7. 專案助理
+## 8. 專案助理
 
 右上角「助理」會搜尋目前專案已同步的資料集摘要、訓練 Run、評估、匯出合約與錯誤紀錄。它用於解釋現況、整理風險與提供下一個檢查方向，不會自動修改參數或取代正式評估。
 
@@ -117,11 +132,11 @@ weights/
 - 「正在搜尋」表示系統正在比對目前專案來源，完成前不會重複送出。
 - 回答沒有引用來源時不應作為決策依據；先同步專案產物或匯入相關報告再提問。
 
-## 8. 評估圖表下載
+## 9. 評估圖表下載
 
 CNN 與 RNN 評估圖表會以 SVG 向量格式直接儲存至目前 Windows 使用者的「下載」資料夾。若同名檔案已存在，系統會保留舊檔並建立帶編號的新檔，不會寫入 AppData 專案資料夾。
 
-## 9. 安全使用
+## 10. 安全使用
 
 - 不要把私有資料集、模型權重或專案資料提交到 Git。
 - 不要手動移動 `projects/{project_id}` 內部資料夾，除非同時更新 project metadata。

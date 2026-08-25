@@ -130,6 +130,7 @@ class ProjectLayout:
             self.project_dir / "dataset" / "images" / "rejected",
             self.project_dir / "dataset" / "videos" / "raw",
             self.project_dir / "dataset" / "videos" / "frames",
+            self.project_dir / "dataset" / "tables",
             self.project_dir / "dataset" / "metadata",
             self.project_dir / "annotations" / "current" / "labelme",
             self.project_dir / "annotations" / "current" / "yolo",
@@ -273,6 +274,13 @@ class ProjectLayout:
 
     def sequences_dir(self) -> Path:
         return self.project_dir / "sequences"
+
+    def tables_dir(self) -> Path:
+        """Return the project-owned source directory for row-level tabular datasets."""
+        return self.project_dir / "dataset" / "tables"
+
+    def tabular_manifest_path(self) -> Path:
+        return self.tables_dir() / "tabular_manifest.json"
 
     def sequence_manifest_path(self) -> Path:
         return self.sequences_dir() / "sequence_manifest.json"

@@ -90,6 +90,7 @@ projects/{project_id}/
 ├─ augmentations/profiles
 ├─ training/runs
 ├─ training/registry
+├─ dataset/tables
 ├─ sequences
 ├─ auto_labeling/jobs
 ├─ inference/jobs
@@ -114,9 +115,12 @@ pytorch_torchvision -> TorchVisionBackend
 transformers_dfine -> DFineBackend
 pytorch_lstm     -> RNNBackend
 sklearn_xgboost  -> XGBoostBackend
+xgboost_tabular  -> TabularXGBoostBackend
 ```
 
 視覺模型沿用既有 CNN 專案儲存格式，但以 `training_category` 區分圖片分類、物件偵測、實例分割與語意分割。這讓舊專案仍可讀取，同時避免所有 segmentation 模型混在同一組。TorchVision backend 直接讀取專案影像、類別、方框與 polygon 標註；D-FINE backend 將方框轉為 COCO annotation 後訓練。
+
+Tabular 專案使用獨立 `tabular_classification`／`tabular_regression` task type 與 `TabularXGBoostBackend`。它與 RNN 的 `sklearn_xgboost` backend 共用低階訓練函式，但資料 loader、前處理契約、推論服務與工作區皆相互隔離，因此不會把既有序列專案改名或遷移。
 
 訓練狀態由 `TrainingStateStore` 統一提供給 API / UI。thread runner 負責背景執行、duplicate guard、runner cleanup 與 lifecycle 管理。
 
@@ -135,6 +139,8 @@ weights/
 ```
 
 compare、export、inference 應讀取 artifact manifest 與 run summary，不應依賴單一 backend 的私有輸出格式。
+
+`artifact_manifest.json` 使用 metadata contract v2，為每個已知產物記錄 SHA-256、content type、producer 版本，並可附帶 dataset/model lineage。`backend.json` 與 `metric_schema.json` 維持既有 v1 契約，避免舊讀取器誤判其 payload 已變更。
 
 ## 7. Model System
 

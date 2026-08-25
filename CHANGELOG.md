@@ -4,6 +4,27 @@ All notable changes to Vision Training Studio are tracked here.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-25
+
+### Added
+- Added an independent Tabular project type with numeric CSV row loading, deterministic train/validation/test splitting, train-only median imputation, and XGBoost classification/regression training.
+- Added feature-importance artifacts, secure single-row and batch CSV inference, model lifecycle registration, Tabular run comparison, and portable Tabular model-package export.
+- Added artifact metadata contract v2 with producer information, SHA-256 checksums, content types, and optional dataset/model lineage while retaining backend contract compatibility.
+- Added repeatable commercial-data acceptance coverage using the official UCI Online Shoppers and Seoul Bike datasets.
+
+### Changed
+- Extended the unified feature overview and project/history navigation with a dedicated Tabular workspace without changing the existing RNN XGBoost backend.
+- Generalized the model registry to discover first-party JSON checkpoints alongside existing PT checkpoints.
+
+### Fixed
+- Rejected invalid Tabular split values, missing targets, non-numeric regression targets, one-class classification targets, and non-finite training data before a run starts.
+- Kept the workspace status synchronized after opening a project and limited Tabular model selection, registry, and export views to compatible artifacts.
+- Rejected provided classification splits whose training partition omits labels that exist in validation or test data.
+- Neutralized spreadsheet formula prefixes in downloadable batch-prediction CSV files while keeping raw API predictions unchanged.
+- Kept project and lifecycle registry state transactional when promoting a model to production.
+- Aggregated flattened RNN XGBoost importance scores back to their original feature names.
+- Stabilized frozen runtime startup by using the bundled h11 HTTP transport instead of optional httptools discovery.
+
 ## [0.1.12] - 2026-08-24
 
 ### Added

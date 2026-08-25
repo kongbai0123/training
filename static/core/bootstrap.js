@@ -16,7 +16,7 @@ import { showToast as showToastCore } from "./toast.js";
 import { initDirtyFormTracking } from "./dirty_forms.js";
 import { initResourceFreshnessTracking } from "./resource_freshness.js";
 import { setActivePage } from "./router.js";
-import { initWorkspaceContextPanel, renderRightPanel as renderRightPanelCore } from "./right_panel.js?v=20260708-rnn-feature-wizard";
+import { initWorkspaceContextPanel, renderRightPanel as renderRightPanelCore } from "./right_panel.js?v=20260825-tabular-mvp";
 import { initInfoTooltips } from "./tooltip.js";
 import { createProjectLifecycle } from "./project_lifecycle.js";
 import { initModelSetup, maybeOpenModelSetup } from "./model_setup.js?v=20260712-model-onboarding";
@@ -27,7 +27,7 @@ import {
   renderPrimaryPageModules,
   renderSecondaryPageModules,
   syncPageModeForProject,
-} from "./page_registry.js?v=20260824-unified-overview";
+} from "./page_registry.js?v=20260825-tabular-mvp";
 
 const {
   bootstrapSession,

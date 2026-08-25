@@ -1,5 +1,5 @@
 import { qs, setHTML, setText, escapeHtml } from "../utils.js";
-import { isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260824-unified-overview";
+import { isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260825-tabular-mvp";
 
 export function renderPageGuards(pageId, status) {
   if (isRnnTrainingWorkspaceActive(pageId)) {

@@ -7,6 +7,7 @@ import { getStaleResources } from "../core/resource_freshness.js";
 export const OVERVIEW_MODULES = Object.freeze([
   Object.freeze({ mode: "rnn", icon: "fa-chart-line", titleKey: "dashboard.module.rnn.title", descriptionKey: "dashboard.module.rnn.description", capabilityKey: "dashboard.module.rnn.capabilities" }),
   Object.freeze({ mode: "cnn", icon: "fa-images", titleKey: "dashboard.module.cnn.title", descriptionKey: "dashboard.module.cnn.description", capabilityKey: "dashboard.module.cnn.capabilities" }),
+  Object.freeze({ mode: "tabular", icon: "fa-table-columns", titleKey: "dashboard.module.tabular.title", descriptionKey: "dashboard.module.tabular.description", capabilityKey: "dashboard.module.tabular.capabilities" }),
 ]);
 
 export function initDashboard() {
@@ -68,7 +69,7 @@ function renderOverviewModules() {
           <span class="overview-module-icon" aria-hidden="true"><i class="fa-solid ${module.icon}"></i></span>
           <div>
             <h3>${escapeHtml(t(module.titleKey))}</h3>
-            <span class="overview-module-context${isActiveProject ? " is-active" : ""}">${escapeHtml(context)}</span>
+            <span class="overview-module-context no-i18n${isActiveProject ? " is-active" : ""}">${escapeHtml(context)}</span>
           </div>
         </header>
         <p>${escapeHtml(t(module.descriptionKey))}</p>
@@ -87,13 +88,15 @@ function countProjectsByMode(projects) {
   return projects.reduce((counts, project) => {
     counts[resolveProjectMode(project)] += 1;
     return counts;
-  }, { cnn: 0, rnn: 0 });
+  }, { cnn: 0, rnn: 0, tabular: 0 });
 }
 
 function resolveProjectMode(project) {
   const explicit = String(project?.architecture || project?.training_mode || project?.training_config?.architecture || "").toLowerCase();
+  if (explicit === "tabular") return "tabular";
   if (explicit === "rnn") return "rnn";
   const taskType = String(project?.task_type || project?.task || "").toLowerCase();
+  if (taskType.includes("tabular")) return "tabular";
   return ["sequence", "time_series", "timeseries", "rnn"].some((token) => taskType.includes(token)) ? "rnn" : "cnn";
 }
 

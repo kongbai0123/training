@@ -17,6 +17,9 @@ class NavigationLifecycleStaticTests(unittest.TestCase):
         self.assertIn('eventBus.on("open-training-module", openTrainingModule)', modes)
         self.assertIn('eventBus.emit("navigate", "training")', modes)
         self.assertIn('eventBus.emit("navigate", "dashboard")', modes)
+        self.assertIn('mode === "tabular" ? "tabular" : "training"', modes)
+        self.assertIn('id="tabular-mode-nav"', index_html)
+        self.assertIn('data-tabular-nav="model-compare"', index_html)
         self.assertIn('openProject(projectId, { page: "training", moduleOverview: true })', bootstrap)
         self.assertIn('targetPage === "module-overview"', modes)
 

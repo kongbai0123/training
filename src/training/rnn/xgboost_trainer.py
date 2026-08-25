@@ -19,6 +19,10 @@ def train_xgboost_from_dataset(
     config: Dict[str, Any],
     stop_requested=None,
     progress_callback=None,
+    *,
+    architecture: str = "rnn",
+    task_prefix: str = "sequence",
+    backend_name: str = "sklearn_xgboost",
 ) -> Dict[str, Any]:
     try:
         import xgboost as xgb
@@ -40,13 +44,27 @@ def train_xgboost_from_dataset(
     y_train = dataset["tensors"]["train"]["y"]
     x_val = _flatten(dataset["tensors"]["val"]["x"])
     y_val = dataset["tensors"]["val"]["y"]
+    if x_train.shape[0] == 0:
+        raise XGBoostTrainingError("XGBoost training requires at least one training row.")
+    if x_val.shape[0] == 0:
+        raise XGBoostTrainingError(
+            "XGBoost training requires at least one validation row so model quality can be measured."
+        )
 
     n_estimators = max(1, int(config.get("epochs") or config.get("n_estimators") or 100))
-    learning_rate = float(config.get("lr0") or config.get("learning_rate") or 0.05)
+    # ``lr0`` remains required by the shared legacy request, but
+    # ``learning_rate`` is the explicit XGBoost control and takes precedence.
+    learning_rate_value = config.get("learning_rate")
+    if learning_rate_value in (None, ""):
+        learning_rate_value = config.get("lr0")
+    learning_rate = float(
+        learning_rate_value if learning_rate_value not in (None, "") else 0.05
+    )
     max_depth = max(1, int(config.get("max_depth") or 4))
     subsample = float(config.get("subsample") or 0.9)
     colsample_bytree = float(config.get("colsample_bytree") or 0.9)
-    random_state = int(config.get("seed") or 42)
+    seed_value = config.get("seed")
+    random_state = int(seed_value if seed_value not in (None, "") else 42)
 
     common_params = {
         "learning_rate": learning_rate,
@@ -95,19 +113,40 @@ def train_xgboost_from_dataset(
 
     model.save_model(weights_dir / "best.json")
     model.save_model(weights_dir / "last.json")
-    _write_model_metadata(weights_dir / "model_metadata.json", dataset, config, final_metrics)
+    feature_importance = _feature_importance(
+        model,
+        dataset.get("feature_columns") or [],
+        sequence_length=(
+            max(1, int((dataset.get("summary") or {}).get("sequence_length") or 1))
+            if architecture == "rnn"
+            else 1
+        ),
+    )
+    (run_dir / "feature_importance.json").write_text(
+        json.dumps(feature_importance, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    _write_model_metadata(
+        weights_dir / "model_metadata.json",
+        dataset,
+        config,
+        final_metrics,
+        architecture=architecture,
+        backend_name=backend_name,
+        feature_importance=feature_importance,
+    )
 
     best_metric_key = "val/mae" if is_regression else "val/macro_f1"
     metrics_payload = {
-        "backend": "sklearn_xgboost",
-        "architecture": "rnn",
+        "backend": backend_name,
+        "architecture": architecture,
         "model": str(config.get("model") or ("xgboost_regressor" if is_regression else "xgboost_classifier")),
-        "task_type": "sequence_regression" if is_regression else "sequence_classification",
+        "task_type": f"{task_prefix}_regression" if is_regression else f"{task_prefix}_classification",
         "primary_metric": best_metric_key,
         "history": history,
         "best_epoch": len(history),
         "best_metrics": history[-1],
         "dataset_summary": dataset["summary"],
+        "feature_importance": feature_importance,
     }
     metrics_payload.update(diagnostics)
     (run_dir / "metrics.json").write_text(json.dumps(metrics_payload, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -117,6 +156,9 @@ def train_xgboost_from_dataset(
 
 def _flatten(values: np.ndarray) -> np.ndarray:
     array = np.asarray(values, dtype=np.float32)
+    if array.shape[0] == 0:
+        flattened_dim = int(np.prod(array.shape[1:])) if array.ndim > 1 else 1
+        return np.empty((0, flattened_dim), dtype=np.float32)
     return array.reshape(array.shape[0], -1)
 
 
@@ -151,9 +193,13 @@ def _evaluate_final(model: Any, dval: Any, y_val: np.ndarray, is_regression: boo
         predictions = np.asarray(raw_predictions, dtype=float).reshape(-1).tolist()
         targets = np.asarray(y_val, dtype=float).reshape(-1).tolist()
         errors = np.asarray(predictions, dtype=float) - np.asarray(targets, dtype=float)
+        target_array = np.asarray(targets, dtype=float)
+        ss_res = float(np.sum(errors ** 2))
+        ss_tot = float(np.sum((target_array - float(np.mean(target_array))) ** 2))
         return {
             "val/mae": round(float(np.mean(np.abs(errors))), 6),
             "val/rmse": round(float(math.sqrt(np.mean(errors ** 2))), 6),
+            "val/r2": round(float(1.0 - (ss_res / ss_tot)), 6) if ss_tot > 0 else 0.0,
             "diagnostics": _diagnostics(predictions, targets, True),
         }
     if num_outputs > 2:
@@ -221,21 +267,64 @@ def _diagnostics(predictions: List[Any], targets: List[Any], is_regression: bool
     }
 
 
-def _write_model_metadata(path: Path, dataset: Dict[str, Any], config: Dict[str, Any], metrics: Dict[str, Any]) -> None:
+def _write_model_metadata(
+    path: Path,
+    dataset: Dict[str, Any],
+    config: Dict[str, Any],
+    metrics: Dict[str, Any],
+    *,
+    architecture: str = "rnn",
+    backend_name: str = "sklearn_xgboost",
+    feature_importance: List[Dict[str, Any]] | None = None,
+) -> None:
     payload = {
-        "backend": "sklearn_xgboost",
+        "backend": backend_name,
+        "architecture": architecture,
         "model": config.get("model") or "xgboost",
-        "sequence_length": config.get("sequence_length"),
+        "sequence_length": config.get("sequence_length") if architecture == "rnn" else None,
         "input_dim": dataset["input_dim"],
         "flattened_input_dim": int(dataset["input_dim"]) * int(dataset["summary"].get("sequence_length") or 1),
         "task_head": dataset["task_head"],
         "feature_columns": dataset["feature_columns"],
         "target_column": dataset["target_column"],
         "label_encoder": dataset.get("label_encoder"),
-        "normalization": dataset["normalization"],
+        "normalization": dataset.get("normalization") or {},
+        "imputation": dataset.get("imputation") or {},
+        "feature_importance": feature_importance or [],
         "metrics": metrics,
     }
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _feature_importance(
+    model: Any,
+    feature_columns: List[str],
+    *,
+    sequence_length: int = 1,
+) -> List[Dict[str, Any]]:
+    raw = model.get_score(importance_type="gain") or {}
+    by_name = {str(name): 0.0 for name in feature_columns}
+    flattened_feature_count = len(feature_columns) * max(1, int(sequence_length))
+    for key, value in raw.items():
+        name = key
+        if key.startswith("f") and key[1:].isdigit():
+            index = int(key[1:])
+            if feature_columns and 0 <= index < flattened_feature_count:
+                # RNN XGBoost flattens [time, feature] in row-major order.
+                # Aggregate every timestep back into its original feature so
+                # artifacts never leak opaque f2/f3/... names to users.
+                name = feature_columns[index % len(feature_columns)]
+        resolved_name = str(name)
+        by_name[resolved_name] = by_name.get(resolved_name, 0.0) + float(value)
+    rows = [
+        {"feature": name, "gain": round(value, 8)}
+        for name, value in by_name.items()
+    ]
+    rows.sort(key=lambda item: item["gain"], reverse=True)
+    total = sum(float(item["gain"]) for item in rows)
+    for item in rows:
+        item["normalized_gain"] = round(float(item["gain"]) / total, 8) if total else 0.0
+    return rows
 
 
 def _write_results_csv(path: Path, history: List[Dict[str, Any]]) -> None:

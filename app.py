@@ -30,6 +30,7 @@ from src.api.routes.monitor import router as monitor_router
 from src.api.routes.project_layout import router as project_layout_router
 from src.api.routes.project_assistant import router as project_assistant_router
 from src.api.routes.rnn_config import router as rnn_config_router
+from src.api.routes.tabular import router as tabular_router
 from src.api.routes.projects import router as projects_router
 from src.api.routes.system import router as system_router
 from src.api.routes.training_orchestration import router as training_orchestration_router
@@ -46,6 +47,7 @@ app.include_router(project_layout_router)
 app.include_router(project_assistant_router)
 app.include_router(projects_router)
 app.include_router(rnn_config_router)
+app.include_router(tabular_router)
 app.include_router(models_router)
 app.include_router(components_router)
 app.include_router(training_runs_router)

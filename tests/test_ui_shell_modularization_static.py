@@ -100,6 +100,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         labelme_css = (ROOT / "static" / "styles" / "pages" / "labelme.css").read_text(encoding="utf-8")
         training_css = (ROOT / "static" / "styles" / "pages" / "training.css").read_text(encoding="utf-8")
         rnn_training_css = (ROOT / "static" / "styles" / "pages" / "rnn_training.css").read_text(encoding="utf-8")
+        tabular_css = (ROOT / "static" / "styles" / "pages" / "tabular.css").read_text(encoding="utf-8")
         augmentation_css = (ROOT / "static" / "styles" / "pages" / "augmentation.css").read_text(encoding="utf-8")
         model_compare_css = (ROOT / "static" / "styles" / "pages" / "model_compare.css").read_text(encoding="utf-8")
         inference_css = (ROOT / "static" / "styles" / "pages" / "inference.css").read_text(encoding="utf-8")
@@ -129,6 +130,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
                 '@import "./styles/pages/split.css?v=20260711-layout-export-precision";\n'
                 '@import "./styles/pages/training.css?v=20260722-cnn-epoch-monitor";\n'
                 '@import "./styles/pages/rnn_training.css";\n'
+                '@import "./styles/pages/tabular.css?v=20260825-tabular-mvp";\n'
                 '@import "./styles/pages/augmentation.css?v=20260722-augmentation-compare2";\n'
                 '@import "./styles/pages/model_compare.css";\n'
                 '@import "./styles/pages/inference.css";\n'
@@ -457,6 +459,8 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn("@media (max-width: 840px) {", rnn_training_css)
         self.assertIn("@media (max-width: 980px) {", rnn_training_css)
         self.assertIn("@media (max-width: 1100px) {", rnn_training_css)
+        self.assertRegex(tabular_css, r"(?m)^\.tabular-workspace \{")
+        self.assertRegex(tabular_css, r"(?m)^\.tabular-training-layout \{")
 
         self.assertRegex(augmentation_css, r"(?m)^\.augmentation-workspace \{")
         self.assertRegex(augmentation_css, r"(?m)^\.aug-strategy-tabs \{")
@@ -857,7 +861,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         tooltip_js = (ROOT / "static" / "core" / "tooltip.js").read_text(encoding="utf-8")
         project_lifecycle_js = (ROOT / "static" / "core" / "project_lifecycle.js").read_text(encoding="utf-8")
 
-        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260824-unified-overview";', app_js)
+        self.assertIn('import { bootstrapApp } from "./core/bootstrap.js?v=20260825-tabular-mvp";', app_js)
         self.assertIn("syncPageModeForProject(null, requestedPage);", bootstrap_js)
         self.assertIn("bootstrapApp().catch", app_js)
         self.assertNotIn("bindGlobalNavigation", app_js)
@@ -870,10 +874,10 @@ class UIShellModularizationStaticTests(unittest.TestCase):
         self.assertIn('from "./action_availability.js?v=20260712-unlocked-actions"', bootstrap_js)
         self.assertIn('from "./toast.js"', bootstrap_js)
         self.assertIn('from "./router.js"', bootstrap_js)
-        self.assertIn('from "./right_panel.js?v=20260708-rnn-feature-wizard"', bootstrap_js)
+        self.assertIn('from "./right_panel.js?v=20260825-tabular-mvp"', bootstrap_js)
         self.assertIn('from "./tooltip.js"', bootstrap_js)
         self.assertIn('from "./project_lifecycle.js"', bootstrap_js)
-        self.assertIn('from "./page_registry.js?v=20260824-unified-overview"', bootstrap_js)
+        self.assertIn('from "./page_registry.js?v=20260825-tabular-mvp"', bootstrap_js)
         self.assertIn("createProjectLifecycle({ renderAll, navigate });", bootstrap_js)
         self.assertIn("export async function bootstrapApp()", bootstrap_js)
         self.assertIn("initPageModules();", bootstrap_js)

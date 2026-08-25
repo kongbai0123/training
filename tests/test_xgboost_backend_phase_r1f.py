@@ -7,7 +7,7 @@ from unittest.mock import patch
 from src.training.backends import xgboost_backend as xgboost_backend_module
 from src.training.backends.xgboost_backend import XGBoostBackend
 from src.training.dispatcher import TrainerDispatcher
-from src.training.rnn.xgboost_trainer import _history_from_evals
+from src.training.rnn.xgboost_trainer import _feature_importance, _history_from_evals
 from src.training.state_store import TrainingStateStore
 
 
@@ -71,6 +71,26 @@ class XGBoostBackendPhaseR1FTests(unittest.TestCase):
         self.assertEqual(history[0]["val/mae"], 3.5)
         self.assertEqual(history[1]["val/rmse"], 3.0)
         self.assertEqual(history[1]["val/mae"], 2.5)
+
+    def test_sequence_feature_importance_aggregates_flattened_timesteps_by_column(self):
+        class FakeBooster:
+            @staticmethod
+            def get_score(*, importance_type):
+                self.assertEqual(importance_type, "gain")
+                return {"f0": 1.0, "f1": 2.0, "f2": 3.0, "f3": 4.0}
+
+        rows = _feature_importance(
+            FakeBooster(),
+            ["temperature", "pressure"],
+            sequence_length=2,
+        )
+
+        self.assertEqual([row["feature"] for row in rows], ["pressure", "temperature"])
+        by_feature = {row["feature"]: row for row in rows}
+        self.assertEqual(by_feature["temperature"]["gain"], 4.0)
+        self.assertEqual(by_feature["pressure"]["gain"], 6.0)
+        self.assertEqual(by_feature["temperature"]["normalized_gain"], 0.4)
+        self.assertEqual(by_feature["pressure"]["normalized_gain"], 0.6)
 
     def test_start_training_sets_regression_task_type_and_starts_runner(self):
         with tempfile.TemporaryDirectory() as temp_dir:

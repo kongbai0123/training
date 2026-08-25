@@ -4,15 +4,15 @@
 
 **Windows 本機 AI 模型訓練與資料集工作平台**
 
-整合 CNN 影像任務、RNN 序列任務、資料標註、資料增強、模型訓練、評估、比較與匯出。
+整合 CNN 影像任務、RNN 序列任務、Tabular 表格任務、資料標註、模型訓練、推論、比較、版本管理與匯出。
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](docs/INSTALL.md)
-[![Version](https://img.shields.io/badge/version-0.1.12-2563EB)](VERSION)
-[![Release](https://img.shields.io/badge/release-v0.1.12%20Update-16A34A)](https://github.com/kongbai0123/training/releases/tag/v0.1.12)
+[![Version](https://img.shields.io/badge/version-0.2.0-2563EB)](VERSION)
+[![Release](https://img.shields.io/badge/release-v0.2.0%20Update-16A34A)](https://github.com/kongbai0123/training/releases/tag/v0.2.0)
 [![Runtime](https://img.shields.io/badge/end--user%20runtime-No%20Python%20required-0F766E)](docs/INSTALL.md)
 
 [下載完整安裝版](https://github.com/kongbai0123/training/releases/tag/v0.1.6) ·
-[取得最新更新](https://github.com/kongbai0123/training/releases/tag/v0.1.12) ·
+[取得最新更新](https://github.com/kongbai0123/training/releases/tag/v0.2.0) ·
 [安裝說明](docs/INSTALL.md) ·
 [使用指南](docs/USER_GUIDE.md) ·
 [模型支援](docs/MODEL_SUPPORT.md) ·
@@ -26,8 +26,8 @@
 
 Vision Training Studio 是以一般使用者操作為核心的 Windows 本機訓練工具，協助使用者在同一套介面中完成：
 
-- 建立與管理 CNN、RNN 專案。
-- 匯入圖片、標註資料、序列 CSV 與既有模型。
+- 建立與管理 CNN、RNN、Tabular 專案。
+- 匯入圖片、標註資料、序列 CSV、表格 CSV 與既有模型。
 - 執行 LabelMe 標註、資料分割、資料增強與自動標註。
 - 設定模型與訓練參數，使用 CPU 或 NVIDIA GPU 執行訓練。
 - 查看逐 Epoch 指標、正式評估結果、Run 比較與模型產物。
@@ -72,14 +72,14 @@ Get-FileHash .\VisionTrainingStudio_Setup_0.1.4.exe -Algorithm SHA256
 
 ## 核心工作流程
 
-| 階段 | CNN 影像任務 | RNN／序列任務 |
-|---|---|---|
-| 專案設定 | 圖片分類、物件偵測、物件輪廓分割、畫面區域分割 | 分類、回歸、LSTM／GRU／BiLSTM／XGBoost |
-| 資料匯入 | 圖片、ZIP、YOLO、分類資料夾與既有標註 | CSV 與 CSV ZIP |
-| 資料準備 | LabelMe、資料品質檢查、Train／Val／Test 分割、資料增強 | 特徵與目標設定、時間與序列欄位、序列切片 |
-| 模型訓練 | YOLO、RT-DETR、D-FINE、TorchVision、U-Net 等 | LSTM、GRU、BiLSTM、XGBoost |
-| 評估 | mAP、Precision、Recall、分類與分割指標 | Accuracy、Macro-F1、MAE、RMSE 與殘差診斷 |
-| 比較與匯出 | 比較多個 Run，匯出權重、ONNX、SVG 圖表與報告 | 比較多個 Run，匯出模型套件、Schema、Scaler 與報告 |
+| 階段 | CNN 影像任務 | RNN／序列任務 | Tabular 表格任務 |
+|---|---|---|---|
+| 專案設定 | 圖片分類、物件偵測、物件輪廓分割、畫面區域分割 | 分類、回歸、LSTM／GRU／BiLSTM／XGBoost | 每列分類或連續數值預測 |
+| 資料匯入 | 圖片、ZIP、YOLO、分類資料夾與既有標註 | CSV 與 CSV ZIP | UTF-8 CSV |
+| 資料準備 | LabelMe、資料品質檢查、Train／Val／Test 分割、資料增強 | 特徵與目標設定、時間與序列欄位、序列切片 | 數值特徵、目標欄位、缺失值中位數補值、可重現切分 |
+| 模型訓練 | YOLO、RT-DETR、D-FINE、TorchVision、U-Net 等 | LSTM、GRU、BiLSTM、XGBoost | 獨立 Tabular XGBoost backend（CPU） |
+| 評估 | mAP、Precision、Recall、分類與分割指標 | Accuracy、Macro-F1、MAE、RMSE 與殘差診斷 | Accuracy、Macro-F1、MAE、RMSE、R² 與特徵重要度 |
+| 比較與匯出 | 比較多個 Run，匯出權重、ONNX、SVG 圖表與報告 | 比較多個 Run，匯出模型套件、Schema、Scaler 與報告 | 比較 Run、模型生命週期、單筆／批次推論與可攜模型套件 |
 
 ### CNN 影像工作流程
 
@@ -97,6 +97,10 @@ Get-FileHash .\VisionTrainingStudio_Setup_0.1.4.exe -Algorithm SHA256
 ![RNN 序列訓練流程](docs/assets/rnn-training-flow.png)
 
 RNN 專案可指定特徵欄位、目標欄位、時間欄位與序列 ID，並透過序列切片建立固定長度的訓練視窗。分類任務顯示 Accuracy、Macro-F1、Precision 與 Recall；回歸任務顯示 MAE、RMSE、Loss 與殘差診斷。
+
+### Tabular 表格工作流程
+
+Tabular 專案把 CSV 的每一列視為獨立樣本，不會改寫或取代 RNN 序列流程。首版只接受數值特徵並使用已隨程式提供的 XGBoost；缺失值統計只由 Train split 擬合，固定 seed 可重現切分。完成訓練後可查看特徵重要度、比較 Run、驗證／升級正式模型、執行單筆或批次推論，並匯出包含模型與前處理契約的 ZIP 套件。
 
 ## 主要功能
 
@@ -129,18 +133,19 @@ RNN 專案可指定特徵欄位、目標欄位、時間欄位與序列 ID，並�
 
 ### 目前版本
 
-- **最新穩定版：v0.1.12**
+- **最新穩定版：v0.2.0**
 - **最新完整安裝基準：v0.1.6**
 - [下載 v0.1.6 完整安裝程式](https://github.com/kongbai0123/training/releases/tag/v0.1.6)
-- [下載 v0.1.12 增量更新包與 SHA-256 checksum](https://github.com/kongbai0123/training/releases/tag/v0.1.12)
+- [下載 v0.2.0 增量更新包與 SHA-256 checksum](https://github.com/kongbai0123/training/releases/tag/v0.2.0)
 - [完整版本變更紀錄](CHANGELOG.md)
 
-新安裝或尚未具備目前更新執行環境的使用者，請先安裝 v0.1.6 完整安裝程式。v0.1.12 為 `runtime-r1` 增量更新，只接受 v0.1.11；較舊版本須依序套用相容更新，不能直接跳版。設定頁會檢查版本與 runtime，相容時才提供下載與套用，不相容時會引導使用完整安裝程式。
+新安裝或尚未具備目前更新執行環境的使用者，請先安裝 v0.1.6 完整安裝程式。v0.2.0 為 `runtime-r1` 增量更新，只接受 v0.1.12；較舊版本須依序套用相容更新，不能直接跳版。設定頁會檢查版本與 runtime，相容時才提供下載與套用，不相容時會引導使用完整安裝程式。
 
 ### 增量更新（由新到舊）
 
 | 目標版本 | 來源版本 | 發布內容 |
 |---|---|---|
+| v0.2.0 | v0.1.12 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.2.0) |
 | v0.1.12 | v0.1.11 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.12) |
 | v0.1.11 | v0.1.10 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.11) |
 | v0.1.10 | v0.1.9 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.10) |
@@ -154,13 +159,14 @@ RNN 專案可指定特徵欄位、目標欄位、時間欄位與序列 ID，並�
 
 以下依版本由新到舊排列：
 
-1. [v0.1.12 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-08-24_0.1.12.md)
-2. [v0.1.11 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-07-24_0.1.11.md)
-3. [v0.1.10 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-07-24_0.1.10.md)
-4. [v0.1.4 更新系統與安裝驗證紀錄](docs/RELEASE_VALIDATION_2026-07-23_0.1.4.md)
-5. [v0.1.3 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-22_0.1.3.md)
-6. [v0.1.2 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-22.md)
-7. [v0.1.1 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-16.md)
+1. [v0.2.0 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-08-25_0.2.0.md)
+2. [v0.1.12 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-08-24_0.1.12.md)
+3. [v0.1.11 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-07-24_0.1.11.md)
+4. [v0.1.10 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-07-24_0.1.10.md)
+5. [v0.1.4 更新系統與安裝驗證紀錄](docs/RELEASE_VALIDATION_2026-07-23_0.1.4.md)
+6. [v0.1.3 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-22_0.1.3.md)
+7. [v0.1.2 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-22.md)
+8. [v0.1.1 發布驗證紀錄](docs/RELEASE_VALIDATION_2026-07-16.md)
 
 ### 更新系統文件
 

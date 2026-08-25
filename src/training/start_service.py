@@ -32,6 +32,10 @@ class TrainingStartService:
         "bidirectional",
         "gradient_clip_norm",
         "early_stopping_patience",
+        "learning_rate",
+        "max_depth",
+        "subsample",
+        "colsample_bytree",
     )
 
     @classmethod

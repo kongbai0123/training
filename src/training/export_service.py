@@ -55,7 +55,22 @@ class ExportService:
     ) -> Dict[str, Any]:
         layout = ProjectLayout.from_project(project)
         normalized_format = cls._normalize_export_format(export_format)
+        is_tabular_export = str(project.get("task_type") or "").lower().startswith("tabular_")
         is_rnn_export = cls._should_export_rnn_package(project, layout, run_id=run_id, model_id=model_id)
+
+        if is_tabular_export:
+            if normalized_format in {"auto", "tabular_package"}:
+                summary = cls.export_tabular_package(project_id, project, layout, run_id=run_id, model_id=model_id)
+                return {
+                    "success": True,
+                    "export_id": summary["export_id"],
+                    "run_id": summary.get("run_id"),
+                    "created_at": summary.get("created_at"),
+                    "package_path": summary["package_abs_path"],
+                    "summary_path": summary["summary_abs_path"],
+                    "export_type": "tabular_model_package",
+                }
+            raise ExportServiceError(f"Export format '{normalized_format}' is not supported for Tabular projects.")
 
         if is_rnn_export:
             if normalized_format in {"auto", "rnn_package"}:
@@ -134,8 +149,133 @@ class ExportService:
             "schema": "rnn_schema_scaler",
             "schema_scaler": "rnn_schema_scaler",
             "schema_and_scaler": "rnn_schema_scaler",
+            "tabular": "tabular_package",
+            "tabular_model": "tabular_package",
         }
         return aliases.get(normalized, normalized)
+
+    @classmethod
+    def export_tabular_package(
+        cls,
+        project_id: str,
+        project: Dict[str, Any],
+        layout: ProjectLayout,
+        *,
+        run_id: Optional[str] = None,
+        model_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        safe_run_id = cls._resolve_tabular_run_id(project, layout, run_id=run_id, model_id=model_id)
+        run_dir = layout.training_run_dir(safe_run_id)
+        export_id = f"export_tabular_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        export_dir = layout.export_dir(export_id)
+        package_root = export_dir / "tabular_model_package"
+        package_root.mkdir(parents=True, exist_ok=True)
+        candidates = (
+            "weights/best.json",
+            "weights/model_metadata.json",
+            "preprocess/feature_schema.json",
+            "preprocess/imputation.json",
+            "preprocess/label_encoder.json",
+            "feature_importance.json",
+            "train_config.json",
+            "dataset_snapshot.json",
+            "metrics.json",
+            "run_summary.json",
+            "backend.json",
+            "metric_schema.json",
+            "artifact_manifest.json",
+        )
+        copied = []
+        for rel_path in candidates:
+            source = run_dir / rel_path
+            if not source.exists() or not source.is_file():
+                continue
+            target = package_root / rel_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(str(source), str(target))
+            copied.append({"path": rel_path, "size_bytes": target.stat().st_size})
+        if not (package_root / "weights" / "best.json").exists():
+            raise ExportableModelNotFound("No trained Tabular XGBoost model was found in this run.")
+        feature_schema = _read_json(run_dir / "preprocess" / "feature_schema.json")
+        backend = _read_json(run_dir / "backend.json")
+        contract = {
+            "contract_version": "1.0",
+            "architecture": "tabular",
+            "backend": backend.get("backend") or "xgboost_tabular",
+            "run_id": safe_run_id,
+            "task_type": backend.get("task_type") or project.get("task_type"),
+            "task_head": feature_schema.get("task_head") or project.get("tabular_config", {}).get("task_head"),
+            "feature_columns": feature_schema.get("feature_columns") or [],
+            "target_column": feature_schema.get("target_column") or "",
+            "model_artifact": "weights/best.json",
+            "imputation": "preprocess/imputation.json",
+            "label_encoder": "preprocess/label_encoder.json" if (run_dir / "preprocess" / "label_encoder.json").exists() else None,
+        }
+        (package_root / "inference_contract.json").write_text(json.dumps(contract, ensure_ascii=False, indent=2), encoding="utf-8")
+        copied.append({"path": "inference_contract.json", "size_bytes": (package_root / "inference_contract.json").stat().st_size})
+        zip_path = export_dir / "tabular_model_package.zip"
+        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for path in package_root.rglob("*"):
+                if path.is_file():
+                    archive.write(path, path.relative_to(package_root).as_posix())
+        summary = {
+            "export_id": export_id,
+            "export_type": "tabular_model_package",
+            "created_at": datetime.now().isoformat(),
+            "run_id": safe_run_id,
+            "package_path": zip_path.relative_to(layout.project_dir).as_posix(),
+            "package_abs_path": zip_path.resolve().as_posix(),
+            "summary_abs_path": (export_dir / "summary.json").resolve().as_posix(),
+            "files": copied,
+            "inference_contract": contract,
+        }
+        (export_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        layout.latest_export_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        project.setdefault("current", {})["export_id"] = export_id
+        ProjectManager.save_project(project_id, project)
+        return summary
+
+    @classmethod
+    def _resolve_tabular_run_id(
+        cls,
+        project: Dict[str, Any],
+        layout: ProjectLayout,
+        *,
+        run_id: Optional[str] = None,
+        model_id: Optional[str] = None,
+    ) -> str:
+        candidate = str(run_id or "").strip()
+        if model_id:
+            parts = str(model_id).split("::")
+            if parts and parts[0] and parts[0] != str(project.get("project_id") or ""):
+                raise ExportableModelNotFound("Selected Tabular model does not belong to this project.")
+            model_run_id = parts[1] if len(parts) >= 2 else ""
+            if candidate and model_run_id and sanitize_run_id(candidate) != sanitize_run_id(model_run_id):
+                raise ExportableModelNotFound("Selected Tabular run and model do not match.")
+            if not candidate:
+                candidate = model_run_id
+        if candidate:
+            safe = sanitize_run_id(candidate)
+            run_dir = layout.training_run_dir(safe)
+            backend = _read_json(run_dir / "backend.json")
+            summary = _read_json(run_dir / "run_summary.json")
+            if (
+                str(backend.get("architecture") or "").lower() == "tabular"
+                and str(summary.get("status") or "").lower() == "completed"
+                and (run_dir / "weights" / "best.json").is_file()
+            ):
+                return safe
+            raise ExportableModelNotFound("Selected run is not a completed Tabular run.")
+        completed = [
+            item for item in project.get("training_runs") or []
+            if item.get("status") == "completed" and str(item.get("architecture") or "").lower() == "tabular"
+        ]
+        completed.sort(key=lambda item: item.get("completed_at") or "", reverse=True)
+        for item in completed:
+            safe = sanitize_run_id(str(item.get("run_id") or ""))
+            if safe and (layout.training_run_dir(safe) / "weights" / "best.json").exists():
+                return safe
+        raise ExportableModelNotFound("No completed Tabular run was found for package export.")
 
     @classmethod
     def export_weight_copy(
@@ -663,7 +803,9 @@ def _infer_export_type(summary: Dict[str, Any]) -> str:
     if summary.get("contract_path") or summary.get("contract_abs_path"):
         return "rnn_inference_contract"
     if summary.get("package_path") or summary.get("package_abs_path"):
-        package_path = str(summary.get("package_path") or "").lower()
+        package_path = str(summary.get("package_path") or summary.get("package_abs_path") or "").lower()
+        if "tabular" in package_path or str(summary.get("architecture") or "").lower() == "tabular":
+            return "tabular_model_package"
         return "rnn_schema_scaler_package" if "schema" in package_path else "rnn_model_package"
     return "export_artifact"
 

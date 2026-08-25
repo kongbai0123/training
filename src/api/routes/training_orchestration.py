@@ -48,6 +48,10 @@ class TrainConfigRequest(BaseModel):
     bidirectional: Optional[bool] = None
     gradient_clip_norm: Optional[float] = None
     early_stopping_patience: Optional[int] = None
+    learning_rate: Optional[float] = None
+    max_depth: Optional[int] = None
+    subsample: Optional[float] = None
+    colsample_bytree: Optional[float] = None
 
 
 

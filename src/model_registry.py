@@ -10,9 +10,28 @@ from src.run_filters import is_test_run
 
 
 class ModelRegistry:
-    """Scan trained YOLO weights for a project without loading model files."""
+    """Scan first-party training artifacts without loading executable model content."""
 
     WEIGHT_TYPES = ("best", "last")
+    TRAINING_PARAMETER_KEYS = (
+        "model",
+        "epochs",
+        "learning_rate",
+        "lr0",
+        "max_depth",
+        "subsample",
+        "colsample_bytree",
+        "seed",
+        "workers",
+        "task_head",
+        "train_ratio",
+        "val_ratio",
+        "test_ratio",
+        "missing_strategy",
+        "feature_columns",
+        "target_column",
+        "feature_config_hash",
+    )
 
     @staticmethod
     def list_models(project: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -25,8 +44,9 @@ class ModelRegistry:
         completed_runs = ModelRegistry._completed_project_runs(project)
         restrict_to_project_runs = bool(project.get("training_runs"))
         models: List[Dict[str, Any]] = []
-        for weight_path in sorted(runs_dir.glob("*/weights/*.pt")):
-            if weight_path.stem not in ModelRegistry.WEIGHT_TYPES:
+        candidates = list(runs_dir.glob("*/weights/*.pt")) + list(runs_dir.glob("*/weights/*.json"))
+        for weight_path in sorted(candidates):
+            if weight_path.stem not in ModelRegistry.WEIGHT_TYPES or weight_path.suffix.lower() not in {".pt", ".json"}:
                 continue
             try:
                 internal_path = ModelRegistry._validate_weight_path(weight_path)
@@ -43,6 +63,13 @@ class ModelRegistry:
             metrics = ModelRegistry._read_run_metrics(run_dir)
             training_config = ModelRegistry._read_training_config(project, run_dir)
             backend_contract = ModelRegistry._read_backend_contract(run_dir)
+            run_summary = ModelRegistry._read_json_file(run_dir / "run_summary.json")
+            artifact_status = str(
+                run_summary.get("status") or backend_contract.get("status") or ""
+            ).lower()
+            if artifact_status and artifact_status != "completed":
+                continue
+            artifact_manifest = ModelRegistry._read_json_file(run_dir / "artifact_manifest.json")
             artifact_meta = ModelRegistry._read_artifact_metadata(run_dir, weight_path)
             stat = weight_path.stat()
             weight_type = weight_path.stem
@@ -53,6 +80,7 @@ class ModelRegistry:
                 "project_id": project_id,
                 "run_id": run_id,
                 "weight_type": weight_type,
+                "model_format": weight_path.suffix.lower().lstrip("."),
                 "weight_path_display": ModelRegistry._display_path(weight_path),
                 "internal_weight_path": internal_path.as_posix(),
                 "model_name": run_record.get("model") or training_config.get("model") or metrics.get("model") or "--",
@@ -61,9 +89,31 @@ class ModelRegistry:
                 "file_size": stat.st_size,
                 "best_map50_m": metrics.get("best_map50_m"),
                 "best_map50_95_m": metrics.get("best_map50_95_m"),
+                "primary_metric_name": run_summary.get("primary_metric_name"),
+                "primary_metric_value": run_summary.get("primary_metric_value"),
+                "lifecycle_status": run_summary.get("model_lifecycle_status") or "pending_validation",
+                "training_parameters": {
+                    key: training_config[key]
+                    for key in ModelRegistry.TRAINING_PARAMETER_KEYS
+                    if key in training_config
+                },
+                "evaluation": {
+                    "primary_metric_name": run_summary.get("primary_metric_name"),
+                    "primary_metric_value": run_summary.get("primary_metric_value"),
+                    "best_epoch": run_summary.get("best_epoch"),
+                    "best_metrics": run_summary.get("best_metrics")
+                    if isinstance(run_summary.get("best_metrics"), dict)
+                    else {},
+                },
                 "status": "ready",
                 "source": "project_training_runs"
             }
+            lineage = artifact_manifest.get("lineage") if isinstance(artifact_manifest, dict) else {}
+            if isinstance(lineage, dict):
+                if isinstance(lineage.get("dataset"), dict):
+                    model_record["dataset_lineage"] = dict(lineage["dataset"])
+                if isinstance(lineage.get("model"), dict):
+                    model_record["model_lineage"] = dict(lineage["model"])
             if backend_contract:
                 if backend_contract.get("architecture"):
                     model_record["architecture"] = backend_contract["architecture"]
@@ -72,6 +122,8 @@ class ModelRegistry:
             if artifact_meta:
                 if artifact_meta.get("role"):
                     model_record["artifact_role"] = artifact_meta["role"]
+                if artifact_meta.get("sha256"):
+                    model_record["sha256"] = artifact_meta["sha256"]
                 model_record["artifact_source"] = "artifact_manifest"
             models.append(model_record)
 
@@ -157,8 +209,8 @@ class ModelRegistry:
     def _validate_weight_path(weight_path: Path) -> Path:
         resolved = weight_path.resolve()
         projects_root = PROJECTS_DIR.resolve()
-        if resolved.suffix.lower() != ".pt":
-            raise ValueError("Only .pt weights are allowed")
+        if resolved.suffix.lower() not in {".pt", ".json"} or resolved.name not in {"best.pt", "last.pt", "best.json", "last.json"}:
+            raise ValueError("Only first-party best/last .pt or .json model artifacts are allowed")
         if not resolved.exists() or not resolved.is_file():
             raise ValueError("Weight file does not exist")
         if projects_root not in resolved.parents:
@@ -196,6 +248,16 @@ class ModelRegistry:
     def _read_backend_contract(run_dir: Path) -> Dict[str, Any]:
         path = run_dir / "backend.json"
         if not path.exists():
+            return {}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    @staticmethod
+    def _read_json_file(path: Path) -> Dict[str, Any]:
+        if not path.exists() or not path.is_file():
             return {}
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -311,6 +373,11 @@ class ModelRegistry:
             return "pose"
         if "-obb" in model_name or "obb" in model_name:
             return "obb"
+        if weight_path.suffix.lower() == ".json":
+            backend = ModelRegistry._read_backend_contract(run_dir)
+            if str(backend.get("architecture") or "").lower() == "tabular":
+                return "tabular_regression" if "regression" in str(backend.get("task_type") or "").lower() else "tabular_classification"
+            return str(backend.get("task_type") or "sequence_classification")
         if model_name.endswith(".pt") or "yolo" in model_name:
             return "detection"
 

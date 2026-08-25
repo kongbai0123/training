@@ -5,9 +5,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.model_registry import ModelRegistry
+from src.model_lifecycle_registry import ModelLifecycleRegistry
 from src.model_store import ModelStore
 from src.model_system import ModelCatalog
 from src.model_system.catalog import normalize_task_family
@@ -31,6 +32,11 @@ class DeleteModelWeightsRequest(BaseModel):
 class InstallModelRequest(BaseModel):
     model_id: str
     confirm: bool = False
+
+
+class ModelLifecycleRequest(BaseModel):
+    status: str
+    limitations: List[str] = Field(default_factory=list)
 
 
 @router.get("/api/models/catalog")
@@ -144,6 +150,34 @@ def list_project_models(project_id: str, scope: str = Query("deployable")):
     return ModelRegistry.list_models(project)
 
 
+@router.get("/api/projects/{project_id}/models/versions")
+def list_project_model_versions(project_id: str):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        return ModelLifecycleRegistry.list_versions(project)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/api/projects/{project_id}/models/{model_id:path}/lifecycle")
+def update_project_model_lifecycle(project_id: str, model_id: str, request: ModelLifecycleRequest):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    try:
+        return ModelLifecycleRegistry.transition(
+            project_id,
+            project,
+            model_id,
+            request.status,
+            limitations=request.limitations,
+        )
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.post("/api/projects/{project_id}/models/weights/delete")
 def delete_project_model_weights(project_id: str, request: DeleteModelWeightsRequest):
     project = ProjectManager.get_project(project_id)
@@ -175,7 +209,7 @@ def delete_project_model_weights(project_id: str, request: DeleteModelWeightsReq
             if runs_dir not in weight_path.parents:
                 skipped.append({"model_id": model_id, "reason": "outside_training_runs"})
                 continue
-            if weight_path.name not in {"best.pt", "last.pt"}:
+            if weight_path.name not in {"best.pt", "last.pt", "best.json", "last.json"}:
                 skipped.append({"model_id": model_id, "reason": "unsupported_filename"})
                 continue
             if not weight_path.exists() or not weight_path.is_file():

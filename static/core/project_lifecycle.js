@@ -9,8 +9,9 @@ import { apiFetch } from "../api.js";
 import { qs, setText, setHTML, escapeHtml } from "../utils.js";
 import {
   loadPageRecommendedConfig,
+  resolvePageForProject,
   syncPageModeForProject,
-} from "./page_registry.js?v=20260722-run-restore-history-count";
+} from "./page_registry.js?v=20260825-tabular-mvp";
 import { showToast as showToastCore } from "./toast.js";
 
 export function createProjectLifecycle({ renderAll, navigate }) {
@@ -77,7 +78,7 @@ export function createProjectLifecycle({ renderAll, navigate }) {
       appState.currentProject = await apiFetch(`/api/projects/${projectId}`);
       appState.currentProjectId = projectId;
       appState.currentProjectClasses = [...(appState.currentProject?.class_names || [])];
-      const destinationPage = options.page || appState.currentPage;
+      const destinationPage = resolvePageForProject(appState.currentProject, options.page || appState.currentPage);
       syncPageModeForProject(appState.currentProject, options.moduleOverview ? "module-overview" : destinationPage);
       updateLabelMeState();
       await checkCurrentTrainStatus();

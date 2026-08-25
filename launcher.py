@@ -24,7 +24,10 @@ def run_backend_child(host: str, port: int, env_mode: str) -> None:
     import uvicorn
     from app import app as fastapi_app
 
-    uvicorn.run(fastapi_app, host=host, port=port, log_level="info")
+    # Keep the frozen executable independent from optional httptools binaries.
+    # runtime-r1 always bundles h11, while a stray/incomplete httptools namespace
+    # can otherwise make Uvicorn's automatic protocol selection fail at startup.
+    uvicorn.run(fastapi_app, host=host, port=port, log_level="info", http="h11")
 
 
 def open_desktop_window(url: str, backend_process: subprocess.Popen, splash=None) -> None:

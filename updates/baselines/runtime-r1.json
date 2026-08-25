@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "product": "Vision Training Studio",
-  "app_version": "0.1.11",
+  "app_version": "0.1.12",
   "runtime_version": "r1",
   "package_format_version": 1,
-  "created_at": "2026-08-24T08:49:13.058582+00:00",
+  "created_at": "2026-08-25T03:52:17.656308+00:00",
   "file_count": 11494,
   "runtime_file_count": 11374,
   "app_file_count": 120,
@@ -28930,8 +28930,8 @@
       "category": "app"
     },
     "_internal/static/app.js": {
-      "size": 446,
-      "sha256": "7d8aba4adabd54d3ea20665e7882dd210b067ed79af373db2bc2817daf21757a",
+      "size": 445,
+      "sha256": "623a47fd58449626215766183584a879dd96fe07f864baa83ea5d785b56c6609",
       "category": "app"
     },
     "_internal/static/core/action_availability.js": {
@@ -28945,8 +28945,8 @@
       "category": "app"
     },
     "_internal/static/core/bootstrap.js": {
-      "size": 6161,
-      "sha256": "d90b560b723eb4b928c98a89206ec7eb746d9220d7fad74fafedf9ac5c1263a8",
+      "size": 6249,
+      "sha256": "1644806841f577e76023642b108fd52bba44c7c6c3749eb1d659f904c42302cc",
       "category": "app"
     },
     "_internal/static/core/cnn_guided_wizard.js": {
@@ -28985,18 +28985,18 @@
       "category": "app"
     },
     "_internal/static/core/page_guards.js": {
-      "size": 3748,
-      "sha256": "a2d1fe9d4fc018807594825024270efe87d2af263c363f151958a47832de068e",
+      "size": 3744,
+      "sha256": "00efc34f121b81e8dcc3bd246643716b6e072a2871c3fe689e724b44e45cb104",
       "category": "app"
     },
     "_internal/static/core/page_registry.js": {
-      "size": 3435,
-      "sha256": "25c5abe8748e08eed63e63be8aa6d8a79e92dfc3d47de7b3e683169fad240702",
+      "size": 3428,
+      "sha256": "61370cd7058ab643790d14bf57d37f2cfd3e811e865ce6ed214610375597f18a",
       "category": "app"
     },
     "_internal/static/core/project_lifecycle.js": {
-      "size": 6988,
-      "sha256": "3a43c36b240d4e59863f0409670e94d03c10e87ea75620aea46060ca49c388f7",
+      "size": 7082,
+      "sha256": "8babad6d48a152175b3b44284edfb0b7770ce457715a95aecc926611de77e62e",
       "category": "app"
     },
     "_internal/static/core/project_status_strip.js": {
@@ -29010,8 +29010,8 @@
       "category": "app"
     },
     "_internal/static/core/right_panel.js": {
-      "size": 44170,
-      "sha256": "8dacfb89ee7e92a4316f5cbd575bf29c20f02cd825fb0c1310d805db049574e0",
+      "size": 44166,
+      "sha256": "33a92c326cfc397adca35b2acc2e58bf9fba24f3f4ad8a62a8068f888f1cff1e",
       "category": "app"
     },
     "_internal/static/core/router.js": {
@@ -29055,8 +29055,8 @@
       "category": "app"
     },
     "_internal/static/index.html": {
-      "size": 250856,
-      "sha256": "e1690e5e7c91463c6e4e177482636be986e3d1142bc7dc252ef74c2ef7ad05ac",
+      "size": 251497,
+      "sha256": "7f36834e7f57c164dbff16aa1bcd8272d1c125c3b86edf4100316734e5ce5a7c",
       "category": "app"
     },
     "_internal/static/pages/augmentation.js": {
@@ -29070,8 +29070,8 @@
       "category": "app"
     },
     "_internal/static/pages/dashboard.js": {
-      "size": 3708,
-      "sha256": "b64b202e1def661ae2b93e11d54793ec1a8e4648a943238bd1950bb42a8bc0f7",
+      "size": 5196,
+      "sha256": "281633a759c113c77acd17fc2128acf2c783160a0228a701bc29919f503fd8b8",
       "category": "app"
     },
     "_internal/static/pages/dataset.js": {
@@ -29115,13 +29115,13 @@
       "category": "app"
     },
     "_internal/static/pages/project_assistant_impl.js": {
-      "size": 31052,
-      "sha256": "e130c105beed0842ec04e66fdb10eb53505549cbcb9a211dab4d3ad25ed6db21",
+      "size": 31048,
+      "sha256": "780b13303cbc6b7ef2a9206ef5144a6ce1472b2dd51b9cdbc31ee8c076cd3084",
       "category": "app"
     },
     "_internal/static/pages/projects.js": {
-      "size": 42078,
-      "sha256": "19b3837082e9880f173d934317167ecf01921aa5e6688d90908838622a31d431",
+      "size": 42050,
+      "sha256": "1452df06f54582f741e87dda7f03a256f25240f1f598125d4a02b5db14dd400b",
       "category": "app"
     },
     "_internal/static/pages/rag_workbench.js": {
@@ -29220,18 +29220,18 @@
       "category": "app"
     },
     "_internal/static/pages/training_modes.js": {
-      "size": 108707,
-      "sha256": "e0c67d0080c57447807c0d19d846d3ae90194937c4612082f0b89c3a8bdb811a",
+      "size": 108673,
+      "sha256": "03ae5d5205ea59b9dbd4ee07353c5a26a64c8cc922cbc6c54ca385db0b7f5ecd",
       "category": "app"
     },
     "_internal/static/state/i18n/en.js": {
-      "size": 193852,
-      "sha256": "e6752bc0a188ff5cc2f3c5b23c315c199fc707c86be028ad22d6489c829328ca",
+      "size": 196138,
+      "sha256": "cc5643f0c4338cc88ff57627d6b901841eea16958967a2d43345ba08b7e736c9",
       "category": "app"
     },
     "_internal/static/state/i18n/zh-TW.js": {
-      "size": 170869,
-      "sha256": "d63c44d4fbe64b4b5a43d9f64a3c06d74650b0ff7b19a921699b10485a4c58fa",
+      "size": 173014,
+      "sha256": "82bcf66d94ab6e943a9dc0ff0a5b091062a40537c187cdb86fbef6f871971a86",
       "category": "app"
     },
     "_internal/static/state/i18n.js": {
@@ -29305,8 +29305,8 @@
       "category": "app"
     },
     "_internal/static/styles/pages/dashboard.css": {
-      "size": 16659,
-      "sha256": "aa8980746fdcbfcdeaf3e5c37c56f1ccedb2e4524deeac80d49162a3a830868b",
+      "size": 18946,
+      "sha256": "3789b1e0310cf744015973ba12772fb6ae14dbcd458af636b0e360a001fa7dd5",
       "category": "app"
     },
     "_internal/static/styles/pages/dataset.css": {
@@ -29370,8 +29370,8 @@
       "category": "app"
     },
     "_internal/static/styles/pages/training.css": {
-      "size": 23824,
-      "sha256": "3398c09b45a10085885dceab0ea65bdd1697acf0cb4b57a103ea3029157d866f",
+      "size": 23179,
+      "sha256": "ed4f5c1e72c8b5ea1349224dc13fa583ebfe8fea04d0498cf953a1453837fae9",
       "category": "app"
     },
     "_internal/static/styles/shared.css": {
@@ -56715,8 +56715,8 @@
       "category": "runtime"
     },
     "_internal/version.json": {
-      "size": 267,
-      "sha256": "e34e5951f21ed0fbf7b1cf3f6bcd39e871de4bbbdc55f4d698310bb2dec130ca",
+      "size": 266,
+      "sha256": "c4b6576a489164b2418dcb197df9266610449690931467e92946b95b77e36b21",
       "category": "app"
     },
     "_internal/wcwidth/py.typed": {

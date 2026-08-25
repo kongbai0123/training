@@ -20,6 +20,8 @@ class ProjectManager:
         "semantic_segmentation",
         "sequence_classification",
         "sequence_regression",
+        "tabular_classification",
+        "tabular_regression",
     }
 
     @staticmethod
@@ -28,7 +30,28 @@ class ProjectManager:
         return any(token in normalized for token in ("sequence", "time_series", "timeseries", "rnn"))
 
     @staticmethod
+    def _is_tabular_task(task_type: str) -> bool:
+        return str(task_type or "").strip().lower().startswith("tabular_")
+
+    @staticmethod
     def _default_training_config(task_type: str) -> Dict[str, Any]:
+        if ProjectManager._is_tabular_task(task_type):
+            task_head = "regression" if "regression" in str(task_type or "").lower() else "classification"
+            return {
+                "backend": "xgboost_tabular",
+                "architecture": "tabular",
+                "model": "xgboost_regressor" if task_head == "regression" else "xgboost_classifier",
+                "epochs": 100,
+                "batch_size": 0,
+                "device": "cpu",
+                "task_head": task_head,
+                "learning_rate": 0.05,
+                "max_depth": 4,
+                "subsample": 0.9,
+                "colsample_bytree": 0.9,
+                "seed": 42,
+                "workers": 1,
+            }
         if ProjectManager._is_sequence_task(task_type):
             task_head = "regression" if "regression" in str(task_type or "").lower() else "classification"
             return {
@@ -104,17 +127,19 @@ class ProjectManager:
                             data = json.load(f)
                             project_root = str(d.resolve().as_posix())
                             is_sequence = ProjectManager._is_sequence_task(data.get("task_type", ""))
+                            is_tabular = ProjectManager._is_tabular_task(data.get("task_type", ""))
                             projects.append({
                                 "project_id": data.get("project_id"),
                                 "project_name": data.get("project_name"),
                                 "task_type": data.get("task_type"),
                                 "created_at": data.get("created_at"),
                                 "updated_at": data.get("updated_at"),
-                                "class_names": [] if is_sequence else data.get("class_names", []),
+                                "class_names": [] if is_sequence or is_tabular else data.get("class_names", []),
                                 "annotation_progress": ProjectManager._derive_annotation_progress(data),
                                 "current": data.get("current", {}),
                                 "rnn_config": data.get("rnn_config", {}) if is_sequence else {},
-                                "training_runs": data.get("training_runs", []) if is_sequence else [],
+                                "tabular_config": data.get("tabular_config", {}) if is_tabular else {},
+                                "training_runs": data.get("training_runs", []),
                                 "path": project_root,
                                 "full_path": project_root,
                                 "copy_path": project_root,
@@ -167,9 +192,21 @@ class ProjectManager:
         videos_raw = project_dir / "dataset" / "videos" / "raw"
         sequences_dir = layout.sequences_dir()
         sequence_manifest = layout.sequence_manifest_path()
+        tables_dir = layout.tables_dir()
+        tabular_manifest = layout.tabular_manifest_path()
 
-        best_weights = list(training_runs.rglob("weights/best.pt")) if training_runs.exists() else []
-        last_weights = list(training_runs.rglob("weights/last.pt")) if training_runs.exists() else []
+        best_weights = (
+            list(training_runs.rglob("weights/best.pt"))
+            + list(training_runs.rglob("weights/best.json"))
+            if training_runs.exists()
+            else []
+        )
+        last_weights = (
+            list(training_runs.rglob("weights/last.pt"))
+            + list(training_runs.rglob("weights/last.json"))
+            if training_runs.exists()
+            else []
+        )
 
         return {
             "project_root": str(project_dir.resolve().as_posix()),
@@ -185,6 +222,8 @@ class ProjectManager:
             "sequence_manifest": sequence_manifest.exists(),
             "sequence_csv_files": count_files(sequences_dir, {".csv"}) if sequences_dir.exists() else 0,
             "sequence_files": count_files(sequences_dir, None) if sequences_dir.exists() else 0,
+            "tabular_manifest": tabular_manifest.exists(),
+            "tabular_csv_files": count_files(tables_dir, {".csv"}) if tables_dir.exists() else 0,
             "inference_jobs": len([p for p in inference_jobs.iterdir() if p.is_dir()]) if inference_jobs.exists() else 0,
             "exports": len([p for p in exports_dir.iterdir() if p.is_dir()]) if exports_dir.exists() else 0,
             "compare_reports": len([p for p in compare_reports_dir.iterdir() if p.is_dir()]) if compare_reports_dir.exists() else 0,
@@ -297,6 +336,9 @@ class ProjectManager:
         if ProjectManager._is_sequence_task(normalized):
             rnn_config = project.setdefault("rnn_config", {})
             rnn_config["task_head"] = "regression" if "regression" in normalized else "classification"
+        elif ProjectManager._is_tabular_task(normalized):
+            tabular_config = project.setdefault("tabular_config", {})
+            tabular_config["task_head"] = "regression" if "regression" in normalized else "classification"
 
         project.setdefault("task_type_history", []).append({
             "from": previous,

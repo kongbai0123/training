@@ -9,7 +9,10 @@ from fastapi.testclient import TestClient
 from app import app
 from src.rag_workbench import RagWorkbenchService
 from src.project_assistant import ProjectAssistantService
-from src.project_assistant_service import ProjectAssistantService as ProjectAssistantServiceImpl
+from src.project_assistant_service import (
+    ProjectAssistantService as ProjectAssistantServiceImpl,
+    resolve_assistant_project_context,
+)
 from src.project_layout import ProjectLayout
 
 
@@ -224,6 +227,38 @@ class ProjectAssistantContractTests(unittest.TestCase):
         self.assertEqual([item["source"] for item in rnn["results"]], ["rnn-training.md"])
         self.assertEqual(cnn["filters"]["architecture"], "cnn")
         self.assertEqual(rnn["results"][0]["task_type"], "sequence_regression")
+
+    def test_project_assistant_preserves_tabular_context_and_filters(self):
+        ProjectAssistantService.ingest_document(
+            "tabular-training.md",
+            "Shared evidence reports tabular macro F1 and feature importance.",
+            metadata={
+                "project_id": "project_tabular",
+                "source_type": "training_runs",
+                "architecture": "tabular",
+                "task_type": "tabular_classification",
+            },
+        )
+
+        context = resolve_assistant_project_context({
+            "task_type": "tabular_classification",
+            "training_config": {"architecture": "tabular"},
+        })
+        retrieval = ProjectAssistantService.retrieve(
+            "shared evidence feature importance",
+            filters={
+                "project_id": "project_tabular",
+                "scope": "training",
+                "architecture": "TABULAR",
+                "task_type": "TABULAR_CLASSIFICATION",
+            },
+        )
+
+        self.assertEqual(context["architecture"], "tabular")
+        self.assertEqual(context["task_type"], "tabular_classification")
+        self.assertEqual(retrieval["filters"]["architecture"], "tabular")
+        self.assertEqual([item["source"] for item in retrieval["results"]], ["tabular-training.md"])
+        self.assertEqual(retrieval["results"][0]["architecture"], "tabular")
 
     def test_project_assistant_scope_contract_is_available_through_api_and_chat(self):
         client = TestClient(app)

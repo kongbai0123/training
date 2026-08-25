@@ -107,6 +107,17 @@ const rnnMonitorChartSignatures = new Map();
 let currentRnnEvaluationDashboard = null;
 let currentRnnComparisons = [];
 let trainingModeSidebarInitialized = false;
+const TABULAR_INCOMPATIBLE_PAGES = new Set([
+  "dataset",
+  "labelme",
+  "split",
+  "augmentation",
+  "training",
+  "evaluation",
+  "inference",
+  "auto-labeling",
+  "export",
+]);
 
 export function initTrainingModeSidebar() {
   if (trainingModeSidebarInitialized) return;
@@ -153,6 +164,21 @@ export function initTrainingModeSidebar() {
     });
   });
 
+  qsa("[data-tabular-nav]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (isHiddenModeNavButton(button)) return;
+      const nav = button.dataset.tabularNav || "overview";
+      const page = button.dataset.page || (nav === "model-compare" ? "model-compare" : "tabular");
+      trainingModeState.activeMode = "tabular";
+      trainingModeState.activeTabularPanel = nav;
+      if (nav === "model-compare") eventBus.emit("set-compare-architecture", "tabular");
+      eventBus.emit("tabular-panel-changed", nav);
+      eventBus.emit("navigate", page);
+      renderTrainingModeSidebar();
+      renderTrainingWorkspace();
+    });
+  });
+
   qsa("[data-mode-nav]").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.preventDefault();
@@ -162,6 +188,7 @@ export function initTrainingModeSidebar() {
       if (button.dataset.modeNav === "overview") {
         trainingModeState.activeCnnPanel = "overview";
         trainingModeState.activeRnnPanel = "overview";
+        trainingModeState.activeTabularPanel = "overview";
         eventBus.emit("navigate", "dashboard");
         renderTrainingModeSidebar();
         renderTrainingWorkspace();
@@ -178,6 +205,7 @@ export function initTrainingModeSidebar() {
   initRnnPreviewEvents();
   eventBus.on("language-changed", () => {
     syncRnnModelSelection();
+    renderTrainingModeSidebar();
     renderTrainingWorkspace();
     renderRnnEvaluation();
   });
@@ -230,12 +258,14 @@ export function setTrainingMode(mode) {
 }
 
 export function openTrainingModule(mode) {
-  if (!["cnn", "rnn"].includes(mode)) return;
+  if (!["cnn", "rnn", "tabular"].includes(mode)) return;
   trainingModeState.activeMode = mode;
   if (mode === "cnn") trainingModeState.activeCnnPanel = "overview";
   if (mode === "rnn") trainingModeState.activeRnnPanel = "overview";
-  eventBus.emit("navigate", "training");
-  ensureTrainingPageActive();
+  if (mode === "tabular") trainingModeState.activeTabularPanel = "overview";
+  if (mode === "tabular") eventBus.emit("tabular-panel-changed", "overview");
+  eventBus.emit("navigate", mode === "tabular" ? "tabular" : "training");
+  if (mode !== "tabular") ensureTrainingPageActive();
   renderTrainingModeSidebar();
   renderTrainingWorkspace();
   if (mode === "rnn") loadRnnConfig();
@@ -249,11 +279,23 @@ function ensureTrainingPageActive() {
 }
 
 export function syncTrainingModeForProject(project, targetPage = "dashboard") {
-  const taskType = String(project?.task_type || "").toLowerCase();
-  const isRnnProject = taskType.includes("sequence") || taskType.includes("time_series") || taskType.includes("rnn");
+  const mode = resolveProjectTrainingMode(project);
   const previousRnnPanel = trainingModeState.activeMode === "rnn" ? trainingModeState.activeRnnPanel : "";
 
-  if (isRnnProject) {
+  if (mode === "tabular") {
+    const previousTabularPanel = trainingModeState.activeMode === "tabular" ? trainingModeState.activeTabularPanel : "";
+    trainingModeState.activeMode = "tabular";
+    trainingModeState.activeTabularPanel = targetPage === "module-overview"
+      ? "overview"
+      : targetPage === "model-compare"
+        ? "model-compare"
+        : targetPage === "tabular" && previousTabularPanel
+          ? previousTabularPanel
+          : "overview";
+    return;
+  }
+
+  if (mode === "rnn") {
     trainingModeState.activeMode = "rnn";
     trainingModeState.activeRnnPanel = targetPage === "module-overview"
       ? "overview"
@@ -269,11 +311,34 @@ export function syncTrainingModeForProject(project, targetPage = "dashboard") {
     : targetPage === "training" ? "training" : "overview";
 }
 
+export function resolveProjectTrainingMode(project) {
+  const explicit = String(project?.architecture || project?.training_mode || project?.training_config?.architecture || "").toLowerCase();
+  const taskType = String(project?.task_type || project?.task || "").toLowerCase();
+  if (explicit === "tabular" || taskType.includes("tabular")) return "tabular";
+  if (
+    explicit === "rnn"
+    || taskType.includes("sequence")
+    || taskType.includes("time_series")
+    || taskType.includes("timeseries")
+    || taskType.includes("rnn")
+  ) return "rnn";
+  return "cnn";
+}
+
+export function resolveProjectWorkspacePage(project, requestedPage = "dashboard") {
+  const page = requestedPage || "dashboard";
+  const mode = resolveProjectTrainingMode(project);
+  if (mode === "tabular" && TABULAR_INCOMPATIBLE_PAGES.has(page)) return "tabular";
+  if (mode !== "tabular" && page === "tabular") return "training";
+  return page;
+}
+
 export function renderTrainingModeSidebar() {
   const isPlatformOverview = appState.currentPage === "dashboard";
   qs("#training-module-divider")?.classList.toggle("hidden", isPlatformOverview);
   qs("#cnn-mode-nav")?.classList.toggle("hidden", isPlatformOverview || trainingModeState.activeMode !== "cnn");
   qs("#rnn-mode-nav")?.classList.toggle("hidden", isPlatformOverview || trainingModeState.activeMode !== "rnn");
+  qs("#tabular-mode-nav")?.classList.toggle("hidden", isPlatformOverview || trainingModeState.activeMode !== "tabular");
 
   qsa("[data-rnn-nav]").forEach((button) => {
     button.classList.toggle("active", button.dataset.rnnNav === trainingModeState.activeRnnPanel);
@@ -291,6 +356,17 @@ export function renderTrainingModeSidebar() {
     );
   });
 
+  qsa("[data-tabular-nav]").forEach((button) => {
+    const nav = button.dataset.tabularNav || "overview";
+    const page = button.dataset.page || (nav === "model-compare" ? "model-compare" : "tabular");
+    button.classList.toggle(
+      "active",
+      trainingModeState.activeMode === "tabular"
+        && trainingModeState.activeTabularPanel === nav
+        && appState.currentPage === page
+    );
+  });
+
   qsa("[data-mode-nav]").forEach((button) => {
     button.classList.toggle(
       "active",
@@ -303,14 +379,17 @@ export function renderTrainingModeSidebar() {
 
 export function renderTrainingWorkspace() {
   const isCnn = trainingModeState.activeMode === "cnn";
-  const isRnnEvaluation = !isCnn && appState.currentPage === "training" && trainingModeState.activeRnnPanel === "evaluation";
+  const isRnn = trainingModeState.activeMode === "rnn";
+  const isRnnEvaluation = isRnn && appState.currentPage === "training" && trainingModeState.activeRnnPanel === "evaluation";
   qs("#cnn-workspace")?.classList.toggle("hidden", !isCnn);
   qs("#cnn-workspace")?.classList.toggle("active", isCnn);
-  qs("#rnn-workspace")?.classList.toggle("hidden", isCnn);
-  qs("#rnn-workspace")?.classList.toggle("active", !isCnn);
-  qs("#rnn-header-actions")?.classList.toggle("hidden", isCnn);
-  setText("#training-workspace-title", t(isCnn ? "dashboard.module.cnn.workspaceTitle" : "dashboard.module.rnn.workspaceTitle"));
-  setText("#training-workspace-subtitle", t(isCnn ? "dashboard.module.cnn.workspaceSubtitle" : "dashboard.module.rnn.workspaceSubtitle"));
+  qs("#rnn-workspace")?.classList.toggle("hidden", !isRnn);
+  qs("#rnn-workspace")?.classList.toggle("active", isRnn);
+  qs("#rnn-header-actions")?.classList.toggle("hidden", !isRnn);
+  if (isCnn || isRnn) {
+    setText("#training-workspace-title", t(isCnn ? "dashboard.module.cnn.workspaceTitle" : "dashboard.module.rnn.workspaceTitle"));
+    setText("#training-workspace-subtitle", t(isCnn ? "dashboard.module.cnn.workspaceSubtitle" : "dashboard.module.rnn.workspaceSubtitle"));
+  }
 
   qsa("[data-rnn-panel]").forEach((panel) => {
     const isActive = panel.dataset.rnnPanel === trainingModeState.activeRnnPanel;
@@ -325,7 +404,7 @@ export function renderTrainingWorkspace() {
 
   renderRnnReadiness();
   renderRnnLiveMonitor();
-  if (!isCnn
+  if (isRnn
     && appState.currentProjectId
     && !trainingModeState.rnn.config
     && !trainingModeState.rnn.configLoading
@@ -333,12 +412,12 @@ export function renderTrainingWorkspace() {
     && !trainingModeState.rnn.readinessLoading) {
     loadRnnConfig();
   }
-  renderRnnSidebarReadiness(isCnn);
+  renderRnnSidebarReadiness(isRnn);
   toggleRnnEvaluationRightPanel(isRnnEvaluation);
   if (isRnnEvaluation) {
     loadRnnEvaluation();
   }
-  if (!isCnn && appState.currentPage === "training" && trainingModeState.activeRnnPanel === "export") {
+  if (isRnn && appState.currentPage === "training" && trainingModeState.activeRnnPanel === "export") {
     renderRnnExportPanel();
     if (appState.currentProjectId && trainingModeState.rnn.exportProjectId !== appState.currentProjectId) {
       loadRnnExportModels();
@@ -350,10 +429,10 @@ export function isRnnTrainingWorkspaceActive(pageId = appState.currentPage) {
   return pageId === "training" && trainingModeState.activeMode === "rnn";
 }
 
-function renderRnnSidebarReadiness(isCnn) {
+function renderRnnSidebarReadiness(isRnn) {
   const section = qs("#section-rnn-readiness");
   if (!section) return;
-  const visible = !isCnn && appState.currentPage === "training" && trainingModeState.activeRnnPanel !== "evaluation";
+  const visible = isRnn && appState.currentPage === "training" && trainingModeState.activeRnnPanel !== "evaluation";
   section.classList.toggle("hidden", !visible);
 }
 

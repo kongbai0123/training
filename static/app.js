@@ -1,5 +1,5 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js?v=20260824-unified-overview";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260825-tabular-mvp";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

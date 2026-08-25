@@ -29,6 +29,8 @@ class ProjectsPageStaticTests(unittest.TestCase):
         self.assertIn('fileMetric("Features / X"', projects_js)
         self.assertIn('fileMetric("Runs"', projects_js)
         self.assertIn("function renderCnnProjectFileSummary", projects_js)
+        self.assertIn('<h3 class="no-i18n">', projects_js)
+        self.assertIn('<code class="no-i18n">', projects_js)
 
     def test_inference_cleanup_toolbar_is_hidden_when_no_jobs_exist(self):
         projects_js = (ROOT / "static" / "pages" / "projects.js").read_text(encoding="utf-8")
@@ -41,9 +43,9 @@ class ProjectsPageStaticTests(unittest.TestCase):
         app_js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("../pages/projects.js?v=20260824-unified-overview", page_registry_js)
-        self.assertIn("./core/bootstrap.js?v=20260824-unified-overview", app_js)
-        self.assertIn("/static/app.js?v=20260824-unified-overview", index_html)
+        self.assertIn("../pages/projects.js?v=20260825-tabular-mvp", page_registry_js)
+        self.assertIn("./core/bootstrap.js?v=20260825-tabular-mvp", app_js)
+        self.assertIn("/static/app.js?v=20260825-tabular-mvp", index_html)
 
 
 if __name__ == "__main__":

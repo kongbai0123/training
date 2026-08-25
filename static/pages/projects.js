@@ -17,6 +17,8 @@ const PROJECT_TASK_GUIDES = {
   semantic_segmentation: { icon: "fa-layer-group", labelKey: "project.taskShort.semantic_segmentation", cardKey: "project.taskCard.semantic_segmentation" },
   sequence_classification: { icon: "fa-tags", labelKey: "project.taskShort.sequence_classification", cardKey: "project.taskCard.sequence_classification" },
   sequence_regression: { icon: "fa-chart-line", labelKey: "project.taskShort.sequence_regression", cardKey: "project.taskCard.sequence_regression" },
+  tabular_classification: { icon: "fa-table-columns", labelKey: "project.taskShort.tabular_classification", cardKey: "project.taskCard.tabular_classification" },
+  tabular_regression: { icon: "fa-chart-simple", labelKey: "project.taskShort.tabular_regression", cardKey: "project.taskCard.tabular_regression" },
 };
 
 export function initProjects() {
@@ -200,6 +202,8 @@ function matchesHistoryMode(project, mode) {
 
 function getProjectHistoryCategory(project) {
   const taskType = String(project?.task_type || "").toLowerCase();
+  const architecture = String(project?.architecture || project?.training_mode || project?.training_config?.architecture || "").toLowerCase();
+  if (architecture === "tabular" || taskType.includes("tabular")) return "tabular";
   const isRnnTask = ["sequence", "time_series", "timeseries", "rnn"].some((token) => taskType.includes(token));
   if (isRnnTask) return "rnn";
 
@@ -207,6 +211,10 @@ function getProjectHistoryCategory(project) {
   if (isCnnTask) return "cnn";
 
   const files = project?.file_summary || {};
+  const hasTabularSources = Boolean(
+    files.tabular_manifest
+    || Number(files.tabular_csv_files || 0) > 0
+  );
   const hasRnnSources = Boolean(
     files.sequence_manifest ||
     Number(files.sequence_csv_files || 0) > 0 ||
@@ -218,6 +226,7 @@ function getProjectHistoryCategory(project) {
     Number(files.yolo_labels || 0) > 0
   );
 
+  if (hasTabularSources && !hasRnnSources && !hasCnnSources) return "tabular";
   if (hasRnnSources && !hasCnnSources) return "rnn";
   if (hasCnnSources) return "cnn";
   return "cnn";
@@ -253,22 +262,26 @@ function renderProjectCard(project, options = {}) {
   const updatedAt = formatDate(project.updated_at);
   const projectName = project.project_name || project.project_id || "--";
   const fullPath = project.full_path || project.copy_path || project.path || files.project_root || "";
-  const isRnnProject = getProjectHistoryCategory(project) === "rnn";
-  const progressText = isRnnProject
+  const projectMode = getProjectHistoryCategory(project);
+  const progressText = projectMode === "rnn"
     ? buildRnnProjectHistoryStatus(project, files)
-    : progress.total
-      ? t("history.imagesAnnotated", { annotated: progress.annotated || 0, total: progress.total || 0 })
-      : t("history.noImagesImported");
-  const fileSummaryHtml = isRnnProject
+    : projectMode === "tabular"
+      ? buildTabularProjectHistoryStatus(project, files)
+      : progress.total
+        ? t("history.imagesAnnotated", { annotated: progress.annotated || 0, total: progress.total || 0 })
+        : t("history.noImagesImported");
+  const fileSummaryHtml = projectMode === "rnn"
     ? renderRnnProjectFileSummary(project, files)
-    : renderCnnProjectFileSummary(project, files, progress);
+    : projectMode === "tabular"
+      ? renderTabularProjectFileSummary(project, files)
+      : renderCnnProjectFileSummary(project, files, progress);
 
   return `
     <article class="project-history-card ${options.compact ? "compact" : ""}">
       <div class="project-history-main">
         <div>
           <div class="project-history-title-row">
-            <h3>${escapeHtml(projectName)}</h3>
+            <h3 class="no-i18n">${escapeHtml(projectName)}</h3>
             <span class="badge badge-info">${escapeHtml(getProjectHistoryModeLabel(project))}</span>
             <span class="badge badge-muted">${escapeHtml(projectTaskLabel(project.task_type))}</span>
           </div>
@@ -286,7 +299,7 @@ function renderProjectCard(project, options = {}) {
         <div class="project-file-details">
           <div>
             <span>${escapeHtml(t("history.projectName"))}</span>
-            <code>${escapeHtml(projectName)}</code>
+            <code class="no-i18n">${escapeHtml(projectName)}</code>
           </div>
           <div>
             <span>${escapeHtml(t("history.fullPath"))}</span>
@@ -309,6 +322,19 @@ function buildRnnProjectHistoryStatus(project, files = {}) {
   return `${csvCount} sequence CSV, ${targetText}, ${runCount} run(s)`;
 }
 
+function buildTabularProjectHistoryStatus(project, files = {}) {
+  const config = project.tabular_config || {};
+  const csvCount = Number(files.tabular_csv_files || 0);
+  const runCount = Array.isArray(project.training_runs) ? project.training_runs.filter(isTabularRun).length : 0;
+  const target = config.target_column || "";
+  if (!csvCount) return t("history.tabular.noCsv");
+  return t("history.tabular.status", {
+    count: csvCount,
+    target: target || t("history.tabular.targetUnset"),
+    runs: runCount,
+  });
+}
+
 function renderCnnProjectFileSummary(project, files = {}, progress = {}) {
   return [
     fileMetric(t("dataset.images"), files.images ?? progress.total ?? 0),
@@ -326,7 +352,9 @@ function renderRnnProjectFileSummary(project, files = {}) {
   const runs = Array.isArray(project.training_runs) ? project.training_runs.filter((run) => {
     const architecture = String(run.architecture || "").toLowerCase();
     const backend = String(run.backend || "").toLowerCase();
-    return architecture === "rnn" || backend.includes("lstm") || backend.includes("xgboost") || String(run.task_type || "").includes("sequence");
+    const taskType = String(run.task_type || "").toLowerCase();
+    if (architecture === "tabular" || backend === "xgboost_tabular" || taskType.includes("tabular")) return false;
+    return architecture === "rnn" || backend.includes("lstm") || backend.includes("xgboost") || taskType.includes("sequence");
   }) : [];
   return [
     fileMetric("Sequence CSV", files.sequence_csv_files ?? 0),
@@ -338,6 +366,28 @@ function renderRnnProjectFileSummary(project, files = {}) {
     fileMetric(t("history.inferenceJobs"), files.inference_jobs ?? 0),
     fileMetric(t("export.model"), files.exports ?? 0)
   ].join("");
+}
+
+function renderTabularProjectFileSummary(project, files = {}) {
+  const config = project.tabular_config || {};
+  const runs = Array.isArray(project.training_runs) ? project.training_runs.filter(isTabularRun) : [];
+  return [
+    fileMetric(t("history.tabular.csvFiles"), files.tabular_csv_files ?? 0),
+    fileMetric(t("history.tabular.task"), config.task_head || String(project.task_type || "").replace(/^tabular_/, "") || "--"),
+    fileMetric(t("history.tabular.target"), config.target_column || "--"),
+    fileMetric(t("history.tabular.features"), Array.isArray(config.feature_columns) ? config.feature_columns.length : "--"),
+    fileMetric(t("history.tabular.runs"), runs.length),
+    fileMetric("best.json", files.best_weights ?? 0),
+    fileMetric(t("history.inferenceJobs"), files.inference_jobs ?? 0),
+    fileMetric(t("export.model"), files.exports ?? 0)
+  ].join("");
+}
+
+function isTabularRun(run) {
+  const architecture = String(run?.architecture || "").toLowerCase();
+  const backend = String(run?.backend || "").toLowerCase();
+  const taskType = String(run?.task_type || "").toLowerCase();
+  return architecture === "tabular" || backend === "xgboost_tabular" || taskType.includes("tabular");
 }
 
 function renderHistoryContent(projects, jobs, options = {}) {
@@ -628,12 +678,20 @@ function openCreateProjectModal(options = {}) {
   const modal = qs("#project-create-modal");
   if (!modal) return;
   const typeSelect = qs("#new-project-type");
-  setCreateProjectMode(options.mode === "rnn" || isSequenceProjectType(options.taskType) ? "rnn" : "cnn", { preserveType: Boolean(options.taskType) });
+  const requestedMode = options.mode === "tabular" || isTabularProjectType(options.taskType)
+    ? "tabular"
+    : options.mode === "rnn" || isSequenceProjectType(options.taskType)
+      ? "rnn"
+      : "cnn";
+  setCreateProjectMode(requestedMode, { preserveType: Boolean(options.taskType) });
   if (options.taskType && typeSelect) {
     typeSelect.value = options.taskType;
   }
   if (options.mode === "rnn" && typeSelect && !isSequenceProjectType(typeSelect.value)) {
     typeSelect.value = "sequence_classification";
+  }
+  if (options.mode === "tabular" && typeSelect && !isTabularProjectType(typeSelect.value)) {
+    typeSelect.value = "tabular_classification";
   }
   syncCreateProjectMode();
   modal.hidden = false;
@@ -650,12 +708,17 @@ function isSequenceProjectType(taskType) {
   return normalized.includes("sequence") || normalized.includes("time_series") || normalized.includes("rnn");
 }
 
+function isTabularProjectType(taskType) {
+  return String(taskType || "").toLowerCase().includes("tabular");
+}
+
 function getProjectModeFromTaskType(taskType) {
+  if (isTabularProjectType(taskType)) return "tabular";
   return isSequenceProjectType(taskType) ? "rnn" : "cnn";
 }
 
 function setCreateProjectMode(mode, options = {}) {
-  const normalizedMode = mode === "rnn" ? "rnn" : "cnn";
+  const normalizedMode = ["cnn", "rnn", "tabular"].includes(mode) ? mode : "cnn";
   qsa("[data-project-mode]").forEach((button) => {
     button.classList.toggle("active", button.dataset.projectMode === normalizedMode);
   });
@@ -671,15 +734,21 @@ function setCreateProjectMode(mode, options = {}) {
 
   const selectedMode = getProjectModeFromTaskType(typeSelect.value);
   if (!options.preserveType || selectedMode !== normalizedMode) {
-    typeSelect.value = normalizedMode === "rnn" ? "sequence_classification" : "object_detection";
+    typeSelect.value = {
+      cnn: "object_detection",
+      rnn: "sequence_classification",
+      tabular: "tabular_classification",
+    }[normalizedMode];
   }
   syncCreateProjectMode();
 }
 
 function syncCreateProjectMode() {
   const type = qs("#new-project-type")?.value || "";
-  const isSequence = isSequenceProjectType(type);
-  const mode = isSequence ? "rnn" : "cnn";
+  const mode = getProjectModeFromTaskType(type);
+  const isSequence = mode === "rnn";
+  const isTabular = mode === "tabular";
+  const hidesClassList = mode === "rnn" || mode === "tabular";
   qsa("[data-project-mode]").forEach((button) => {
     button.classList.toggle("active", button.dataset.projectMode === mode);
   });
@@ -687,7 +756,11 @@ function syncCreateProjectMode() {
   const classList = qs("#new-project-class-list");
   classField?.classList.toggle("hidden", isSequence);
   classList?.classList.toggle("hidden", isSequence);
-  if (isSequence && appState.newProjectClasses.length) {
+  if (isTabular) {
+    classField?.classList.add("hidden");
+    classList?.classList.add("hidden");
+  }
+  if (hidesClassList && appState.newProjectClasses.length) {
     appState.newProjectClasses = [];
     renderNewProjectClassList();
   }
@@ -695,16 +768,21 @@ function syncCreateProjectMode() {
   setText("#new-project-class-label", t("project.classList"));
   setText(
     "#new-project-class-hint",
-    isSequence
-      ? t("project.classListHelp.sequence")
-      : t("project.classListHelp.vision")
+    mode === "tabular"
+      ? t("project.classListHelp.tabular")
+      : mode === "rnn"
+        ? t("project.classListHelp.sequence")
+        : t("project.classListHelp.vision")
   );
   const input = qs("#new-project-class-input");
   if (input) {
-    input.placeholder = isSequence
-      ? t("project.classPlaceholder.sequence")
-      : t("project.classPlaceholder.vision");
+    input.placeholder = mode === "tabular"
+      ? t("project.classPlaceholder.tabular")
+      : mode === "rnn"
+        ? t("project.classPlaceholder.sequence")
+        : t("project.classPlaceholder.vision");
     input.disabled = isSequence;
+    if (isTabular) input.disabled = true;
   }
   renderProjectTaskQuickGuide("#new-project-task-quick-guide", "new-project-type");
 }
@@ -752,7 +830,7 @@ function closeProjectTaskEditModal() {
 }
 
 function setEditProjectMode(mode, options = {}) {
-  const normalizedMode = mode === "rnn" ? "rnn" : "cnn";
+  const normalizedMode = ["cnn", "rnn", "tabular"].includes(mode) ? mode : "cnn";
   qsa("[data-edit-project-mode]").forEach((button) => {
     button.classList.toggle("active", button.dataset.editProjectMode === normalizedMode);
   });
@@ -764,7 +842,11 @@ function setEditProjectMode(mode, options = {}) {
     option.disabled = !matches;
   });
   if (!options.preserveType || getProjectModeFromTaskType(select.value) !== normalizedMode) {
-    select.value = normalizedMode === "rnn" ? "sequence_classification" : "object_detection";
+    select.value = {
+      cnn: "object_detection",
+      rnn: "sequence_classification",
+      tabular: "tabular_classification",
+    }[normalizedMode];
   }
   syncProjectTaskEdit();
 }
@@ -780,9 +862,12 @@ function syncProjectTaskEdit() {
   renderProjectTaskQuickGuide("#project-task-edit-quick-guide", "project-task-edit-type");
   if (!project) return;
   const files = project.file_summary || {};
-  const dataCount = getProjectHistoryCategory(project) === "rnn"
+  const category = getProjectHistoryCategory(project);
+  const dataCount = category === "rnn"
     ? Number(files.sequence_csv_files || 0)
-    : Number(files.images || project.annotation_progress?.total || 0);
+    : category === "tabular"
+      ? Number(files.tabular_csv_files || 0)
+      : Number(files.images || project.annotation_progress?.total || 0);
   const runCount = Array.isArray(project.training_runs) ? project.training_runs.length : 0;
   setText("#project-task-edit-impact", t("project.taskEditImpact", { dataCount, runCount }));
 }
@@ -802,7 +887,7 @@ async function saveProjectTaskEdit(event) {
     closeProjectTaskEditModal();
     eventBus.emit("toast", t("project.taskEditSuccess"));
     eventBus.emit("reload-projects", isCurrentProject
-      ? { openProjectId: projectId, page: "training", moduleOverview: true }
+      ? { openProjectId: projectId, page: isTabularProjectType(taskType) ? "tabular" : "training", moduleOverview: true }
       : {});
   } catch (err) {
     eventBus.emit("toast", t("project.taskEditFailed", { error: err.message }));
@@ -814,10 +899,12 @@ async function createProject(event) {
   const name = qs("#new-project-name")?.value.trim();
   const type = qs("#new-project-type")?.value;
   const isSequence = isSequenceProjectType(type);
+  const noClassList = isSequence || isTabularProjectType(type);
   const classes = isSequence ? [] : [...appState.newProjectClasses];
+  if (isTabularProjectType(type)) classes.splice(0, classes.length);
 
-  if (!name || (!isSequenceProjectType(type) && classes.length === 0)) {
-    eventBus.emit("toast", isSequenceProjectType(type) ? "請輸入專案名稱" : "請輸入專案名稱與至少一個類別");
+  if (!name || (!noClassList && classes.length === 0)) {
+    eventBus.emit("toast", noClassList ? "請輸入專案名稱" : "請輸入專案名稱與至少一個類別");
     return;
   }
 
@@ -835,7 +922,7 @@ async function createProject(event) {
 
     eventBus.emit("reload-projects", {
       openProjectId: project.project_id,
-      page: "training",
+      page: isTabularProjectType(type) ? "tabular" : "training",
       moduleOverview: true
     });
     eventBus.emit("toast", "專案已建立");
