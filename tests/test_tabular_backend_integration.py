@@ -1,5 +1,6 @@
 import json
 import tempfile
+import threading
 import unittest
 import zipfile
 from pathlib import Path
@@ -17,7 +18,9 @@ from src.training.backends.tabular_xgboost_backend import TabularXGBoostBackend
 from src.training.compare_service import CompareService
 from src.training.export_service import ExportService, ExportableModelNotFound
 from src.training.rnn.xgboost_trainer import XGBoostTrainingError, train_xgboost_from_dataset
+from src.training.state_store import TrainingStateStore
 from src.training.tabular.dataset import load_csv_tabular_dataset
+from src.training.backends import tabular_xgboost_backend as tabular_backend_module
 
 
 class TabularBackendIntegrationTests(unittest.TestCase):
@@ -283,6 +286,157 @@ class TabularBackendIntegrationTests(unittest.TestCase):
         snapshot = json.loads((run_dir / "dataset_snapshot.json").read_text(encoding="utf-8"))
         self.assertEqual(snapshot["seed"], 0)
         self.assertEqual(snapshot["split_counts"]["test"], 0)
+
+    def test_completed_state_is_published_only_after_artifacts_are_finalized(self):
+        run_id = "run_finalization_order"
+        self.project["training_config"] = {
+            "run_id": run_id,
+            "backend": "xgboost_tabular",
+            "architecture": "tabular",
+            "model": "xgboost_classifier",
+            "epochs": 3,
+            "learning_rate": 0.05,
+            "max_depth": 2,
+            "seed": 11,
+            "workers": 1,
+        }
+        TrainingStateStore.init_run(
+            self.project["project_id"],
+            run_id,
+            3,
+            "tabular",
+            "xgboost_tabular",
+        )
+        backend = TabularXGBoostBackend()
+        manifest_started = threading.Event()
+        allow_manifest = threading.Event()
+        real_write_manifest = tabular_backend_module.write_artifact_manifest
+
+        def blocked_manifest(*args, **kwargs):
+            manifest_started.set()
+            if not allow_manifest.wait(timeout=10):
+                raise TimeoutError("Timed out waiting to finish the manifest.")
+            return real_write_manifest(*args, **kwargs)
+
+        worker = threading.Thread(target=backend._run_training, args=(self.project,))
+        with (
+            patch(
+                "src.training.backends.tabular_xgboost_backend.write_artifact_manifest",
+                side_effect=blocked_manifest,
+            ),
+            patch(
+                "src.training.backends.tabular_xgboost_backend.ProjectManager.save_project",
+                return_value=True,
+            ),
+        ):
+            worker.start()
+            try:
+                self.assertTrue(manifest_started.wait(timeout=10))
+                state = TrainingStateStore.get_state(self.project["project_id"])
+                self.assertEqual(state["status"], "training")
+                run_dir = self.project_dir / "training" / "runs" / run_id
+                self.assertFalse((run_dir / "artifact_manifest.json").exists())
+            finally:
+                allow_manifest.set()
+                worker.join(timeout=10)
+
+        self.assertFalse(worker.is_alive())
+        final_state = TrainingStateStore.get_state(self.project["project_id"])
+        self.assertEqual(final_state["status"], "completed")
+        self.assertTrue(
+            (self.project_dir / "training" / "runs" / run_id / "artifact_manifest.json").is_file()
+        )
+
+    def test_artifact_finalization_failure_cannot_report_completed(self):
+        run_id = "run_finalization_failure"
+        self.project["training_config"] = {
+            "run_id": run_id,
+            "backend": "xgboost_tabular",
+            "architecture": "tabular",
+            "model": "xgboost_classifier",
+            "epochs": 3,
+            "learning_rate": 0.05,
+            "max_depth": 2,
+            "seed": 11,
+            "workers": 1,
+        }
+        TrainingStateStore.init_run(
+            self.project["project_id"],
+            run_id,
+            3,
+            "tabular",
+            "xgboost_tabular",
+        )
+        backend = TabularXGBoostBackend()
+
+        with (
+            patch(
+                "src.training.backends.tabular_xgboost_backend.write_artifact_manifest",
+                side_effect=OSError("simulated manifest failure"),
+            ),
+            patch(
+                "src.training.backends.tabular_xgboost_backend.ProjectManager.save_project",
+                return_value=True,
+            ),
+        ):
+            backend._run_training(self.project)
+
+        final_state = TrainingStateStore.get_state(self.project["project_id"])
+        self.assertEqual(final_state["status"], "failed")
+        self.assertIn("could not be finalized", final_state["error"])
+        summary = json.loads(
+            (
+                self.project_dir
+                / "training"
+                / "runs"
+                / run_id
+                / "run_summary.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(summary["status"], "failed")
+        self.assertIn("simulated manifest failure", summary["error"])
+
+    def test_project_save_failure_rolls_back_completed_state(self):
+        run_id = "run_project_save_failure"
+        self.project["training_config"] = {
+            "run_id": run_id,
+            "backend": "xgboost_tabular",
+            "architecture": "tabular",
+            "model": "xgboost_classifier",
+            "epochs": 3,
+            "learning_rate": 0.05,
+            "max_depth": 2,
+            "seed": 11,
+            "workers": 1,
+        }
+        original_runs = list(self.project["training_runs"])
+        original_current = dict(self.project["current"])
+        TrainingStateStore.init_run(
+            self.project["project_id"],
+            run_id,
+            3,
+            "tabular",
+            "xgboost_tabular",
+        )
+        backend = TabularXGBoostBackend()
+
+        with patch(
+            "src.training.backends.tabular_xgboost_backend.ProjectManager.save_project",
+            return_value=False,
+        ):
+            backend._run_training(self.project)
+
+        final_state = TrainingStateStore.get_state(self.project["project_id"])
+        self.assertEqual(final_state["status"], "failed")
+        self.assertIn("could not be saved", final_state["error"])
+        self.assertEqual(self.project["training_runs"], original_runs)
+        self.assertEqual(self.project["current"], original_current)
+
+        run_dir = self.project_dir / "training" / "runs" / run_id
+        summary = json.loads((run_dir / "run_summary.json").read_text(encoding="utf-8"))
+        manifest = json.loads((run_dir / "artifact_manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(summary["status"], "failed")
+        self.assertIsNone(manifest["lineage"]["model"]["model_id"])
 
     def test_explicit_export_rejects_failed_missing_or_foreign_runs(self):
         failed_dir = self.project_dir / "training" / "runs" / "run_failed"

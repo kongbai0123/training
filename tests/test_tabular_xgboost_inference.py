@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 
 from src.tabular_xgboost_inference import (
     TabularXGBoostInferenceError,
     TabularXGBoostInferenceService,
+    _lexical_under,
 )
 
 
@@ -340,6 +343,45 @@ class TabularXGBoostInferenceServiceTests(unittest.TestCase):
             for child in outside.glob("*"):
                 child.unlink(missing_ok=True)
             outside.rmdir()
+
+    @unittest.skipUnless(os.name == "nt", "Windows 8.3 path alias behavior")
+    def test_equivalent_windows_short_path_alias_remains_inside_trusted_root(self) -> None:
+        canonical_root = self.root / "canonical-project"
+        alias_root = self.root / "PROJECT~1"
+        candidate = alias_root / "training" / "runs" / "run_001"
+
+        def same_file(left, right):
+            left_path = Path(left)
+            right_path = Path(right)
+            return left_path == alias_root and right_path == canonical_root
+
+        with patch("src.tabular_xgboost_inference.os.path.samefile", side_effect=same_file):
+            secured = _lexical_under(canonical_root, candidate, "Run directory")
+
+        self.assertEqual(secured, candidate)
+
+    @unittest.skipUnless(os.name == "nt", "Windows reparse-point containment")
+    def test_equivalent_alias_cannot_enter_root_through_parent_reparse_point(self) -> None:
+        canonical_root = self.root / "canonical-project"
+        alias_parent = self.root / "outside-link"
+        alias_root = alias_parent / "canonical-project"
+        candidate = alias_root / "training" / "runs" / "run_001"
+
+        def same_file(left, right):
+            return Path(left) == alias_root and Path(right) == canonical_root
+
+        def is_link_or_reparse(path):
+            return Path(path) == alias_parent
+
+        with (
+            patch("src.tabular_xgboost_inference.os.path.samefile", side_effect=same_file),
+            patch(
+                "src.tabular_xgboost_inference._is_link_or_reparse",
+                side_effect=is_link_or_reparse,
+            ),
+            self.assertRaisesRegex(TabularXGBoostInferenceError, "reparse points"),
+        ):
+            _lexical_under(canonical_root, candidate, "Run directory")
 
     def test_loader_rejects_wrong_architecture_and_non_xgboost_json(self) -> None:
         self._write_contracts(task_head="classification")

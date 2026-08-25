@@ -127,6 +127,7 @@ class ScriptsContractTests(unittest.TestCase):
         self.assertIn("OpenSSL", audit_script)
         self.assertIn("scipy\\.optimize", audit_script)
         self.assertIn("numba\\.", audit_script)
+        self.assertIn("huggingface_hub\\.inference\\._mcp", audit_script)
         self.assertIn("return 1", audit_script)
 
     def test_dist_smoke_uses_clean_user_data_and_checks_runtime(self):

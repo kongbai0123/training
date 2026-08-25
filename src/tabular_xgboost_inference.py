@@ -5,6 +5,7 @@ import json
 import math
 import os
 import re
+import stat
 import tempfile
 import threading
 import time
@@ -736,19 +737,75 @@ def _secure_root(path: Path) -> Path:
     return resolved
 
 
+def _is_link_or_reparse(path: Path) -> bool:
+    try:
+        details = path.lstat()
+    except OSError:
+        return False
+    if stat.S_ISLNK(details.st_mode):
+        return True
+    if os.name != "nt":
+        return False
+    attributes = int(getattr(details, "st_file_attributes", 0))
+    reparse_flag = int(getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
+    return bool(attributes & reparse_flag)
+
+
+def _reject_link_components(path: Path, label: str) -> None:
+    current = Path(path.anchor) if path.anchor else Path()
+    parts = path.parts[1:] if path.anchor else path.parts
+    for part in parts:
+        current = current / part
+        if _is_link_or_reparse(current):
+            raise TabularXGBoostInferenceError(
+                f"{label} cannot traverse symbolic links or reparse points."
+            )
+
+
 def _lexical_under(root: Path, candidate: Path, label: str) -> Path:
     combined = candidate if candidate.is_absolute() else root / candidate
     lexical = Path(os.path.abspath(os.fspath(combined)))
     try:
         relative = lexical.relative_to(root)
-    except ValueError as exc:
-        raise TabularXGBoostInferenceError(f"{label} must remain inside the trusted root.") from exc
+        traversal_root = root
+    except ValueError:
+        # Windows may spell the same directory with both its long name and an
+        # 8.3 alias (for example ``runneradmin`` and ``RUNNER~1``).  A purely
+        # lexical comparison rejects that safe case even though both paths
+        # identify the same trusted directory.  Locate the equivalent ancestor
+        # by file identity, while still rejecting paths that enter the trusted
+        # root through a symbolic-link alias.
+        if (
+            os.name != "nt"
+            or os.path.normcase(lexical.anchor) != os.path.normcase(root.anchor)
+        ):
+            raise TabularXGBoostInferenceError(
+                f"{label} must remain inside the trusted root."
+            )
+        traversal_root = None
+        relative = None
+        for ancestor in (lexical, *lexical.parents):
+            try:
+                if not os.path.samefile(ancestor, root):
+                    continue
+            except (OSError, ValueError):
+                continue
+            _reject_link_components(ancestor, label)
+            traversal_root = ancestor
+            relative = lexical.relative_to(ancestor)
+            break
+        if traversal_root is None or relative is None:
+            raise TabularXGBoostInferenceError(
+                f"{label} must remain inside the trusted root."
+            )
 
-    current = root
+    current = traversal_root
     for part in relative.parts:
         current = current / part
-        if current.exists() and current.is_symlink():
-            raise TabularXGBoostInferenceError(f"{label} cannot traverse symbolic links.")
+        if _is_link_or_reparse(current):
+            raise TabularXGBoostInferenceError(
+                f"{label} cannot traverse symbolic links or reparse points."
+            )
     return lexical
 
 

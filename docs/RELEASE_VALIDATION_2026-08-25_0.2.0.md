@@ -19,8 +19,8 @@ Runtime：`r1`
 | 項目 | 結果 |
 |---|---|
 | 更新包 | `VisionTrainingStudio_Update_0.2.0_runtime-r1.vtsupdate` |
-| 檔案大小 | 71,578,297 bytes |
-| SHA-256 | `ae49f4ffa25668e12ae33272a64037f320a3e3d565f681999d4cb3d9a2d071b7` |
+| 檔案大小 | 71,580,929 bytes |
+| SHA-256 | `1277b8d8050ed9cea2a3528f2aa97ed75046006ad28658b1e902c07edda75850` |
 | 簽章 | Ed25519 驗證通過 |
 | 簽章金鑰 ID | `b2170ea6a93b6c26` |
 | 變更檔案 | 26 |
@@ -41,7 +41,9 @@ Runtime：`r1`
 
 ## 程式與介面驗證
 
-- Python 完整測試：`574 passed`。
+- Python 完整測試：`579 passed`。
+- Tabular 只會在訓練產物與專案狀態都成功持久化後發布完成／停止等終止狀態；若產物收尾或專案儲存失敗，run 會轉為失敗，且記憶體中的專案變更會回滾，不會留下假完成狀態。
+- GitHub Windows runner 曾攔截到 `runneradmin`／`RUNNER~1` 長短路徑別名誤判；修正後仍拒絕 traversal、symbolic link 與 reparse point 繞過，本地完整測試維持通過，正式發布以最後 `main`／tag CI 全部通過為硬閘門。
 - JavaScript 語法與 Python compile 建置檢查：通過。
 - 繁中 DOM 稽核：11 個主要頁面、1,265 個可見節點、0 問題。
 - 英文 DOM 稽核：11 個主要頁面、1,265 個可見節點、0 問題。
@@ -55,7 +57,7 @@ Runtime：`r1`
 - 凍結程式固定使用 runtime 內建的 h11 HTTP 傳輸，避免選取不完整的選用 httptools namespace。
 - 安裝模式離線 smoke：`v0.2.0 / runtime-r1` 啟動成功，0 個預載使用者專案、0 個自動模型下載、0 個外部連線。
 - 可攜模式離線 smoke：`v0.2.0 / runtime-r1` 啟動成功，使用者資料正確留在可攜目錄且測試後清理。
-- 封裝版直接讀取兩個商業 Tabular 專案，分類單筆預測回傳 `no_purchase`、信心度 `0.99189072`、延遲 `0.913 ms`。
+- 封裝版直接讀取兩個商業 Tabular 專案；分類單筆預測回傳 `no_purchase`、信心度 `0.99189072`、延遲 `5.240 ms`，回歸單筆預測回傳 `156.3956604`、延遲 `0.827 ms`。
 
 ## 更新器驗證
 

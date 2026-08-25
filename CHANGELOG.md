@@ -22,8 +22,10 @@ All notable changes to Vision Training Studio are tracked here.
 - Rejected provided classification splits whose training partition omits labels that exist in validation or test data.
 - Neutralized spreadsheet formula prefixes in downloadable batch-prediction CSV files while keeping raw API predictions unchanged.
 - Kept project and lifecycle registry state transactional when promoting a model to production.
+- Published Tabular terminal training states only after run artifacts and project state persisted successfully; artifact-finalization or project-save failures now mark the run failed and roll back in-memory project changes.
 - Aggregated flattened RNN XGBoost importance scores back to their original feature names.
 - Stabilized frozen runtime startup by using the bundled h11 HTTP transport instead of optional httptools discovery.
+- Accepted equivalent Windows 8.3 path aliases during Tabular inference without weakening traversal, symbolic-link, or reparse-point containment.
 
 ## [0.1.12] - 2026-08-24
 

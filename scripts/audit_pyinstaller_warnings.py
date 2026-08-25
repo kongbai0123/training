@@ -46,6 +46,7 @@ EXPECTED_PATTERNS = [
     r"missing module named ['\"]?(org\.python|java|vms_lib|_winreg)",
     r"missing module named ['\"]?.*\.tests?['\"]?",
     r"missing module named ['\"]?(pytest|_pytest|mypy|toml|tomli|email_validator|fastapi_cli|orjson|ujson)\b",
+    r"missing module named ['\"]?typer\b.*huggingface_hub\.inference\._mcp",
     r"missing module named ['\"]?(trio|curio|wsproto|gunicorn|werkzeug|python_socks|a2wsgi|uvloop|h2|OpenSSL|watchfiles)(\.|['\"]|\s)",
     r"missing module named ['\"]?(android|jnius|objc|WebKit|Foundation|AppKit|qtpy|cefpython3|PyObjCTools|System|Microsoft|WebBrowserInterop|gi\.repository)\b",
     r"missing module named ['\"]?(System\.|Microsoft\.Web)\b",

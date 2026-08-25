@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import math
 import threading
@@ -138,34 +139,88 @@ class TabularXGBoostBackend(TrainingBackend):
             )
             status = "stopped" if self._is_stop_requested(project_id) else "completed"
             summary = self._write_summary(run_dir, task_type, status, metrics, dataset.get("feature_config_hash"))
-            if status == "stopped":
-                TrainingStateStore.mark_stopped(project_id, "Training stopped by user.", run_id=run_id)
-            else:
-                TrainingStateStore.mark_completed(project_id, best_model="weights/best.json", run_id=run_id)
         except Exception as exc:
             error = str(exc)
             (run_dir / "error.log").write_text(error, encoding="utf-8")
             summary = self._write_summary(run_dir, task_type, "failed", None, tabular_config.get("feature_config_hash"), error)
-            TrainingStateStore.mark_failed(project_id, error, run_id=run_id)
         finally:
-            self._write_contracts(run_dir, run_id, task_type, summary.get("status", "failed"), created_at)
-            write_artifact_manifest(
-                run_dir,
-                run_id,
-                dataset_lineage={
-                    "source_file": tabular_config.get("source_file"),
-                    "dataset_sha256": (dataset or {}).get("dataset_hash"),
-                    "feature_config_hash": (dataset or {}).get("feature_config_hash") or tabular_config.get("feature_config_hash"),
-                    "row_count": ((dataset or {}).get("summary") or {}).get("row_count"),
-                },
-                model_lineage={
-                    "model_id": f"{project_id}::{run_id}::best" if summary.get("status") == "completed" else None,
-                    "parent_model_id": None,
-                },
-            )
-            self._update_project_run(project, summary)
-            with self._lock:
-                self._stop_flags.pop(project_id, None)
+            dataset_lineage = {
+                "source_file": tabular_config.get("source_file"),
+                "dataset_sha256": (dataset or {}).get("dataset_hash"),
+                "feature_config_hash": (dataset or {}).get("feature_config_hash") or tabular_config.get("feature_config_hash"),
+                "row_count": ((dataset or {}).get("summary") or {}).get("row_count"),
+            }
+            finalization_error = ""
+            try:
+                self._write_contracts(run_dir, run_id, task_type, summary.get("status", "failed"), created_at)
+                write_artifact_manifest(
+                    run_dir,
+                    run_id,
+                    dataset_lineage=dataset_lineage,
+                    model_lineage={
+                        "model_id": f"{project_id}::{run_id}::best" if summary.get("status") == "completed" else None,
+                        "parent_model_id": None,
+                    },
+                )
+                self._update_project_run(project, summary)
+            except Exception as exc:
+                finalization_error = f"Training artifacts could not be finalized: {exc}"
+                original_error = str(summary.get("error") or "").strip()
+                combined_error = (
+                    f"{original_error}; {finalization_error}"
+                    if original_error
+                    else finalization_error
+                )
+                summary = {
+                    **summary,
+                    "status": "failed",
+                    "error": combined_error,
+                    "completed_at": datetime.now().isoformat(),
+                    "model_lifecycle_status": "training_failed",
+                }
+                try:
+                    (run_dir / "error.log").write_text(combined_error, encoding="utf-8")
+                    (run_dir / "run_summary.json").write_text(
+                        json.dumps(summary, indent=2, ensure_ascii=False),
+                        encoding="utf-8",
+                    )
+                    self._write_contracts(run_dir, run_id, task_type, "failed", created_at)
+                    write_artifact_manifest(
+                        run_dir,
+                        run_id,
+                        dataset_lineage=dataset_lineage,
+                        model_lineage={"model_id": None, "parent_model_id": None},
+                    )
+                except Exception:
+                    pass
+                try:
+                    self._update_project_run(project, summary)
+                except Exception:
+                    pass
+
+            try:
+                status = str(summary.get("status") or "failed")
+                if finalization_error or status == "failed":
+                    TrainingStateStore.mark_failed(
+                        project_id,
+                        str(summary.get("error") or finalization_error or "Training failed."),
+                        run_id=run_id,
+                    )
+                elif status == "stopped":
+                    TrainingStateStore.mark_stopped(
+                        project_id,
+                        "Training stopped by user.",
+                        run_id=run_id,
+                    )
+                else:
+                    TrainingStateStore.mark_completed(
+                        project_id,
+                        best_model="weights/best.json",
+                        run_id=run_id,
+                    )
+            finally:
+                with self._lock:
+                    self._stop_flags.pop(project_id, None)
 
     def _write_summary(self, run_dir: Path, task_type: str, status: str, metrics: Dict[str, Any] | None, feature_hash: str | None, error: str = "") -> Dict[str, Any]:
         best = (metrics or {}).get("best_metrics") or {}
@@ -200,14 +255,25 @@ class TabularXGBoostBackend(TrainingBackend):
         project_id = str(project.get("project_id") or "")
         if not project_id:
             return
-        runs = [item for item in project.get("training_runs") or [] if item.get("run_id") != summary.get("run_id")]
-        runs.append(summary)
-        project["training_runs"] = runs
-        current = project.setdefault("current", {})
-        current["training_run_id"] = summary.get("run_id")
-        if summary.get("status") == "completed":
-            current["best_model_id"] = f"{project_id}::{summary.get('run_id')}::best"
-        ProjectManager.save_project(project_id, project)
+        snapshot = copy.deepcopy(project)
+        try:
+            runs = [item for item in project.get("training_runs") or [] if item.get("run_id") != summary.get("run_id")]
+            runs.append(summary)
+            project["training_runs"] = runs
+            current = project.setdefault("current", {})
+            current["training_run_id"] = summary.get("run_id")
+            if summary.get("status") == "completed":
+                current["best_model_id"] = f"{project_id}::{summary.get('run_id')}::best"
+            elif str(current.get("best_model_id") or "").startswith(
+                f"{project_id}::{summary.get('run_id')}::"
+            ):
+                current.pop("best_model_id", None)
+            if not ProjectManager.save_project(project_id, project):
+                raise RuntimeError("Project state could not be saved after Tabular training.")
+        except Exception:
+            project.clear()
+            project.update(snapshot)
+            raise
 
     def _is_stop_requested(self, project_id: str) -> bool:
         with self._lock:
