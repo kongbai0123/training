@@ -36,11 +36,44 @@ if not exist "dist\VisionTrainingStudio\VisionTrainingStudio.exe" (
   exit /b 3
 )
 
+if defined VTS_SIGN_CERT_SHA1 (
+  echo [Vision Training Studio] Signing packaged executables before installer compilation...
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sign_windows_release.ps1 -ArtifactPath "dist\VisionTrainingStudio\VisionTrainingStudio.exe"
+  if errorlevel 1 (
+    echo [ERROR] Main executable signing failed.
+    exit /b 1
+  )
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sign_windows_release.ps1 -ArtifactPath "dist\VisionTrainingStudio\VisionTrainingStudioUpdater.exe"
+  if errorlevel 1 (
+    echo [ERROR] Updater executable signing failed.
+    exit /b 1
+  )
+)
+
 echo [Vision Training Studio] Building installer with "%ISCC_EXE%"...
 "%ISCC_EXE%" installer\VisionTrainingStudio.iss
 if %ERRORLEVEL% NEQ 0 (
   echo [ERROR] Installer build failed.
   exit /b %ERRORLEVEL%
+)
+
+set /p APP_VERSION=<VERSION
+set "SETUP_EXE=installer\output\VisionTrainingStudio_Setup_%APP_VERSION%.exe"
+if defined VTS_SIGN_CERT_SHA1 (
+  echo [Vision Training Studio] Signing installer...
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sign_windows_release.ps1 -ArtifactPath "%SETUP_EXE%"
+  if errorlevel 1 (
+    echo [ERROR] Installer signing failed.
+    exit /b 1
+  )
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_windows_release.ps1 -ArtifactPath "%SETUP_EXE%"
+) else (
+  echo [WARNING] No VTS_SIGN_CERT_SHA1 was provided. This build is internal-QA only and cannot be published.
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_windows_release.ps1 -ArtifactPath "%SETUP_EXE%" -InternalQa
+)
+if errorlevel 1 (
+  echo [ERROR] Installer release validation failed.
+  exit /b 1
 )
 
 echo [Vision Training Studio] Installer output: installer\output

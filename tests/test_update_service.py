@@ -328,3 +328,44 @@ class UpdateServiceTests(unittest.TestCase):
                     "VisionTrainingStudio_Setup_0.1.4.exe",
                 )
                 download.assert_not_called()
+
+    def test_restart_is_single_flight_and_updater_waits_for_backend(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            install = root / "install"
+            install.mkdir()
+            executable = install / "VisionTrainingStudio.exe"
+            updater = install / "VisionTrainingStudioUpdater.exe"
+            archive = root / "ready.vtsupdate"
+            executable.write_bytes(b"app")
+            updater.write_bytes(b"updater")
+            archive.write_bytes(b"package")
+            service = UpdateService(
+                downloads_dir=root / "updates" / "downloads",
+                state_file=root / "state.json",
+                public_key_path=root / "public.pem",
+                current_version=self.current,
+            )
+            service._state["ready_package"] = {
+                "path": archive.as_posix(),
+                "app_version": "0.1.4",
+                "runtime_version": "r1",
+            }
+
+            with (
+                patch("src.update.service.active_update_blockers", return_value=[]),
+                patch("src.update.service.sys.frozen", True, create=True),
+                patch("src.update.service.sys.executable", str(executable)),
+                patch("src.update.service.os.getpid", return_value=4321),
+                patch("src.update.service.os.getppid", return_value=1234),
+                patch("src.update.service.subprocess.Popen") as popen,
+                patch("src.update.service.threading.Thread") as thread,
+            ):
+                result = service.launch_ready_update()
+                command = popen.call_args.args[0]
+                self.assertEqual(command[command.index("--parent-pid") + 1], "4321")
+                self.assertEqual(result["backend_pid"], 4321)
+                thread.return_value.start.assert_called_once()
+                with self.assertRaisesRegex(ValueError, "already scheduled"):
+                    service.launch_ready_update()
+                popen.assert_called_once()

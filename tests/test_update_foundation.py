@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from src.update.baseline import build_runtime_baseline
-from src.update.manifest import verify_update_archive
+from src.update.manifest import validate_manifest, verify_update_archive
 from src.update.package_builder import build_update_package
 from src.update.paths import is_app_mutable_path, normalize_package_path
 from src.update.versioning import (
@@ -144,6 +144,11 @@ class UpdateFoundationTests(unittest.TestCase):
             verified = verify_update_archive(package, public_key)
             self.assertEqual(verified.manifest["target_app_version"], "0.1.4")
             self.assertEqual(verified.manifest["runtime_version"], "r1")
+            self.assertEqual(verified.manifest["runtime_identity"], {"dist_info": []})
+            unsafe_manifest = dict(verified.manifest)
+            unsafe_manifest.pop("runtime_identity")
+            with self.assertRaisesRegex(ValueError, "main executable must declare runtime identity"):
+                validate_manifest(unsafe_manifest)
 
             (dist / "_internal" / "runtime.dll").write_bytes(b"changed-runtime")
             with self.assertRaisesRegex(ValueError, "full installer"):

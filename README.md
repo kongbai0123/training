@@ -210,6 +210,18 @@ Tabular 專案把 CSV 的每一列視為獨立樣本，不會改寫或取代 RNN
 - [離線模型助理執行說明](docs/OFFLINE_MODEL_ASSISTANT_EXECUTION.md)
 - [第三方授權清單](docs/compliance/THIRD_PARTY_LICENSES.md)
 
+## Windows 可執行檔位置
+
+從 GitHub clone 原始碼後不會直接包含大型打包產物；請先執行 `scripts\package.bat` 或 `scripts\build_installer.bat`。完成後可執行檔位於：
+
+| 用途 | 位置 |
+| --- | --- |
+| 直接啟動完整目錄包 | `dist\VisionTrainingStudio\VisionTrainingStudio.exe` |
+| 提供給使用者安裝 | `installer\output\VisionTrainingStudio_Setup_<version>.exe` |
+| 內部獨立更新程式 | `dist\VisionTrainingStudio\VisionTrainingStudioUpdater.exe` |
+
+`VisionTrainingStudio.exe` 不能單獨搬離 `dist\VisionTrainingStudio\`；必須保留同層 `_internal` 與其他打包檔案。一般使用者應優先使用 `installer\output` 內的完整安裝器。
+
 ## 開發者快速開始
 
 ### 建立環境

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import ctypes
 from datetime import datetime, timezone
 import json
 import os
@@ -33,6 +34,49 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _process_is_running(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        synchronize = 0x00100000
+        wait_object_0 = 0x00000000
+        wait_timeout = 0x00000102
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.OpenProcess.argtypes = [ctypes.c_uint32, ctypes.c_int, ctypes.c_uint32]
+        kernel32.OpenProcess.restype = ctypes.c_void_p
+        kernel32.WaitForSingleObject.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+        kernel32.WaitForSingleObject.restype = ctypes.c_uint32
+        kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+        handle = kernel32.OpenProcess(synchronize, False, pid)
+        if not handle:
+            return ctypes.get_last_error() == 5
+        try:
+            result = kernel32.WaitForSingleObject(handle, 0)
+            if result == wait_timeout:
+                return True
+            if result == wait_object_0:
+                return False
+            return True
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _wait_for_process_exit(pid: int, timeout_seconds: float = 10.0) -> bool:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if not _process_is_running(pid):
+            return True
+        time.sleep(0.1)
+    return not _process_is_running(pid)
+
+
 class UpdateService:
     def __init__(
         self,
@@ -55,6 +99,7 @@ class UpdateService:
         self.release_client = release_client or GitHubReleaseClient()
         self.current_version = current_version or VersionInfo.from_mapping(VERSION_INFO)
         self._lock = threading.RLock()
+        self._restart_scheduled = False
         self._state = self._load_state()
         cleanup_expired_parts(self.update_root)
 
@@ -438,6 +483,8 @@ class UpdateService:
         if not getattr(sys, "frozen", False) and os.environ.get("VTS_ALLOW_SOURCE_UPDATE") != "1":
             raise ValueError("Applying updates is disabled in source-development mode.")
         with self._lock:
+            if self._restart_scheduled:
+                raise ValueError("An update restart is already scheduled.")
             ready = deepcopy(self._state.get("ready_package"))
         archive = Path(str((ready or {}).get("path") or "")).resolve()
         if not archive.is_file():
@@ -447,7 +494,13 @@ class UpdateService:
         if not updater.is_file():
             raise FileNotFoundError("The standalone updater is not installed; use the full setup package.")
         current_version_file = BASE_DIR / "version.json"
-        parent_pid = os.getppid()
+        # The backend child owns the API socket and loads files from the
+        # installation directory.  Waiting only for its launcher leaves a race
+        # where the updater can replace/relaunch while the backend is still
+        # releasing those resources.  Keep the legacy CLI option for updater
+        # compatibility, but pass the actual backend process ID.
+        backend_pid = os.getpid()
+        launcher_pid = os.getppid()
         command = [
             str(updater),
             "--archive",
@@ -461,30 +514,43 @@ class UpdateService:
             "--update-root",
             str(UPDATES_DIR),
             "--parent-pid",
-            str(parent_pid),
+            str(backend_pid),
         ]
         creationflags = 0
         if os.name == "nt":
             creationflags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-        subprocess.Popen(
-            command,
-            cwd=str(install_dir),
-            creationflags=creationflags,
-            close_fds=True,
-        )
+        with self._lock:
+            if self._restart_scheduled:
+                raise ValueError("An update restart is already scheduled.")
+            self._restart_scheduled = True
+        try:
+            subprocess.Popen(
+                command,
+                cwd=str(install_dir),
+                creationflags=creationflags,
+                close_fds=True,
+            )
+        except Exception:
+            with self._lock:
+                self._restart_scheduled = False
+            raise
 
         def close_application() -> None:
             time.sleep(1.25)
             try:
-                os.kill(parent_pid, signal.SIGTERM)
+                os.kill(launcher_pid, signal.SIGTERM)
             except OSError:
                 pass
+            # The detached updater waits for this backend PID.  Do not release
+            # it until the launcher has also stopped holding the main EXE.
+            _wait_for_process_exit(launcher_pid)
             os._exit(0)
 
         threading.Thread(target=close_application, daemon=True, name="software-update-shutdown").start()
         return {
             "status": "restart_scheduled",
             "target_app_version": ready["app_version"],
+            "backend_pid": backend_pid,
             "message": "The application will close and apply the verified update.",
         }
 

@@ -113,6 +113,22 @@ class UpdateReleaseContractTests(unittest.TestCase):
         self.assertIn("ROLLBACK_BACKUP_KEEP_COUNT = 1", storage_source)
         self.assertIn("UPDATE_CACHE_LIMIT_BYTES = 2 * 1024 * 1024 * 1024", storage_source)
 
+    def test_restart_ui_and_backend_prevent_duplicate_updaters(self):
+        settings = (ROOT / "static" / "pages" / "settings.js").read_text(encoding="utf-8")
+        service = (ROOT / "src" / "update" / "service.py").read_text(encoding="utf-8")
+        self.assertIn("softwareUpdateRestartRequested", settings)
+        self.assertIn("self._restart_scheduled", service)
+        self.assertIn("backend_pid = os.getpid()", service)
+        self.assertIn("_wait_for_process_exit(launcher_pid)", service)
+
+    def test_signed_update_contract_binds_runtime_dependency_identity(self):
+        builder = (ROOT / "src" / "update" / "package_builder.py").read_text(encoding="utf-8")
+        transaction = (ROOT / "src" / "update" / "transaction.py").read_text(encoding="utf-8")
+        schema = (ROOT / "updates" / "schemas" / "update-manifest.schema.json").read_text(encoding="utf-8")
+        self.assertIn('"runtime_identity"', builder)
+        self.assertIn("installed_runtime_dist_info_names", transaction)
+        self.assertIn('"runtime_identity"', schema)
+
 
 if __name__ == "__main__":
     unittest.main()

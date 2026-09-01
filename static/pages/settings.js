@@ -7,6 +7,7 @@ import { followServerTask } from "../core/task_progress.js";
 
 let migrationScan = null;
 let softwareUpdateState = null;
+let softwareUpdateRestartRequested = false;
 
 export function initSettings() {
   qs("#btn-theme-toggle")?.addEventListener("click", () => {
@@ -122,20 +123,29 @@ async function importSoftwareUpdate(event) {
 }
 
 async function applySoftwareUpdate() {
-  if (!softwareUpdateState?.can_apply) return;
+  if (!softwareUpdateState?.can_apply || softwareUpdateRestartRequested) return;
   const confirmed = window.confirm(t("updates.applyConfirm", {
     version: softwareUpdateState.ready_package?.app_version || "",
   }));
   if (!confirmed) return;
-  await apiFetch("/api/updates/apply", {
-    method: "POST",
-    taskProgress: {
-      kind: "software-update",
-      title: t("updates.preparingRestart"),
-      inlineHost: qs(".software-update-settings"),
-    },
-  });
-  eventBus.emit("toast", t("updates.restarting"));
+  const button = qs("#btn-apply-update");
+  softwareUpdateRestartRequested = true;
+  if (button) button.disabled = true;
+  try {
+    await apiFetch("/api/updates/apply", {
+      method: "POST",
+      taskProgress: {
+        kind: "software-update",
+        title: t("updates.preparingRestart"),
+        inlineHost: qs(".software-update-settings"),
+      },
+    });
+    eventBus.emit("toast", t("updates.restarting"));
+  } catch (error) {
+    softwareUpdateRestartRequested = false;
+    if (button) button.disabled = false;
+    eventBus.emit("toast", error.message);
+  }
 }
 
 async function cleanUpdateCache() {

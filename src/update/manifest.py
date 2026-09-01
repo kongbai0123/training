@@ -44,6 +44,16 @@ def validate_manifest(payload: dict[str, Any]) -> dict[str, Any]:
     runtime = payload.get("runtime_version")
     if not isinstance(runtime, str) or not runtime.startswith("r"):
         raise ValueError("Update manifest has an invalid runtime version.")
+    runtime_identity = payload.get("runtime_identity")
+    if runtime_identity is not None:
+        if not isinstance(runtime_identity, dict):
+            raise ValueError("Update manifest runtime identity must be an object.")
+        dist_info = runtime_identity.get("dist_info")
+        if not isinstance(dist_info, list) or any(not isinstance(item, str) or not item for item in dist_info):
+            raise ValueError("Update manifest runtime identity must contain dist_info names.")
+        folded_dist_info = [item.casefold() for item in dist_info]
+        if folded_dist_info != sorted(set(folded_dist_info)):
+            raise ValueError("Update manifest runtime dist_info names must be sorted and unique.")
     supported = payload.get("supported_from")
     if not isinstance(supported, list) or not supported:
         raise ValueError("Update manifest must declare supported_from versions.")
@@ -77,6 +87,10 @@ def validate_manifest(payload: dict[str, Any]) -> dict[str, Any]:
             raise ValueError(f"Invalid update file digest: {path}")
         int(digest, 16)
         total += size
+    if runtime_identity is None and any(
+        str(entry.get("path", "")).casefold() == "visiontrainingstudio.exe" for entry in files
+    ):
+        raise ValueError("Updates that replace the main executable must declare runtime identity.")
     if total > MAX_UPDATE_UNCOMPRESSED_BYTES:
         raise ValueError("Update package exceeds the allowed uncompressed size.")
 

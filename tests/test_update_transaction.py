@@ -92,6 +92,22 @@ class UpdateTransactionTests(unittest.TestCase):
             self.assertEqual((install / "_internal" / "runtime.dll").read_bytes(), b"runtime-r1")
             self.assertEqual(json.loads((install / "_internal" / "version.json").read_text())["version"], "0.1.4")
 
+    def test_prepare_rejects_mislabeled_installed_runtime(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            install, package, public_key = self._fixture(root)
+            unexpected = install / "_internal" / "pydantic_core-2.46.4.dist-info"
+            unexpected.mkdir()
+            (unexpected / "METADATA").write_text("Version: 2.46.4", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "runtime identity does not match"):
+                prepare_update(
+                    package,
+                    install,
+                    install / "_internal" / "version.json",
+                    public_key,
+                    root / "updates",
+                )
+
     def test_apply_failure_rolls_back_every_replaced_file(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

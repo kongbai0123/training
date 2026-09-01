@@ -35,6 +35,7 @@ Other `_internal` content is runtime-owned and requires a full installer when ch
 - The package may contain at most 20,000 files and 1 GiB uncompressed content.
 - The signed key ID must match the embedded public key.
 - The source version and runtime must be compatible before staging.
+- An update replacing `VisionTrainingStudio.exe` must include a signed runtime identity listing the baseline `.dist-info`/`.egg-info` directories; the updater rejects an installation whose frozen dependency versions differ, even when both builds were mistakenly given the same runtime label. Older static-only packages remain compatible.
 
 ## Private-key policy
 

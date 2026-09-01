@@ -10,6 +10,7 @@ import uuid
 import zipfile
 
 from src.update.manifest import VerifiedUpdate, verify_update_archive
+from src.update.baseline import installed_runtime_dist_info_names
 from src.update.paths import require_app_mutable_path
 from src.update.security import sha256_file
 from src.update.versioning import VersionInfo, ensure_update_compatible, load_version_info
@@ -94,6 +95,18 @@ def prepare_update(
         }
     )
     ensure_update_compatible(current, target, list(verified.manifest["supported_from"]))
+    runtime_identity = verified.manifest.get("runtime_identity")
+    if runtime_identity:
+        expected_runtime = list(runtime_identity["dist_info"])
+        installed_runtime = installed_runtime_dist_info_names(install_dir)
+        if installed_runtime != expected_runtime:
+            missing = sorted(set(expected_runtime) - set(installed_runtime))
+            unexpected = sorted(set(installed_runtime) - set(expected_runtime))
+            raise ValueError(
+                "Installed runtime identity does not match the update baseline; "
+                "use the full installer. "
+                f"missing={missing[:3]}, unexpected={unexpected[:3]}"
+            )
 
     transaction_id = f"update_{target.app_version}_{uuid.uuid4().hex[:12]}"
     update_root = update_root.resolve()

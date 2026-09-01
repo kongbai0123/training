@@ -13,6 +13,32 @@ from src.update.versioning import load_version_info
 IGNORED_DIST_FILES = frozenset({"portable.mode", "portable_manifest.json"})
 
 
+def runtime_dist_info_names(files: dict[str, dict[str, Any]]) -> list[str]:
+    """Return the frozen third-party distribution identity for a runtime baseline."""
+    names: set[str] = set()
+    for relative, metadata in files.items():
+        if metadata.get("category") != "runtime":
+            continue
+        parts = Path(relative).parts
+        if len(parts) < 3 or parts[0] != "_internal":
+            continue
+        directory = parts[1]
+        if directory.endswith((".dist-info", ".egg-info")):
+            names.add(directory.casefold())
+    return sorted(names)
+
+
+def installed_runtime_dist_info_names(install_dir: Path) -> list[str]:
+    internal = install_dir.resolve() / "_internal"
+    if not internal.is_dir():
+        return []
+    return sorted(
+        path.name.casefold()
+        for path in internal.iterdir()
+        if path.is_dir() and path.name.endswith((".dist-info", ".egg-info"))
+    )
+
+
 def scan_dist_files(dist: Path) -> dict[str, dict[str, Any]]:
     dist = dist.resolve()
     if not (dist / "VisionTrainingStudio.exe").is_file():

@@ -53,6 +53,17 @@ installer\VisionTrainingStudio.iss
 scripts\build_installer.bat
 ```
 
+正式發佈必須在憑證存放區安裝含私鑰的可信程式碼簽章憑證，並設定：
+
+```powershell
+$env:VTS_SIGN_CERT_SHA1 = "<certificate thumbprint>"
+scripts\build_installer.bat
+```
+
+建置流程會先簽署主程式與 updater，再建立並簽署 installer。沒有設定憑證時仍可建立隔離測試用安裝器，但產物會標示為 internal-QA only；`publish_update_release.ps1` 會拒絕未通過 Authenticode 驗證的 installer。禁止使用自簽憑證冒充正式簽章。
+
+完整離線 GPU 安裝器的容量上限預設為 2 GiB。這個套件刻意包含 CUDA/PyTorch runtime，容量不是可攜性缺陷；若超過上限，必須先稽核相依內容，不能直接放寬發佈門檻。
+
 輸出預期位置：
 
 ```text

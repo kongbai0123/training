@@ -37,11 +37,14 @@ try {
     if ($version -eq $UpdaterBootstrapVersion -and -not $hasSetup) {
         throw "Updater bootstrap releases must include the full installer: $setupName"
     }
-    if ($version -ne $UpdaterBootstrapVersion -and -not $hasUpdate) {
-        throw "Missing required signed update asset: $updateName"
+    if ($version -ne $UpdaterBootstrapVersion -and -not $hasUpdate -and -not $hasSetup) {
+        throw "A signed incremental update or a full installer is required."
     }
     if (-not $hasChecksums) {
         throw "Every release must include a SHA256SUMS.txt asset."
+    }
+    foreach ($setupAsset in @($Assets | Where-Object { (Split-Path $_ -Leaf) -eq $setupName })) {
+        & (Join-Path $PSScriptRoot "verify_windows_release.ps1") -ArtifactPath $setupAsset
     }
     if (-not (git tag --list $Tag)) {
         git tag -a $Tag -m "Vision Training Studio $version"

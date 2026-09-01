@@ -8,7 +8,7 @@ import tempfile
 from typing import Any
 import zipfile
 
-from src.update.baseline import load_runtime_baseline, scan_dist_files
+from src.update.baseline import load_runtime_baseline, runtime_dist_info_names, scan_dist_files
 from src.update.paths import is_app_mutable_path
 from src.update.security import load_private_key, public_key_id, sign_manifest
 from src.update.versioning import load_version_info
@@ -83,6 +83,9 @@ def build_update_package(
         "package_type": "application-update",
         "target_app_version": str(target_version.app_version),
         "runtime_version": target_version.runtime_version,
+        "runtime_identity": {
+            "dist_info": runtime_dist_info_names(baseline_files),
+        },
         "supported_from": [str(baseline["app_version"])],
         "created_at": datetime.now(timezone.utc).isoformat(),
         "requires_restart": True,
