@@ -43,7 +43,7 @@ jobs:
         run: python -m compileall -q src app.py launcher.py
       - name: Upload test report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pytest-report
           path: report.xml
