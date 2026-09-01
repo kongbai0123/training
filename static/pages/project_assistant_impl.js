@@ -179,7 +179,7 @@ function getPageContextBadge(pageId) {
   const labels = {
     dashboard: t("navDashboard"),
     dataset: t("navDataset"),
-    labelme: t("navLabelMe"),
+    labelme: t("shell.nav.labelme"),
     split: t("navSplit"),
     augmentation: t("navAugmentation"),
     training: t("navTraining"),

@@ -22,6 +22,15 @@ class LabelMeReviewAndSplitLayoutTests(unittest.TestCase):
         self.assertIn("/failed-sources/clear", self.labelme_js)
         self.assertIn("selectedImportReviewFiles", self.labelme_js)
 
+    def test_sidebar_uses_image_annotation_and_labelme_is_an_internal_tool(self):
+        self.assertIn('data-i18n="shell.nav.labelme">影像標註</span>', self.html)
+        header_start = self.html.index('<div class="page-header labelme-page-header">')
+        layout_start = self.html.index('<div class="labelme-clean-layout">', header_start)
+        page_header = self.html[header_start:layout_start]
+        self.assertIn('id="btn-open-labelme"', page_header)
+        self.assertIn('data-i18n="labelme.launchExternalEditor"', page_header)
+        self.assertEqual(self.html.count('id="btn-open-labelme"'), 1)
+
     def test_split_uses_two_by_two_workspace_with_spanning_distribution_panel(self):
         self.assertIn('class="panel-section split-config-panel"', self.html)
         self.assertIn('class="panel-section split-preview-panel"', self.html)
@@ -48,6 +57,7 @@ class LabelMeReviewAndSplitLayoutTests(unittest.TestCase):
     def test_new_review_and_distribution_text_is_bilingual(self):
         keys = [
             "labelme.reviewQueueHelp",
+            "labelme.launchExternalEditor",
             "labelme.clearSelected",
             "labelme.review.clearConfirm",
             "labelme.review.cleared",

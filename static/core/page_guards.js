@@ -33,8 +33,8 @@ export function renderPageGuards(pageId, status) {
     guards.training.push(statusGuard("danger", "Training blocked", ["Dataset is missing."], "Import images from Dataset first."));
   }
   if (status.hasDataset && !status.labelme.synced) {
-    guards.training.push(statusGuard("danger", "Training blocked", ["LabelMe annotations are not synced."], "Open LabelMe and sync annotations before training."));
-    guards.split.push(statusGuard("info", "LabelMe pending", ["Split can be configured after LabelMe JSON is ready."], "Open LabelMe and sync annotations first."));
+    guards.training.push(statusGuard("danger", "Training blocked", ["Image annotations are not synced."], "Open Image Annotation and sync annotations before training."));
+    guards.split.push(statusGuard("info", "Annotations pending", ["Split can be configured after annotation JSON is ready."], "Open Image Annotation and sync annotations first."));
   }
   if (status.hasDataset && !status.splitComplete) {
     guards.training.push(statusGuard("danger", "Training blocked", ["Train / Val / Test split is missing."], "Create a split before training."));
@@ -55,7 +55,7 @@ export function renderPageGuards(pageId, status) {
       setHTML("#page-guards-container", activeGuards.join(""));
       const pageTitleMap = {
         dataset: "Dataset Page Status",
-        labelme: "LabelMe Page Status",
+        labelme: "Image Annotation Status",
         split: "Split Page Status",
         augmentation: "Augmentation Status",
         training: "Training Status",

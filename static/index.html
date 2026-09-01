@@ -83,7 +83,7 @@
 
           <div id="cnn-mode-nav" class="training-mode-nav hidden">
             <button class="sidebar-item" data-page="dataset" data-cnn-nav="dataset"><i class="fa-solid fa-images"></i><span data-i18n="shell.nav.dataset">資料集</span></button>
-            <button class="sidebar-item" data-page="labelme" data-cnn-nav="labelme"><i class="fa-solid fa-pen-nib"></i><span data-i18n="shell.nav.labelme">LabelMe</span></button>
+            <button class="sidebar-item" data-page="labelme" data-cnn-nav="labelme"><i class="fa-solid fa-pen-ruler"></i><span data-i18n="shell.nav.labelme">影像標註</span></button>
             <button class="sidebar-item" data-page="split" data-cnn-nav="split"><i class="fa-solid fa-code-branch"></i><span data-i18n="shell.nav.split">資料分割</span></button>
             <button class="sidebar-item" data-page="augmentation" data-cnn-nav="augmentation"><i class="fa-solid fa-wand-magic-sparkles"></i><span data-i18n="shell.nav.augmentation">資料增強</span></button>
             <button class="sidebar-item" data-page="training" data-cnn-nav="training"><i class="fa-solid fa-microchip"></i><span data-i18n="shell.nav.training">模型訓練</span></button>
@@ -568,13 +568,16 @@
           <div class="page-header labelme-page-header">
             <div>
               <h1>
-                <span data-i18n="labelme.title">LabelMe Annotation Manager</span>
-                <span class="info-icon" data-tooltip="LabelMe is an external annotation tool. This page manages paths, JSON sync, review, and conversion." data-i18n-tooltip="labelme.titleTooltip">i</span>
+                <span data-i18n="labelme.title">Image Annotation</span>
+                <span class="info-icon" data-tooltip="Manage image annotations here. LabelMe remains available as an optional external editor." data-i18n-tooltip="labelme.titleTooltip">i</span>
               </h1>
-              <p data-i18n="labelme.subtitle">Manage the LabelMe workspace, sync JSON annotations, and review issues before conversion.</p>
+              <p data-i18n="labelme.subtitle">Create, import, review, and export image annotations from one workspace.</p>
             </div>
             <div class="page-actions">
               <span class="badge badge-success" data-i18n="labelme.backendConnected">Backend Connected</span>
+              <button class="btn btn-secondary guarded" data-requires="project" id="btn-open-labelme">
+                <i class="fa-solid fa-up-right-from-square"></i> <span data-i18n="labelme.launchExternalEditor">啟動 LabelMe</span>
+              </button>
               <button class="btn btn-primary guarded" data-requires="project" id="btn-sync-labelme">
                 <i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="labelme.syncJson">Rescan annotation status</span>
               </button>
@@ -629,7 +632,7 @@
 
             <section class="panel-section labelme-workspace-panel">
               <div class="section-title">
-                <h2 data-i18n="labelme.workspace">Workspace</h2>
+                <h2 data-i18n="labelme.workspace">Annotation Storage</h2>
                 <span class="info-icon" data-tooltip="Images folder is opened by LabelMe. JSON folder stores annotation output." data-i18n-tooltip="labelme.workspaceTooltip">i</span>
               </div>
               <div class="path-list labelme-path-list">
@@ -640,7 +643,6 @@
                 <div class="path-row"><span data-i18n="labelme.command">Command</span><code id="labelme-command">No project loaded</code><button class="icon-btn guarded" data-requires="project" id="btn-copy-labelme-command" title="Copy" data-i18n-title="common.copy"><i class="fa-regular fa-copy"></i></button></div>
               </div>
               <div class="button-row labelme-primary-actions">
-                <button class="btn btn-primary guarded" data-requires="project" id="btn-open-labelme"><i class="fa-solid fa-up-right-from-square"></i> <span data-i18n="labelme.openLabelMe">Open LabelMe</span></button>
                 <button class="btn btn-secondary guarded" data-requires="project" id="btn-refresh-labelme"><i class="fa-solid fa-rotate"></i> <span data-i18n="labelme.refreshStatus">Refresh Status</span></button>
               </div>
             </section>

@@ -711,7 +711,7 @@ function buildDatasetRightPanel(status) {
       { label: "Duplicates", value: String(duplicates), badgeType: duplicates > 0 ? "warning" : null },
       { label: "Invalid", value: String(invalid), badgeType: invalid > 0 ? "danger" : null }
     ],
-    actions: ["Import images or a folder.", "Run quality check before labeling.", "Open LabelMe after images are ready."],
+    actions: ["Import images or a folder.", "Run quality check before labeling.", "Open Image Annotation after images are ready."],
     warnings
   };
 }
@@ -733,7 +733,7 @@ function buildLabelMeRightPanel(status) {
       { label: "Invalid", value: String(lm.invalidJson || 0), badgeType: lm.invalidJson > 0 ? "danger" : null },
       { label: "Completion", value: `${status.labelme.completionRate || 0}%`, badgeType: (status.labelme.completionRate || 0) >= 95 ? "success" : "neutral" }
     ],
-    actions: ["Open LabelMe with the project image folder.", "Rescan annotation status after editing.", "Review invalid or unknown labels before Split."],
+    actions: ["Annotate in the workspace or launch LabelMe as an external editor.", "Rescan annotation status after editing.", "Review invalid or unknown labels before Split."],
     warnings
   };
 }
@@ -839,7 +839,7 @@ function buildTrainingRightPanel(status) {
 
   const warnings = [];
   if (!status.hasDataset) warnings.push("Dataset is missing. Import images before training.");
-  if (!status.labelme.synced) warnings.push("LabelMe annotations are not synced.");
+  if (!status.labelme.synced) warnings.push("Image annotations are not synced.");
   if (!status.splitComplete) warnings.push("Train / Val / Test split is missing.");
   if (gpu === "CPU" || gpu.includes("unavailable") || gpu.includes("Backend")) warnings.push("GPU is unavailable or backend health is missing; training may be slow.");
 
