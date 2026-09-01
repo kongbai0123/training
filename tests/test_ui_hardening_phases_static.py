@@ -57,6 +57,16 @@ class UIHardeningPhasesStaticTests(unittest.TestCase):
         self.assertIn(".training-flow-phases", dashboard_css)
         self.assertIn(".training-flow-stage", dashboard_css)
 
+    def test_cnn_public_navigation_uses_image_annotation_name(self):
+        zh_tw = self.read("static", "state", "i18n", "zh-TW.js")
+        english = self.read("static", "state", "i18n", "en.js")
+        self.assertIn('"dashboard.module.cnn.capabilities": "影像資料集 · 影像標註', zh_tw)
+        self.assertIn('"trainingFlow.cnn.stage.annotation": "影像標註"', zh_tw)
+        self.assertIn('"dashboard.module.cnn.capabilities": "Image data · Image annotation', english)
+        self.assertIn('"trainingFlow.cnn.stage.annotation": "Image Annotation"', english)
+        self.assertNotIn('"dashboard.module.cnn.capabilities": "影像資料集 · LabelMe', zh_tw)
+        self.assertNotIn('"dashboard.module.cnn.capabilities": "Image data · LabelMe', english)
+
     def test_phase5_deployment_decision_card_is_connected_to_compare(self):
         decision_js = self.read("static", "core", "deployment_decision.js")
         compare_js = self.read("static", "pages", "model_compare.js")

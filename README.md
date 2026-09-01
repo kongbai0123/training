@@ -8,10 +8,10 @@
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](docs/INSTALL.md)
 [![Version](https://img.shields.io/badge/version-0.2.0-2563EB)](VERSION)
-[![Release](https://img.shields.io/badge/release-v0.2.0%20Update-16A34A)](https://github.com/kongbai0123/training/releases/tag/v0.2.0)
+[![Distribution](https://img.shields.io/badge/distribution-Internal%20QA-F59E0B)](docs/release_strategy.md)
 [![Runtime](https://img.shields.io/badge/end--user%20runtime-No%20Python%20required-0F766E)](docs/INSTALL.md)
 
-[查看最新 Release](https://github.com/kongbai0123/training/releases/latest) ·
+[查看發佈狀態](#版本與發佈狀態) ·
 [檢視 main 原始碼](https://github.com/kongbai0123/training/tree/main) ·
 [安裝說明](docs/INSTALL.md) ·
 [使用指南](docs/USER_GUIDE.md) ·
@@ -26,11 +26,13 @@
 - `main` 保存原始碼、測試、建置腳本與文件。大型 `dist/`、`installer/output/` 和 `.exe` 產物依規則不直接提交進 Git。
 - 從原始碼執行 `scripts\package.bat` 後，主程式位於 `dist\VisionTrainingStudio\VisionTrainingStudio.exe`。
 - 執行 `scripts\build_installer.bat` 後，完整安裝器位於 `installer\output\VisionTrainingStudio_Setup_<version>.exe`。
-- 對外下載的 EXE 應放在 [GitHub Releases](https://github.com/kongbai0123/training/releases)，且必須通過 checksum 與正式程式碼簽章驗證；沒有 EXE 資產時，代表該 Release 目前只提供原始碼或更新資料。
+- 對外下載的 EXE 應放在 [GitHub Releases](https://github.com/kongbai0123/training/releases)，且必須通過 checksum 與可信任的 Windows 程式碼簽章驗證；repo 內不會直接存放大型 EXE。
 
-> 目前本機已建立 0.2.0 完整安裝器，但在取得可信任的 Windows 程式碼簽章憑證前，只能作為內部 QA 產物，不會冒充正式簽章版上傳。
+> 目前本機已建立 0.2.0 full package，但尚未取得可信任的 Windows 程式碼簽章憑證，因此只屬於內部 QA 產物。正式對外發佈目前暫停；不得使用或重新發佈舊 `0.2.0 runtime-r1` 增量包。
 
 ![Vision Training Studio 應用程式總覽](docs/assets/app-overview.png)
+
+> 上圖由目前 `main` 的實際介面擷取；首頁公開入口為「影像標註」，LabelMe 僅保留為標註工作區內的可選啟動工具。
 
 ## 軟體用途
 
@@ -65,17 +67,16 @@ Vision Training Studio 是以一般使用者操作為核心的 Windows 本機訓
 - CPU 可執行；大型模型建議使用支援 CUDA 的 NVIDIA GPU。
 - 使用安裝版不需要另外安裝 Python 或 Node.js。
 
-### 安裝步驟
+### 對外安裝狀態
 
-1. 前往 [GitHub Releases](https://github.com/kongbai0123/training/releases/latest)。
-2. 下載 `VisionTrainingStudio_Setup_<version>.exe`。
-3. 如需驗證檔案完整性，同時下載對應的 `SHA256SUMS.txt`。
-4. 關閉正在執行的舊版程式，再啟動安裝程式。
+目前沒有可宣稱為正式簽章版的公開 EXE。取得可信任的 Windows Code Signing 憑證、設定 `VTS_SIGN_CERT_SHA1` 並重新建立 full package 後，才會把安裝器與 `SHA256SUMS.txt` 放到 GitHub Releases。舊 `0.2.0 runtime-r1` 增量包不在支援路徑內。
+
+內部 QA 可在建置機執行 `scripts\build_installer.bat`，完成後由 `installer\output` 取得完整安裝器。安裝前請關閉正在執行的舊版程式，並核對 SHA-256。
 
 PowerShell 驗證範例：
 
 ```powershell
-Get-FileHash .\VisionTrainingStudio_Setup_0.1.4.exe -Algorithm SHA256
+Get-FileHash .\VisionTrainingStudio_Setup_<version>.exe -Algorithm SHA256
 ```
 
 輸出的雜湊值應與 Release 隨附的 checksum 相同。
@@ -86,7 +87,7 @@ Get-FileHash .\VisionTrainingStudio_Setup_0.1.4.exe -Algorithm SHA256
 |---|---|---|---|
 | 專案設定 | 圖片分類、物件偵測、物件輪廓分割、畫面區域分割 | 分類、回歸、LSTM／GRU／BiLSTM／XGBoost | 每列分類或連續數值預測 |
 | 資料匯入 | 圖片、ZIP、YOLO、分類資料夾與既有標註 | CSV 與 CSV ZIP | UTF-8 CSV |
-| 資料準備 | LabelMe、資料品質檢查、Train／Val／Test 分割、資料增強 | 特徵與目標設定、時間與序列欄位、序列切片 | 數值特徵、目標欄位、缺失值中位數補值、可重現切分 |
+| 資料準備 | 影像標註、資料品質檢查、Train／Val／Test 分割、資料增強 | 特徵與目標設定、時間與序列欄位、序列切片 | 數值特徵、目標欄位、缺失值中位數補值、可重現切分 |
 | 模型訓練 | YOLO、RT-DETR、D-FINE、TorchVision、U-Net 等 | LSTM、GRU、BiLSTM、XGBoost | 獨立 Tabular XGBoost backend（CPU） |
 | 評估 | mAP、Precision、Recall、分類與分割指標 | Accuracy、Macro-F1、MAE、RMSE 與殘差診斷 | Accuracy、Macro-F1、MAE、RMSE、R² 與特徵重要度 |
 | 比較與匯出 | 比較多個 Run，匯出權重、ONNX、SVG 圖表與報告 | 比較多個 Run，匯出模型套件、Schema、Scaler 與報告 | 比較 Run、模型生命週期、單筆／批次推論與可攜模型套件 |
@@ -117,7 +118,7 @@ Tabular 專案把 CSV 的每一列視為獨立樣本，不會改寫或取代 RNN
 ### 資料集與標註
 
 - 圖片、CSV、ZIP 與既有標註匯入。
-- 內建 LabelMe 工作區及 Polygon／BBox 標註流程。
+- 內建影像標註工作區及 Polygon／BBox 標註流程；LabelMe 為工作區內的可選外部編輯器啟動鍵。
 - 資料品質檢查、類別統計與 Train／Val／Test 分割。
 - CNN 天候、光照、模糊、雜訊、幾何與遮擋資料增強。
 - 增強前後即時比較與 Polygon／BBox 幾何重映射檢查。
@@ -137,39 +138,30 @@ Tabular 專案把 CSV 的每一列視為獨立樣本，不會改寫或取代 RNN
 - 長時間工作提供統一進度、失敗原因與復原提示。
 - 軟體更新採用簽章、SHA-256、備份、交易式替換與失敗回復。
 
-## 版本與更新
+## 版本與發佈狀態
 
 此區只放版本發布、更新機制與發布驗證內容；其他安裝、使用、架構及補充文件請見下一節。
 
 ### 目前版本
 
-- **最新穩定版：v0.2.0**
-- **最新完整安裝基準：v0.1.6**
-- [下載 v0.1.6 完整安裝程式](https://github.com/kongbai0123/training/releases/tag/v0.1.6)
-- [下載 v0.2.0 增量更新包與 SHA-256 checksum](https://github.com/kongbai0123/training/releases/tag/v0.2.0)
+- **main 原始碼版本：v0.2.0**
+- **交付狀態：內部 QA，尚未正式簽章**
+- **下一個正式對外候選：重新建置且完成可信任簽章的 full package**
 - [完整版本變更紀錄](CHANGELOG.md)
 
-新安裝或尚未具備目前更新執行環境的使用者，請先安裝 v0.1.6 完整安裝程式。v0.2.0 為 `runtime-r1` 增量更新，只接受 v0.1.12；較舊版本須依序套用相容更新，不能直接跳版。設定頁會檢查版本與 runtime，相容時才提供下載與套用，不相容時會引導使用完整安裝程式。
+### 發佈安全門檻
 
-### 增量更新（由新到舊）
-
-| 目標版本 | 來源版本 | 發布內容 |
-|---|---|---|
-| v0.2.0 | v0.1.12 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.2.0) |
-| v0.1.12 | v0.1.11 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.12) |
-| v0.1.11 | v0.1.10 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.11) |
-| v0.1.10 | v0.1.9 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.10) |
-| v0.1.9 | v0.1.8 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.9) |
-| v0.1.8 | v0.1.7 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.8) |
-| v0.1.7 | v0.1.6 | [更新包、checksum 與版本說明](https://github.com/kongbai0123/training/releases/tag/v0.1.7) |
-
-`.vtsupdate` 是相容版本間的增量更新檔，不是完整安裝程式。更新成功後，軟體會清除下載與暫存內容，並只保留最近一份回復備份。
+1. 不再使用或重新發佈 `0.2.0 runtime-r1` 增量包。
+2. 正式 Windows 安裝器必須由一致且鎖定的依賴環境重新建置。
+3. 設定 `VTS_SIGN_CERT_SHA1`，完成可信任的 Authenticode 簽章與時間戳。
+4. 執行 release 驗證腳本並核對 SHA-256 後，才可上傳 GitHub Releases。
+5. 未簽章安裝器僅供內部 QA，不得標示為正式版。
 
 ### 發布驗證紀錄
 
 以下依版本由新到舊排列：
 
-1. [v0.2.0 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-08-25_0.2.0.md)
+1. [v0.2.0 歷史增量更新驗證紀錄（已退出支援路徑）](docs/RELEASE_VALIDATION_2026-08-25_0.2.0.md)
 2. [v0.1.12 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-08-24_0.1.12.md)
 3. [v0.1.11 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-07-24_0.1.11.md)
 4. [v0.1.10 增量更新驗證紀錄](docs/RELEASE_VALIDATION_2026-07-24_0.1.10.md)
@@ -278,4 +270,4 @@ docs\         使用、開發、部署、驗證與安全文件
 
 ## 發布標準
 
-正式版本必須通過相關自動化測試、打包檢查、安裝版啟動驗證及發布資產 checksum 核對。未完成乾淨環境與安裝版驗證前，不應宣稱版本已可正式交付。
+正式版本必須通過相關自動化測試、打包檢查、安裝版啟動驗證、發布資產 checksum 核對與可信任的 Windows 程式碼簽章驗證。未簽章安裝器只能作為內部 QA 產物；未完成乾淨環境與安裝版驗證前，不應宣稱版本已可正式交付。
