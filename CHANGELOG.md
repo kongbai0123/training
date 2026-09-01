@@ -13,6 +13,7 @@ All notable changes to Vision Training Studio are tracked here.
 - Rejected incremental updates when the installed frozen dependency identity differs from the signed runtime baseline, preventing Pydantic/Pydantic Core and similar mixed-runtime startup failures.
 - Blocked unsigned Windows installers from the formal GitHub release flow while retaining an explicit internal-QA validation mode.
 - Updated the Inno Setup x64 architecture identifiers and strengthened full-installer compression and size validation.
+- Updated official GitHub Actions to their Node.js 24-based major versions, removing the runner's Node.js 20 deprecation warning.
 
 ## [0.2.0] - 2026-08-25
 
