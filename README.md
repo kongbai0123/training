@@ -11,14 +11,24 @@
 [![Release](https://img.shields.io/badge/release-v0.2.0%20Update-16A34A)](https://github.com/kongbai0123/training/releases/tag/v0.2.0)
 [![Runtime](https://img.shields.io/badge/end--user%20runtime-No%20Python%20required-0F766E)](docs/INSTALL.md)
 
-[下載完整安裝版](https://github.com/kongbai0123/training/releases/tag/v0.1.6) ·
-[取得最新更新](https://github.com/kongbai0123/training/releases/tag/v0.2.0) ·
+[查看最新 Release](https://github.com/kongbai0123/training/releases/latest) ·
+[檢視 main 原始碼](https://github.com/kongbai0123/training/tree/main) ·
 [安裝說明](docs/INSTALL.md) ·
 [使用指南](docs/USER_GUIDE.md) ·
 [模型支援](docs/MODEL_SUPPORT.md) ·
 [疑難排解](docs/TROUBLESHOOTING.md)
 
 </div>
+
+## Repo、README 與 EXE 說明
+
+- **Repo** 是整個 `kongbai0123/training` GitHub 專案；README 只是 repo 首頁顯示的這一份說明文件。
+- `main` 保存原始碼、測試、建置腳本與文件。大型 `dist/`、`installer/output/` 和 `.exe` 產物依規則不直接提交進 Git。
+- 從原始碼執行 `scripts\package.bat` 後，主程式位於 `dist\VisionTrainingStudio\VisionTrainingStudio.exe`。
+- 執行 `scripts\build_installer.bat` 後，完整安裝器位於 `installer\output\VisionTrainingStudio_Setup_<version>.exe`。
+- 對外下載的 EXE 應放在 [GitHub Releases](https://github.com/kongbai0123/training/releases)，且必須通過 checksum 與正式程式碼簽章驗證；沒有 EXE 資產時，代表該 Release 目前只提供原始碼或更新資料。
+
+> 目前本機已建立 0.2.0 完整安裝器，但在取得可信任的 Windows 程式碼簽章憑證前，只能作為內部 QA 產物，不會冒充正式簽章版上傳。
 
 ![Vision Training Studio 應用程式總覽](docs/assets/app-overview.png)
 
@@ -28,7 +38,7 @@ Vision Training Studio 是以一般使用者操作為核心的 Windows 本機訓
 
 - 建立與管理 CNN、RNN、Tabular 專案。
 - 匯入圖片、標註資料、序列 CSV、表格 CSV 與既有模型。
-- 執行 LabelMe 標註、資料分割、資料增強與自動標註。
+- 執行影像標註、資料分割、資料增強與自動標註；需要時可從影像標註工作區啟動內部 LabelMe 工具。
 - 設定模型與訓練參數，使用 CPU 或 NVIDIA GPU 執行訓練。
 - 查看逐 Epoch 指標、正式評估結果、Run 比較與模型產物。
 - 匯出模型、評估圖表、報告及可供後續推論使用的套件。
