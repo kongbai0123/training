@@ -92,6 +92,8 @@ Get-FileHash .\VisionTrainingStudio_Setup_<version>.exe -Algorithm SHA256
 | 評估 | mAP、Precision、Recall、分類與分割指標 | Accuracy、Macro-F1、MAE、RMSE 與殘差診斷 | Accuracy、Macro-F1、MAE、RMSE、R² 與特徵重要度 |
 | 比較與匯出 | 比較多個 Run，匯出權重、ONNX、SVG 圖表與報告 | 比較多個 Run，匯出模型套件、Schema、Scaler 與報告 | 比較 Run、模型生命週期、單筆／批次推論與可攜模型套件 |
 
+三種專案共用同一個「評估」入口與 Run 資料契約，但不共用錯誤的任務假設：CNN 顯示影像與定位結果，RNN 顯示序列分類或殘差診斷，Tabular 顯示逐列分類／回歸結果與特徵重要度。訓練頁用來監看「本次如何訓練」，評估頁則用來判斷「完成後的產物是否達到業務門檻」；因此不再為 Tabular 建立一套重複的評估流程，也不會把 BBox／Polygon 或 Window／Stride 控制項放進不相容的模型頁面。
+
 ### CNN 影像工作流程
 
 ![CNN 影像訓練流程](docs/assets/cnn-training-flow.png)
@@ -128,7 +130,7 @@ Tabular 專案把 CSV 的每一列視為獨立樣本，不會改寫或取代 RNN
 - 模型依任務類型分類顯示，清楚區分已安裝、需安裝與任務相容性。
 - CPU／CUDA 裝置選擇、早停、AMP、批次大小與資料載入設定。
 - 訓練狀態、目前 Epoch、進度、執行時間與停止原因。
-- 評估圖表依指標拆分顯示，並於每個 Epoch 完成後更新。
+- 訓練頁顯示即時 Epoch 與收斂狀態；共用評估頁只讀取已完成 Run，呈現標準化指標與任務專屬診斷。
 - 訓練完成後沿用同一份 Run 資料產生正式評估、比較與匯出內容。
 
 ### 本機資料與安全

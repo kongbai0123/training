@@ -73,7 +73,7 @@ RNN deep learning backend 仍屬 beta；XGBoost baseline 適合作為 tabular / 
 3. 選擇數值 feature columns、target column，以及選用的 split／ID column。
 4. 確認 Train／Val／Test 比例與 seed；若 CSV 自帶 split 欄位，可使用 `train`、`val`、`test`。
 5. 就緒檢查通過後，以 CPU 執行獨立 `xgboost_tabular` backend。
-6. 查看驗證指標與 feature importance。
+6. 從共用「評估」入口查看驗證指標與 feature importance。
 7. 使用單筆 JSON 或批次 CSV 推論。
 8. 在模型版本中心依序標記「待驗證 → 已驗證 → 正式模型 → 已淘汰」，或比較 Run 並匯出模型套件。
 
@@ -132,11 +132,23 @@ weights/
 - 「正在搜尋」表示系統正在比對目前專案來源，完成前不會重複送出。
 - 回答沒有引用來源時不應作為決策依據；先同步專案產物或匯入相關報告再提問。
 
-## 9. 評估圖表下載
+## 9. 共用評估入口
 
-CNN 與 RNN 評估圖表會以 SVG 向量格式直接儲存至目前 Windows 使用者的「下載」資料夾。若同名檔案已存在，系統會保留舊檔並建立帶編號的新檔，不會寫入 AppData 專案資料夾。
+CNN、RNN 與 Tabular 都從側邊欄的「評估」進入，系統只讀取已完成 Run 的 `metrics.json` 與 `metric_schema.json`，避免訓練中的暫時值被誤當成正式結果。
 
-## 10. 安全使用
+- 分類任務共用 Accuracy、Precision、Recall、Macro-F1 與混淆矩陣語意。
+- 回歸任務共用 MAE、RMSE、R² 與實際值／預測值／殘差語意。
+- CNN 額外顯示影像、定位或分割圖表。
+- RNN 額外保留序列情境，不顯示 BBox／Polygon 控制。
+- Tabular 額外顯示欄位／資料列情境與特徵重要度，不顯示 Window／Stride 控制。
+
+訓練頁的指標用於監看收斂、早停與執行狀態；共用評估頁用於審查已完成產物、比較業務門檻與診斷錯誤。兩者讀取同一份 Run，沒有重新訓練或複製另一份模型。
+
+## 10. 評估圖表下載
+
+有圖表產物的 Run 可將 SVG 向量圖直接儲存至目前 Windows 使用者的「下載」資料夾。若同名檔案已存在，系統會保留舊檔並建立帶編號的新檔，不會寫入 AppData 專案資料夾。
+
+## 11. 安全使用
 
 - 不要把私有資料集、模型權重或專案資料提交到 Git。
 - 不要手動移動 `projects/{project_id}` 內部資料夾，除非同時更新 project metadata。

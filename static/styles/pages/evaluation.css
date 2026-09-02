@@ -70,6 +70,7 @@
 #evaluation-verdict.usable { background: color-mix(in srgb, var(--primary) 18%, transparent); color: var(--primary); }
 #evaluation-verdict.attention { background: color-mix(in srgb, var(--warning) 18%, transparent); color: var(--warning); }
 #evaluation-verdict.weak { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
+#evaluation-verdict.review { background: color-mix(in srgb, var(--primary) 18%, transparent); color: var(--primary); }
 
 .evaluation-context-chips {
   display: flex;
@@ -136,6 +137,82 @@
 
 .evaluation-metric-grid .metric-card strong {
   font-size: 0.98rem;
+}
+
+.evaluation-capability-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.evaluation-capability-summary span {
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-panel-soft);
+  color: var(--text-soft);
+  font-size: 0.76rem;
+}
+
+.evaluation-diagnostics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.evaluation-diagnostics-grid.hidden,
+.evaluation-diagnostic-card.hidden {
+  display: none;
+}
+
+.evaluation-confusion-table,
+.evaluation-residual-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.evaluation-confusion-table th,
+.evaluation-confusion-table td,
+.evaluation-residual-table th,
+.evaluation-residual-table td {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  text-align: right;
+}
+
+.evaluation-confusion-table th:first-child,
+.evaluation-residual-table th:first-child,
+.evaluation-residual-table td:first-child {
+  text-align: left;
+}
+
+.evaluation-importance-list {
+  display: grid;
+  gap: 8px;
+}
+
+.evaluation-importance-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) minmax(120px, 2fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.evaluation-importance-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.evaluation-importance-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
 }
 
 .evaluation-plot-card {
@@ -288,6 +365,10 @@
   }
 
   .evaluation-guidance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .evaluation-diagnostics-grid {
     grid-template-columns: 1fr;
   }
 }

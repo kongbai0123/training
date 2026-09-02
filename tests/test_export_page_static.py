@@ -65,7 +65,7 @@ class ExportPageStaticTests(unittest.TestCase):
         self.assertIn("async function exportRnnArtifact", training_modes_js)
         self.assertIn("params.set(\"model_id\", selectedModelId)", training_modes_js)
         self.assertIn("resolveExportPath(data)", training_modes_js)
-        self.assertIn("../pages/training_modes.js?v=20260825-tabular-mvp", page_registry_js)
+        self.assertIn("../pages/training_modes.js?v=20260902-unified-evaluation", page_registry_js)
 
 
 if __name__ == "__main__":

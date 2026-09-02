@@ -21,11 +21,12 @@ class TabularWorkspaceStaticTests(unittest.TestCase):
         self.assertIn('id="tabular-workspace-root"', index_html)
         self.assertIn('data-tabular-nav="overview"', index_html)
         self.assertIn('data-tabular-nav="registry"', index_html)
+        self.assertIn('data-tabular-nav="evaluation" data-page="evaluation"', index_html)
         self.assertIn('data-project-mode="tabular"', index_html)
         self.assertIn('tabular_classification:', projects)
         self.assertIn('tabular_regression:', projects)
         self.assertIn('["cnn", "rnn", "tabular"]', modes)
-        self.assertIn('mode === "tabular" ? "tabular" : "training"', modes)
+        self.assertIn('if (mode === "tabular") eventBus.emit("navigate", "tabular")', modes)
         self.assertIn('initTabularWorkspace', registry)
         self.assertIn('renderTabularWorkspace', registry)
 
@@ -54,7 +55,9 @@ class TabularWorkspaceStaticTests(unittest.TestCase):
         ):
             self.assertIn(action, tabular)
 
-        self.assertIn("feature_importance", tabular)
+        evaluation = self.read("static", "pages", "evaluation.js")
+        self.assertNotIn("function renderFeatureImportance", tabular)
+        self.assertIn("function renderFeatureImportance", evaluation)
         self.assertIn('backend: "xgboost_tabular"', tabular)
         self.assertIn('architecture: "tabular"', tabular)
         self.assertIn('artifactRole === "best"', tabular)
@@ -69,11 +72,11 @@ class TabularWorkspaceStaticTests(unittest.TestCase):
         bootstrap = self.read("static", "core", "bootstrap.js")
         page_registry = self.read("static", "core", "page_registry.js")
 
-        self.assertIn("style.css?v=20260825-tabular-mvp", index_html)
-        self.assertIn("app.js?v=20260825-tabular-mvp", index_html)
-        self.assertIn("bootstrap.js?v=20260825-tabular-mvp", app_js)
-        self.assertIn("page_registry.js?v=20260825-tabular-mvp", bootstrap)
-        self.assertIn("training_modes.js?v=20260825-tabular-mvp", page_registry)
+        self.assertIn("style.css?v=20260902-unified-evaluation", index_html)
+        self.assertIn("app.js?v=20260902-unified-evaluation", index_html)
+        self.assertIn("bootstrap.js?v=20260902-unified-evaluation", app_js)
+        self.assertIn("page_registry.js?v=20260902-unified-evaluation", bootstrap)
+        self.assertIn("training_modes.js?v=20260902-unified-evaluation", page_registry)
         self.assertIn("tabular.js?v=20260825-tabular-mvp", page_registry)
 
 

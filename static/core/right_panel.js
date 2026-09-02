@@ -2,7 +2,7 @@ import { apiFetch } from "../api.js";
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { qs, setHTML, escapeHtml } from "../utils.js";
-import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260825-tabular-mvp";
+import { trainingModeState, isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260902-unified-evaluation";
 import { followServerTask } from "./task_progress.js";
 
 function contextCardFor(selector) {

@@ -113,7 +113,6 @@ const TABULAR_INCOMPATIBLE_PAGES = new Set([
   "split",
   "augmentation",
   "training",
-  "evaluation",
   "inference",
   "auto-labeling",
   "export",
@@ -129,6 +128,7 @@ export function initTrainingModeSidebar() {
       if (isHiddenModeNavButton(button)) return;
       trainingModeState.activeMode = "rnn";
       trainingModeState.activeRnnPanel = button.dataset.rnnNav;
+      const targetPage = button.dataset.page || "training";
       if (trainingModeState.activeRnnPanel === "model-compare") {
         eventBus.emit("set-compare-architecture", "rnn");
         eventBus.emit("navigate", "model-compare");
@@ -136,7 +136,12 @@ export function initTrainingModeSidebar() {
         renderTrainingWorkspace();
         return;
       }
-      eventBus.emit("navigate", "training");
+      eventBus.emit("navigate", targetPage);
+      if (targetPage !== "training") {
+        renderTrainingModeSidebar();
+        renderTrainingWorkspace();
+        return;
+      }
       ensureTrainingPageActive();
       renderTrainingModeSidebar();
       renderTrainingWorkspace();
@@ -172,7 +177,7 @@ export function initTrainingModeSidebar() {
       trainingModeState.activeMode = "tabular";
       trainingModeState.activeTabularPanel = nav;
       if (nav === "model-compare") eventBus.emit("set-compare-architecture", "tabular");
-      eventBus.emit("tabular-panel-changed", nav);
+      if (page === "tabular") eventBus.emit("tabular-panel-changed", nav);
       eventBus.emit("navigate", page);
       renderTrainingModeSidebar();
       renderTrainingWorkspace();
@@ -264,7 +269,8 @@ export function openTrainingModule(mode) {
   if (mode === "rnn") trainingModeState.activeRnnPanel = "overview";
   if (mode === "tabular") trainingModeState.activeTabularPanel = "overview";
   if (mode === "tabular") eventBus.emit("tabular-panel-changed", "overview");
-  eventBus.emit("navigate", mode === "tabular" ? "tabular" : "training");
+  if (mode === "tabular") eventBus.emit("navigate", "tabular");
+  else eventBus.emit("navigate", "training");
   if (mode !== "tabular") ensureTrainingPageActive();
   renderTrainingModeSidebar();
   renderTrainingWorkspace();
@@ -287,6 +293,8 @@ export function syncTrainingModeForProject(project, targetPage = "dashboard") {
     trainingModeState.activeMode = "tabular";
     trainingModeState.activeTabularPanel = targetPage === "module-overview"
       ? "overview"
+      : targetPage === "evaluation"
+        ? "evaluation"
       : targetPage === "model-compare"
         ? "model-compare"
         : targetPage === "tabular" && previousTabularPanel
@@ -299,6 +307,8 @@ export function syncTrainingModeForProject(project, targetPage = "dashboard") {
     trainingModeState.activeMode = "rnn";
     trainingModeState.activeRnnPanel = targetPage === "module-overview"
       ? "overview"
+      : targetPage === "evaluation"
+      ? "evaluation"
       : targetPage === "training" && previousRnnPanel
       ? previousRnnPanel
       : "overview";

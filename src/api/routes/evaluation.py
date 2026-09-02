@@ -9,6 +9,11 @@ from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
 from src.trainer import YOLOTrainer
 from src.system_downloads import copy_file_to_downloads
+from src.training.metric_schema import (
+    build_rnn_metric_schema,
+    build_tabular_metric_schema,
+    build_yolo_metric_schema,
+)
 
 router = APIRouter()
 
@@ -24,6 +29,10 @@ def get_evaluation_results(project_id: str):
         return _empty_evaluation_payload()
 
     results = _read_evaluation_metrics(run_dir)
+    summary = _read_run_summary(run_dir)
+    architecture = _resolve_evaluation_architecture(project, summary, results or {})
+    task_type = str((results or {}).get("task_type") or summary.get("task_type") or project.get("task_type") or "")
+    metric_schema = _read_metric_schema(run_dir, architecture, task_type)
     available_plots = _list_evaluation_plots(run_dir)
     plot_exports = _list_vector_plot_exports(run_dir, available_plots)
     artifacts = _list_run_artifact_files(run_dir)
@@ -34,15 +43,30 @@ def get_evaluation_results(project_id: str):
         payload["plots"] = available_plots
         payload["plot_exports"] = plot_exports
         payload["artifacts"] = artifacts
+        payload.update({
+            "architecture": architecture,
+            "task_type": task_type,
+            "metric_schema": metric_schema,
+            "metric_cards": [],
+            "capabilities": _evaluation_capabilities(architecture, {}),
+            "diagnostics": {},
+        })
         return payload
 
+    diagnostics = _evaluation_diagnostics(run_dir, results)
     return {
         "success": True,
         "has_metrics": True,
         "run_id": run_dir.name,
         "metrics": results["metrics"],
+        "architecture": architecture,
+        "task_type": task_type,
+        "metric_schema": metric_schema,
+        "metric_cards": _build_metric_cards(architecture, results["metrics"], metric_schema),
+        "capabilities": _evaluation_capabilities(architecture, diagnostics),
+        "diagnostics": diagnostics,
         "epochs_completed": results["epochs_completed"],
-        "assessment": _build_smart_assessment(project, run_dir, results),
+        "assessment": _build_smart_assessment(project, run_dir, results) if architecture == "cnn" else _build_structured_assessment(project, run_dir, results, metric_schema),
         "plots": available_plots,
         "plot_exports": plot_exports,
         "artifacts": artifacts
@@ -109,6 +133,12 @@ def _empty_evaluation_payload() -> Dict[str, Any]:
         "success": True,
         "has_metrics": False,
         "run_id": None,
+        "architecture": None,
+        "task_type": None,
+        "metric_schema": {},
+        "metric_cards": [],
+        "capabilities": {},
+        "diagnostics": {},
         "metrics": {
             "map50": 0.0,
             "map50_95": 0.0,
@@ -178,12 +208,30 @@ def _read_evaluation_metrics(run_dir: Path) -> Optional[Dict[str, Any]]:
                 data = json.load(f)
             raw = data.get("raw") or {}
             epochs = data.get("epochs") or []
+            history = data.get("history") or []
+            best_metrics = data.get("best_metrics") or {}
+            if isinstance(history, list) and history:
+                raw = _raw_series_from_history(history)
+                metrics = dict(best_metrics or history[-1] or {})
+                return {
+                    "metrics": metrics,
+                    "epochs_completed": len(history),
+                    "raw": raw,
+                    "task_type": data.get("task_type"),
+                    "architecture": data.get("architecture"),
+                    "backend": data.get("backend"),
+                    "payload": data,
+                }
             if isinstance(raw, dict) and raw:
                 metrics = _metrics_from_raw_series(raw)
                 return {
                     "metrics": metrics,
                     "epochs_completed": len(epochs) or _series_length(raw),
                     "raw": raw,
+                    "task_type": data.get("task_type"),
+                    "architecture": data.get("architecture"),
+                    "backend": data.get("backend"),
+                    "payload": data,
                 }
         except Exception:
             pass
@@ -198,6 +246,142 @@ def _read_evaluation_metrics(run_dir: Path) -> Optional[Dict[str, Any]]:
         "metrics": metrics,
         "epochs_completed": csv_results.get("epochs_completed", 0),
         "last_row": last_row,
+    }
+
+
+def _raw_series_from_history(history: List[Dict[str, Any]]) -> Dict[str, List[Any]]:
+    keys = {key for row in history if isinstance(row, dict) for key in row if key != "epoch"}
+    return {key: [row.get(key) for row in history if isinstance(row, dict)] for key in sorted(keys)}
+
+
+def _resolve_evaluation_architecture(project: Dict[str, Any], summary: Dict[str, Any], results: Dict[str, Any]) -> str:
+    explicit = str(results.get("architecture") or summary.get("architecture") or project.get("architecture") or (project.get("training_config") or {}).get("architecture") or "").lower()
+    task_type = str(results.get("task_type") or summary.get("task_type") or project.get("task_type") or "").lower()
+    backend = str(results.get("backend") or summary.get("backend") or "").lower()
+    if explicit == "tabular" or task_type.startswith("tabular_") or backend == "xgboost_tabular":
+        return "tabular"
+    if explicit == "rnn" or "sequence" in task_type or backend in {"pytorch_rnn", "sklearn_xgboost"}:
+        return "rnn"
+    return "cnn"
+
+
+def _read_metric_schema(run_dir: Path, architecture: str, task_type: str) -> Dict[str, Any]:
+    schema = _read_json_object(run_dir / "metric_schema.json")
+    if schema:
+        schema.setdefault("architecture", architecture)
+        return schema
+    if architecture == "tabular":
+        return build_tabular_metric_schema(task_type)
+    if architecture == "rnn":
+        return build_rnn_metric_schema(task_type)
+    return build_yolo_metric_schema(task_type)
+
+
+def _build_metric_cards(architecture: str, metrics: Dict[str, Any], schema: Dict[str, Any]) -> List[Dict[str, Any]]:
+    if architecture == "cnn":
+        definitions = [
+            ("map50", "mAP50", "maximize"),
+            ("map50_95", "mAP50-95", "maximize"),
+            ("precision", "Precision", "maximize"),
+            ("recall", "Recall", "maximize"),
+            ("f1", "F1", "maximize"),
+            ("cls_loss", "Classification loss", "minimize"),
+            ("dfl_loss", "DFL loss", "minimize"),
+            ("box_loss", "Box loss", "minimize"),
+        ]
+    else:
+        primary = (schema.get("primary_metric") or {}).get("key")
+        goals = {primary: (schema.get("primary_metric") or {}).get("goal", "maximize")}
+        keys: List[str] = []
+        for group in ("quality", "loss"):
+            for key in (schema.get("groups") or {}).get(group, []):
+                if key not in keys:
+                    keys.append(key)
+        definitions = [(key, _metric_display_name(key, schema), goals.get(key, "minimize" if "loss" in key or key.endswith("/mae") or key.endswith("/rmse") else "maximize")) for key in keys]
+
+    cards: List[Dict[str, Any]] = []
+    for key, label, goal in definitions:
+        value = metrics.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        cards.append({"key": key, "label": label, "value": float(value), "goal": goal})
+    return cards
+
+
+def _metric_display_name(key: str, schema: Dict[str, Any]) -> str:
+    primary = schema.get("primary_metric") or {}
+    if key == primary.get("key") and primary.get("display_name"):
+        return str(primary["display_name"])
+    names = {
+        "val/accuracy": "Accuracy", "val/macro_f1": "Macro-F1", "val/precision": "Precision",
+        "val/recall": "Recall", "val/mae": "MAE", "val/rmse": "RMSE", "val/r2": "R2",
+        "train/loss": "Training loss", "val/loss": "Validation loss",
+    }
+    return names.get(key, key.replace("val/", "").replace("train/", "").replace("_", " ").title())
+
+
+def _evaluation_diagnostics(run_dir: Path, results: Dict[str, Any]) -> Dict[str, Any]:
+    payload = results.get("payload") if isinstance(results.get("payload"), dict) else {}
+    diagnostics = {
+        key: payload.get(key)
+        for key in ("confusion_labels", "confusion_matrix", "residuals", "prediction_actual_samples", "diagnostic_sample_limit")
+        if payload.get(key) is not None
+    }
+    feature_importance = payload.get("feature_importance")
+    if not isinstance(feature_importance, list):
+        file_payload = _read_json_value(run_dir / "feature_importance.json")
+        feature_importance = file_payload if isinstance(file_payload, list) else []
+    diagnostics["feature_importance"] = feature_importance
+    return diagnostics
+
+
+def _read_json_value(path: Path) -> Any:
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+
+
+def _evaluation_capabilities(architecture: str, diagnostics: Dict[str, Any]) -> Dict[str, bool]:
+    return {
+        "image_plots": architecture == "cnn",
+        "sequence_context": architecture == "rnn",
+        "row_context": architecture == "tabular",
+        "confusion_matrix": bool(diagnostics.get("confusion_matrix")),
+        "residual_analysis": bool(diagnostics.get("residuals") or diagnostics.get("prediction_actual_samples")),
+        "feature_importance": bool(diagnostics.get("feature_importance")),
+    }
+
+
+def _build_structured_assessment(project: Dict[str, Any], run_dir: Path, results: Dict[str, Any], schema: Dict[str, Any]) -> Dict[str, Any]:
+    metrics = results.get("metrics") or {}
+    primary = schema.get("primary_metric") or {}
+    key = str(primary.get("key") or "")
+    value = metrics.get(key)
+    signals = [{
+        "code": "structured_review",
+        "severity": "info",
+        "values": {
+            "primary_metric": primary.get("display_name") or key,
+            "primary_value": value,
+        },
+    }]
+    return {
+        "score": None,
+        "verdict": "review",
+        "signals": signals,
+        "context": {
+            "run_id": run_dir.name,
+            "model": (results.get("payload") or {}).get("model") or _read_run_summary(run_dir).get("model") or "--",
+            "task_type": project.get("task_type") or results.get("task_type") or "--",
+            "configured_epochs": _read_run_summary(run_dir).get("epochs") or results.get("epochs_completed") or 0,
+            "completed_epochs": results.get("epochs_completed") or 0,
+            "best_epoch": (results.get("payload") or {}).get("best_epoch") or _read_run_summary(run_dir).get("best_epoch") or "--",
+            "primary_metric": primary.get("display_name") or key,
+            "primary_value": value,
+        },
     }
 
 

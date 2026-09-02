@@ -12,8 +12,8 @@ import {
   renderTrainingWorkspace,
   resolveProjectWorkspacePage,
   syncTrainingModeForProject,
-} from "../pages/training_modes.js?v=20260825-tabular-mvp";
-import { initEvaluation, renderEvaluationPage } from "../pages/evaluation.js?v=20260702-cnn-eval-polish2";
+} from "../pages/training_modes.js?v=20260902-unified-evaluation";
+import { initEvaluation, renderEvaluationPage } from "../pages/evaluation.js?v=20260902-unified-evaluation";
 import { initModelCompare, renderModelComparePage } from "../pages/model_compare.js?v=20260825-tabular-mvp";
 import { initInference, renderInferencePage } from "../pages/inference.js?v=20260702-model-scroll-bounds";
 import { initAutoLabeling, renderAutoLabelingPage } from "../pages/auto_labeling.js?v=20260709-review-gate";

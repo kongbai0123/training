@@ -7,6 +7,7 @@ All notable changes to Vision Training Studio are tracked here.
 ### Changed
 - Renamed the CNN sidebar entry and workspace from LabelMe to Image Annotation while retaining the existing internal route and annotation data compatibility.
 - Moved LabelMe into the Image Annotation header as an optional external-editor launch action.
+- Unified CNN, RNN, and Tabular evaluation under one completed-run contract while retaining task-specific image, sequence, residual, confusion-matrix, and feature-importance panels.
 
 ### Fixed
 - Prevented duplicate updater launches and made restart-to-update wait for the backend process that owns application resources, avoiding file-lock and port-release races during relaunch.

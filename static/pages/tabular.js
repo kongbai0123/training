@@ -394,10 +394,6 @@ function renderTrainingPanel(status, ready) {
         </div>
       </article>
     </div>
-    <article class="tabular-card tabular-importance-card">
-      <div class="tabular-card-head"><div><span>${escapeHtml(text("tabular.importance.eyebrow", "模型解釋", "Model explanation"))}</span><strong>${escapeHtml(text("tabular.importance.title", "特徵重要度", "Feature importance"))}</strong></div><span>${escapeHtml(tabularState.runMetricsId || "--")}</span></div>
-      ${renderFeatureImportance(tabularState.runMetrics?.feature_importance || [])}
-    </article>
   `;
 }
 
@@ -984,15 +980,6 @@ function renderTrainingProgress(status) {
 
 function metricCell(label, value) {
   return `<div><span>${escapeHtml(label)}</span><strong>${formatMetric(value)}</strong></div>`;
-}
-
-function renderFeatureImportance(items) {
-  if (!items.length) return `<div class="tabular-empty-inline">${escapeHtml(text("tabular.importance.empty", "完成訓練後會在這裡顯示 gain 特徵重要度。", "Gain-based feature importance appears here after training."))}</div>`;
-  const max = Math.max(...items.map((item) => Number(item.normalized_gain ?? item.gain ?? 0)), 0.000001);
-  return `<div class="tabular-importance-list">${items.slice(0, 30).map((item, index) => {
-    const value = Number(item.normalized_gain ?? item.gain ?? 0);
-    return `<div><b>${index + 1}</b><strong>${escapeHtml(item.feature || `f${index}`)}</strong><span class="tabular-importance-track"><i style="width:${Math.max(1, Math.min(100, (value / max) * 100))}%"></i></span><small>${formatMetric(value)}</small></div>`;
-  }).join("")}</div>`;
 }
 
 function modelSelect(id, models, selected, label) {

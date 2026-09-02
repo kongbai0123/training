@@ -1,5 +1,5 @@
 import { qs, setHTML, setText, escapeHtml } from "../utils.js";
-import { isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260825-tabular-mvp";
+import { isRnnTrainingWorkspaceActive } from "../pages/training_modes.js?v=20260902-unified-evaluation";
 
 export function renderPageGuards(pageId, status) {
   if (isRnnTrainingWorkspaceActive(pageId)) {
@@ -41,7 +41,7 @@ export function renderPageGuards(pageId, status) {
     guards.augmentation.push(statusGuard("warning", "Split required", ["Augmentation requires a target train split."], "Create a Train / Val / Test split first."));
   }
   if (!status.bestModelExists) {
-    guards.evaluation.push(statusGuard("warning", "No trained model", ["No best model is available yet."], "Finish training before reviewing mAP / IoU."));
+    guards.evaluation.push(statusGuard("warning", "No trained model", ["No completed training result is available yet."], "Finish training before reviewing model metrics and diagnostics."));
     guards.export.push(statusGuard("warning", "No exportable model", ["No trained model is available for export."], "Finish training before exporting PT / ONNX."));
   }
 

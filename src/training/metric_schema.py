@@ -20,6 +20,7 @@ def build_yolo_metric_schema(task_type: str) -> Dict[str, Any]:
 
     return {
         "contract_version": CONTRACT_VERSION,
+        "architecture": "cnn",
         "primary_metric": {
             "key": f"metrics/mAP50-95{suffix}",
             "display_name": "mAP50-95",
@@ -58,6 +59,7 @@ def build_rnn_metric_schema(task_type: str = "sequence_classification") -> Dict[
 
     return {
         "contract_version": CONTRACT_VERSION,
+        "architecture": "rnn",
         "primary_metric": primary_metric,
         "groups": {
             "loss": ["train/loss", "val/loss"],

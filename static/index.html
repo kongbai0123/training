@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260825-tabular-mvp">
+  <link rel="stylesheet" href="/static/style.css?v=20260902-unified-evaluation">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -99,7 +99,7 @@
             <button class="sidebar-item" data-rnn-nav="features-labels"><i class="fa-solid fa-tag"></i><span data-i18n="shell.nav.featuresLabels">特徵與標籤</span></button>
             <button class="sidebar-item" data-rnn-nav="windowing"><i class="fa-solid fa-crop-simple"></i><span data-i18n="shell.nav.windowing">序列切片</span></button>
             <button class="sidebar-item" data-rnn-nav="training"><i class="fa-solid fa-sliders"></i><span data-i18n="shell.nav.training">模型訓練</span></button>
-            <button class="sidebar-item" data-rnn-nav="evaluation"><i class="fa-solid fa-chart-line"></i><span data-i18n="shell.nav.evaluation">評估</span></button>
+            <button class="sidebar-item" data-rnn-nav="evaluation" data-page="evaluation"><i class="fa-solid fa-chart-line"></i><span data-i18n="shell.nav.evaluation">評估</span></button>
             <button class="sidebar-item" data-rnn-nav="sequence-test"><i class="fa-regular fa-circle-play"></i><span data-i18n="shell.nav.sequenceTest">序列測試</span></button>
             <button class="sidebar-item" data-rnn-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span data-i18n="shell.nav.compare">模型比較</span></button>
             <button class="sidebar-item" data-rnn-nav="export"><i class="fa-solid fa-file-export"></i><span data-i18n="shell.nav.export">匯出</span></button>
@@ -109,6 +109,7 @@
             <button class="sidebar-item active" data-tabular-nav="overview"><i class="fa-solid fa-table-columns"></i><span data-i18n="shell.nav.tabularOverview">表格總覽</span></button>
             <button class="sidebar-item" data-tabular-nav="data"><i class="fa-solid fa-file-csv"></i><span data-i18n="shell.nav.tabularData">資料與欄位</span></button>
             <button class="sidebar-item" data-tabular-nav="training"><i class="fa-solid fa-gears"></i><span data-i18n="shell.nav.training">模型訓練</span></button>
+            <button class="sidebar-item" data-tabular-nav="evaluation" data-page="evaluation"><i class="fa-solid fa-chart-line"></i><span data-i18n="shell.nav.evaluation">評估</span></button>
             <button class="sidebar-item" data-tabular-nav="inference"><i class="fa-solid fa-vial-circle-check"></i><span data-i18n="shell.nav.inference">模型測試</span></button>
             <button class="sidebar-item" data-tabular-nav="model-compare"><i class="fa-solid fa-scale-balanced"></i><span data-i18n="shell.nav.compare">模型比較</span></button>
             <button class="sidebar-item" data-tabular-nav="registry"><i class="fa-solid fa-box-archive"></i><span data-i18n="shell.nav.modelRegistry">模型版本</span></button>
@@ -1774,18 +1775,12 @@
           <div class="page-header">
             <div>
               <h1 data-i18n="evaluation.title">Evaluation Console</h1>
-              <p data-i18n="evaluation.subtitle">Review model evaluation results including mAP, IoU, Precision, Recall, and plots.</p>
+              <p data-i18n="evaluation.subtitle">Review task-aware metrics, diagnostics and artifacts from the selected training run.</p>
             </div>
           </div>
-          <div class="metric-grid evaluation-metric-grid">
-            <div class="metric-card"><span>mAP <span class="info-icon" data-tooltip="mAP measures how well model predictions match annotated ground truth overall." data-i18n-tooltip="evaluation.mapTooltip">i</span></span><strong id="eval-map50">--</strong></div>
-            <div class="metric-card"><span>IoU <span class="info-icon" data-tooltip="IoU is the overlap ratio between prediction and annotation areas." data-i18n-tooltip="evaluation.iouTooltip">i</span></span><strong id="eval-iou">--</strong></div>
-            <div class="metric-card"><span>Precision</span><strong id="eval-precision">--</strong></div>
-            <div class="metric-card"><span>Recall</span><strong id="eval-recall">--</strong></div>
-            <div class="metric-card"><span>F1</span><strong id="eval-f1">--</strong></div>
-            <div class="metric-card"><span>cls_loss</span><strong id="eval-cls-loss">--</strong></div>
-            <div class="metric-card"><span>dfl_loss</span><strong id="eval-dfl-loss">--</strong></div>
-            <div class="metric-card"><span>box_loss</span><strong id="eval-box-loss">--</strong></div>
+          <div id="evaluation-capability-summary" class="evaluation-capability-summary"></div>
+          <div id="evaluation-metric-grid" class="metric-grid evaluation-metric-grid">
+            <div class="empty-state evaluation-wide-empty" data-i18n="evaluation.empty">Complete a training run to review metrics.</div>
           </div>
           <section class="panel-section evaluation-guidance-card evaluation-intelligence-card">
             <div class="section-title evaluation-intelligence-title">
@@ -1805,8 +1800,22 @@
               <div class="evaluation-recommendation-list" id="evaluation-recommendation-list"></div>
             </div>
           </section>
+          <section id="evaluation-diagnostics" class="evaluation-diagnostics-grid hidden">
+            <article id="evaluation-confusion-card" class="panel-section evaluation-diagnostic-card hidden">
+              <div class="section-title"><h2 data-i18n="evaluation.diagnostics.confusion">Confusion matrix</h2></div>
+              <div id="evaluation-confusion-content"></div>
+            </article>
+            <article id="evaluation-residual-card" class="panel-section evaluation-diagnostic-card hidden">
+              <div class="section-title"><h2 data-i18n="evaluation.diagnostics.residuals">Residual analysis</h2></div>
+              <div id="evaluation-residual-content"></div>
+            </article>
+            <article id="evaluation-importance-card" class="panel-section evaluation-diagnostic-card hidden">
+              <div class="section-title"><h2 data-i18n="evaluation.diagnostics.importance">Feature importance</h2></div>
+              <div id="evaluation-importance-content"></div>
+            </article>
+          </section>
           <section class="panel-section evaluation-plots-card">
-                  <div class="section-title"><h2 data-i18n="evaluation.yoloPlots">YOLO 評估圖表</h2></div>
+            <div class="section-title"><h2 data-i18n="evaluation.plots">評估圖表</h2></div>
             <div id="evaluation-plots-grid" class="evaluation-plots-grid">
               <div class="empty-state" data-i18n="evaluation.empty">尚無評估圖表。完成訓練或評估後，圖表會顯示在這裡。</div>
             </div>
@@ -3059,7 +3068,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260825-tabular-mvp"></script>
+  <script type="module" src="/static/app.js?v=20260902-unified-evaluation"></script>
 </body>
 </html>
 

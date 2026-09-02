@@ -27,7 +27,7 @@ import {
   renderPrimaryPageModules,
   renderSecondaryPageModules,
   syncPageModeForProject,
-} from "./page_registry.js?v=20260825-tabular-mvp";
+} from "./page_registry.js?v=20260902-unified-evaluation";
 
 const {
   bootstrapSession,

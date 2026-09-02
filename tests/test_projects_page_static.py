@@ -44,8 +44,8 @@ class ProjectsPageStaticTests(unittest.TestCase):
         index_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("../pages/projects.js?v=20260825-tabular-mvp", page_registry_js)
-        self.assertIn("./core/bootstrap.js?v=20260825-tabular-mvp", app_js)
-        self.assertIn("/static/app.js?v=20260825-tabular-mvp", index_html)
+        self.assertIn("./core/bootstrap.js?v=20260902-unified-evaluation", app_js)
+        self.assertIn("/static/app.js?v=20260902-unified-evaluation", index_html)
 
 
 if __name__ == "__main__":

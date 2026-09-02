@@ -142,6 +142,20 @@ compare、export、inference 應讀取 artifact manifest 與 run summary，不�
 
 `artifact_manifest.json` 使用 metadata contract v2，為每個已知產物記錄 SHA-256、content type、producer 版本，並可附帶 dataset/model lineage。`backend.json` 與 `metric_schema.json` 維持既有 v1 契約，避免舊讀取器誤判其 payload 已變更。
 
+### Unified Evaluation Contract
+
+評估 API 以已完成 Run 為唯一資料來源，輸出共同的 `metric_schema`、`metric_cards`、`capabilities` 與 `diagnostics`。UI 依 capability 顯示適用面板，而不是依畫面複製三套流程：
+
+```text
+completed run
+  -> metrics.json + metric_schema.json
+  -> normalized evaluation response
+  -> shared classification/regression metrics
+  -> CNN image plots | RNN sequence diagnostics | Tabular feature importance
+```
+
+此邊界保留 `task_type`、`architecture`、`backend`、run 與 export contract 的相容性。舊 CNN `results.csv` 仍可 fallback；RNN／Tabular 的結構化 `history` 與 `best_metrics` 會直接正規化，不把影像 BBox／Polygon 或序列 Window／Stride 假設外洩至其他架構。
+
 ## 7. Model System
 
 模型系統原則：

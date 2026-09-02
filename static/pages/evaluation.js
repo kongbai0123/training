@@ -26,6 +26,8 @@ export async function renderEvaluationPage() {
     cachedEvaluation = null;
     resetEvaluationMetrics();
     renderEvaluationAssessment(null);
+    renderEvaluationDiagnostics({}, {});
+    renderEvaluationCapabilities(null, null, {});
     renderEvaluationPlots([]);
     return;
   }
@@ -48,6 +50,8 @@ export async function renderEvaluationPage() {
     console.error("Failed to load evaluation metrics:", err);
     resetEvaluationMetrics();
     renderEvaluationAssessment(null);
+    renderEvaluationDiagnostics({}, {});
+    renderEvaluationCapabilities(null, null, {});
     renderEvaluationPlots([]);
   } finally {
     evaluationLoading = false;
@@ -55,26 +59,102 @@ export async function renderEvaluationPage() {
 }
 
 function renderEvaluationData(data) {
-  const metrics = data.metrics || {};
-  setText("#eval-map50", data.has_metrics ? formatMetric(metrics.map50, 3) : "--");
-  setText("#eval-iou", data.has_metrics ? formatMetric(metrics.map50_95, 3) : "--");
-  setText("#eval-precision", data.has_metrics ? formatMetric(metrics.precision, 3) : "--");
-  setText("#eval-recall", data.has_metrics ? formatMetric(metrics.recall, 3) : "--");
-  setText("#eval-f1", data.has_metrics ? formatMetric(metrics.f1, 3) : "--");
-  setText("#eval-cls-loss", data.has_metrics ? formatMetric(metrics.cls_loss, 4) : "--");
-  setText("#eval-dfl-loss", data.has_metrics ? formatMetric(metrics.dfl_loss, 4) : "--");
-  setText("#eval-box-loss", data.has_metrics ? formatMetric(metrics.box_loss, 4) : "--");
+  renderEvaluationMetrics(data.has_metrics ? data.metric_cards || [] : []);
+  renderEvaluationCapabilities(data.architecture, data.task_type, data.capabilities || {});
+  renderEvaluationDiagnostics(data.diagnostics || {}, data.capabilities || {});
   renderEvaluationAssessment(data.assessment);
   renderEvaluationPlots(data.has_metrics ? data.plots || [] : [], data.run_id, data.plot_exports || {});
 }
 
 function resetEvaluationMetrics() {
-  ["#eval-map50", "#eval-iou", "#eval-precision", "#eval-recall", "#eval-f1", "#eval-cls-loss", "#eval-dfl-loss", "#eval-box-loss"].forEach((selector) => {
-    setText(selector, "--");
-  });
+  renderEvaluationMetrics([]);
+}
+
+function renderEvaluationMetrics(cards = []) {
+  const grid = qs("#evaluation-metric-grid");
+  if (!grid) return;
+  if (!cards.length) {
+    grid.innerHTML = `<div class="empty-state evaluation-wide-empty">${escapeHtml(t("evaluation.empty"))}</div>`;
+    return;
+  }
+  grid.innerHTML = cards.map((card) => `
+    <article class="metric-card" data-metric-key="${escapeHtml(card.key || "")}">
+      <span>${escapeHtml(card.label || card.key || "Metric")}</span>
+      <strong>${escapeHtml(formatMetric(card.value, metricDigits(card.value)))}</strong>
+      <small>${escapeHtml(t(card.goal === "minimize" ? "evaluation.goal.minimize" : "evaluation.goal.maximize"))}</small>
+    </article>
+  `).join("");
+}
+
+function metricDigits(value) {
+  const number = Math.abs(Number(value));
+  return Number.isFinite(number) && number >= 100 ? 1 : 4;
+}
+
+function renderEvaluationCapabilities(architecture, taskType, capabilities = {}) {
+  const host = qs("#evaluation-capability-summary");
+  if (!host) return;
+  if (!architecture) {
+    host.innerHTML = "";
+    return;
+  }
+  const labels = [
+    t(`evaluation.architecture.${architecture}`),
+    taskType || "--",
+    capabilities.image_plots ? t("evaluation.capability.imagePlots") : null,
+    capabilities.sequence_context ? t("evaluation.capability.sequence") : null,
+    capabilities.row_context ? t("evaluation.capability.rows") : null,
+  ].filter(Boolean);
+  host.innerHTML = labels.map((label) => `<span>${escapeHtml(label)}</span>`).join("");
+}
+
+function renderEvaluationDiagnostics(diagnostics = {}, capabilities = {}) {
+  const host = qs("#evaluation-diagnostics");
+  const confusionCard = qs("#evaluation-confusion-card");
+  const residualCard = qs("#evaluation-residual-card");
+  const importanceCard = qs("#evaluation-importance-card");
+  const hasConfusion = Boolean(capabilities.confusion_matrix);
+  const hasResiduals = Boolean(capabilities.residual_analysis);
+  const hasImportance = Boolean(capabilities.feature_importance);
+  host?.classList.toggle("hidden", !hasConfusion && !hasResiduals && !hasImportance);
+  confusionCard?.classList.toggle("hidden", !hasConfusion);
+  residualCard?.classList.toggle("hidden", !hasResiduals);
+  importanceCard?.classList.toggle("hidden", !hasImportance);
+  if (hasConfusion) renderConfusionMatrix(diagnostics.confusion_labels || [], diagnostics.confusion_matrix || []);
+  if (hasResiduals) renderResidualAnalysis(diagnostics.prediction_actual_samples || [], diagnostics.residuals || []);
+  if (hasImportance) renderFeatureImportance(diagnostics.feature_importance || []);
+}
+
+function renderConfusionMatrix(labels, matrix) {
+  const host = qs("#evaluation-confusion-content");
+  if (!host) return;
+  const safeLabels = labels.length ? labels : matrix.map((_, index) => String(index));
+  host.innerHTML = `<div class="table-scroll"><table class="evaluation-confusion-table"><thead><tr><th>${escapeHtml(t("evaluation.diagnostics.actualPredicted"))}</th>${safeLabels.map((label) => `<th>${escapeHtml(label)}</th>`).join("")}</tr></thead><tbody>${matrix.map((row, index) => `<tr><th>${escapeHtml(safeLabels[index] ?? index)}</th>${row.map((value) => `<td>${escapeHtml(String(value ?? 0))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+
+function renderResidualAnalysis(samples, residuals) {
+  const host = qs("#evaluation-residual-content");
+  if (!host) return;
+  const values = residuals.map(Number).filter(Number.isFinite);
+  const mean = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+  const maxAbs = values.length ? Math.max(...values.map(Math.abs)) : null;
+  host.innerHTML = `<div class="evaluation-context-chips"><span class="evaluation-context-chip">${escapeHtml(t("evaluation.diagnostics.meanResidual"))}: ${formatMetric(mean, 4)}</span><span class="evaluation-context-chip">${escapeHtml(t("evaluation.diagnostics.maxResidual"))}: ${formatMetric(maxAbs, 4)}</span></div><div class="table-scroll"><table class="evaluation-residual-table"><thead><tr><th>#</th><th>${escapeHtml(t("evaluation.diagnostics.actual"))}</th><th>${escapeHtml(t("evaluation.diagnostics.prediction"))}</th><th>${escapeHtml(t("evaluation.diagnostics.residual"))}</th></tr></thead><tbody>${samples.slice(0, 20).map((sample, index) => `<tr><td>${index + 1}</td><td>${formatMetric(sample.actual, 4)}</td><td>${formatMetric(sample.prediction, 4)}</td><td>${formatMetric(sample.residual, 4)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+function renderFeatureImportance(items) {
+  const host = qs("#evaluation-importance-content");
+  if (!host) return;
+  const rows = items.slice(0, 30);
+  const max = Math.max(...rows.map((item) => Number(item.normalized_gain ?? item.gain ?? 0)), 0.000001);
+  host.innerHTML = `<div class="evaluation-importance-list">${rows.map((item, index) => {
+    const value = Number(item.normalized_gain ?? item.gain ?? 0);
+    const width = Math.max(1, Math.min(100, (value / max) * 100));
+    return `<div class="evaluation-importance-row"><strong>${escapeHtml(item.feature || `f${index}`)}</strong><span class="evaluation-importance-track"><i style="width:${width}%"></i></span><small>${formatMetric(value, 4)}</small></div>`;
+  }).join("")}</div>`;
 }
 
 function formatMetric(value, digits = 3) {
+  if (value === null || value === undefined || value === "") return "--";
   const number = Number(value);
   return Number.isFinite(number) ? number.toFixed(digits) : "--";
 }
@@ -85,7 +165,7 @@ function renderEvaluationAssessment(assessment) {
   const hasAssessment = Boolean(assessment?.context && Array.isArray(assessment?.signals));
   empty?.classList.toggle("hidden", hasAssessment);
   content?.classList.toggle("hidden", !hasAssessment);
-  setText("#evaluation-score", hasAssessment ? assessment.score : "--");
+  setText("#evaluation-score", hasAssessment && Number.isFinite(Number(assessment.score)) ? assessment.score : "--");
   if (!hasAssessment) return;
 
   const verdict = String(assessment.verdict || "attention");
@@ -106,7 +186,9 @@ function renderEvaluationAssessment(assessment) {
     ["batch", context.batch_size || "--"],
     ["dataset", context.total_images || "--"],
     ["classes", context.class_count || "--"],
-  ];
+    ["primaryMetric", context.primary_metric],
+    ["primaryValue", context.primary_value != null ? formatMetric(context.primary_value, 4) : null],
+  ].filter(([, value]) => value !== undefined && value !== null && value !== "");
   const chips = qs("#evaluation-context-chips");
   if (chips) {
     chips.innerHTML = contextItems.map(([key, value]) => `<span class="evaluation-context-chip">${escapeHtml(t(`evaluation.context.${key}`))}: ${escapeHtml(String(value))}</span>`).join("");

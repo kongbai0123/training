@@ -64,7 +64,7 @@ def test_rnn_training_modes_has_one_initializer_and_one_module_identity():
     assistant = read("static/pages/project_assistant_impl.js")
     training = read("static/pages/training.js")
     modes = read("static/pages/training_modes.js")
-    module_url = "training_modes.js?v=20260825-tabular-mvp"
+    module_url = "training_modes.js?v=20260902-unified-evaluation"
 
     assert module_url in registry
     assert module_url in guards

@@ -3,7 +3,7 @@ import { followServerTask } from "../core/task_progress.js";
 import { eventBus } from "../event_bus.js";
 import { appState, t } from "../state.js";
 import { buildProjectAssistantContext } from "../core/right_panel.js?v=20260825-tabular-mvp";
-import { trainingModeState } from "./training_modes.js?v=20260825-tabular-mvp";
+import { trainingModeState } from "./training_modes.js?v=20260902-unified-evaluation";
 import { escapeHtml, qs, setHTML, setText } from "../utils.js";
 
 const assistantState = {
