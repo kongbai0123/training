@@ -225,6 +225,58 @@ class RNNConfigPhaseR1Tests(unittest.TestCase):
             self.assertEqual(dataset["input_dim"], 2)
             self.assertTrue(dataset["feature_config_hash"])
 
+    def test_sequence_dataset_rejects_target_or_metadata_as_features(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "proj_rnn"
+            _write_csv(root / "sequences" / "sample.csv")
+            project = {
+                "project_id": "proj_rnn",
+                "dataset_path": (root / "dataset").as_posix(),
+                "task_type": "sequence_classification",
+                "rnn_config": {
+                    "feature_columns": ["speed", "target"],
+                    "target_column": "target",
+                    "sequence_column": "sequence_id",
+                    "time_column": "timestep",
+                    "sequence_length": 4,
+                    "stride": 2,
+                    "horizon": 1,
+                    "task_head": "classification",
+                },
+            }
+            with self.assertRaisesRegex(Exception, "Feature columns cannot include"):
+                load_csv_feature_sequences(project, sequence_length=4, stride=2)
+
+    def test_sequence_dataset_rejects_one_sequence_crossing_split_boundaries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "proj_rnn"
+            source = root / "sequences" / "mixed.csv"
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text(
+                "sequence_id,timestep,split,speed,target\n"
+                "same,0,train,1,ok\n"
+                "same,1,val,2,ok\n"
+                "same,2,val,3,ok\n",
+                encoding="utf-8",
+            )
+            project = {
+                "project_id": "proj_rnn",
+                "dataset_path": (root / "dataset").as_posix(),
+                "task_type": "sequence_classification",
+                "rnn_config": {
+                    "feature_columns": ["speed"],
+                    "target_column": "target",
+                    "sequence_column": "sequence_id",
+                    "time_column": "timestep",
+                    "sequence_length": 2,
+                    "stride": 1,
+                    "horizon": 1,
+                    "task_head": "classification",
+                },
+            }
+            with self.assertRaisesRegex(Exception, "crosses split boundaries"):
+                load_csv_feature_sequences(project, sequence_length=2, stride=1)
+
     def test_sequence_dataset_supports_single_continuous_series_without_sequence_id(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "proj_rnn"

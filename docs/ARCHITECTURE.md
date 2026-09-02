@@ -4,6 +4,8 @@
 
 Vision Training Studio 是本地優先的 Windows AI 訓練工具。整體架構：
 
+公開資訊架構以資料為第一層：影像訓練、序列訓練、表格資料預測。CNN、RNN 與 XGBoost 僅作為內部相容識別或工作區內模型名稱；公開改名不會改寫資料契約。
+
 ```text
 launcher.py
   -> FastAPI app.py
@@ -151,10 +153,10 @@ completed run
   -> metrics.json + metric_schema.json
   -> normalized evaluation response
   -> shared classification/regression metrics
-  -> CNN image plots | RNN sequence diagnostics | Tabular feature importance
+  -> image plots | sequence diagnostics | tabular feature importance
 ```
 
-此邊界保留 `task_type`、`architecture`、`backend`、run 與 export contract 的相容性。舊 CNN `results.csv` 仍可 fallback；RNN／Tabular 的結構化 `history` 與 `best_metrics` 會直接正規化，不把影像 BBox／Polygon 或序列 Window／Stride 假設外洩至其他架構。
+此邊界保留 `task_type`、`architecture`、`backend`、run 與 export contract 的相容性。舊影像專案的 `results.csv` 仍可 fallback；序列／表格資料的結構化 `history` 與 `best_metrics` 會直接正規化，不把影像 BBox／Polygon 或序列 Window／Stride 假設外洩至其他架構。
 
 ## 7. Model System
 

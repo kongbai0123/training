@@ -5,11 +5,16 @@ All notable changes to Vision Training Studio are tracked here.
 ## [Unreleased]
 
 ### Changed
+- Reorganized public workspaces by data type as Image Training, Sequence Training, and Tabular Data Prediction while preserving CNN/RNN/Tabular identifiers in stored compatibility contracts.
+- Documented XGBoost as a model option and sequence-window baseline instead of a top-level data category.
+- Added centralized legacy page aliases, an unknown-page dashboard fallback, and workspace compatibility/rollback documentation.
+- Replaced the README application overview with a screenshot captured from the current reorganized interface.
 - Renamed the CNN sidebar entry and workspace from LabelMe to Image Annotation while retaining the existing internal route and annotation data compatibility.
 - Moved LabelMe into the Image Annotation header as an optional external-editor launch action.
 - Unified CNN, RNN, and Tabular evaluation under one completed-run contract while retaining task-specific image, sequence, residual, confusion-matrix, and feature-importance panels.
 
 ### Fixed
+- Rejected sequence feature configurations that include target, sequence ID, time, or split columns, and rejected a sequence ID that crosses train/validation/test boundaries.
 - Prevented duplicate updater launches and made restart-to-update wait for the backend process that owns application resources, avoiding file-lock and port-release races during relaunch.
 - Rejected incremental updates when the installed frozen dependency identity differs from the signed runtime baseline, preventing Pydantic/Pydantic Core and similar mixed-runtime startup failures.
 - Blocked unsigned Windows installers from the formal GitHub release flow while retaining an explicit internal-QA validation mode.

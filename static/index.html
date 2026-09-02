@@ -1490,6 +1490,10 @@
                         <span><i class="fa-regular fa-circle-xmark"></i><strong id="rnn-context-sequence-length">--</strong><small data-i18n="rnn.training.sequenceLength">序列長度</small></span>
                         <span><i class="fa-solid fa-circle rnn-gpu-dot"></i><strong data-i18n="rnn.training.gpuAvailable">GPU 可用</strong></span>
                       </div>
+                      <div class="model-registry-note hidden" id="rnn-xgboost-baseline-note" role="note">
+                        <strong data-i18n="rnn.training.xgboostBaselineTitle">XGBoost 序列對照基準</strong>
+                        <span data-i18n="rnn.training.xgboostBaselineHelp">系統先建立序列視窗，再依時間順序把 [時間步, 特徵] 展平成固定欄位。XGBoost 不會像 LSTM／GRU／BiLSTM 建模時間狀態；目標、序列 ID、時間與 split 欄位不會進入特徵，且同一 sequence_id 必須只屬於一個資料分割。</span>
+                      </div>
                       <div class="rnn-training-parameter-grid">
                         <section class="rnn-parameter-column">
                           <h3 data-i18n="rnn.training.basicParameters">基本參數</h3>
@@ -2340,9 +2344,9 @@
           <div class="history-filter-row">
             <div class="history-mode-filter" role="group" aria-label="History category filter" data-i18n-aria-label="history.categoryFilterAria">
               <button type="button" class="active" data-history-filter="all" data-i18n="common.all">全部</button>
-              <button type="button" data-history-filter="cnn">CNN</button>
-              <button type="button" data-history-filter="rnn">RNN</button>
-              <button type="button" data-history-filter="tabular">Tabular</button>
+              <button type="button" data-history-filter="cnn" data-i18n="workspace.kind.image">影像訓練</button>
+              <button type="button" data-history-filter="rnn" data-i18n="workspace.kind.sequence">序列訓練</button>
+              <button type="button" data-history-filter="tabular" data-i18n="workspace.kind.tabular">表格資料預測</button>
             </div>
             <span id="history-page-result-count" class="history-result-count">0 projects</span>
           </div>
@@ -2758,9 +2762,9 @@
         <div class="project-type-mode-field">
           <span data-i18n="project.trainingMode">Training mode</span>
           <div class="project-type-mode-toggle" role="group" aria-label="Training mode" data-i18n-aria-label="project.trainingModeAria">
-            <button type="button" class="active" id="new-project-mode-rnn" data-project-mode="rnn">RNN</button>
-            <button type="button" id="new-project-mode-cnn" data-project-mode="cnn">CNN</button>
-            <button type="button" id="new-project-mode-tabular" data-project-mode="tabular">Tabular</button>
+            <button type="button" class="active" id="new-project-mode-rnn" data-project-mode="rnn" data-i18n="workspace.kind.sequence">序列訓練</button>
+            <button type="button" id="new-project-mode-cnn" data-project-mode="cnn" data-i18n="workspace.kind.image">影像訓練</button>
+            <button type="button" id="new-project-mode-tabular" data-project-mode="tabular" data-i18n="workspace.kind.tabular">表格資料預測</button>
           </div>
         </div>
         <label>
@@ -2814,9 +2818,9 @@
         <div class="project-type-mode-field">
           <span data-i18n="project.trainingMode">Training mode</span>
           <div class="project-type-mode-toggle" role="group" aria-label="Edit training mode" data-i18n-aria-label="project.taskEditModeAria">
-            <button type="button" data-edit-project-mode="cnn">CNN</button>
-            <button type="button" data-edit-project-mode="rnn">RNN</button>
-            <button type="button" data-edit-project-mode="tabular">Tabular</button>
+            <button type="button" data-edit-project-mode="cnn" data-i18n="workspace.kind.image">影像訓練</button>
+            <button type="button" data-edit-project-mode="rnn" data-i18n="workspace.kind.sequence">序列訓練</button>
+            <button type="button" data-edit-project-mode="tabular" data-i18n="workspace.kind.tabular">表格資料預測</button>
           </div>
         </div>
         <label>
@@ -2859,9 +2863,9 @@
         </div>
         <div class="history-mode-filter" role="group" aria-label="Browse history category filter" data-i18n-aria-label="history.browseCategoryFilterAria">
           <button type="button" class="active" data-history-filter="all" data-i18n="common.all">全部</button>
-          <button type="button" data-history-filter="cnn">CNN</button>
-          <button type="button" data-history-filter="rnn">RNN</button>
-          <button type="button" data-history-filter="tabular">Tabular</button>
+          <button type="button" data-history-filter="cnn" data-i18n="workspace.kind.image">影像訓練</button>
+          <button type="button" data-history-filter="rnn" data-i18n="workspace.kind.sequence">序列訓練</button>
+          <button type="button" data-history-filter="tabular" data-i18n="workspace.kind.tabular">表格資料預測</button>
         </div>
         <button class="btn btn-secondary btn-sm" id="btn-clear-history-search" type="button" data-i18n="common.clear">Clear</button>
         <span id="project-history-result-count" class="history-result-count">0 projects</span>

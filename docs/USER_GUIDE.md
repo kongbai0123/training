@@ -15,13 +15,13 @@ Vision Training Studio 提供本機 AI 訓練與推論流程。使用者主要�
 projects/{project_id}/
 ```
 
-## 2. CNN / 視覺模型流程
+## 2. 影像訓練流程
 
 典型流程：
 
-1. 建立 CNN / 視覺模型專案，選擇圖片分類、物件偵測、實例分割或語意分割。
+1. 建立影像訓練專案，選擇圖片分類、物件偵測、實例分割或語意分割。
 2. 匯入影像或資料夾。
-3. 使用 LabelMe 建立或同步標註。
+3. 在「影像標註」工作區建立或同步標註；需要外部編輯器時，再使用工作區內的 LabelMe 啟動鍵。
 4. 偵測與分割任務需建立方框或 polygon；圖片分類可依類別資料夾匯入，不需要畫框。
 5. 建立 Train / Val / Test split。
 6. 視需要執行資料增強。
@@ -50,11 +50,11 @@ projects/{project_id}/
 
 旋轉、縮放、透視、水平／垂直翻轉與隨機裁剪會同步重映射 Polygon／BBox。垂直翻轉與隨機裁剪預設關閉或為 0，因為具有上下方向語意的場景或靠近影像邊緣的目標可能不適合這類變換；啟用時，風險檢查會提示抽查。設定一旦變更，舊預覽立即失效，必須重新產生並檢查標註位置後才能套用至整個 Train split。
 
-## 3. RNN / Sequence / XGBoost 流程
+## 3. 序列訓練流程
 
 典型流程：
 
-1. 建立 RNN / Sequence 專案。
+1. 建立序列訓練專案。
 2. 匯入 CSV sequence data。
 3. 設定 feature columns 與 target column。
 4. 設定 sequence length、stride、horizon。
@@ -62,13 +62,19 @@ projects/{project_id}/
 6. 選擇 PyTorch LSTM 或 XGBoost backend。
 7. 開始訓練並查看 metrics、artifacts 與 run history。
 
-RNN deep learning backend 仍屬 beta；XGBoost baseline 適合作為 tabular / sequence baseline。
+序列 deep learning backend 仍屬 beta；XGBoost 適合作為序列視窗的對照 baseline。
 
-## 4. Tabular / 表格 XGBoost 流程
+### 序列工作區的 XGBoost baseline
+
+XGBoost 在這個工作區是用來和 LSTM／GRU／BiLSTM 比較的對照模型，不是另一種資料類型。系統會先依 `sequence_length` 與 `stride` 建立視窗，再將每個視窗的 `[time step, feature]` 依時間順序展平成一列固定欄位；例如兩個時間步、三個特徵會成為六個輸入欄位。特徵重要度在顯示時會把各時間步重新加總回原始特徵名稱。
+
+這種展平方式保留「第幾個時間步」的位置，但不具備 LSTM／GRU／BiLSTM 的循環狀態，因此適合當作速度快、容易解釋的 baseline，不應宣稱等同序列神經網路。為避免洩漏，`target`、`sequence_id`、時間與 `split` 欄位不得選為特徵；同一 `sequence_id` 也不得跨越 train／val／test。載入資料時若違反任一規則，訓練會停止並顯示原因。
+
+## 4. 表格資料預測流程
 
 典型流程：
 
-1. 從功能總覽建立或開啟 Tabular 分類／回歸專案。
+1. 從功能總覽建立或開啟表格資料分類／數值預測專案。
 2. 匯入 UTF-8 CSV；每列代表一個獨立樣本。
 3. 選擇數值 feature columns、target column，以及選用的 split／ID column。
 4. 確認 Train／Val／Test 比例與 seed；若 CSV 自帶 split 欄位，可使用 `train`、`val`、`test`。
@@ -134,13 +140,13 @@ weights/
 
 ## 9. 共用評估入口
 
-CNN、RNN 與 Tabular 都從側邊欄的「評估」進入，系統只讀取已完成 Run 的 `metrics.json` 與 `metric_schema.json`，避免訓練中的暫時值被誤當成正式結果。
+影像訓練、序列訓練與表格資料預測都從側邊欄的「評估」進入，系統只讀取已完成 Run 的 `metrics.json` 與 `metric_schema.json`，避免訓練中的暫時值被誤當成正式結果。
 
 - 分類任務共用 Accuracy、Precision、Recall、Macro-F1 與混淆矩陣語意。
 - 回歸任務共用 MAE、RMSE、R² 與實際值／預測值／殘差語意。
-- CNN 額外顯示影像、定位或分割圖表。
-- RNN 額外保留序列情境，不顯示 BBox／Polygon 控制。
-- Tabular 額外顯示欄位／資料列情境與特徵重要度，不顯示 Window／Stride 控制。
+- 影像訓練額外顯示影像、定位或分割圖表。
+- 序列訓練額外保留序列情境，不顯示 BBox／Polygon 控制。
+- 表格資料預測額外顯示欄位／資料列情境與特徵重要度，不顯示 Window／Stride 控制。
 
 訓練頁的指標用於監看收斂、早停與執行狀態；共用評估頁用於審查已完成產物、比較業務門檻與診斷錯誤。兩者讀取同一份 Run，沒有重新訓練或複製另一份模型。
 

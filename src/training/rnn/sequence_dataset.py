@@ -43,7 +43,17 @@ def load_csv_feature_sequences(
     windows: List[Dict[str, Any]] = []
     for sequence_id, sequence_rows in grouped.items():
         ordered = _sort_sequence_rows(sequence_rows, time_column)
-        split = _first_value(ordered, "split") or "unknown"
+        split_values = {
+            _normalize_split(row.get("split"))
+            for row in ordered
+            if _normalize_split(row.get("split")) != "unknown"
+        }
+        if len(split_values) > 1:
+            raise RNNSequenceDatasetError(
+                f"Sequence {sequence_id} crosses split boundaries: {', '.join(sorted(split_values))}. "
+                "Keep every sequence_id in exactly one of train, val, or test."
+            )
+        split = next(iter(split_values), "unknown")
         for start in range(0, max(len(ordered) - sequence_length + 1, 0), max(stride, 1)):
             chunk = ordered[start : start + sequence_length]
             if len(chunk) < sequence_length:
@@ -185,6 +195,18 @@ def _read_csv_rows(paths: Iterable[Path], config: Dict[str, Any] | None = None) 
                 raise RNNSequenceDatasetError(f"{path.name} is missing target column: {current_target_col}.")
             if not current_features:
                 raise RNNSequenceDatasetError(f"{path.name} must include at least one feature column.")
+            protected_columns = {
+                col
+                for col in (current_target_col, current_sequence_col, current_time_col, _first_present(headers, ["split"]))
+                if col
+            }
+            leaked_columns = [col for col in current_features if col in protected_columns]
+            if leaked_columns:
+                raise RNNSequenceDatasetError(
+                    "Feature columns cannot include target, sequence ID, time, or split columns: "
+                    + ", ".join(leaked_columns)
+                    + "."
+                )
             missing_features = [col for col in current_features if col not in headers]
             if missing_features:
                 raise RNNSequenceDatasetError(f"{path.name} is missing feature columns: {', '.join(missing_features)}.")
@@ -222,6 +244,13 @@ def _split_windows(windows: Sequence[Dict[str, Any]]) -> Dict[str, List[Dict[str
         splits["val"] = ordered[train_end:val_end] or ordered[:1]
         splits["test"] = ordered[val_end:]
     return splits
+
+
+def _normalize_split(value: Any) -> str:
+    split = str(value or "unknown").strip().lower()
+    if split in {"validation", "valid"}:
+        return "val"
+    return split
 
 
 def _sort_sequence_rows(rows: List[Dict[str, Any]], time_column: str | None) -> List[Dict[str, Any]]:

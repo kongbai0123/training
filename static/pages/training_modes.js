@@ -95,6 +95,7 @@ import {
   buildRnnSmartAssessment
 } from "./rnn_intelligence_helpers.js";
 import { trainingModeState } from "./training_mode_state.js";
+import { canonicalizePageId } from "../core/router.js";
 
 export { trainingModeState } from "./training_mode_state.js";
 
@@ -113,6 +114,15 @@ const TABULAR_INCOMPATIBLE_PAGES = new Set([
   "split",
   "augmentation",
   "training",
+  "inference",
+  "auto-labeling",
+  "export",
+]);
+const RNN_INCOMPATIBLE_PAGES = new Set([
+  "dataset",
+  "labelme",
+  "split",
+  "augmentation",
   "inference",
   "auto-labeling",
   "export",
@@ -336,10 +346,11 @@ export function resolveProjectTrainingMode(project) {
 }
 
 export function resolveProjectWorkspacePage(project, requestedPage = "dashboard") {
-  const page = requestedPage || "dashboard";
+  const page = canonicalizePageId(requestedPage);
   const mode = resolveProjectTrainingMode(project);
   if (mode === "tabular" && TABULAR_INCOMPATIBLE_PAGES.has(page)) return "tabular";
-  if (mode !== "tabular" && page === "tabular") return "training";
+  if (mode === "rnn" && (page === "tabular" || RNN_INCOMPATIBLE_PAGES.has(page))) return "training";
+  if (mode === "cnn" && page === "tabular") return "training";
   return page;
 }
 
@@ -2514,6 +2525,7 @@ function syncRnnAdvancedParameterControls() {
   const isTreeModel = model.includes("xgboost") || backend.includes("xgboost");
   qsa("[data-rnn-neural-only]").forEach((field) => field.classList.toggle("hidden", isTreeModel));
   qs("#rnn-advanced-applicability-note")?.classList.toggle("hidden", !isTreeModel);
+  qs("#rnn-xgboost-baseline-note")?.classList.toggle("hidden", !isTreeModel);
   const earlyStopEnabled = Boolean(qs("#rnn-early-stop-enabled")?.checked);
   qs("#rnn-patience-field")?.classList.toggle("hidden", !earlyStopEnabled);
   const patience = Math.max(1, Number(qs("#rnn-early-stopping-patience")?.value || 10));

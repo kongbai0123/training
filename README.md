@@ -4,7 +4,7 @@
 
 **Windows 本機 AI 模型訓練與資料集工作平台**
 
-整合 CNN 影像任務、RNN 序列任務、Tabular 表格任務、資料標註、模型訓練、推論、比較、版本管理與匯出。
+整合影像訓練、序列訓練、表格資料預測、資料標註、模型訓練、推論、比較、版本管理與匯出。
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](docs/INSTALL.md)
 [![Version](https://img.shields.io/badge/version-0.2.0-2563EB)](VERSION)
@@ -38,7 +38,7 @@
 
 Vision Training Studio 是以一般使用者操作為核心的 Windows 本機訓練工具，協助使用者在同一套介面中完成：
 
-- 建立與管理 CNN、RNN、Tabular 專案。
+- 建立與管理影像訓練、序列訓練、表格資料預測專案。
 - 匯入圖片、標註資料、序列 CSV、表格 CSV 與既有模型。
 - 執行影像標註、資料分割、資料增強與自動標註；需要時可從影像標註工作區啟動內部 LabelMe 工具。
 - 設定模型與訓練參數，使用 CPU 或 NVIDIA GPU 執行訓練。
@@ -83,7 +83,7 @@ Get-FileHash .\VisionTrainingStudio_Setup_<version>.exe -Algorithm SHA256
 
 ## 核心工作流程
 
-| 階段 | CNN 影像任務 | RNN／序列任務 | Tabular 表格任務 |
+| 階段 | 影像訓練 | 序列訓練 | 表格資料預測 |
 |---|---|---|---|
 | 專案設定 | 圖片分類、物件偵測、物件輪廓分割、畫面區域分割 | 分類、回歸、LSTM／GRU／BiLSTM／XGBoost | 每列分類或連續數值預測 |
 | 資料匯入 | 圖片、ZIP、YOLO、分類資料夾與既有標註 | CSV 與 CSV ZIP | UTF-8 CSV |
@@ -92,9 +92,9 @@ Get-FileHash .\VisionTrainingStudio_Setup_<version>.exe -Algorithm SHA256
 | 評估 | mAP、Precision、Recall、分類與分割指標 | Accuracy、Macro-F1、MAE、RMSE 與殘差診斷 | Accuracy、Macro-F1、MAE、RMSE、R² 與特徵重要度 |
 | 比較與匯出 | 比較多個 Run，匯出權重、ONNX、SVG 圖表與報告 | 比較多個 Run，匯出模型套件、Schema、Scaler 與報告 | 比較 Run、模型生命週期、單筆／批次推論與可攜模型套件 |
 
-三種專案共用同一個「評估」入口與 Run 資料契約，但不共用錯誤的任務假設：CNN 顯示影像與定位結果，RNN 顯示序列分類或殘差診斷，Tabular 顯示逐列分類／回歸結果與特徵重要度。訓練頁用來監看「本次如何訓練」，評估頁則用來判斷「完成後的產物是否達到業務門檻」；因此不再為 Tabular 建立一套重複的評估流程，也不會把 BBox／Polygon 或 Window／Stride 控制項放進不相容的模型頁面。
+三種專案共用同一個「評估」入口與 Run 資料契約，但不共用錯誤的任務假設：影像訓練顯示影像與定位結果，序列訓練顯示序列分類或殘差診斷，表格資料預測顯示逐列分類／回歸結果與特徵重要度。訓練頁用來監看「本次如何訓練」，評估頁則用來判斷「完成後的產物是否達到業務門檻」；因此不會為表格資料另建重複的評估流程，也不會把 BBox／Polygon 或 Window／Stride 控制項放進不相容的模型頁面。
 
-### CNN 影像工作流程
+### 影像訓練工作流程
 
 ![CNN 影像訓練流程](docs/assets/cnn-training-flow.png)
 
@@ -105,15 +105,15 @@ Get-FileHash .\VisionTrainingStudio_Setup_<version>.exe -Algorithm SHA256
 - **物件輪廓分割**：描出每個獨立物件的輪廓，可分開計數。
 - **畫面區域分割**：標示道路、背景、天空等像素區域。
 
-### RNN 序列工作流程
+### 序列訓練工作流程
 
 ![RNN 序列訓練流程](docs/assets/rnn-training-flow.png)
 
-RNN 專案可指定特徵欄位、目標欄位、時間欄位與序列 ID，並透過序列切片建立固定長度的訓練視窗。分類任務顯示 Accuracy、Macro-F1、Precision 與 Recall；回歸任務顯示 MAE、RMSE、Loss 與殘差診斷。
+序列專案可指定特徵欄位、目標欄位、時間欄位與序列 ID，並透過序列切片建立固定長度的訓練視窗。分類任務顯示 Accuracy、Macro-F1、Precision 與 Recall；回歸任務顯示 MAE、RMSE、Loss 與殘差診斷。LSTM、GRU、BiLSTM 與 XGBoost 是這個工作區內可選的模型，不是頂層資料分類。
 
-### Tabular 表格工作流程
+### 表格資料預測工作流程
 
-Tabular 專案把 CSV 的每一列視為獨立樣本，不會改寫或取代 RNN 序列流程。首版只接受數值特徵並使用已隨程式提供的 XGBoost；缺失值統計只由 Train split 擬合，固定 seed 可重現切分。完成訓練後可查看特徵重要度、比較 Run、驗證／升級正式模型、執行單筆或批次推論，並匯出包含模型與前處理契約的 ZIP 套件。
+表格資料預測專案把 CSV 的每一列視為獨立樣本，不會改寫或取代序列流程。首版只接受數值特徵並使用已隨程式提供的 XGBoost；缺失值統計只由 Train split 擬合，固定 seed 可重現切分。完成訓練後可查看特徵重要度、比較 Run、驗證／升級正式模型、執行單筆或批次推論，並匯出包含模型與前處理契約的 ZIP 套件。
 
 ## 主要功能
 
@@ -122,7 +122,7 @@ Tabular 專案把 CSV 的每一列視為獨立樣本，不會改寫或取代 RNN
 - 圖片、CSV、ZIP 與既有標註匯入。
 - 內建影像標註工作區及 Polygon／BBox 標註流程；LabelMe 為工作區內的可選外部編輯器啟動鍵。
 - 資料品質檢查、類別統計與 Train／Val／Test 分割。
-- CNN 天候、光照、模糊、雜訊、幾何與遮擋資料增強。
+- 影像訓練支援天候、光照、模糊、雜訊、幾何與遮擋資料增強。
 - 增強前後即時比較與 Polygon／BBox 幾何重映射檢查。
 
 ### 模型訓練與評估
@@ -195,6 +195,8 @@ Tabular 專案把 CSV 的每一列視為獨立樣本，不會改寫或取代 RNN
 
 - [開發指南](docs/DEVELOPER_GUIDE.md)
 - [系統架構](docs/ARCHITECTURE.md)
+- [工作區資訊架構](docs/WORKSPACE_INFORMATION_ARCHITECTURE.md)
+- [工作區相容性與回滾](docs/WORKSPACE_COMPATIBILITY.md)
 - [專案結構](docs/PROJECT_STRUCTURE.md)
 - [部署指南](docs/DEPLOYMENT.md)
 - [自訂訓練外掛合約](docs/CUSTOM_TRAINING_PLUGIN_CONTRACT.md)

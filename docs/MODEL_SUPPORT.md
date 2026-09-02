@@ -9,7 +9,7 @@
 | 研究輪廓 | 只提供 benchmark 與選型資訊，不允許執行 |
 | 待研究 | 尚未完成 Windows、授權、訓練與匯出驗證 |
 
-## CNN 視覺模型
+## 影像訓練模型
 
 | 家族 | 任務 | 型號 | 狀態 | 後端 | 授權重點 |
 |---|---|---|---|---|---|
@@ -26,7 +26,7 @@
 | DeepLabV3 | Semantic Segmentation | MobileNetV3、ResNet50 | 可執行、選配下載 | `pytorch_torchvision` | torchvision BSD-3-Clause |
 | U-Net | Semantic Segmentation | 內建模板 | 可執行、免下載 | `pytorch_torchvision` | 專案內建實作 |
 
-## RNN 與結構化序列模型
+## 序列訓練模型
 
 | 家族 | 任務 | 狀態 | 後端 |
 |---|---|---|---|
@@ -36,6 +36,17 @@
 | XGBoost | Sequence Classification / Regression | 可執行 | `sklearn_xgboost` |
 | FastRNN | Sequence Classification / Regression | 規劃中，不可執行 | `pytorch_fastrnn` |
 | Isolation Forest | 異常探索 | 規劃中，不可執行 | `sklearn_isolation_forest` |
+
+XGBoost 在序列工作區會把已建立的序列視窗依時間步展平，作為 LSTM／GRU／BiLSTM 的 baseline；它不是頂層工作區分類。
+
+## 表格資料預測模型
+
+| 家族 | 任務 | 狀態 | 後端 |
+|---|---|---|---|
+| XGBoost | 每列獨立分類 | 可執行 | `xgboost_tabular` |
+| XGBoost | 每列連續數值預測 | 可執行 | `xgboost_tabular` |
+
+表格資料工作區首版只接受數值特徵。XGBoost 是目前可選模型；資料類型與模型名稱維持分離，以便未來加入其他表格模型而不改變專案分類。
 
 ## 模型尺寸
 

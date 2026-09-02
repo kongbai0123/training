@@ -27,6 +27,8 @@ class TabularWorkspaceStaticTests(unittest.TestCase):
         self.assertIn('tabular_regression:', projects)
         self.assertIn('["cnn", "rnn", "tabular"]', modes)
         self.assertIn('if (mode === "tabular") eventBus.emit("navigate", "tabular")', modes)
+        self.assertIn("const RNN_INCOMPATIBLE_PAGES", modes)
+        self.assertIn('mode === "rnn" && (page === "tabular" || RNN_INCOMPATIBLE_PAGES.has(page))', modes)
         self.assertIn('initTabularWorkspace', registry)
         self.assertIn('renderTabularWorkspace', registry)
 
