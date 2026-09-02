@@ -2,6 +2,9 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("vts-model-setup-reviewed", "e2e");
+  });
   await page.goto("/");
   await expect(page.locator("header.top-header")).toBeVisible();
 });
