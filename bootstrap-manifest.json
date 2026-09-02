@@ -1,0 +1,17 @@
+{
+    "schema_version":  1,
+    "product":  "Vision Training Studio",
+    "version":  "0.2.0",
+    "package_id":  "personal-v0.2.0-20260902",
+    "installer":  {
+                      "file_name":  "VisionTrainingStudio_Setup_0.2.0.exe",
+                      "url":  "https://github.com/kongbai0123/training/releases/download/personal-v0.2.0-20260902/VisionTrainingStudio_Setup_0.2.0.exe",
+                      "bytes":  1671230895,
+                      "sha256":  "32d3d9abc42910f5e3557f0a2307f8711ed2538175c36788677ad6ba3fe8ca4c"
+                  },
+    "install":  {
+                    "registry_app_id":  "{8E5806E8-7BA8-4D4D-9415-8E9185B2857F}_is1",
+                    "default_relative_dir":  "Programs\\VisionTrainingStudio",
+                    "relative_executable":  "VisionTrainingStudio.exe"
+                }
+}

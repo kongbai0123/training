@@ -5,6 +5,8 @@ All notable changes to Vision Training Studio are tracked here.
 ## [Unreleased]
 
 ### Changed
+- Added a visible repository-root personal launcher that downloads one pinned full installer, resumes interrupted transfers, verifies size and SHA-256, creates the desktop shortcut, and directly opens the local UI without requiring Python or Node.js.
+- Limited the personal bootstrap to local installation and launch; it does not add LAN binding, authentication, firewall, or public-network features.
 - Added expert-default and persistent guided shell modes, a reduced header, three-item workspace summary, 14px reading baseline, keyboard-visible focus, accessible upload controls, modal assistant focus lifecycle, and reduced-motion support.
 - Added generation-scoped project requests so stale project/model/status responses are aborted and ignored after switching projects.
 - Added a shared training-readiness response for CNN, RNN, and Tabular, with stable blocker codes and the same decision used by training start.

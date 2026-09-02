@@ -6,11 +6,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BuildScriptStaticTests(unittest.TestCase):
-    def test_batch_entrypoints_are_grouped_under_scripts(self):
-        root_batch_files = list(ROOT.glob("*.bat"))
+    def test_root_contains_only_the_personal_one_click_launcher(self):
+        root_batch_files = [path.name for path in ROOT.glob("*.bat")]
+        launcher = (ROOT / "啟動 Vision Training Studio.bat").read_text(encoding="utf-8")
         run_bat = (ROOT / "scripts" / "run.bat").read_text(encoding="utf-8")
 
-        self.assertEqual(root_batch_files, [])
+        self.assertEqual(root_batch_files, ["啟動 Vision Training Studio.bat"])
+        self.assertIn("scripts\\bootstrap_personal.ps1", launcher)
+        self.assertIn("powershell.exe", launcher)
+        self.assertNotIn("python", launcher.lower())
+        self.assertNotIn("node", launcher.lower())
         self.assertIn('cd /d "%~dp0\\.."', run_bat)
         self.assertIn('start "Vision Training Studio API"', run_bat)
 

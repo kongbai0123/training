@@ -1,14 +1,20 @@
 # 安裝指南
 
-本文說明 Vision Training Studio 的 Windows Portable EXE、開發安裝與 installer 建置方式。
+本文說明 Vision Training Studio 的個人一鍵啟動、開發安裝與 installer 建置方式。
 
-## 1. 一般使用者：Windows Portable EXE
+## 1. 個人使用：GitHub pull 後直接啟動
 
-1. 從 [GitHub Releases](https://github.com/kongbai0123/training/releases) 下載 `VisionTrainingStudio_<version>_Windows_x64_portable.zip`。
-2. 將 ZIP 完整解壓縮到可寫入的資料夾。
-3. 執行 `VisionTrainingStudio.exe`。
+1. 在另一台 Windows 10／11 x64 電腦 clone 或 pull 這個 repository。
+2. 雙擊根目錄的 `啟動 Vision Training Studio.bat`。
+3. 第一次等候完整安裝器下載與安裝；完成後 UI 會自動開啟，桌面也會建立捷徑。
 
-Portable EXE 已包含必要 runtime，一般使用者不需要安裝 Python 或 Node.js。`VisionTrainingStudio.exe` 必須與 `_internal` 位於同一套件目錄，不可只移動單一 EXE。
+啟動器使用 Windows 內建 PowerShell，不要求先安裝 Python 或 Node.js。下載內容先存成 `.part`，通過固定大小與 SHA-256 驗證後才會執行；中斷時再次雙擊即可重試或續傳。個人安裝器未簽章，因此 Windows 可能顯示未知發行者。
+
+此流程只安裝並開啟本機 UI，不會設定區網、登入、API token 或 Windows Firewall。
+
+### Portable 補充
+
+自行建置的 Portable 套件仍可直接執行，但檔案超過 GitHub 單一 Release asset 的大小限制，因此不是 GitHub pull 後的預設安裝方式。
 
 ## 2. 開發模式安裝
 
@@ -121,6 +127,8 @@ scripts\clean_runtime.bat
 
 ## 6. 常見安裝問題
 
+- 一鍵啟動下載中斷：保留網路連線後再次雙擊根目錄啟動檔；未完成檔案不會被安裝。
+- checksum 不符：刪除 `%LOCALAPPDATA%\VisionTrainingStudio\bootstrap\downloads` 後再次啟動；若仍失敗，檢查 Release 是否與 `bootstrap-manifest.json` 一致。
 - `python` 找不到：確認 Python 3.11 已安裝並加入 PATH，或使用 `.venv\Scripts\python.exe`。
 - `PyInstaller` 找不到：執行 `python -m pip install -r requirements-build.txt`。
 - port 被占用：改用 `--port` 指定其他 port。

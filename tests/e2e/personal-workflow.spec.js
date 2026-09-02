@@ -36,6 +36,41 @@ test("assistant dialog moves and restores focus", async ({ page }) => {
   await expect(opener).toBeFocused();
 });
 
+test("global pages hide project workflow navigation", async ({ page }) => {
+  for (const pageId of ["history", "settings", "model-guide"]) {
+    await page.locator(`.training-shared-nav [data-page='${pageId}']`).click();
+    await expect(page.locator("#training-module-divider")).toBeHidden();
+    await expect(page.locator("#cnn-mode-nav")).toBeHidden();
+    await expect(page.locator("#rnn-mode-nav")).toBeHidden();
+    await expect(page.locator("#tabular-mode-nav")).toBeHidden();
+  }
+});
+
+test("project workflow pages show the matching project navigation", async ({ page }) => {
+  const state = await page.evaluate(async () => {
+    const [{ appState }, { renderTrainingModeSidebar }] = await Promise.all([
+      import("/static/state.js"),
+      import("/static/pages/training_modes.js"),
+    ]);
+    appState.currentProjectId = "e2e-cnn-project";
+    appState.currentProject = { id: appState.currentProjectId, architecture: "cnn" };
+    appState.currentPage = "dataset";
+    renderTrainingModeSidebar();
+    return {
+      dividerHidden: document.querySelector("#training-module-divider").classList.contains("hidden"),
+      cnnHidden: document.querySelector("#cnn-mode-nav").classList.contains("hidden"),
+      rnnHidden: document.querySelector("#rnn-mode-nav").classList.contains("hidden"),
+      tabularHidden: document.querySelector("#tabular-mode-nav").classList.contains("hidden"),
+    };
+  });
+  expect(state).toEqual({
+    dividerHidden: false,
+    cnnHidden: false,
+    rnnHidden: true,
+    tabularHidden: true,
+  });
+});
+
 for (const width of [1280, 1100, 841, 840]) {
   test(`responsive shell remains operable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });

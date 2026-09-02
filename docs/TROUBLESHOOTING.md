@@ -2,6 +2,10 @@
 
 ## 1. 啟動失敗
 
+若是在另一台電腦第一次啟動，先重新雙擊 repo 根目錄的 `啟動 Vision Training Studio.bat`。下載會使用 `.part` 暫存並最多重試三次；只有檔案大小與 SHA-256 都正確時才會安裝。
+
+下載仍失敗時，確認網路可開啟 GitHub Releases，然後刪除 `%LOCALAPPDATA%\VisionTrainingStudio\bootstrap\downloads` 再試一次。這只刪除安裝器下載暫存，不會刪除專案或模型。
+
 常見原因：
 
 - Python 或 packaged dependency 缺失。

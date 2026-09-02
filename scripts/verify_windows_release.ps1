@@ -34,7 +34,7 @@ if ($signature.Status -ne "Valid") {
     if (-not $InternalQa) {
         throw "Authenticode signature is required for publication: $artifact ($($signature.Status))."
     }
-    Write-Warning "Unsigned or unverifiable artifact accepted for isolated internal QA only: $artifact"
+    Write-Warning "Unsigned or unverifiable artifact accepted for personal local use only: $artifact"
     $signatureLabel = if ($signature.Status -eq "Unavailable") { "UNVERIFIED_INTERNAL_QA" } else { "UNSIGNED_INTERNAL_QA" }
     $signer = ""
 } else {

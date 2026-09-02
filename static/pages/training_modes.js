@@ -354,12 +354,27 @@ export function resolveProjectWorkspacePage(project, requestedPage = "dashboard"
   return page;
 }
 
+const PROJECT_WORKFLOW_PAGES = new Set([
+  "dataset",
+  "labelme",
+  "split",
+  "augmentation",
+  "training",
+  "tabular",
+  "evaluation",
+  "model-compare",
+  "inference",
+  "auto-labeling",
+  "export",
+]);
+
 export function renderTrainingModeSidebar() {
-  const isPlatformOverview = appState.currentPage === "dashboard";
-  qs("#training-module-divider")?.classList.toggle("hidden", isPlatformOverview);
-  qs("#cnn-mode-nav")?.classList.toggle("hidden", isPlatformOverview || trainingModeState.activeMode !== "cnn");
-  qs("#rnn-mode-nav")?.classList.toggle("hidden", isPlatformOverview || trainingModeState.activeMode !== "rnn");
-  qs("#tabular-mode-nav")?.classList.toggle("hidden", isPlatformOverview || trainingModeState.activeMode !== "tabular");
+  const showProjectWorkflow = Boolean(appState.currentProjectId)
+    && PROJECT_WORKFLOW_PAGES.has(appState.currentPage);
+  qs("#training-module-divider")?.classList.toggle("hidden", !showProjectWorkflow);
+  qs("#cnn-mode-nav")?.classList.toggle("hidden", !showProjectWorkflow || trainingModeState.activeMode !== "cnn");
+  qs("#rnn-mode-nav")?.classList.toggle("hidden", !showProjectWorkflow || trainingModeState.activeMode !== "rnn");
+  qs("#tabular-mode-nav")?.classList.toggle("hidden", !showProjectWorkflow || trainingModeState.activeMode !== "tabular");
 
   qsa("[data-rnn-nav]").forEach((button) => {
     button.classList.toggle("active", button.dataset.rnnNav === trainingModeState.activeRnnPanel);

@@ -68,7 +68,7 @@ if defined VTS_SIGN_CERT_SHA1 (
   )
   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_windows_release.ps1 -ArtifactPath "%SETUP_EXE%"
 ) else (
-  echo [WARNING] No VTS_SIGN_CERT_SHA1 was provided. This build is internal-QA only and cannot be published.
+  echo [WARNING] No VTS_SIGN_CERT_SHA1 was provided. This is an unsigned personal-use build; Windows may show Unknown publisher.
   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_windows_release.ps1 -ArtifactPath "%SETUP_EXE%" -InternalQa
 )
 if errorlevel 1 (

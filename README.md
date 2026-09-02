@@ -13,6 +13,7 @@
 
 [查看發佈狀態](#版本與發佈狀態) ·
 [檢視 main 原始碼](https://github.com/kongbai0123/training/tree/main) ·
+[另一台電腦一鍵啟動](#另一台-windows-電腦一鍵啟動) ·
 [安裝說明](docs/INSTALL.md) ·
 [使用指南](docs/USER_GUIDE.md) ·
 [模型支援](docs/MODEL_SUPPORT.md) ·
@@ -28,9 +29,9 @@
 - `main` 保存原始碼、測試、建置腳本與文件。大型 `dist/`、`installer/output/` 和 `.exe` 產物依規則不直接提交進 Git。
 - 從原始碼執行 `scripts\package.bat` 後，主程式位於 `dist\VisionTrainingStudio\VisionTrainingStudio.exe`。
 - 執行 `scripts\build_installer.bat` 後，完整安裝器位於 `installer\output\VisionTrainingStudio_Setup_<version>.exe`。
-- 對外下載的 EXE 應放在 [GitHub Releases](https://github.com/kongbai0123/training/releases)，且必須通過 checksum 與可信任的 Windows 程式碼簽章驗證；repo 內不會直接存放大型 EXE。
+- 個人安裝器放在 [GitHub Releases](https://github.com/kongbai0123/training/releases)，repo 只保存小型啟動檔與完整性資訊，不把大型 `dist` 寫入 Git 歷史。
 
-> 目前本機已建立 0.2.0 full package，可作為個人本機安裝版使用。它尚未取得可信任的 Windows 程式碼簽章，因此 Windows 可能顯示未知發行者；只有未來要公開散布給陌生使用者時，才需要完成正式簽章與外部發佈驗證。不得使用或重新發佈舊 `0.2.0 runtime-r1` 增量包。
+> 個人安裝器未使用 Authenticode，Windows 可能顯示「未知發行者」。這不阻擋自己的電腦安裝；只有未來要把軟體正式散布給陌生使用者時才需要簽章。不得使用舊 `0.2.0 runtime-r1` 增量包取代完整安裝器。
 
 ![Vision Training Studio 應用程式總覽](docs/assets/app-overview.png)
 
@@ -60,6 +61,18 @@ Vision Training Studio 是以一般使用者操作為核心的 Windows 本機訓
 └─ exports\
 ```
 
+## 另一台 Windows 電腦一鍵啟動
+
+從 GitHub clone 或 pull 完成後，直接雙擊 repo 根目錄的：
+
+```text
+啟動 Vision Training Studio.bat
+```
+
+第一次會自動下載固定版本的完整安裝器、核對檔案大小與 SHA-256、安裝到目前 Windows 使用者並建立桌面捷徑，完成後直接開啟 UI。以後再次雙擊時會直接啟動，不需要安裝 Python 或 Node.js。
+
+這個入口只啟動本機軟體；沒有加入區網監聽、登入、API token、Firewall 或公網服務。
+
 ## 快速安裝
 
 ### 系統需求
@@ -69,11 +82,11 @@ Vision Training Studio 是以一般使用者操作為核心的 Windows 本機訓
 - CPU 可執行；大型模型建議使用支援 CUDA 的 NVIDIA GPU。
 - 使用安裝版不需要另外安裝 Python 或 Node.js。
 
-### 對外安裝狀態
+### 個人本機安裝
 
-目前沒有可宣稱為正式簽章版的公開 EXE。取得可信任的 Windows Code Signing 憑證、設定 `VTS_SIGN_CERT_SHA1` 並重新建立 full package 後，才會把安裝器與 `SHA256SUMS.txt` 放到 GitHub Releases。舊 `0.2.0 runtime-r1` 增量包不在支援路徑內。
+一般使用請使用根目錄的 `啟動 Vision Training Studio.bat`。它會從固定的 GitHub Release 取得完整安裝器並驗證 checksum；舊 `0.2.0 runtime-r1` 增量包不在這條首次安裝路徑內。
 
-內部 QA 可在建置機執行 `scripts\build_installer.bat`，完成後由 `installer\output` 取得完整安裝器。安裝前請關閉正在執行的舊版程式，並核對 SHA-256。
+需要自行重建時可執行 `scripts\build_installer.bat`，完成後由 `installer\output` 取得完整安裝器。
 
 PowerShell 驗證範例：
 
@@ -149,11 +162,11 @@ Get-FileHash .\VisionTrainingStudio_Setup_<version>.exe -Algorithm SHA256
 ### 目前版本
 
 - **main 原始碼版本：v0.2.0**
-- **交付狀態：內部 QA，尚未正式簽章**
-- **下一個正式對外候選：重新建置且完成可信任簽章的 full package**
+- **交付狀態：個人本機可用，未使用正式簽章**
+- **GitHub pull 啟動方式：根目錄一鍵啟動檔＋固定版本完整安裝器**
 - [完整版本變更紀錄](CHANGELOG.md)
 
-### 發佈安全門檻
+### 未來正式對外散布門檻
 
 1. 不再使用或重新發佈 `0.2.0 runtime-r1` 增量包。
 2. 正式 Windows 安裝器必須由一致且鎖定的依賴環境重新建置。

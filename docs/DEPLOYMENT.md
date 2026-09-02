@@ -2,6 +2,18 @@
 
 本文定義 Vision Training Studio 的打包、smoke test、installer 與 release validation 流程。
 
+## 0. 個人 GitHub 一鍵啟動
+
+repo 根目錄的 `啟動 Vision Training Studio.bat` 呼叫 `scripts\bootstrap_personal.ps1`。首次啟動依 `bootstrap-manifest.json` 下載固定的完整安裝器，驗證 bytes 與 SHA-256 後才執行；安裝後直接啟動現有本機 UI。
+
+每次重建個人安裝器後執行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\update_bootstrap_manifest.ps1 -ReleaseTag <personal-release-tag>
+```
+
+此命令同步 manifest 並在 `installer\output\SHA256SUMS.txt` 產生 Release checksum。個人 Release 只需上傳 Installer 與 checksum；不要上傳 `dist/`，也不要上傳超過 GitHub 單檔限制的 Portable ZIP。
+
 ## 1. Package Build
 
 使用 PyInstaller 建立 onedir package：
@@ -53,14 +65,14 @@ installer\VisionTrainingStudio.iss
 scripts\build_installer.bat
 ```
 
-正式發佈必須在憑證存放區安裝含私鑰的可信程式碼簽章憑證，並設定：
+未來若要正式散布給陌生使用者，必須在憑證存放區安裝含私鑰的可信程式碼簽章憑證，並設定：
 
 ```powershell
 $env:VTS_SIGN_CERT_SHA1 = "<certificate thumbprint>"
 scripts\build_installer.bat
 ```
 
-建置流程會先簽署主程式與 updater，再建立並簽署 installer。沒有設定憑證時仍可建立隔離測試用安裝器，但產物會標示為 internal-QA only；`publish_update_release.ps1` 會拒絕未通過 Authenticode 驗證的 installer。禁止使用自簽憑證冒充正式簽章。
+建置流程會先簽署主程式與 updater，再建立並簽署 installer。沒有設定憑證時仍可建立個人本機安裝器；Windows 可能顯示未知發行者。正式發佈流程仍會拒絕未通過 Authenticode 驗證的 installer，禁止使用自簽憑證冒充正式簽章。
 
 完整離線 GPU 安裝器的容量上限預設為 2 GiB。這個套件刻意包含 CUDA/PyTorch runtime，容量不是可攜性缺陷；若超過上限，必須先稽核相依內容，不能直接放寬發佈門檻。
 
