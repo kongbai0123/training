@@ -6,7 +6,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Import-Module Microsoft.PowerShell.Security -Force -ErrorAction Stop
+if (-not (Get-Command Get-AuthenticodeSignature -ErrorAction SilentlyContinue)) {
+    Import-Module Microsoft.PowerShell.Security -ErrorAction Stop
+}
 $artifact = (Resolve-Path -LiteralPath $ArtifactPath).Path
 $item = Get-Item -LiteralPath $artifact
 

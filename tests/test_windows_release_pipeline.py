@@ -19,6 +19,8 @@ class WindowsReleasePipelineTests(unittest.TestCase):
         publisher = (ROOT / "scripts" / "publish_update_release.ps1").read_text(encoding="utf-8")
         verifier = (ROOT / "scripts" / "verify_windows_release.ps1").read_text(encoding="utf-8")
         self.assertIn("verify_windows_release.ps1", publisher)
+        self.assertIn("Get-Command Get-AuthenticodeSignature", verifier)
+        self.assertNotIn("Import-Module Microsoft.PowerShell.Security -Force", verifier)
         self.assertIn('if ($signature.Status -ne "Valid")', verifier)
         self.assertIn("Authenticode signature is required for publication", verifier)
         self.assertIn("2147483648", verifier)
