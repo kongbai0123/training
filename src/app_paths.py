@@ -88,6 +88,7 @@ UPDATE_DOWNLOADS_DIR = UPDATES_DIR / "downloads"
 UPDATE_STAGING_DIR = UPDATES_DIR / "staging"
 UPDATE_BACKUPS_DIR = UPDATES_DIR / "backups"
 UPDATE_JOURNALS_DIR = UPDATES_DIR / "journals"
+TASKS_DIR = USER_DATA_DIR / "tasks"
 
 def _ensure_dirs(*paths: Path) -> None:
     for p in paths:
@@ -107,6 +108,7 @@ _ensure_dirs(
     UPDATE_STAGING_DIR,
     UPDATE_BACKUPS_DIR,
     UPDATE_JOURNALS_DIR,
+    TASKS_DIR,
 )
 
 # Backward compatible legacy directory for UI assets.

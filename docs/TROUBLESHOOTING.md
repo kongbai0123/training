@@ -84,6 +84,14 @@ scripts\package.bat
 
 readiness check 失敗時，先依 UI 顯示修正資料或設定，不要直接啟動訓練。
 
+### APP_RESTARTED / Interrupted
+
+應用程式不會在重啟後自動重播上傳、刪除、匯入、訓練或模型生命週期操作。請由任務的 retry action 返回原頁，核對磁碟上的輸出與設定後重新確認。任務 journal 最多保留 200 項或 30 天。
+
+### PROJECT_REVISION_CONFLICT
+
+代表另一個操作已先更新專案。重新載入專案後再送出變更；不要覆蓋磁碟上的 `project.json`。若主檔損壞，系統會嘗試由 `_meta/project-backups` 最近有效版本復原；無有效備份時專案會保持唯讀，避免建立空白資料。
+
 ## 6. 模型匯入後不能訓練
 
 模型匯入與訓練啟用是不同階段：

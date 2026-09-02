@@ -63,7 +63,7 @@
 .aug-strategy-description p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.86rem;
+  font-size: 0.875rem;
   line-height: 1.55;
 }
 
@@ -120,7 +120,7 @@
   justify-content: space-between;
   gap: 6px;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   white-space: nowrap;
   overflow: hidden;
 }
@@ -145,7 +145,7 @@
   background: rgba(59, 130, 246, 0.1);
   border-radius: 4px;
   font-family: var(--font-mono, monospace);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -163,7 +163,7 @@
   padding-top: 8px;
   border-top: 1px solid var(--border);
   color: var(--text-soft);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.45;
 }
 
@@ -175,7 +175,7 @@
   height: 39px;
   margin-top: 0;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .aug-switch-row > span:first-child {
@@ -250,7 +250,7 @@
 .aug-quantity-card > label,
 .aug-quantity-stat span {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 .aug-stepper {
@@ -342,7 +342,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   color: var(--text);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   font-weight: 700;
 }
 
@@ -490,7 +490,7 @@ body[data-theme="light"] .aug-preview-container {
 .aug-readiness-content p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   line-height: 1.45;
 }
 
@@ -498,7 +498,7 @@ body[data-theme="light"] .aug-preview-container {
   margin: 0;
   padding-left: 17px;
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 
@@ -521,7 +521,7 @@ body[data-theme="light"] .aug-preview-container {
   align-items: flex-start;
   gap: 8px;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 
@@ -549,7 +549,7 @@ body[data-theme="light"] .aug-preview-container {
   display: grid;
   grid-template-columns: minmax(82px, auto) minmax(0, 1fr);
   gap: 8px;
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .aug-strategy-summary dt,
@@ -626,7 +626,7 @@ body[data-theme="light"] .aug-preview-container {
 .aug-job-main span:not(.summary-badge),
 .aug-job-stats small {
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .aug-job-stats {

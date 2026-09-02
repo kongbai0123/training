@@ -96,7 +96,7 @@
 .assistant-run-card span,
 .assistant-eval-grid span {
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .assistant-status-strip strong {
@@ -128,7 +128,7 @@
 .assistant-project-mode p {
   margin: 3px 0 0;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
 }
 
 .assistant-settings-panel {
@@ -290,7 +290,7 @@
 .assistant-chat-status {
   min-height: 22px;
   color: var(--text-soft);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .assistant-chat-status.is-searching {

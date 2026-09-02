@@ -7,6 +7,7 @@ export function initInfoTooltips() {
     tooltip.id = "floating-tooltip";
     tooltip.className = "floating-tooltip";
     tooltip.setAttribute("role", "tooltip");
+    tooltip.setAttribute("aria-hidden", "true");
     document.body.appendChild(tooltip);
   }
 
@@ -84,12 +85,14 @@ export function initInfoTooltips() {
     const text = target?.dataset?.tooltip;
     if (!text) return;
     tooltip.innerHTML = renderTooltipContent(text);
+    tooltip.setAttribute("aria-hidden", "false");
     tooltip.classList.add("is-visible");
     placeTooltip(target);
   };
 
   const hideTooltip = () => {
     tooltip.classList.remove("is-visible");
+    tooltip.setAttribute("aria-hidden", "true");
   };
 
   normalizeInfoIcons();

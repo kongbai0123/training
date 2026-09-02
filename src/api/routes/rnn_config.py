@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
 from src.training.rnn_readiness import build_rnn_readiness_report
+from src.training.readiness_service import TrainingReadinessService
 from src.training.rnn_config import (
     active_rnn_config,
     build_schema_wizard,
@@ -46,12 +47,20 @@ def get_rnn_readiness(
     sequence_length = max(1, int(sequence_length or 16))
     stride = max(1, int(stride or 8))
     horizon = max(1, int(horizon or 1))
-    return build_rnn_readiness_report(
+    legacy = build_rnn_readiness_report(
         project,
         sequence_length=sequence_length,
         stride=stride,
         horizon=horizon,
     )
+    unified = TrainingReadinessService.check(project_id, project, {
+        "sequence_length": sequence_length,
+        "stride": stride,
+        "horizon": horizon,
+    })
+    legacy["ready"] = unified["ready"]
+    legacy["training_readiness"] = unified
+    return legacy
 
 
 @router.get("/api/projects/{project_id}/rnn/config")

@@ -48,7 +48,7 @@ select:focus {
   justify-content: flex-end;
   gap: 8px;
   color: var(--text-muted);
-  font-size: 0.86rem;
+  font-size: 0.875rem;
 }
 
 .split-ratio-total strong {
@@ -82,7 +82,7 @@ select:focus {
 
 .phase-card span {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 .phase-card.disabled {

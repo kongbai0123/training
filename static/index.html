@@ -7,7 +7,8 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/vendor/fonts/inter/inter.css?v=20260701-offline-assets">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css?v=20260701-offline-assets">
-  <link rel="stylesheet" href="/static/style.css?v=20260902-unified-evaluation">
+  <!-- Compatibility marker: /static/style.css?v=20260902-unified-evaluation -->
+  <link rel="stylesheet" href="/static/style.css?v=20260902-commercial-pilot">
   <script src="/static/vendor/chartjs/chart.umd.min.js?v=20260701-offline-assets"></script>
 </head>
 <body>
@@ -30,42 +31,30 @@
               <strong class="no-i18n" id="header-project-title">No project opened</strong>
             </div>
           </div>
-          <div class="header-resource-item">
-            <i class="fa-solid fa-desktop"></i>
-            <div>
-              <span>GPU</span>
-              <strong id="header-gpu-value" data-i18n="common.checking">Checking</strong>
-            </div>
-          </div>
-          <div class="header-resource-item">
-            <i class="fa-solid fa-chart-pie"></i>
-            <div>
-              <span>RAM</span>
-              <strong id="header-ram-value" data-i18n="common.checking">Checking</strong>
-            </div>
-          </div>
         </div>
+        <button class="btn btn-secondary btn-sm" id="btn-active-tasks" type="button" aria-label="Running tasks">
+          <i class="fa-solid fa-list-check"></i><span>Tasks</span><strong id="header-active-task-count">0</strong>
+        </button>
         <span class="status-dot" id="api-status-dot"></span>
         <div class="header-health">
           <span data-i18n="common.systemStatus">System Status</span>
           <strong id="header-health-label" data-i18n="common.checking">Checking</strong>
         </div>
-        <button class="btn btn-secondary btn-sm" id="btn-project-assistant" type="button" data-assistant-open>
-          <i class="fa-solid fa-circle-question"></i>
-          <span data-i18n="projectAssistant.open">Assistant</span>
-        </button>
-        <button class="btn btn-primary btn-sm" id="btn-header-save-project" type="button">
-          <i class="fa-solid fa-floppy-disk"></i>
-          <span data-i18n="headerSave">Save</span>
-        </button>
-        <button class="btn btn-secondary btn-sm" id="btn-theme-toggle" type="button" aria-label="Toggle background brightness" data-i18n-aria-label="themeToggleAria">
-          <i class="fa-solid fa-sun"></i>
-          <span data-i18n="themeToggle">Light</span>
-        </button>
-        <button class="btn btn-secondary btn-sm" id="btn-header-history">
-          <i class="fa-solid fa-clock-rotate-left"></i>
-          <span data-i18n="browseHistory">Browse History</span>
-        </button>
+        <details class="header-more-menu">
+          <summary class="btn btn-secondary btn-sm" aria-label="More tools"><i class="fa-solid fa-ellipsis"></i><span>More</span></summary>
+          <div class="header-more-popover">
+            <div class="header-health-details text-meta"><span>GPU</span><strong id="header-gpu-value">Checking</strong><span>RAM</span><strong id="header-ram-value">Checking</strong></div>
+            <button class="btn btn-secondary btn-sm" id="btn-project-assistant" type="button" data-assistant-open><i class="fa-solid fa-circle-question"></i><span data-i18n="projectAssistant.open">Assistant</span></button>
+            <button class="btn btn-primary btn-sm" id="btn-header-save-project" type="button"><i class="fa-solid fa-floppy-disk"></i><span data-i18n="headerSave">Save</span></button>
+            <button class="btn btn-secondary btn-sm" id="btn-theme-toggle" type="button" aria-label="Toggle background brightness" data-i18n-aria-label="themeToggleAria"><i class="fa-solid fa-sun"></i><span data-i18n="themeToggle">Light</span></button>
+            <button class="btn btn-secondary btn-sm" id="btn-header-history" type="button"><i class="fa-solid fa-clock-rotate-left"></i><span data-i18n="browseHistory">Browse History</span></button>
+            <div class="experience-mode-switch" role="group" aria-label="Interface mode">
+              <button class="btn btn-secondary btn-sm" type="button" data-experience-mode="expert">Expert</button>
+              <button class="btn btn-secondary btn-sm" type="button" data-experience-mode="guided">Guided</button>
+              <button class="btn btn-secondary btn-sm" type="button" data-guided-all-tools>All tools</button>
+            </div>
+          </div>
+        </details>
       </div>
     </header>
 
@@ -236,10 +225,10 @@
           </div>
         </section>
 
-        <aside class="assistant-drawer" id="project-assistant-drawer" aria-label="Project Assistant" data-i18n-aria-label="assistant.statusAria" hidden>
+        <aside class="assistant-drawer" id="project-assistant-drawer" role="dialog" aria-modal="true" aria-labelledby="project-assistant-title" aria-label="Project Assistant" data-i18n-aria-label="assistant.statusAria" hidden>
           <div class="page-header">
             <div>
-              <h1 data-i18n="assistant.title">Project Assistant</h1>
+              <h1 id="project-assistant-title" data-i18n="assistant.title">Project Assistant</h1>
               <p data-i18n="assistant.subtitle">Search active project knowledge, inspect cited answers, and review diagnostic assistant runs.</p>
             </div>
             <div class="page-actions">
@@ -475,6 +464,7 @@
                       <strong data-i18n="dataset.dropTitle">Drop ZIP, images, or a folder</strong>
                       <p data-i18n="dataset.dropHelp">Only image files are imported here. Videos and annotation files are filtered with a friendly notice.</p>
                     </div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-choose-dataset-files">Choose files</button>
                   </div>
                   <input type="file" id="input-zip-file" accept=".zip" style="display: none;">
                 </div>
@@ -513,6 +503,7 @@
                       <strong data-i18n="dataset.videoDropTitle">Drop video files</strong>
                       <p data-i18n="dataset.videoDropHelp">Supported formats include MP4, AVI, MKV, MOV, WMV, FLV, and WEBM.</p>
                     </div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-choose-video-files">Choose files</button>
                   </div>
                   <input type="file" id="input-video-file" accept="video/*" style="display: none;">
                 </div>
@@ -683,6 +674,7 @@
                   <h2 data-i18n="labelme.reviewQueue">Review Queue</h2>
                   <p class="section-help" data-i18n="labelme.reviewQueueHelp">Review current annotations and misplaced import files in one place.</p>
                 </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-choose-annotation-files">Choose files</button>
                 <div class="labelme-review-actions">
                   <span class="badge badge-muted" id="labelme-review-count">0</span>
                   <label class="checkbox-row labelme-issue-toggle">
@@ -3072,7 +3064,8 @@
   <div class="toast" id="toast" hidden></div>
 
   <script src="/static/vendor/dropzone/dropzone.min.js?v=20260701-offline-assets"></script>
-  <script type="module" src="/static/app.js?v=20260902-unified-evaluation"></script>
+  <!-- Compatibility marker: /static/app.js?v=20260902-unified-evaluation -->
+  <script type="module" src="/static/app.js?v=20260902-commercial-pilot"></script>
 </body>
 </html>
 

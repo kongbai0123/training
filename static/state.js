@@ -30,7 +30,8 @@ export const appState = {
   },
   settings: {
     theme: localStorage.getItem("vts-theme") || "dark",
-    language: localStorage.getItem("vts-language") || "zh-TW"
+    language: localStorage.getItem("vts-language") || "zh-TW",
+    experienceMode: localStorage.getItem("vts-experience-mode") === "guided" ? "guided" : "expert"
   },
   labelme: {
     uiReady: true,
@@ -239,6 +240,19 @@ export const fixedAugmentationValues = {
 export function initPreferences() {
   applyTheme(appState.settings.theme);
   applyLanguage(appState.settings.language);
+  applyExperienceMode(appState.settings.experienceMode);
+}
+
+export function applyExperienceMode(mode) {
+  const nextMode = mode === "guided" ? "guided" : "expert";
+  appState.settings.experienceMode = nextMode;
+  localStorage.setItem("vts-experience-mode", nextMode);
+  document.body.dataset.experienceMode = nextMode;
+  document.body.removeAttribute("data-guided-all-tools");
+  document.querySelectorAll("button[data-experience-mode]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.experienceMode === nextMode));
+  });
+  eventBus.emit("experience-mode-changed", nextMode);
 }
 
 export function applyTheme(theme) {
@@ -272,9 +286,14 @@ export function applyLanguage(language, options = {}) {
   }
 }
 
-export function updateLabelMeState() {
-  const project = appState.currentProject;
-  if (!project) return;
+export function deriveLabelMeState(project) {
+  if (!project) {
+    return {
+      uiReady: true, backendReady: true, synced: false, totalImages: 0,
+      jsonCount: 0, missingJson: 0, emptyJson: 0, unknownLabels: 0,
+      invalidJson: 0, completionRate: 0
+    };
+  }
   const rawImages = (project.images || []).filter((img) => !img.is_augmented);
   const total = rawImages.length;
 
@@ -283,20 +302,23 @@ export function updateLabelMeState() {
   const skipped = rawImages.filter((img) => img.status === "skipped").length;
 
   const missing = total - annotated - flagged - skipped;
-  const hasAnnotated = annotated > 0;
-
-  appState.labelme = {
+  const progress = project.labelme_progress || {};
+  return {
     uiReady: true,
     backendReady: true,
-    synced: hasAnnotated || appState.labelme.synced,
+    synced: annotated > 0 || (total > 0 && Number(progress.json_count || 0) > 0 && Number(progress.missing_json || 0) === 0),
     totalImages: total,
-    jsonCount: annotated,
-    missingJson: missing,
-    emptyJson: 0,
-    unknownLabels: appState.labelme.unknownClasses ? appState.labelme.unknownClasses.length : 0,
-    invalidJson: 0,
+    jsonCount: Number(progress.json_count ?? annotated),
+    missingJson: Number(progress.missing_json ?? missing),
+    emptyJson: Number(progress.empty_json || 0),
+    unknownLabels: Array.isArray(progress.unknown_labels) ? progress.unknown_labels.length : 0,
+    invalidJson: Number(progress.invalid_json || 0),
     completionRate: total > 0 ? Math.round((annotated / total) * 100) : 0
   };
+}
+
+export function updateLabelMeState() {
+  appState.labelme = deriveLabelMeState(appState.currentProject);
 }
 
 export function getProjectStatus(project) {

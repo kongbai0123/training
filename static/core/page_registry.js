@@ -1,5 +1,5 @@
 import { initDashboard, renderDashboard } from "../pages/dashboard.js?v=20260825-tabular-mvp";
-import { initProjectAssistant, renderProjectAssistantPage } from "../pages/project_assistant.js?v=20260825-tabular-mvp";
+import { initProjectAssistant, renderProjectAssistantPage } from "../pages/project_assistant.js?v=20260902-commercial-pilot";
 import { initProjects, renderProjectsPage } from "../pages/projects.js?v=20260825-tabular-mvp";
 import { initDataset, renderDatasetPage } from "../pages/dataset.js?v=20260630-progress-hud";
 import { initLabelMe, renderLabelMeManager } from "../pages/labelme.js?v=20260711-layout-export-precision";

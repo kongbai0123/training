@@ -44,7 +44,7 @@
 .btn-xs {
   padding: 4px 8px;
   min-height: 26px;
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 body[data-theme="light"] .btn-secondary {
@@ -85,7 +85,7 @@ body[data-theme="light"] .btn:disabled {
 .btn-sm {
   min-height: 32px;
   padding: 0 10px;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
 }
 
 .btn-block {
@@ -95,7 +95,7 @@ body[data-theme="light"] .btn:disabled {
 .form-hint {
   margin-top: 8px;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   line-height: 1.45;
 }
 
@@ -113,7 +113,7 @@ body[data-theme="light"] .btn:disabled {
 
 .toast small {
   color: var(--text-soft);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .icon-btn {
@@ -203,7 +203,7 @@ body[data-theme="light"] .icon-btn:hover:not(:disabled) {
 
 .metric-card span {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
 }
 
 .metric-card strong {
@@ -262,7 +262,7 @@ body[data-theme="light"] .card-heading i {
   margin: 0;
   color: var(--text-muted);
   line-height: 1.45;
-  font-size: 0.86rem;
+  font-size: 0.875rem;
 }
 
 #page-export .export-selector-grid {
@@ -386,7 +386,7 @@ body[data-theme="light"] .card-heading i {
   flex-wrap: wrap;
   gap: 8px 16px;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
 }
 
 .export-artifact-list {
@@ -450,7 +450,7 @@ body[data-theme="light"] .card-heading i {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--text-soft);
 }
 
@@ -473,7 +473,7 @@ body[data-theme="light"] .card-heading i {
   align-items: center;
   justify-content: center;
   width: fit-content;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 800;
   border: 1px solid transparent;
 }
@@ -548,7 +548,7 @@ body[data-theme="light"] .badge-muted {
   align-items: center;
   justify-content: space-between;
   color: var(--text-soft);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .progress-track {
@@ -632,7 +632,7 @@ body[data-theme="light"] .progress-track {
 
 .progress-ring__caption {
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 700;
   line-height: 1.1;
   max-width: 86px;
@@ -648,7 +648,7 @@ body[data-theme="light"] .progress-track {
 }
 
 .circular-progress.compact .progress-ring__caption {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   max-width: 64px;
 }
 
@@ -710,7 +710,7 @@ body[data-theme="light"] .global-progress-hud {
 .global-progress-header span {
   color: var(--text-soft);
   font-weight: 800;
-  font-size: 0.86rem;
+  font-size: 0.875rem;
   white-space: nowrap;
 }
 
@@ -725,12 +725,12 @@ body[data-theme="light"] .global-progress-hud {
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   color: var(--info);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .global-progress-message {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   line-height: 1.35;
   overflow: hidden;
   display: -webkit-box;
@@ -820,12 +820,12 @@ body[data-theme="light"] .global-progress-bar-bg {
 .task-progress-inline__title,
 .task-progress-inline__percent {
   color: var(--text);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 .task-progress-inline__message {
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .task-progress-inline__track {
@@ -960,7 +960,7 @@ label.form-stack {
   display: grid;
   gap: 7px;
   color: var(--text-soft);
-  font-size: 0.86rem;
+  font-size: 0.875rem;
 }
 
 input[type="text"],
@@ -990,7 +990,7 @@ select {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
   text-align: left;
-  font-size: 0.86rem;
+  font-size: 0.875rem;
 }
 
 .data-table th {
@@ -1102,7 +1102,7 @@ body[data-theme="light"] .modal-overlay {
   display: grid;
   gap: 7px;
   color: var(--text-soft);
-  font-size: 0.86rem;
+  font-size: 0.875rem;
 }
 
 .project-type-mode-toggle {
@@ -1163,7 +1163,7 @@ body[data-theme="light"] .modal-overlay {
 .is-readiness-blocked { opacity: 1; cursor: pointer; }
 .action-guard-modal-content { max-width: 620px; }
 .action-guard-operation { display: grid; gap: 5px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel-soft); }
-.action-guard-operation span { color: var(--text-muted); font-size: 0.78rem; }
+.action-guard-operation span { color: var(--text-muted); font-size: 0.875rem; }
 .action-guard-operation strong { font-size: 1rem; }
 #action-guard-reasons { margin: 8px 0 0; padding-left: 20px; }
 
@@ -1205,7 +1205,7 @@ body[data-theme="light"] .toast {
   gap: 10px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--border, #3f3f46);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 .summary-row:last-child {
   border-bottom: none;
@@ -1233,7 +1233,7 @@ body[data-theme="light"] .summary-row code {
 .summary-badge {
   display: inline-block;
   padding: 2px 6px;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   border-radius: 4px;
   text-transform: uppercase;
@@ -1247,7 +1247,7 @@ body[data-theme="light"] .summary-row code {
 .summary-action-list {
   padding-left: 18px;
   margin: 8px 0;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--text-soft, #e4e4e7);
   line-height: 1.45;
 }
@@ -1260,14 +1260,14 @@ body[data-theme="light"] .summary-row code {
   padding: 8px 12px;
   border-radius: 0 4px 4px 0;
   margin-bottom: 8px;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   color: #fca5a5;
 }
 .summary-empty {
   padding: 16px;
   text-align: center;
   color: var(--text-muted, #a1a1aa);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   border: 1px dashed var(--border, #3f3f46);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.02);

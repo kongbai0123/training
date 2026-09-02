@@ -74,7 +74,7 @@
 
 .dataset-side-rail .section-help {
   margin-bottom: 10px;
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 
@@ -101,7 +101,7 @@
 
 .dataset-field-label {
   color: var(--text-soft);
-  font-size: 0.84rem;
+  font-size: 0.875rem;
   font-weight: 700;
   line-height: 1.25;
 }
@@ -150,7 +150,7 @@
   align-items: center;
   gap: 6px;
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.875rem;
 }
 
 .dataset-storage-status span {
@@ -175,7 +175,7 @@
   width: 26px;
   height: 26px;
   flex: 0 0 26px;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .dataset-drop-zone {
@@ -192,7 +192,7 @@
 }
 
 .dataset-drop-zone p {
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .dataset-side-rail .dataset-upload-header {
@@ -200,7 +200,7 @@
 }
 
 .dataset-side-rail .dataset-storage-status {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .dataset-side-rail .dataset-drop-zone {

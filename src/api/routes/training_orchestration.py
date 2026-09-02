@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -13,6 +13,8 @@ from src.training.compare_service import CompareService, CompareServiceError
 from src.training.export_service import ExportableModelNotFound, ExportService, ExportServiceError
 from src.training.output_compare_service import CNNOutputCompareService, OutputCompareServiceError
 from src.training.start_service import TrainingReadinessError, TrainingRunAlreadyExists, TrainingStartService
+from src.training.readiness_service import TrainingReadinessService
+from src.api.exceptions import VtsApiException
 from src.task_jobs import task_job_manager
 
 router = APIRouter()
@@ -54,12 +56,40 @@ class TrainConfigRequest(BaseModel):
     colsample_bytree: Optional[float] = None
 
 
+class TrainingReadinessBlocker(BaseModel):
+    code: str
+    message: str
+    field: Optional[str] = None
+    action_page: str
+
+
+class TrainingReadinessResponse(BaseModel):
+    project_id: str
+    project_revision: int
+    architecture: str
+    backend: str
+    ready: bool
+    phase: str
+    blockers: List[TrainingReadinessBlocker]
+    warnings: List[Any]
+    next_action: Dict[str, Any]
+    checked_at: str
+
+
 
 class CompareRequest(BaseModel):
     architecture: str
     run_ids: List[str]
     baseline_run_id: Optional[str] = None
 
+
+
+@router.post("/api/projects/{project_id}/readiness", response_model=TrainingReadinessResponse)
+def get_training_readiness(project_id: str, config: Optional[Dict[str, Any]] = None):
+    project = ProjectManager.get_project(project_id)
+    if not project:
+        raise VtsApiException("PROJECT_NOT_FOUND", "Project not found", status_code=404)
+    return TrainingReadinessService.check(project_id, project, config)
 
 
 @router.post("/api/projects/{project_id}/train/start")
@@ -74,7 +104,12 @@ def start_training(project_id: str, config: TrainConfigRequest):
     except TrainingRunAlreadyExists as exc:
         raise HTTPException(status_code=409, detail=str(exc))
     except TrainingReadinessError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise VtsApiException(
+            "TRAINING_NOT_READY",
+            "Training requirements are not satisfied.",
+            status_code=400,
+            details=exc.report,
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

@@ -75,6 +75,21 @@ export function initProjectAssistantImpl() {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && assistantState.drawerOpen) closeProjectAssistantDrawer();
+    if (event.key === "Tab" && assistantState.drawerOpen) {
+      const drawer = qs("#project-assistant-drawer");
+      const focusable = [...(drawer?.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])') || [])]
+        .filter((node) => !node.hidden && node.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
   });
 }
 
@@ -226,6 +241,7 @@ function getActiveAssistantFilters() {
 }
 
 async function openProjectAssistantDrawer() {
+  assistantState.opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   assistantState.drawerOpen = true;
   const drawer = qs("#project-assistant-drawer");
   if (drawer) {
@@ -233,8 +249,12 @@ async function openProjectAssistantDrawer() {
     drawer.setAttribute("aria-hidden", "false");
   }
   document.body.classList.add("assistant-drawer-open");
+  document.querySelectorAll(".top-header, .sidebar, .main-content > .page:not(#project-assistant-drawer)").forEach((node) => {
+    node.inert = true;
+  });
   await loadProjectAssistant({ force: !assistantState.status });
   renderProjectAssistantImplPage();
+  (qs("#rag-chat-input") || qs("#btn-project-assistant-close"))?.focus();
 }
 
 function closeProjectAssistantDrawer() {
@@ -245,6 +265,11 @@ function closeProjectAssistantDrawer() {
     drawer.setAttribute("aria-hidden", "true");
   }
   document.body.classList.remove("assistant-drawer-open");
+  document.querySelectorAll(".top-header, .sidebar, .main-content > .page:not(#project-assistant-drawer)").forEach((node) => {
+    node.inert = false;
+  });
+  assistantState.opener?.focus?.();
+  assistantState.opener = null;
 }
 
 function requireActiveProject() {

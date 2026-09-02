@@ -10,7 +10,7 @@ function requestKey(url, options, method) {
   const headers = Object.entries(options.headers || {})
     .map(([key, value]) => [String(key).toLowerCase(), String(value)])
     .sort(([left], [right]) => left.localeCompare(right));
-  return JSON.stringify([method, String(url), headers]);
+  return JSON.stringify([method, String(url), headers, Number(options.projectScope?.generation) || 0]);
 }
 
 function clearResponseCache() {
@@ -91,8 +91,11 @@ export function apiFetch(url, options = {}) {
     progressMode: _progressMode,
     dedupe: _dedupe,
     responseCacheTtlMs: _responseCacheTtlMs,
+    projectScope: _projectScope,
     ...fetchOptions
   } = options;
+
+  if (_projectScope?.signal && !fetchOptions.signal) fetchOptions.signal = _projectScope.signal;
 
   if (token) {
     extraHeaders["X-VTS-Token"] = token;
@@ -118,6 +121,10 @@ export function apiFetch(url, options = {}) {
       task?.complete();
       return payload;
     } catch (err) {
+      if (err?.name === "AbortError") {
+        task?.complete();
+        throw err;
+      }
       task?.fail({ message: err?.message || "Request failed" });
       if (!suppressToast) {
         eventBus.emit("toast", err instanceof VtsApiError ? err : formatApiErrorForToast(err));

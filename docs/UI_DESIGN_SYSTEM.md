@@ -19,6 +19,9 @@ This document defines the UI contract used by the local desktop web shell. The g
 - Dirty forms must warn through the dashboard alert stack and `beforeunload`.
 - Stale project data must be visible after mutating local API calls until the project is refreshed.
 - CNN guided onboarding must route users to the real project, dataset, annotation, split, training, and compare pages.
+- The application shell defaults to `expert`. `guided` reuses the same pages and backend flows, showing the current step and next action while keeping the rest under **All tools**. The preference is stored as `vts-experience-mode` and is not project-scoped.
+- Body, control, table, and chart copy is at least 14px. Only `.text-meta` may use 13px for paths, IDs, versions, and timestamps.
+- Keyboard focus uses a 2px visible ring. Drawer dialogs move, trap, and restore focus; reduced-motion disables looping animation and transform transitions.
 - Deployment decisions must separate recommendation, blockers, reasons, risks, and next actions.
 
 ## UI Smoke Contract

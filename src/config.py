@@ -22,7 +22,7 @@ VERSION_INFO = {
     "update_channel": "stable",
     "edition": "Local",
     "build": "unknown",
-    "channel": "commercial-mvp",
+    "channel": "personal-local",
 }
 
 _version_file = BASE_DIR / "version.json"

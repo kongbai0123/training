@@ -23,12 +23,12 @@
 }
 
 .simple-step strong {
-  font-size: 0.84rem;
+  font-size: 0.875rem;
 }
 
 .simple-step span {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 
@@ -73,13 +73,13 @@
 }
 
 .compact-strategy-list strong {
-  font-size: 0.86rem;
+  font-size: 0.875rem;
 }
 
 .compact-strategy-list span,
 .muted-note {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   line-height: 1.45;
 }
 
@@ -121,7 +121,7 @@
 .mode-card span {
   grid-column: 2;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 .source-option.active,
@@ -165,7 +165,7 @@
 
 .strategy-item span {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   line-height: 1.45;
 }
 

@@ -271,7 +271,7 @@ class UIShellModularizationStaticTests(unittest.TestCase):
 
         self.assertIn(":root {", tokens_css)
         self.assertIn("--bg: #0f1318;", tokens_css)
-        self.assertIn("--primary: #3b82f6;", tokens_css)
+        self.assertIn("--primary: #2563eb;", tokens_css)
         self.assertIn("--radius: 8px;", tokens_css)
         self.assertIn('body[data-theme="light"] {', tokens_css)
         self.assertIn("--shadow: 0 12px 30px rgba(15, 23, 42, 0.12);", tokens_css)

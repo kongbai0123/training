@@ -139,7 +139,7 @@ function setupVideoDropZone() {
   input.style.display = "none";
   input.multiple = true;
   input.accept = "video/*";
-  dropZone.addEventListener("click", () => input.click());
+  qs("#btn-choose-video-files")?.addEventListener("click", () => input.click());
   input.addEventListener("change", async (event) => {
     await uploadVideoFiles([...(event.target.files || [])]);
     input.value = "";
@@ -155,7 +155,7 @@ function setupDatasetDropZone() {
   input.multiple = true;
   input.setAttribute("webkitdirectory", "");
   input.setAttribute("directory", "");
-  dropZone.addEventListener("click", () => input.click());
+  qs("#btn-choose-dataset-files")?.addEventListener("click", () => input.click());
   input.addEventListener("change", async (event) => {
     await uploadDatasetFiles([...(event.target.files || [])]);
     input.value = "";

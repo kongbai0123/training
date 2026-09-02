@@ -57,7 +57,7 @@
 }
 
 .split-readiness-item { min-width: 0; }
-.split-readiness-item span { display: block; color: var(--text-muted, #94a3b8); font-size: 12px; }
+.split-readiness-item span { display: block; color: var(--text-muted, #94a3b8); font-size: 0.875rem; }
 .split-readiness-item strong { display: block; margin-top: 4px; font-size: 18px; }
 
 .split-set-counts {
@@ -188,10 +188,10 @@
 .export-validation-strip > div { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; padding: 14px 16px; align-content: start; }
 .export-validation-strip > div + div { border-left: 1px solid var(--border-color, #334155); }
 .export-validation-strip i { grid-row: 1 / span 2; color: var(--accent, #3b82f6); margin-top: 2px; }
-.export-validation-strip span { color: var(--text-muted, #94a3b8); font-size: 12px; line-height: 1.45; }
+.export-validation-strip span { color: var(--text-muted, #94a3b8); font-size: 0.875rem; line-height: 1.45; }
 .export-validation-strip .btn { grid-column: 2; justify-self: start; margin-top: 4px; }
 .export-precision-field { display: grid; gap: 5px; margin-top: auto; }
-.export-precision-field span { color: var(--text-muted, #94a3b8); font-size: 12px; }
+.export-precision-field span { color: var(--text-muted, #94a3b8); font-size: 0.875rem; }
 
 @media (max-width: 980px) {
   .split-workspace {

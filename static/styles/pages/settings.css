@@ -73,7 +73,7 @@
 
 .update-version-grid span {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 0.875rem;
 }
 
 .update-version-grid strong {
@@ -124,7 +124,7 @@
 .update-storage-heading p {
   margin-top: 4px;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   line-height: 1.45;
 }
 
@@ -145,7 +145,7 @@
 
 .update-storage-grid span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.875rem;
 }
 
 .update-storage-grid strong {

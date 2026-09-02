@@ -8,7 +8,7 @@
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](docs/INSTALL.md)
 [![Version](https://img.shields.io/badge/version-0.2.0-2563EB)](VERSION)
-[![Distribution](https://img.shields.io/badge/distribution-Internal%20QA-F59E0B)](docs/release_strategy.md)
+[![Usage](https://img.shields.io/badge/usage-Personal%20Local-2563EB)](docs/USER_GUIDE.md)
 [![Runtime](https://img.shields.io/badge/end--user%20runtime-No%20Python%20required-0F766E)](docs/INSTALL.md)
 
 [查看發佈狀態](#版本與發佈狀態) ·
@@ -22,13 +22,15 @@
 
 ## Repo、README 與 EXE 說明
 
+> **目前定位：**這是一套供個人本機使用、模擬完整產品流程的 AI 訓練操作介面，不是準備公開販售的商業產品。Sidebar 保留為資料、標註、訓練、評估、推論與匯出的流程導航；Expert 顯示完整工具，Guided 只突出目前階段與下一步。
+
 - **Repo** 是整個 `kongbai0123/training` GitHub 專案；README 只是 repo 首頁顯示的這一份說明文件。
 - `main` 保存原始碼、測試、建置腳本與文件。大型 `dist/`、`installer/output/` 和 `.exe` 產物依規則不直接提交進 Git。
 - 從原始碼執行 `scripts\package.bat` 後，主程式位於 `dist\VisionTrainingStudio\VisionTrainingStudio.exe`。
 - 執行 `scripts\build_installer.bat` 後，完整安裝器位於 `installer\output\VisionTrainingStudio_Setup_<version>.exe`。
 - 對外下載的 EXE 應放在 [GitHub Releases](https://github.com/kongbai0123/training/releases)，且必須通過 checksum 與可信任的 Windows 程式碼簽章驗證；repo 內不會直接存放大型 EXE。
 
-> 目前本機已建立 0.2.0 full package，但尚未取得可信任的 Windows 程式碼簽章憑證，因此只屬於內部 QA 產物。正式對外發佈目前暫停；不得使用或重新發佈舊 `0.2.0 runtime-r1` 增量包。
+> 目前本機已建立 0.2.0 full package，可作為個人本機安裝版使用。它尚未取得可信任的 Windows 程式碼簽章，因此 Windows 可能顯示未知發行者；只有未來要公開散布給陌生使用者時，才需要完成正式簽章與外部發佈驗證。不得使用或重新發佈舊 `0.2.0 runtime-r1` 增量包。
 
 ![Vision Training Studio 應用程式總覽](docs/assets/app-overview.png)
 

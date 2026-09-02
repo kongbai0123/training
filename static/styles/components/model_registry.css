@@ -37,7 +37,7 @@
 .model-registry-main span,
 .model-registry-metrics span {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .model-registry-metrics {
@@ -100,7 +100,7 @@
 .model-registry-note,
 .training-model-registry-card .form-hint {
   color: var(--text-muted);
-  font-size: 0.84rem;
+  font-size: 0.875rem;
   line-height: 1.45;
 }
 
@@ -131,7 +131,7 @@
 
 .model-registry-meta-grid span {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .model-registry-meta-grid code {
@@ -175,7 +175,7 @@
   border-radius: var(--radius);
   background: var(--bg-panel);
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
 }
 
 .model-import-check.passed code {
@@ -215,7 +215,7 @@
 .model-approval-header span,
 .model-approval-panel > div:first-child span {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
 }
 
 .model-approval-badge {
@@ -227,7 +227,7 @@
   border-radius: 999px;
   color: var(--warning);
   background: color-mix(in srgb, var(--warning) 18%, var(--bg-panel));
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -252,7 +252,7 @@
 .model-approval-summary span,
 .model-approval-decision span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.875rem;
 }
 
 .model-permission-list {
@@ -303,13 +303,13 @@
   border-radius: calc(var(--radius) - 2px);
   background: var(--bg-panel-soft);
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 
 .model-import-supported-types strong {
   color: var(--text);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
 }
 
 .model-import-drop-zone {
@@ -355,7 +355,7 @@
 .model-import-drop-zone p {
   margin: 4px 0 0;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 
@@ -434,7 +434,7 @@
 }
 
 .model-registry-group-title strong {
-  font-size: 0.76rem;
+  font-size: 0.875rem;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--text);
@@ -442,7 +442,7 @@
 
 .model-registry-group-title span {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .model-registry-item.checkpoint {
@@ -469,7 +469,7 @@
 
 .weight-manager-toolbar label span {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 .weight-manager-toolbar-actions,
@@ -484,7 +484,7 @@
 .weight-manager-summary {
   margin: 8px 0 12px;
   color: var(--text-muted);
-  font-size: 0.86rem;
+  font-size: 0.875rem;
 }
 
 .weight-manager-list {
@@ -519,7 +519,7 @@
 .run-cleanup-header p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   line-height: 1.5;
 }
 
@@ -557,7 +557,7 @@
 .weight-manager-row-main span,
 .weight-manager-row-meta span {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .weight-manager-row-meta {

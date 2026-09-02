@@ -13,6 +13,7 @@ import {
   syncPageModeForProject,
 } from "./page_registry.js?v=20260825-tabular-mvp";
 import { showToast as showToastCore } from "./toast.js";
+import { projectScope } from "./project_scope.js";
 
 export function createProjectLifecycle({ renderAll, navigate }) {
   async function bootstrapSession() {
@@ -74,26 +75,35 @@ export function createProjectLifecycle({ renderAll, navigate }) {
 
   async function openProject(projectId, options = {}) {
     if (!projectId) return;
+    const scope = projectScope.begin(projectId);
+    updateLabelMeState();
+    renderAll();
     try {
-      appState.currentProject = await apiFetch(`/api/projects/${projectId}`);
-      appState.currentProjectId = projectId;
+      const project = await apiFetch(`/api/projects/${projectId}`, { projectScope: scope });
+      projectScope.assertCurrent(scope);
+      appState.currentProject = project;
       appState.currentProjectClasses = [...(appState.currentProject?.class_names || [])];
       const destinationPage = resolvePageForProject(appState.currentProject, options.page || appState.currentPage);
       syncPageModeForProject(appState.currentProject, options.moduleOverview ? "module-overview" : destinationPage);
       updateLabelMeState();
-      await checkCurrentTrainStatus();
+      await checkCurrentTrainStatus(scope);
+      projectScope.assertCurrent(scope);
       try {
-        const models = await apiFetch(`/api/projects/${projectId}/models`);
+        const models = await apiFetch(`/api/projects/${projectId}/models`, { projectScope: scope });
+        projectScope.assertCurrent(scope);
         appState.models = Array.isArray(models) ? models : [];
       } catch (e) {
+        if (e?.name === "AbortError") return;
         console.warn("Failed to prefetch models:", e.message);
         appState.models = [];
       }
       await loadPageRecommendedConfig();
+      projectScope.assertCurrent(scope);
       renderAll();
       eventBus.emit("project-opened", { projectId, project: appState.currentProject });
       if (!options.stayOnPage) navigate(destinationPage || "dashboard");
     } catch (err) {
+      if (err?.name === "AbortError") return;
       showToastCore(`Failed to open project: ${err.message}`);
     }
   }
@@ -133,7 +143,9 @@ export function createProjectLifecycle({ renderAll, navigate }) {
 
   async function requestProjectSave(projectId) {
     try {
-      return await apiFetch(`/api/projects/${projectId}/save`, { method: "POST", suppressToast: true });
+      const revision = Number(appState.currentProject?.revision);
+      const headers = Number.isFinite(revision) ? { "If-Match": `"${revision}"` } : {};
+      return await apiFetch(`/api/projects/${projectId}/save`, { method: "POST", headers, suppressToast: true });
     } catch (error) {
       if (error?.status === 404 || error?.status === 405) {
         return apiFetch(`/api/projects/${projectId}`);
@@ -142,12 +154,15 @@ export function createProjectLifecycle({ renderAll, navigate }) {
     }
   }
 
-  async function checkCurrentTrainStatus() {
-    if (!appState.currentProjectId) return;
+  async function checkCurrentTrainStatus(scope = projectScope.capture()) {
+    if (!projectScope.isCurrent(scope)) return;
     try {
-      appState.trainingStatus = await apiFetch(`/api/projects/${appState.currentProjectId}/train/status`);
+      const status = await apiFetch(`/api/projects/${scope.projectId}/train/status`, { projectScope: scope });
+      projectScope.assertCurrent(scope);
+      appState.trainingStatus = status;
       eventBus.emit("check-training-websocket");
-    } catch {
+    } catch (error) {
+      if (error?.name === "AbortError") return;
       appState.trainingStatus = null;
     }
   }
@@ -177,14 +192,8 @@ export function createProjectLifecycle({ renderAll, navigate }) {
 
   function clearDeletedProject(projectId) {
     if (appState.currentProjectId !== projectId) return;
-    appState.currentProjectId = null;
-    appState.currentProject = null;
-    appState.trainingStatus = null;
+    projectScope.clear();
     updateLabelMeState();
-    if (appState.wsConn) {
-      appState.wsConn.close();
-      appState.wsConn = null;
-    }
   }
 
   return {

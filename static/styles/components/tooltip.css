@@ -9,7 +9,7 @@
   background: #2b3544;
   border: 1px solid #3d4a5c;
   color: #8fa0b4;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 700;
   line-height: 1;
   position: relative;
@@ -38,7 +38,7 @@ body[data-theme="light"] .info-icon {
   background: #0d1117;
   color: var(--text);
   box-shadow: var(--shadow);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   line-height: 1.45;
   display: none;
   text-align: left;
@@ -65,7 +65,7 @@ body[data-theme="light"] .info-icon::after {
   background: #0d1117;
   color: var(--text);
   box-shadow: var(--shadow);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   line-height: 1.45;
   overflow-wrap: break-word;
   word-break: break-word;

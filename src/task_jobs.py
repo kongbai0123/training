@@ -4,14 +4,20 @@ from __future__ import annotations
 
 import threading
 import uuid
+import json
+import os
+import tempfile
 from collections import OrderedDict
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 
 TaskHandler = Callable[["TaskReporter"], Any]
-TERMINAL_STATUSES = {"completed", "failed", "cancelled"}
+TERMINAL_STATUSES = {"completed", "failed", "cancelled", "interrupted"}
+ACTIVE_STATUSES = {"queued", "running", "cancelling"}
+MAX_HISTORY_EVENTS = 100
 
 
 def _utc_now() -> str:
@@ -59,12 +65,17 @@ class TaskReporter:
 class TaskJobManager:
     """Thread-safe in-process task registry with a stable API/WebSocket payload."""
 
-    def __init__(self, *, max_jobs: int = 200):
+    def __init__(self, *, max_jobs: int = 200, journal_dir: Optional[Path] = None, retention_days: int = 30):
         self._max_jobs = max(20, int(max_jobs))
+        self._journal_dir = Path(journal_dir).resolve() if journal_dir else None
+        self._retention_days = max(1, int(retention_days))
         self._jobs: "OrderedDict[str, Dict[str, Any]]" = OrderedDict()
         self._cancel_events: Dict[str, threading.Event] = {}
         self._lock = threading.RLock()
         self._changed = threading.Condition(self._lock)
+        if self._journal_dir:
+            self._journal_dir.mkdir(parents=True, exist_ok=True)
+            self._restore_journal()
 
     def submit(
         self,
@@ -102,6 +113,7 @@ class TaskJobManager:
             self._jobs[job_id] = job
             self._cancel_events[job_id] = threading.Event()
             self._prune_locked()
+            self._persist_locked(job)
             self._changed.notify_all()
         threading.Thread(target=self._run, args=(job_id, handler), daemon=True, name=job_id).start()
         return self.get(job_id)
@@ -161,7 +173,9 @@ class TaskJobManager:
                     "progress": float(job.get("progress") or 0.0),
                     "at": job["updated_at"],
                 })
+                job["history"] = job["history"][-MAX_HISTORY_EVENTS:]
             self._jobs.move_to_end(job_id)
+            self._persist_locked(job)
             self._changed.notify_all()
             return deepcopy(job)
 
@@ -174,6 +188,7 @@ class TaskJobManager:
             if job["status"] not in TERMINAL_STATUSES:
                 event.set()
                 job.update({"status": "cancelling", "phase": "cancelling", "message": "Cancelling task", "updated_at": _utc_now()})
+                self._persist_locked(job)
                 self._changed.notify_all()
             return deepcopy(job)
 
@@ -205,6 +220,85 @@ class TaskJobManager:
                 return
             self._jobs.pop(removable, None)
             self._cancel_events.pop(removable, None)
+            if self._journal_dir:
+                journal = self._journal_dir / removable / "job.json"
+                journal.unlink(missing_ok=True)
+                try:
+                    journal.parent.rmdir()
+                except OSError:
+                    pass
+
+    def _persist_locked(self, job: Dict[str, Any]) -> None:
+        if not self._journal_dir:
+            return
+        job_dir = self._journal_dir / str(job["job_id"])
+        job_dir.mkdir(parents=True, exist_ok=True)
+        target = job_dir / "job.json"
+        fd, temp_name = tempfile.mkstemp(prefix=".job.", suffix=".tmp", dir=job_dir)
+        temp = Path(temp_name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+                json.dump(job, handle, ensure_ascii=False, indent=2)
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temp, target)
+        finally:
+            temp.unlink(missing_ok=True)
+
+    def _restore_journal(self) -> None:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=self._retention_days)
+        restored: list[Dict[str, Any]] = []
+        for path in self._journal_dir.glob("*/job.json"):
+            try:
+                with path.open("r", encoding="utf-8") as handle:
+                    job = json.load(handle)
+                updated = datetime.fromisoformat(str(job.get("updated_at") or ""))
+                if updated.tzinfo is None:
+                    updated = updated.replace(tzinfo=timezone.utc)
+                if updated < cutoff:
+                    path.unlink(missing_ok=True)
+                    continue
+                if job.get("status") in ACTIVE_STATUSES:
+                    now = _utc_now()
+                    job.update({
+                        "status": "interrupted",
+                        "phase": "interrupted",
+                        "message": "The application restarted before this task completed.",
+                        "error": "Application restarted",
+                        "error_code": "APP_RESTARTED",
+                        "retryable": True,
+                        "retry_action": job.get("retry_action") or {"project_id": job.get("project_id", ""), "kind": job.get("kind", "")},
+                        "completed_at": now,
+                        "updated_at": now,
+                    })
+                    job.setdefault("history", []).append({
+                        "phase": "interrupted", "message": job["message"], "progress": float(job.get("progress") or 0), "at": now
+                    })
+                job["history"] = list(job.get("history") or [])[-MAX_HISTORY_EVENTS:]
+                restored.append(job)
+            except (OSError, ValueError, json.JSONDecodeError, TypeError):
+                continue
+        restored.sort(key=lambda item: str(item.get("updated_at") or ""))
+        for expired in restored[:-self._max_jobs]:
+            expired_id = str(expired.get("job_id") or "")
+            if expired_id:
+                expired_path = self._journal_dir / expired_id / "job.json"
+                expired_path.unlink(missing_ok=True)
+                try:
+                    expired_path.parent.rmdir()
+                except OSError:
+                    pass
+        for job in restored[-self._max_jobs:]:
+            job_id = str(job.get("job_id") or "")
+            if not job_id:
+                continue
+            self._jobs[job_id] = job
+            self._cancel_events[job_id] = threading.Event()
+            self._persist_locked(job)
 
 
-task_job_manager = TaskJobManager()
+from src.app_paths import TASKS_DIR
+
+
+task_job_manager = TaskJobManager(journal_dir=TASKS_DIR)

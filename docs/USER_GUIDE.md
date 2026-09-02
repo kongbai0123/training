@@ -59,6 +59,8 @@ projects/{project_id}/
 3. 設定 feature columns 與 target column。
 4. 設定 sequence length、stride、horizon。
 5. 執行 readiness check。
+
+介面預設為 Expert。可在右上角 **More → Guided** 切換引導模式；它只精簡導覽，不會建立另一份專案或訓練流程。若應用程式在背景工作期間重新啟動，工作會顯示為 **Interrupted / APP_RESTARTED**，請返回原功能頁確認資料後重新執行。
 6. 選擇 PyTorch LSTM 或 XGBoost backend。
 7. 開始訓練並查看 metrics、artifacts 與 run history。
 

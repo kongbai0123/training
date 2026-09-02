@@ -41,6 +41,20 @@ jobs:
         run: python -m pytest tests -q -m "not gpu" --junitxml=report.xml
       - name: Compile Python entry points and packages
         run: python -m compileall -q src app.py launcher.py
+      - name: Check CSS tokens and generated API contracts
+        run: |
+          python tools/check_css_tokens.py
+          python tools/generate_frontend_api_types.py --check
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install browser test dependencies
+        run: npm ci
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+      - name: Run Playwright and axe checks
+        run: npm run test:e2e
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v7

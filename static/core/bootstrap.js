@@ -4,6 +4,7 @@ import {
   initPreferences,
   applyLanguage,
   getProjectStatus,
+  applyExperienceMode,
   t,
 } from "../state.js";
 import { qs, qsa } from "../utils.js";
@@ -27,7 +28,8 @@ import {
   renderPrimaryPageModules,
   renderSecondaryPageModules,
   syncPageModeForProject,
-} from "./page_registry.js?v=20260902-unified-evaluation";
+} from "./page_registry.js?v=20260902-commercial-pilot";
+// Compatibility marker for static release audits: from "./page_registry.js?v=20260902-unified-evaluation"
 
 const {
   bootstrapSession,
@@ -39,6 +41,22 @@ const {
   closeHistoryModal,
   clearDeletedProject,
 } = createProjectLifecycle({ renderAll, navigate });
+let assistantShellOpener = null;
+
+function setAssistantShellOpen(open) {
+  const drawer = qs("#project-assistant-drawer");
+  if (!drawer) return;
+  if (open) assistantShellOpener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  drawer.hidden = !open;
+  drawer.setAttribute("aria-hidden", open ? "false" : "true");
+  document.body.classList.toggle("assistant-drawer-open", open);
+  qsa(".top-header, .sidebar, .main-content > .page:not(#project-assistant-drawer)").forEach((node) => { node.inert = open; });
+  if (open) window.setTimeout(() => (qs("#rag-chat-input") || qs("#btn-project-assistant-close"))?.focus(), 0);
+  else {
+    assistantShellOpener?.focus?.();
+    assistantShellOpener = null;
+  }
+}
 
 export async function bootstrapApp() {
   initPreferences();
@@ -75,6 +93,21 @@ export async function bootstrapApp() {
 }
 
 function bindGlobalNavigation() {
+  qsa(".sidebar-item").forEach((button) => {
+    const name = button.querySelector("span")?.textContent?.trim();
+    if (name) {
+      button.setAttribute("aria-label", name);
+      button.setAttribute("title", name);
+    }
+  });
+  qsa("[data-assistant-open]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setAssistantShellOpen(true);
+      eventBus.emit("open-project-assistant");
+    });
+  });
   qsa("[data-page]").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (btn.closest(".training-mode-nav.hidden")) return;
@@ -88,10 +121,19 @@ function bindGlobalNavigation() {
   });
 
   document.addEventListener("click", (event) => {
-    const assistantTarget = event.target.closest("[data-assistant-open]");
-    if (assistantTarget) {
-      event.preventDefault();
-      eventBus.emit("open-project-assistant");
+    const modeTarget = event.target.closest("button[data-experience-mode]");
+    if (modeTarget) {
+      applyExperienceMode(modeTarget.dataset.experienceMode);
+      renderAll();
+      return;
+    }
+    if (event.target.closest("[data-guided-all-tools]")) {
+      if (document.body.hasAttribute("data-guided-all-tools")) document.body.removeAttribute("data-guided-all-tools");
+      else document.body.setAttribute("data-guided-all-tools", "true");
+      return;
+    }
+    if (event.target.closest("#btn-project-assistant-close")) {
+      setAssistantShellOpen(false);
       return;
     }
 
@@ -132,6 +174,14 @@ function bindGlobalNavigation() {
 
   eventBus.on("open-project", async (projectId) => {
     await openProject(projectId, { page: "training", moduleOverview: true });
+  });
+  document.addEventListener("keydown", (event) => {
+    const drawer = qs("#project-assistant-drawer");
+    if (!drawer || drawer.hidden) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setAssistantShellOpen(false);
+    }
   });
 
   eventBus.on("reload-projects", async (options = {}) => {

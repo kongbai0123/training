@@ -26,7 +26,7 @@
   gap: 5px;
   min-width: 0;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 0.875rem;
 }
 
 .model-guide-toolbar input {
@@ -175,7 +175,7 @@
 .model-guide-task-intro small,
 .model-guide-task-explainer dt {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 0.875rem;
 }
 
 .model-guide-task-explainer dl {
@@ -194,7 +194,7 @@
 .model-guide-task-explainer dd {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 12px;
+  font-size: 0.875rem;
 }
 
 .model-guide-context-strip {
@@ -224,7 +224,7 @@
 .model-guide-list-item span,
 .model-guide-list-item small {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 0.875rem;
 }
 
 .model-guide-context-strip strong {
@@ -344,7 +344,7 @@
   border-radius: 3px;
   background: var(--success-soft);
   color: var(--success);
-  font-size: 12px;
+  font-size: 0.875rem;
   font-style: normal;
 }
 
@@ -373,7 +373,7 @@
   border-radius: 3px;
   background: var(--bg-soft);
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 0.875rem;
 }
 
 .model-guide-tags .success { color: var(--success); }
@@ -408,7 +408,7 @@
 }
 
 .model-guide-metrics span,
-.model-guide-metrics small { color: var(--text-muted); font-size: 12px; }
+.model-guide-metrics small { color: var(--text-muted); font-size: 0.875rem; }
 .model-guide-metrics strong { font-size: 18px; }
 
 .model-guide-pros-cons,
@@ -436,7 +436,7 @@
 
 .model-guide-charts .section-title.compact small {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 
@@ -473,7 +473,7 @@
 .model-guide-evidence-source small,
 .model-guide-comparison-note {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 
@@ -489,7 +489,7 @@
 .model-guide-evidence-source a {
   width: fit-content;
   color: var(--accent);
-  font-size: 12px;
+  font-size: 0.875rem;
   text-decoration: none;
 }
 
@@ -522,12 +522,12 @@
 
 .model-guide-chart-empty strong {
   color: var(--text);
-  font-size: 12px;
+  font-size: 0.875rem;
 }
 
 .model-guide-chart-empty span {
   max-width: 240px;
-  font-size: 12px;
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 
@@ -634,7 +634,7 @@
 
 .model-guide-report-preview h3 { margin: 3px 0; }
 .model-guide-report-preview time,
-.model-guide-report-preview footer { color: var(--text-muted); font-size: 12px; }
+.model-guide-report-preview footer { color: var(--text-muted); font-size: 0.875rem; }
 .model-guide-report-preview ul { padding-left: 20px; line-height: 1.6; }
 .model-guide-report-preview footer { padding-top: 10px; border-top: 1px solid var(--border); }
 

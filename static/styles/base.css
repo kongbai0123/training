@@ -63,10 +63,12 @@ hr {
 code {
   color: var(--text-soft);
   font-family: Consolas, "JetBrains Mono", monospace;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   overflow-wrap: normal;
   word-break: normal;
 }
+
+small { font-size: 0.875rem; }
 
 [hidden] {
   display: none !important;

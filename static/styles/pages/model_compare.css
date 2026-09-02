@@ -56,7 +56,7 @@
 .compare-scope-summary span,
 .compare-view-row > span {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -165,7 +165,7 @@
 .compare-run-card span,
 .compare-selected-card span {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   overflow-wrap: anywhere;
 }
 
@@ -214,7 +214,7 @@
 .deployment-decision-head span,
 .deployment-decision-target span {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
@@ -272,7 +272,7 @@
 
 .compare-recommendation span {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
@@ -312,7 +312,7 @@
 .compare-table th {
   color: var(--text-muted);
   background: var(--bg-panel-soft);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
@@ -357,7 +357,7 @@
   display: grid;
   gap: 6px;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 700;
 }
 
@@ -396,7 +396,7 @@
 
 .compare-output-head span {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 .compare-output-image {
@@ -433,7 +433,7 @@
 .compare-output-stats span {
   display: block;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .compare-output-stats strong {
@@ -474,7 +474,7 @@
 
 .compare-artifact-column-head span {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   overflow-wrap: anywhere;
 }
 
@@ -486,7 +486,7 @@
 .compare-artifact-group h3 {
   margin: 0;
   color: var(--text);
-  font-size: 0.86rem;
+  font-size: 0.875rem;
 }
 
 .compare-artifact-list {
@@ -508,14 +508,14 @@
 .compare-artifact-row strong {
   display: block;
   color: var(--text);
-  font-size: 0.84rem;
+  font-size: 0.875rem;
   overflow-wrap: anywhere;
 }
 
 .compare-artifact-row span,
 .compare-artifact-more {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.875rem;
   overflow-wrap: anywhere;
 }
 
@@ -553,7 +553,7 @@
 
 .compare-report-file span {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
 }
 
 .compare-report-history-card {
@@ -577,7 +577,7 @@
 .compare-report-history-card small {
   display: block;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   overflow-wrap: anywhere;
 }
 

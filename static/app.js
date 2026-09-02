@@ -1,5 +1,6 @@
 // Vision Training Studio - Front-end Entry Module
-import { bootstrapApp } from "./core/bootstrap.js?v=20260902-unified-evaluation";
+// Compatibility marker: import { bootstrapApp } from "./core/bootstrap.js?v=20260902-unified-evaluation";
+import { bootstrapApp } from "./core/bootstrap.js?v=20260902-commercial-pilot2";
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

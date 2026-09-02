@@ -14,9 +14,10 @@ This document tracks accepted product and engineering gaps for the current beta 
 
 ## P2
 
-- GitHub Actions or equivalent CI is not configured.
-- Formatter, lint, type check, coverage, and visual regression gates are not enforced.
+- GitHub Actions runs the non-GPU pytest, compile, CSS-token, and generated API-contract gates. Formatter, full type checking, coverage, axe, and visual regression are not yet all enforced in CI.
 - Release validation is script-driven and requires manual execution.
+- Only the core project, task, training status/start, and readiness contracts are currently targeted for generated frontend API types; remaining routes are intentionally untyped.
+- Interrupted jobs are visible and retryable after restart, but are not automatically resumed.
 
 ## Security
 

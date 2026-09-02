@@ -81,7 +81,7 @@
   background: rgba(59, 130, 246, 0.16);
   border: 1px solid rgba(59, 130, 246, 0.35);
   color: var(--text);
-  font-size: 0.84rem;
+  font-size: 0.875rem;
   font-weight: 700;
 }
 
@@ -103,7 +103,7 @@
 
 .empty-class-list {
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 @media (max-width: 560px) {
@@ -128,7 +128,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.84rem;
+  font-size: 0.875rem;
 }
 
 .ingest-progress-status {
@@ -151,7 +151,7 @@
 }
 
 .ingest-progress-details {
-  font-size: 0.76rem;
+  font-size: 0.875rem;
   color: var(--text-muted);
 }
 

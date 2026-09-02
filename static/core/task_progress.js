@@ -8,7 +8,26 @@ let sequence = 0;
 let lastActionButton = null;
 let lastActionAt = 0;
 
-const TERMINAL = new Set(["completed", "failed", "cancelled"]);
+const TERMINAL = new Set(["completed", "failed", "cancelled", "interrupted"]);
+
+function renderActiveTaskCount(serverCount = null) {
+  const count = serverCount === null ? activeTasks.size : Math.max(activeTasks.size, Number(serverCount) || 0);
+  const badge = document.getElementById("header-active-task-count");
+  const button = document.getElementById("btn-active-tasks");
+  if (badge) badge.textContent = String(count);
+  if (button) button.setAttribute("aria-label", `Running tasks: ${count}`);
+}
+
+async function refreshServerTaskCount() {
+  try {
+    const response = await fetch("/api/tasks?active_only=true", { headers: { Accept: "application/json" } });
+    if (!response.ok) return;
+    const payload = await response.json();
+    renderActiveTaskCount(Array.isArray(payload) ? payload.length : 0);
+  } catch {
+    renderActiveTaskCount();
+  }
+}
 
 function nextTaskId(prefix = "request") {
   sequence += 1;
@@ -145,6 +164,7 @@ function finalize(task, status, payload = {}) {
     window.setTimeout(() => task.inlineEl?.remove(), COMPLETE_HIDE_MS);
   }
   activeTasks.delete(task.id);
+  renderActiveTaskCount();
 }
 
 export function beginTask(options = {}) {
@@ -168,6 +188,7 @@ export function beginTask(options = {}) {
     delayTimer: null,
   };
   activeTasks.set(task.id, task);
+  renderActiveTaskCount();
   setButtonBusy(task, true);
   task.delayTimer = window.setTimeout(() => reveal(task), Number(options.delayMs ?? DEFAULT_DELAY_MS));
 
@@ -207,6 +228,12 @@ export function beginApiTask(url, options = {}, method = "GET") {
 }
 
 export function initTaskProgressFramework() {
+  renderActiveTaskCount();
+  void refreshServerTaskCount();
+  document.getElementById("btn-active-tasks")?.addEventListener("click", () => {
+    void refreshServerTaskCount();
+    document.querySelector(".progress-hud")?.focus?.();
+  });
   document.addEventListener("click", (event) => {
     const button = event.target instanceof Element ? event.target.closest("button, [role='button']") : null;
     if (!button) return;
@@ -235,7 +262,7 @@ export function followServerTask(jobId, options = {}) {
     button: options.button,
     inlineHost: options.inlineHost,
   });
-  const terminal = new Set(["completed", "failed", "cancelled"]);
+  const terminal = new Set(["completed", "failed", "cancelled", "interrupted"]);
   let settled = false;
   let socket = null;
   let pollTimer = null;
@@ -253,7 +280,7 @@ export function followServerTask(jobId, options = {}) {
         resolve(task?.result);
         return;
       }
-      if (status === "failed" || status === "cancelled") {
+      if (status === "failed" || status === "cancelled" || status === "interrupted") {
         settled = true;
         const message = task?.error || phaseMessage || t("task.common.failed");
         controller.fail({ message, percent: Number.isFinite(progress) ? progress : 0 });

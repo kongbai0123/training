@@ -115,7 +115,7 @@ body[data-theme="light"] .labelme-step-card {
 .labelme-step-card span {
   margin-top: 4px;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 
@@ -176,7 +176,7 @@ body[data-theme="light"] .labelme-step-card {
 .labelme-overview-kicker,
 .labelme-completion-count {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .labelme-overview-completion strong {
@@ -208,7 +208,7 @@ body[data-theme="light"] .labelme-step-card {
 }
 
 .labelme-overview-group-heading strong {
-  font-size: 0.84rem;
+  font-size: 0.875rem;
 }
 
 .annotation-import-metric {
@@ -222,7 +222,7 @@ body[data-theme="light"] .labelme-step-card {
 .annotation-import-metric span {
   display: block;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
@@ -258,7 +258,7 @@ body[data-theme="light"] .labelme-step-card {
   align-items: center;
   gap: 7px;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   cursor: pointer;
 }
 
@@ -334,7 +334,7 @@ body[data-theme="light"] .labelme-step-card {
 
 .labelme-export-details summary small {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
@@ -354,12 +354,12 @@ body[data-theme="light"] .labelme-step-card {
   flex-wrap: wrap;
   gap: 12px;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
 }
 
 .annotation-import-meta.compact {
   gap: 8px;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .annotation-import-status-line {
@@ -368,7 +368,7 @@ body[data-theme="light"] .labelme-step-card {
   gap: 8px;
   min-height: 24px;
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.875rem;
 }
 
 .annotation-import-status-line.is-warning {
@@ -387,7 +387,7 @@ body[data-theme="light"] .labelme-step-card {
   padding-top: 8px;
   border-top: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 
@@ -458,7 +458,7 @@ body[data-theme="light"] .labelme-step-card {
 
 .csv-map-field span {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 .csv-map-field select {

@@ -72,19 +72,15 @@ function updateWorkspaceContextSummary(pageId, status, config = {}) {
   summary.removeAttribute("data-i18n");
   const projectLabel = status.hasProject ? status.projectName : t("common.noProject");
   const pageLabel = config.title || getPageTitle(pageId);
-  const actionsCount = config.suppressActions ? 0 : (config.actions || []).length;
-  const warningCount = config.suppressWarnings ? 0 : ((config.warnings || []).length);
-  const notesCount = config.suppressWarnings ? 0 : ((config.notes || []).length);
-  const readiness = status.hasProject
-    ? (status.trainReady ? t("workspace.trainingReady") : status.hasDataset ? t("workspace.datasetActive") : t("workspace.projectOpen"))
-    : t("workspace.idle");
+  const firstWarning = config.suppressWarnings ? "" : String((config.warnings || [])[0]?.text || (config.warnings || [])[0] || "");
+  const firstAction = config.suppressActions ? "" : String((config.actions || [])[0]?.label || (config.actions || [])[0]?.text || (config.actions || [])[0] || "");
+  const phase = status.hasProject ? pageLabel : t("workspace.idle");
+  const blocker = firstWarning || (status.trainReady ? t("workspace.trainingReady") : status.hasDataset ? t("workspace.datasetActive") : t("workspace.projectOpen"));
+  const next = firstAction || (status.trainReady ? t("workspace.trainingReady") : pageLabel);
   summary.innerHTML = `
-    <span class="summary-badge badge-neutral">${escapeHtml(projectLabel)}</span>
-    <span class="summary-badge badge-info">${escapeHtml(pageLabel)}</span>
-    <span class="summary-badge badge-${status.trainReady ? "success" : "neutral"}">${escapeHtml(readiness)}</span>
-    <span class="summary-badge badge-neutral">${escapeHtml(t("workspace.actionsCount", { count: actionsCount }))}</span>
-    <span class="summary-badge badge-${warningCount > 0 ? "warning" : "neutral"}">${escapeHtml(t("workspace.warningsCount", { count: warningCount }))}</span>
-    ${notesCount > 0 ? `<span class="summary-badge badge-info">${escapeHtml(t("workspace.notesCount", { count: notesCount }))}</span>` : ""}
+    <span class="summary-badge badge-info" title="${escapeHtml(projectLabel)}">Current: ${escapeHtml(phase)}</span>
+    <span class="summary-badge badge-${firstWarning ? "warning" : "neutral"}">Blocker: ${escapeHtml(blocker)}</span>
+    <span class="summary-badge badge-${status.trainReady ? "success" : "neutral"}">Next: ${escapeHtml(next)}</span>
   `;
 }
 

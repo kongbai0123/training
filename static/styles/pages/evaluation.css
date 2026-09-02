@@ -36,7 +36,7 @@
 .evaluation-verdict-row p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
 }
 
 .evaluation-score-badge {
@@ -56,7 +56,7 @@
 
 .evaluation-score-badge span {
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .evaluation-verdict-row {
@@ -85,7 +85,7 @@
   border-radius: 999px;
   background: var(--bg-panel-soft);
   color: var(--text-soft);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .evaluation-recommendation-list {
@@ -111,8 +111,8 @@
 .evaluation-recommendation.warning i { color: var(--warning); }
 .evaluation-recommendation.critical i { color: var(--danger); }
 .evaluation-recommendation.positive i { color: var(--success); }
-.evaluation-recommendation strong { display: block; color: var(--text); font-size: 0.84rem; }
-.evaluation-recommendation p { margin: 3px 0 0; color: var(--text-muted); font-size: 0.78rem; line-height: 1.4; }
+.evaluation-recommendation strong { display: block; color: var(--text); font-size: 0.875rem; }
+.evaluation-recommendation p { margin: 3px 0 0; color: var(--text-muted); font-size: 0.875rem; line-height: 1.4; }
 
 .evaluation-plots-grid {
   display: grid;
@@ -132,7 +132,7 @@
 }
 
 .evaluation-metric-grid .metric-card span {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .evaluation-metric-grid .metric-card strong {
@@ -152,7 +152,7 @@
   border-radius: 999px;
   background: var(--bg-panel-soft);
   color: var(--text-soft);
-  font-size: 0.76rem;
+  font-size: 0.875rem;
 }
 
 .evaluation-diagnostics-grid {
@@ -170,7 +170,7 @@
 .evaluation-residual-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .evaluation-confusion-table th,
@@ -198,7 +198,7 @@
   grid-template-columns: minmax(90px, 1fr) minmax(120px, 2fr) auto;
   align-items: center;
   gap: 8px;
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .evaluation-importance-track {
@@ -229,7 +229,7 @@
 .evaluation-plot-card h3 {
   margin: 0;
   color: var(--text-soft);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   text-transform: none;
   line-height: 1.2;
 }
@@ -257,7 +257,7 @@
 
 .evaluation-plot-download span {
   margin-left: 5px;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 700;
 }
 

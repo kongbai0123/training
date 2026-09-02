@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import shutil
 import uuid
@@ -8,9 +9,13 @@ from typing import Dict, Any, List, Optional
 from src.auto_label_review_gate import build_auto_label_review_gate
 from src.config import PROJECTS_DIR
 from src.project_layout import ProjectLayout
+from src.project_repository import ProjectReadOnlyRecovery, ProjectRepository, ProjectRevisionConflict
+from src.path_security import safe_resolve_under, validate_resource_id
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".wmv"}
+LOGGER = logging.getLogger(__name__)
+PROJECT_REPOSITORY = ProjectRepository(PROJECTS_DIR)
 
 class ProjectManager:
     SUPPORTED_TASK_TYPES = {
@@ -23,6 +28,13 @@ class ProjectManager:
         "tabular_classification",
         "tabular_regression",
     }
+
+    @staticmethod
+    def _repository() -> ProjectRepository:
+        # Tests and portable bootstrap may redirect PROJECTS_DIR at runtime.
+        if PROJECT_REPOSITORY.projects_dir != PROJECTS_DIR.resolve():
+            return ProjectRepository(PROJECTS_DIR)
+        return PROJECT_REPOSITORY
 
     @staticmethod
     def _is_sequence_task(task_type: str) -> bool:
@@ -123,13 +135,15 @@ class ProjectManager:
                 json_path = d / "project.json"
                 if json_path.exists():
                     try:
-                        with open(json_path, "r", encoding="utf-8") as f:
-                            data = json.load(f)
+                            data = ProjectManager.get_project(d.name)
+                            if not data:
+                                continue
                             project_root = str(d.resolve().as_posix())
                             is_sequence = ProjectManager._is_sequence_task(data.get("task_type", ""))
                             is_tabular = ProjectManager._is_tabular_task(data.get("task_type", ""))
                             projects.append({
                                 "project_id": data.get("project_id"),
+                                "revision": int(data.get("revision") or 0),
                                 "project_name": data.get("project_name"),
                                 "task_type": data.get("task_type"),
                                 "created_at": data.get("created_at"),
@@ -146,7 +160,7 @@ class ProjectManager:
                                 "file_summary": ProjectManager.build_project_file_summary(d, data)
                             })
                     except Exception as e:
-                        print(f"Error loading project {d.name}: {e}")
+                        LOGGER.exception("Error loading project %s: %s", d.name, e)
         # 依修改時間降序排序
         projects.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
         return projects
@@ -257,7 +271,8 @@ class ProjectManager:
           },
           "created_at": now_str,
           "updated_at": now_str,
-          "dataset_path": str((project_dir / "dataset").resolve().as_posix()),
+          "revision": 0,
+          "dataset_path": "dataset",
           "paths": {
             "project_root": ".",
             "dataset": "dataset",
@@ -298,8 +313,9 @@ class ProjectManager:
           "training_runs": []
         }
         
-        ProjectManager.save_project(project_id, project_data)
-        return project_data
+        if not ProjectManager.save_project(project_id, project_data):
+            raise RuntimeError("Unable to create project metadata")
+        return ProjectManager.get_project(project_id) or project_data
 
     @staticmethod
     def update_task_type(project_id: str, task_type: str) -> Dict[str, Any]:
@@ -365,20 +381,15 @@ class ProjectManager:
 
     @staticmethod
     def get_project(project_id: str) -> Optional[Dict[str, Any]]:
-        """讀取單一專案設定並進行自動延遲遷移 (Lazy Migration)"""
-        project_dir = PROJECTS_DIR / project_id
-        json_path = project_dir / "project.json"
-        if not json_path.exists():
-            return None
+        """Read a project without mutating metadata on GET."""
         try:
-            with open(json_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            
-            # Lazy Migration: 檢查並升級 Schema 至 2.0 版
-            migrated = False
+            data = ProjectManager._repository().read(project_id)
+            if data is None:
+                return None
+            # Compatibility defaults are an in-memory projection.  They are
+            # persisted only on the next explicit mutation.
             if "schema_version" not in data:
                 data["schema_version"] = "2.0"
-                migrated = True
 
             if "layout" not in data:
                 data["layout"] = {
@@ -389,7 +400,6 @@ class ProjectManager:
                     "verified_at": None
                 }
                 data["layout_version"] = "legacy"
-                migrated = True
                 
             if "labelme_config" not in data:
                 is_v3_layout = (data.get("layout") or {}).get("mode") == "v3"
@@ -399,7 +409,6 @@ class ProjectManager:
                     "command": "",
                     "last_opened_at": None
                 }
-                migrated = True
                 
             if "labelme_progress" not in data:
                 data["labelme_progress"] = {
@@ -413,22 +422,15 @@ class ProjectManager:
                     "empty_jsons_list": [],
                     "unknown_labels_detail": {}
                 }
-                migrated = True
                 
             if "imports_history" not in data:
                 data["imports_history"] = []
-                migrated = True
                 
             if "versions" not in data:
                 data["versions"] = []
-                migrated = True
                 
             if "jobs" not in data:
                 data["jobs"] = []
-                migrated = True
-                
-            if migrated:
-                ProjectManager.save_project(project_id, data)
 
             data["_layout_report"] = ProjectLayout.from_project(data).get_layout_report()
             try:
@@ -450,33 +452,35 @@ class ProjectManager:
                 }
             return data
         except Exception as e:
-            print(f"Error loading project {project_id}: {e}")
+            LOGGER.exception("Error loading project %s: %s", project_id, e)
             return None
 
     @staticmethod
+    def mutate_project(project_id: str, callback, *, expected_revision: Optional[int] = None) -> Dict[str, Any]:
+        """Apply a narrow mutation to the latest on-disk revision."""
+        saved, _ = ProjectManager._repository().mutate(project_id, callback, expected_revision=expected_revision)
+        return saved
+
+    @staticmethod
     def save_project(project_id: str, data: Dict[str, Any]) -> bool:
-        """儲存專案設定至 project.json"""
-        project_dir = PROJECTS_DIR / project_id
-        if not project_dir.exists():
-            project_dir.mkdir(parents=True, exist_ok=True)
-            
-        json_path = project_dir / "project.json"
-        data["updated_at"] = datetime.now().isoformat()
+        """Persist through the repository with optimistic revision checking."""
         try:
-            data_to_save = dict(data)
-            data_to_save.pop("_layout_report", None)
-            data_to_save.pop("auto_label_review_gate", None)
-            with open(json_path, "w", encoding="utf-8") as f:
-                json.dump(data_to_save, f, indent=2, ensure_ascii=False)
+            expected = data.get("revision")
+            saved = ProjectManager._repository().write(project_id, data, expected_revision=int(expected) if expected is not None else None)
+            data.update(saved)
             return True
+        except (ProjectRevisionConflict, ProjectReadOnlyRecovery) as e:
+            LOGGER.warning("Project save rejected project=%s code=%s", project_id, e.code)
+            return False
         except Exception as e:
-            print(f"Error saving project {project_id}: {e}")
+            LOGGER.exception("Error saving project %s: %s", project_id, e)
             return False
 
     @staticmethod
     def delete_project(project_id: str) -> bool:
         """刪除專案資料夾"""
-        project_dir = PROJECTS_DIR / project_id
+        validate_resource_id(project_id, label="project_id")
+        project_dir = safe_resolve_under(PROJECTS_DIR, PROJECTS_DIR / project_id)
         if project_dir.exists():
             try:
                 shutil.rmtree(project_dir)

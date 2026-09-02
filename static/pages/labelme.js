@@ -78,7 +78,7 @@ export function initLabelMe() {
     inputAnnoFile.style.display = "none";
     if (annoDropZone.dropzone) annoDropZone.dropzone.destroy();
 
-    annoDropZone.addEventListener("click", () => inputAnnoFile.click());
+    qs("#btn-choose-annotation-files")?.addEventListener("click", () => inputAnnoFile.click());
     inputAnnoFile.addEventListener("change", async (event) => {
       const files = [...(event.target.files || [])];
       if (files.length === 0) return;

@@ -42,7 +42,7 @@
 }
 
 .auto-label-status-strip .metric-card span {
-  font-size: 0.76rem;
+  font-size: 0.875rem;
 }
 
 .auto-label-status-strip .metric-card strong {
@@ -72,7 +72,7 @@
 
 .auto-label-page-guide-heading span {
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 
@@ -115,7 +115,7 @@
   border-radius: 999px;
   background: rgba(59, 130, 246, 0.16);
   color: var(--primary);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 800;
 }
 
@@ -130,13 +130,13 @@
 }
 
 .auto-label-page-guide-step strong {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   line-height: 1.25;
 }
 
 .auto-label-page-guide-step small {
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.3;
 }
 
@@ -144,7 +144,7 @@
   align-self: center;
   justify-self: center;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .auto-label-workbench {
@@ -210,7 +210,7 @@
   border-radius: 999px;
   background: var(--primary);
   color: #fff;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   font-weight: 800;
 }
 
@@ -299,7 +299,7 @@
   display: grid;
   gap: 3px;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 
@@ -356,7 +356,7 @@
 
 .auto-class-filter-help {
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 
@@ -382,7 +382,7 @@
   border-radius: var(--radius);
   background: var(--bg-panel);
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 
@@ -422,7 +422,7 @@
 .auto-start-reason-inline {
   margin: 5px 0 0;
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 
@@ -561,7 +561,7 @@
 
 .review-card-title span {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
 }
 
 .auto-review-queue-table {
@@ -573,7 +573,7 @@
 }
 
 .auto-review-queue-table code {
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .auto-shape-review-grid {
@@ -628,7 +628,7 @@
   cursor: pointer;
   color: var(--text-muted);
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .review-nav-button {
@@ -679,7 +679,7 @@
 .section-subtitle {
   margin: 4px 0 0;
   color: var(--text-muted);
-  font-size: 0.84rem;
+  font-size: 0.875rem;
   line-height: 1.35;
 }
 

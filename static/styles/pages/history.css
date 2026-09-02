@@ -35,7 +35,7 @@
 .project-history-main p {
   margin: 6px 0 0;
   color: var(--text-muted);
-  font-size: 0.86rem;
+  font-size: 0.875rem;
 }
 
 .project-file-summary {
@@ -57,7 +57,7 @@
 
 .project-file-metric span {
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .project-file-metric strong {
@@ -80,7 +80,7 @@
 
 .project-file-details span {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.875rem;
 }
 
 .project-file-details code {
@@ -173,7 +173,7 @@
 
 .history-result-count {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   white-space: nowrap;
 }
 
@@ -199,13 +199,13 @@
   gap: 10px;
   margin: 0 0 10px;
   color: var(--text);
-  font-size: 0.86rem;
+  font-size: 0.875rem;
   font-weight: 700;
 }
 
 .history-section-title small {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 
@@ -235,7 +235,7 @@
 .inference-job-cleanup-toolbar span,
 .inference-job-delete-confirmation span {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 
@@ -248,7 +248,7 @@
   align-items: center;
   gap: 6px;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   white-space: nowrap;
 }
 

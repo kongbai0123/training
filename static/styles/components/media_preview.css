@@ -66,7 +66,7 @@ body[data-theme="light"] .thumb-image-frame {
 }
 
 .thumb-card strong {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -74,7 +74,7 @@ body[data-theme="light"] .thumb-image-frame {
 
 .thumb-card .badge {
   width: fit-content;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   padding: 3px 6px;
 }
 
@@ -93,7 +93,7 @@ body[data-theme="light"] .thumb-image-frame {
 
 .load-more-card span {
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .path-list {
@@ -131,7 +131,7 @@ body[data-theme="light"] .thumb-image-frame {
   text-overflow: clip;
   overflow-wrap: anywhere;
   word-break: break-word;
-  font-size: 0.76rem;
+  font-size: 0.875rem;
   line-height: 1.35;
   text-align: right;
 }
@@ -171,7 +171,7 @@ body[data-theme="light"] .thumb-image-frame {
 
 .project-context-compact > div > span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.875rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -188,7 +188,7 @@ body[data-theme="light"] .thumb-image-frame {
 
 .path-row span {
   color: var(--text-muted);
-  font-size: 0.84rem;
+  font-size: 0.875rem;
 }
 
 .preview-panel {

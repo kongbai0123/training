@@ -6,6 +6,7 @@ from src.project_layout import ProjectLayout
 from src.project_manager import ProjectManager
 from src.training.dispatcher import TrainerDispatcher
 from src.training.run_manager import RunManager
+from src.training.readiness_service import TrainingReadinessService
 
 
 class TrainingStartServiceError(RuntimeError):
@@ -13,7 +14,10 @@ class TrainingStartServiceError(RuntimeError):
 
 
 class TrainingReadinessError(TrainingStartServiceError):
-    pass
+    def __init__(self, report: Dict[str, Any]):
+        self.report = report
+        messages = "\n".join(str(item.get("message") or "") for item in report.get("blockers", []))
+        super().__init__("Training readiness check failed" + (f":\n{messages}" if messages else ""))
 
 
 class TrainingRunAlreadyExists(TrainingStartServiceError):
@@ -41,10 +45,9 @@ class TrainingStartService:
     @classmethod
     def start(cls, project_id: str, project: Dict[str, Any], config: Any) -> Dict[str, Any]:
         config_dict = cls._config_to_dict(config)
-        backend = TrainerDispatcher.resolve_backend(project, config_dict)
-        readiness_errors = backend.validate_readiness(project, config_dict)
-        if readiness_errors:
-            raise TrainingReadinessError("Training readiness check failed:\n" + "\n".join(readiness_errors))
+        report = TrainingReadinessService.check(project_id, project, config_dict)
+        if not report["ready"]:
+            raise TrainingReadinessError(report)
 
         run_id = str(config_dict.get("run_id") or "").strip() or RunManager.generate_run_id()
         layout = ProjectLayout.from_project(project)
@@ -53,8 +56,8 @@ class TrainingStartService:
             raise TrainingRunAlreadyExists(f"Training run '{run_id}' already exists.")
 
         project["training_config"] = cls._build_training_config(config_dict, run_id)
-        ProjectManager.save_project(project_id, project)
-
+        if not ProjectManager.save_project(project_id, project):
+            raise TrainingStartServiceError("Project changed before training could start. Retry readiness.")
         TrainerDispatcher.start_training(project)
         return {"status": "started", "message": "Training started.", "run_id": run_id}
 

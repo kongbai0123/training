@@ -59,6 +59,9 @@ src/api/routes/
 - `training_orchestration.py`：start training、compare、export。
 - `training_runs.py`：run history、metrics、artifacts、stop、abort。
 - `rnn_config.py`：sequence readiness、config、CSV import。
+- `TrainingReadinessService`：CNN、RNN 與 Tabular 訓練前檢查的單一契約；`/readiness` 與 `/train/start` 共用結果。
+- `ProjectRepository`：以每專案鎖、revision、同目錄 temporary file、fsync、atomic replace 與五版備份保存 `project.json`。GET 只做 runtime projection，不回寫 migration。
+- `TaskJobManager`：將工作狀態及有界事件歷史原子寫入 `user_data/tasks/<job_id>/job.json`；重啟時 active 工作轉為 `APP_RESTARTED` interrupted，不自動重播。
 - `inference.py`：image / sequence inference。
 - `models.py`：model catalog、import、custom package flow。
 - `diagnostics.py`：diagnostics report。

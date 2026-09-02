@@ -5,6 +5,12 @@ All notable changes to Vision Training Studio are tracked here.
 ## [Unreleased]
 
 ### Changed
+- Added expert-default and persistent guided shell modes, a reduced header, three-item workspace summary, 14px reading baseline, keyboard-visible focus, accessible upload controls, modal assistant focus lifecycle, and reduced-motion support.
+- Added generation-scoped project requests so stale project/model/status responses are aborted and ignored after switching projects.
+- Added a shared training-readiness response for CNN, RNN, and Tabular, with stable blocker codes and the same decision used by training start.
+- Added crash-safe project metadata writes with monotonic revisions, optimistic `If-Match`, per-project locks, atomic replacement, five-version backups, recovery, and project-relative dataset paths.
+- Added persistent task journals; unfinished tasks become retryable `APP_RESTARTED` interruptions after restart and remain visible through the task list, polling, and WebSocket APIs.
+- Added generated frontend types for the scoped personal-workflow APIs and a CI check for undefined CSS tokens.
 - Reorganized public workspaces by data type as Image Training, Sequence Training, and Tabular Data Prediction while preserving CNN/RNN/Tabular identifiers in stored compatibility contracts.
 - Documented XGBoost as a model option and sequence-window baseline instead of a top-level data category.
 - Added centralized legacy page aliases, an unknown-page dashboard fallback, and workspace compatibility/rollback documentation.
