@@ -126,6 +126,7 @@ class EvaluationIntelligenceAndSvgTests(unittest.TestCase):
         self.assertIn('vectorFilename ? "SVG"', script)
         self.assertIn("/save-to-downloads", script)
         self.assertNotIn("URL.createObjectURL", script)
+        self.assertIn('hasEvaluationData ? "evaluation.plots.unavailable" : "evaluation.empty"', script)
 
 
 if __name__ == "__main__":

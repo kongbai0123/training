@@ -1535,6 +1535,7 @@ export const zhTWOverrides = {
   "evaluation.iouTooltip": "IoU 是預測區域與標註區域的重疊比例。",
   "evaluation.empty": "尚無可用評估資料。完成訓練後會在這裡顯示指標與診斷。",
   "evaluation.plots": "評估圖表",
+  "evaluation.plots.unavailable": "本次沒有額外評估圖表；上方評估指標與任務專屬診斷已載入。",
   "evaluation.goal.minimize": "越低越佳",
   "evaluation.goal.maximize": "越高越佳",
   "evaluation.architecture.cnn": "CNN／視覺模型",

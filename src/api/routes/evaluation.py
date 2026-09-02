@@ -360,6 +360,7 @@ def _build_structured_assessment(project: Dict[str, Any], run_dir: Path, results
     primary = schema.get("primary_metric") or {}
     key = str(primary.get("key") or "")
     value = metrics.get(key)
+    score = _structured_quality_score(metrics, primary)
     signals = [{
         "code": "structured_review",
         "severity": "info",
@@ -369,7 +370,7 @@ def _build_structured_assessment(project: Dict[str, Any], run_dir: Path, results
         },
     }]
     return {
-        "score": None,
+        "score": score,
         "verdict": "review",
         "signals": signals,
         "context": {
@@ -383,6 +384,34 @@ def _build_structured_assessment(project: Dict[str, Any], run_dir: Path, results
             "primary_value": value,
         },
     }
+
+
+def _structured_quality_score(metrics: Dict[str, Any], primary: Dict[str, Any]) -> Optional[int]:
+    """Return a defensible 0-100 score only for bounded quality metrics.
+
+    Classification metrics and R² already have a portable 0-1 interpretation.
+    Absolute errors such as MAE/RMSE do not, so regression falls back to R²
+    instead of inventing a dataset-independent normalization.
+    """
+    primary_key = str(primary.get("key") or "")
+    primary_goal = str(primary.get("goal") or "maximize").lower()
+    candidate_keys: List[str] = []
+    if primary_goal == "maximize":
+        candidate_keys.append(primary_key)
+    candidate_keys.extend(("val/r2", "val/macro_f1", "val/accuracy", "val/f1"))
+
+    for key in candidate_keys:
+        if not key:
+            continue
+        raw_value = metrics.get(key)
+        if isinstance(raw_value, bool) or not isinstance(raw_value, (int, float)):
+            continue
+        value = float(raw_value)
+        if key == "val/r2":
+            value = max(0.0, value)
+        if 0.0 <= value <= 1.0:
+            return round(value * 100)
+    return None
 
 
 def _series_length(raw: Dict[str, Any]) -> int:

@@ -28,7 +28,7 @@ export async function renderEvaluationPage() {
     renderEvaluationAssessment(null);
     renderEvaluationDiagnostics({}, {});
     renderEvaluationCapabilities(null, null, {});
-    renderEvaluationPlots([]);
+    renderEvaluationPlots([], null, {}, false);
     return;
   }
 
@@ -52,7 +52,7 @@ export async function renderEvaluationPage() {
     renderEvaluationAssessment(null);
     renderEvaluationDiagnostics({}, {});
     renderEvaluationCapabilities(null, null, {});
-    renderEvaluationPlots([]);
+    renderEvaluationPlots([], null, {}, false);
   } finally {
     evaluationLoading = false;
   }
@@ -63,7 +63,7 @@ function renderEvaluationData(data) {
   renderEvaluationCapabilities(data.architecture, data.task_type, data.capabilities || {});
   renderEvaluationDiagnostics(data.diagnostics || {}, data.capabilities || {});
   renderEvaluationAssessment(data.assessment);
-  renderEvaluationPlots(data.has_metrics ? data.plots || [] : [], data.run_id, data.plot_exports || {});
+  renderEvaluationPlots(data.has_metrics ? data.plots || [] : [], data.run_id, data.plot_exports || {}, Boolean(data.has_metrics));
 }
 
 function resetEvaluationMetrics() {
@@ -204,11 +204,12 @@ function renderEvaluationAssessment(assessment) {
   }
 }
 
-function renderEvaluationPlots(plots = [], runId = null, plotExports = {}) {
+function renderEvaluationPlots(plots = [], runId = null, plotExports = {}, hasEvaluationData = false) {
   const plotsGrid = qs("#evaluation-plots-grid");
   if (!plotsGrid) return;
   if (!plots.length) {
-    plotsGrid.innerHTML = `<div class="empty-state evaluation-wide-empty">${escapeHtml(t("evaluation.empty"))}</div>`;
+    const messageKey = hasEvaluationData ? "evaluation.plots.unavailable" : "evaluation.empty";
+    plotsGrid.innerHTML = `<div class="empty-state evaluation-wide-empty">${escapeHtml(t(messageKey))}</div>`;
     return;
   }
 

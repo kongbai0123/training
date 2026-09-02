@@ -72,6 +72,7 @@ class UnifiedEvaluationContractTests(unittest.TestCase):
             self.assertTrue(payload["capabilities"]["feature_importance"])
             self.assertFalse(payload["capabilities"]["image_plots"])
             self.assertEqual(payload["assessment"]["verdict"], "review")
+            self.assertEqual(payload["assessment"]["score"], 88)
 
     def test_rnn_regression_exposes_residuals_without_image_assumptions(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -104,6 +105,7 @@ class UnifiedEvaluationContractTests(unittest.TestCase):
             self.assertTrue(payload["capabilities"]["residual_analysis"])
             self.assertFalse(payload["capabilities"]["image_plots"])
             self.assertEqual(payload["diagnostics"]["residuals"], [0.1, -0.2])
+            self.assertEqual(payload["assessment"]["score"], 82)
 
 
 if __name__ == "__main__":

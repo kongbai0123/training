@@ -977,6 +977,7 @@
     "evaluation.iouTooltip": "IoU is the overlap ratio between prediction and annotation areas.",
     "evaluation.empty": "No evaluation data is available yet. Complete training to show metrics and diagnostics here.",
     "evaluation.plots": "Evaluation plots",
+    "evaluation.plots.unavailable": "No additional evaluation plots were produced for this run; the metrics and task-specific diagnostics above are loaded.",
     "evaluation.goal.minimize": "Lower is better",
     "evaluation.goal.maximize": "Higher is better",
     "evaluation.architecture.cnn": "CNN / vision model",
